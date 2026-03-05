@@ -59,7 +59,8 @@ The app includes a concrete native Node-API bridge package:
 
 - `packages/ndi-native` (`@cast-interface/ndi-native`)
 
-The Electron main process integration lives in `app/main/ndi/ndiService.ts`.
+The Electron main process integration lives in `app/main/ndi/ndi-service.ts`.
+Stability research notes live in `docs/ndi-stability-notes.md`.
 
 If the addon is missing or the NDI runtime library cannot be found, the app falls back to no-op mode and logs a warning.
 
@@ -67,13 +68,23 @@ Native module API:
 
 - `initializeSender({ senderName, width, height, withAlpha })`
 - `sendRgbaFrame(senderName, buffer, width, height, stride)`
+- `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
 The sender is initialized with:
 
-- sender names: `Cast Interface - Audience` and `Cast Interface - Stage` (active output only)
+- sender names: `Cast Interface - Audience` and `Cast Interface - Stage` (both can be active simultaneously)
 - resolution: `1920x1080`
 - alpha enabled: `true`
+
+Main process NDI behavior:
+
+- Frame dispatch is bounded with a latest-frame-wins queue to prevent unbounded memory growth.
+- Frame emission remains active outside Show view and always uses the Show output scene pipeline.
+- Output senders are recreated automatically when frame dimensions change.
+- When input frames stop for more than `100ms`, heartbeat black frames are sent at `30 FPS`.
+- Graceful shutdown (`before-quit`, `will-quit`, process exit/signals) tears down all NDI senders and runtime.
+- Optional diagnostics can be enabled with `CAST_NDI_DEBUG=1` (5-second aggregate stats logs).
 
 ### NDI runtime discovery
 

@@ -3,24 +3,46 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CastRepository } from '@database/store';
 import { registerIpcHandlers } from './ipc';
-import { NdiService } from './ndi/ndiService';
+import { NdiService } from './ndi/ndi-service';
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'cast-media',
   privileges: { secure: true, supportFetchAPI: true, stream: true },
 }]);
 
-process.on('uncaughtException', (error) => {
-  console.error('[Main process uncaughtException]', error);
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error('[Main process unhandledRejection]', reason);
-});
-
 let mainWindow: BrowserWindow | null = null;
 const repository = new CastRepository();
 const ndiService = new NdiService();
+
+function teardownNdi(reason: string, error?: unknown) {
+  if (error !== undefined) {
+    console.error(`[Main process ${reason}]`, error);
+  }
+  try {
+    ndiService.destroy();
+  } catch (destroyError) {
+    console.error('[Main process NDI teardown failure]', destroyError);
+  }
+}
+
+process.on('uncaughtException', (error) => {
+  teardownNdi('uncaughtException', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  teardownNdi('unhandledRejection', reason);
+});
+
+process.on('exit', () => {
+  teardownNdi('exit');
+});
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    teardownNdi(signal);
+    app.quit();
+  });
+}
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -59,6 +81,14 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  ndiService.destroy();
+  teardownNdi('window-all-closed');
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  teardownNdi('before-quit');
+});
+
+app.on('will-quit', () => {
+  teardownNdi('will-quit');
 });

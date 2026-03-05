@@ -7,6 +7,7 @@ import { ElementProvider } from './contexts/element-context';
 import { UIProvider, useUI } from './contexts/ui-context';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { CommandBar } from './features/playback/components/command-bar';
+import { NdiOutputEmitter } from './features/playback/components/ndi-output-emitter';
 import { ShowViewLayout } from './features/workspace/components/show-view-layout';
 import { EditViewLayout } from './features/workspace/components/edit-view-layout';
 import { ErrorBoundary } from './components/error-boundary';
@@ -86,7 +87,8 @@ function AppLayout() {
   const panelToggles = workspaceView === 'show' ? showPanelToggles : editPanelToggles;
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
+    <div className="relative grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
+      <NdiOutputEmitter />
       <CommandBar panelToggles={panelToggles} />
       {workspaceView === 'show' && (
         <ShowViewLayout
