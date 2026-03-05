@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface-0: #171717;
+  --color-surface-1: #1C1C1C;
+  --color-surface-2: #262626;
+  --color-surface-3: #333333;
+  --color-surface-4: #5C5C5C;
+
+  --color-stroke: #494c52;
+  --color-stroke-light: #40434a;
+
+  --color-text-primary: #f5f6f7;
+  --color-text-secondary: #bec3ca;
+  --color-text-muted: #939aa3;
+
+  --color-live: #2ec27e;
+  --color-queued: #3d8bfd;
+  --color-selected: #ff4fa3;
+  --color-warning: #f4c84a;
+  --color-disabled: #747980;
+  --color-error: #eb5757;
+
+  --color-focus: #ff8cc7;
+  --color-accent: #7a2f61;
+  --color-accent-border: #bf5f96;
+
+  --color-take: #2a6b48;
+  --color-take-border: #3b9664;
+
+  --color-danger: #4a2327;
+  --color-danger-border: #8d4046;
+
+  --color-kbd-bg: #3a1e33;
+  --color-kbd-border: #7f4f6c;
+  --color-kbd-text: #ffd7ed;
+
+  --color-status-bg: #3a2034;
+  --color-status-border: #7f4d69;
+  --color-status-text: #ffd3e7;
+
+  --color-canvas-check-a: #1c1d20;
+  --color-canvas-check-b: #232528;
+  --color-canvas-border: #5b6270;
+
+  --color-live-screen: #0e0f11;
+  --color-thumb-bg: #121315;
+  --color-thumb-border: #42464d;
+
+  --shadow-elevated: 0 18px 42px #00000040;
+
+  --font-family-sans: 'Avenir Next', 'SF Pro Display', 'Segoe UI', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(circle at 15% -10%, #3a2a36 0%, transparent 45%), var(--color-surface-0);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}

@@ -1,0 +1,87 @@
+import type { Id } from '@core/types';
+import { Badge } from '../../../components/badge';
+import { EditableText } from '../../../components/editable-text';
+import { SceneFrame } from '../../../components/scene-frame';
+import type { OutlineSlideRow } from '../hooks/use-outline-view';
+import { SceneStage } from '../rendering/scene-stage';
+import type { RenderScene } from '../rendering/scene-types';
+
+interface SlideOutlineRowProps {
+  row: OutlineSlideRow;
+  scene: RenderScene;
+  isFocused: boolean;
+  onSelect: (index: number) => void;
+  onOpen: (index: number) => void;
+  onPrimaryTextCommit: (slideId: Id, nextPrimary: string) => void;
+}
+
+export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPrimaryTextCommit }: SlideOutlineRowProps) {
+
+  const rowStateClass = row.state === 'live'
+    ? 'border-live/70 bg-live/10'
+    : isFocused
+      ? 'border-focus/80 bg-focus/10'
+      : 'border-stroke bg-surface-1/40';
+
+  function handleSelect() {
+    onSelect(row.index);
+  }
+
+  function handleOpen() {
+    onOpen(row.index);
+  }
+
+  function handlePrimaryTextCommit(nextPrimary: string) {
+    onPrimaryTextCommit(row.slide.id, nextPrimary);
+  }
+
+  function renderPrimaryText() {
+    if (!row.textEditable) {
+      return (
+        <span className="w-full truncate text-[13px] font-medium text-text-secondary">
+          {row.primaryText}
+        </span>
+      );
+    }
+
+    return (
+      <EditableText
+        value={row.primaryText}
+        onCommit={handlePrimaryTextCommit}
+        placeholder="Slide text"
+        className="w-full text-[13px] font-medium"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={handleSelect}
+      onDoubleClick={handleOpen}
+      className={`grid w-full cursor-pointer grid-cols-[220px_1fr] overflow-hidden rounded border text-left transition-colors ${rowStateClass}`}
+    >
+      <SceneFrame width={scene.width} height={scene.height} className="border-r border-stroke bg-thumb-bg" stageClassName="absolute inset-0">
+        {row.elements.length === 0 && (
+          <div className="absolute inset-0 grid place-items-center text-[11px] uppercase tracking-wider text-text-muted">
+            Empty
+          </div>
+        )}
+        <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
+      </SceneFrame>
+
+      <div className="grid min-h-[92px] content-center gap-1.5 p-2.5">
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{row.index + 1}.</span>
+          {renderPrimaryText()}
+          {row.state === 'live' && <Badge state="live" label="Live" />}
+        </div>
+
+        {row.secondaryText && (
+          <p className="m-0 truncate text-[12px] text-text-muted" title={row.secondaryText}>
+            {row.secondaryText}
+          </p>
+        )}
+      </div>
+    </button>
+  );
+}

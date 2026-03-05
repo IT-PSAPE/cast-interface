@@ -1,0 +1,51 @@
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error('[ErrorBoundary]', error, info.componentStack);
+  }
+
+  private handleReload = (): void => {
+    window.location.reload();
+  };
+
+  render(): ReactNode {
+    if (!this.state.hasError) return this.props.children;
+
+    return (
+      <div className="grid place-items-center h-full p-8 text-center">
+        <div className="grid gap-4 max-w-md">
+          <h2 className="text-lg font-semibold text-text-primary">Something went wrong</h2>
+          <p className="text-sm text-text-secondary">
+            {this.state.error?.message ?? 'An unexpected error occurred.'}
+          </p>
+          <button
+            type="button"
+            onClick={this.handleReload}
+            className="justify-self-center rounded border border-accent-border bg-accent px-4 py-2 text-sm text-text-primary transition-colors hover:bg-accent/80"
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
