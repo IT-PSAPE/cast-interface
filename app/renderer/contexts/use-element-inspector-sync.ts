@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AppSnapshot } from '@core/types';
-import type { Id, SlideElement } from '@core/types';
+import type { ElementUpdateInput, Id, SlideElement } from '@core/types';
 import type { ElementInspectorDraft } from '../types/ui';
 import { clamp } from '../utils/slides';
 import { hasGeometryChange, payloadSignature } from './element-context-utils';
@@ -12,7 +11,7 @@ interface UseElementInspectorSyncInput {
   isCanvasInteracting: boolean;
   draftElements: Record<Id, Partial<SlideElement>>;
   setDraftElements: React.Dispatch<React.SetStateAction<Record<Id, Partial<SlideElement>>>>;
-  mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+  saveElementUpdate: (input: ElementUpdateInput) => Promise<void>;
 }
 
 export function shouldApplyInspectorDraftPatch(isCanvasInteracting: boolean, draftOwnerElementId: Id | null, selectedElementId: Id | null): boolean {
@@ -35,6 +34,18 @@ export function hasInspectorDraftDelta(baseElement: SlideElement, elementDraft: 
   return payloadChanged || geometryChanged;
 }
 function isInteractionSettling(lastCanvasInteractionEndRef: React.RefObject<number>): boolean { return Date.now() - (lastCanvasInteractionEndRef.current ?? 0) < 120; }
+function hasMatchingInspectorDraft(current: ElementInspectorDraft | null, selectedElement: SlideElement): boolean {
+  if (!current) return false;
+  return (
+    current.x === selectedElement.x &&
+    current.y === selectedElement.y &&
+    current.width === selectedElement.width &&
+    current.height === selectedElement.height &&
+    current.rotation === selectedElement.rotation &&
+    current.opacity === selectedElement.opacity &&
+    current.zIndex === selectedElement.zIndex
+  );
+}
 
 export function useElementInspectorSync({
   selectedElementId,
@@ -43,7 +54,7 @@ export function useElementInspectorSync({
   isCanvasInteracting,
   draftElements,
   setDraftElements,
-  mutate,
+  saveElementUpdate,
 }: UseElementInspectorSyncInput) {
   const [elementDraft, setElementDraft] = useState<ElementInspectorDraft | null>(null);
   const [elementPayloadDraft, setElementPayloadDraft] = useState<SlideElement['payload'] | null>(null);
@@ -66,9 +77,9 @@ export function useElementInspectorSync({
 
   useEffect(() => {
     if (!selectedElement) {
-      setElementDraft(null);
-      setElementPayloadDraft(null);
-      setDraftOwnerElementId(null);
+      setElementDraft((current) => (current === null ? current : null));
+      setElementPayloadDraft((current) => (current === null ? current : null));
+      setDraftOwnerElementId((current) => (current === null ? current : null));
       previousSelectedIdRef.current = null;
       lastSelectedSyncKeyRef.current = '';
       return;
@@ -78,17 +89,23 @@ export function useElementInspectorSync({
     if (!selectionChanged && (isCanvasInteracting || nextSyncKey === lastSelectedSyncKeyRef.current)) return;
     previousSelectedIdRef.current = selectedElement.id;
     lastSelectedSyncKeyRef.current = nextSyncKey;
-    setDraftOwnerElementId(selectedElement.id);
-    setElementDraft({
-      x: selectedElement.x,
-      y: selectedElement.y,
-      width: selectedElement.width,
-      height: selectedElement.height,
-      rotation: selectedElement.rotation,
-      opacity: selectedElement.opacity,
-      zIndex: selectedElement.zIndex,
+    setDraftOwnerElementId((current) => (current === selectedElement.id ? current : selectedElement.id));
+    setElementDraft((current) => {
+      if (hasMatchingInspectorDraft(current, selectedElement)) return current;
+      return {
+        x: selectedElement.x,
+        y: selectedElement.y,
+        width: selectedElement.width,
+        height: selectedElement.height,
+        rotation: selectedElement.rotation,
+        opacity: selectedElement.opacity,
+        zIndex: selectedElement.zIndex,
+      };
     });
-    setElementPayloadDraft(JSON.parse(JSON.stringify(selectedElement.payload)) as SlideElement['payload']);
+    setElementPayloadDraft((current) => {
+      if (payloadSignature(current) === payloadSignature(selectedElement.payload)) return current;
+      return JSON.parse(JSON.stringify(selectedElement.payload)) as SlideElement['payload'];
+    });
     if (selectionChanged) setLockAspectRatio(false);
   }, [isCanvasInteracting, selectedElement]);
 
@@ -157,7 +174,7 @@ export function useElementInspectorSync({
     autoSaveTimerRef.current = setTimeout(() => {
       autoSaveTimerRef.current = null;
       lastAutoSaveKeyRef.current = capturedKey;
-      void mutate(() => window.castApi.updateElement({
+      void saveElementUpdate({
         id: capturedId,
         x: capturedDraft.x,
         y: capturedDraft.y,
@@ -167,14 +184,14 @@ export function useElementInspectorSync({
         opacity: clamp(capturedDraft.opacity, 0, 1),
         zIndex: Math.round(capturedDraft.zIndex),
         payload: capturedPayload,
-      }));
+      });
     }, 120);
     return () => {
       if (!autoSaveTimerRef.current) return;
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
     };
-  }, [baseElements, draftOwnerElementId, elementDraft, elementPayloadDraft, isCanvasInteracting, mutate, selectedElementId]);
+  }, [baseElements, draftOwnerElementId, elementDraft, elementPayloadDraft, isCanvasInteracting, saveElementUpdate, selectedElementId]);
   return {
     draftElements,
     elementDraft,

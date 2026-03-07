@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "capture:ui-screenshots": "npm run build && node app/e2e/capture-ui-screenshots.mjs",
     "build:ndi-native": "npm --prefix packages/ndi-native run build",
     "clean:ndi-native": "npm --prefix packages/ndi-native run clean",
     "rebuild:ndi-native": "npm --prefix packages/ndi-native run rebuild"

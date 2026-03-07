@@ -1,110 +1,113 @@
-# Cast Interface UI Specification (Prototype v1)
+# Cast Interface UI Specification
+
+Updated on 2026-03-07.
 
 ## 1. Layout Structure
 
-Root layout uses four persistent zones with an added right utility rail:
+The renderer is organized around a `workbench` shell with three primary modes:
 
-1. `TopCommandBar`
-2. `MainWorkArea`
-   - `LeftHierarchyPanel`
-   - `CenterWorkspace`
-   - `RightOutputInspectorRail`
-3. `BottomResourceDrawer`
+1. `show`
+2. `slide-editor`
+3. `overlay-editor`
 
-### Component Tree
+Persistent shell surfaces:
 
-- `AppShell`
-  - `TopCommandBar`
-    - `ModeSegmentedControl` (`library`, `playlist`, `presentation`, `slide-editor`)
-    - `PrimaryActions`
-    - `PlaybackActions` (`prev`, `take`, `next`)
-    - `ContextChips` (`library`, `playlist`, `presentation`, `slide`)
-  - `MainWorkArea`
-    - `LeftHierarchyPanel`
-      - `LibraryTreeView`
-        - `LibraryNode`
-          - `PlaylistNode`
-            - `SegmentNode`
-              - `PresentationRefNode`
-    - `CenterWorkspace`
-      - `WorkspaceToolbar`
-      - `ViewModeTabs` (`single`, `grid`, `strip`)
-      - `CanvasStage` or `SlideGrid` or `SlideStrip`
-    - `RightOutputInspectorRail`
-      - `LivePreviewPanel`
-      - `InspectorTabs` (`presentation`, `slide`, `element`)
-      - `InspectorProperties`
-  - `BottomResourceDrawer`
-    - `ResourceTabs` (`media`, `overlays`, `shortcuts`)
-    - `MediaCollection`
-    - `OverlayCollection`
-    - `ShortcutReference`
+1. `AppToolbar`
+2. active workbench layout
+3. `StatusBar`
 
-## 2. Interaction States
+### Show mode layout
 
-### Slide States
+- `LibraryPanel`
+- `SlideBrowser`
+- `ResourceDrawer`
+- `PreviewPanel`
 
-- `live`: currently active output slide.
-- `queued`: available slide not active.
-- `selected`: focused card/item in editor context.
-- `warning`: slide contains no renderable elements.
-- `disabled`: unavailable interaction.
+### Slide editor layout
 
-### Tree States
+- `SlideListPanel`
+- `StagePanel`
+- `SlideNotesPanel`
+- `InspectorPanel`
 
-- `expanded`
-- `collapsed`
-- `selected`
-- `focused`
+### Overlay editor layout
 
-## 3. State-Color System
+- `OverlayListPanel`
+- `StagePanel`
+- `InspectorPanel`
 
-Use semantic tokens only. UI components may not hardcode arbitrary colors.
+## 2. Canonical Modes
 
-- `--state-live`: #2ec27e
-- `--state-queued`: #3d8bfd
-- `--state-selected`: #ff9f43
-- `--state-warning`: #f4c84a
-- `--state-disabled`: #6f7785
-- `--state-error`: #eb5757
+### Workbench mode
 
-Additional surface tokens:
+- `show`
+- `slide-editor`
+- `overlay-editor`
 
-- `--surface-0`: #1a1b1f
-- `--surface-1`: #202329
-- `--surface-2`: #2a2d34
-- `--surface-3`: #323640
-- `--stroke-subtle`: #3d414b
-- `--text-primary`: #f5f7fa
-- `--text-secondary`: #b5becd
+### Slide browser mode
+
+- `focus`
+- `grid`
+- `list`
+
+### Playlist browser mode
+
+- `current`
+- `tabs`
+- `continuous`
+
+### Library panel view
+
+- `libraries`
+- `playlist`
+
+## 3. User-Facing Vocabulary
+
+Use ProPresenter-style nouns for product surfaces:
+
+- `Library`
+- `Playlist`
+- `Continuous Playlist`
+- `Preview`
+- `Slide Editor`
+- `Overlay Editor`
+- `Media Bin`
+- `Overlay Bin`
+
+Use VS Code-style container nouns for structural terms:
+
+- `Workbench`
+- `Panel`
+- `Drawer`
+- `Sidebar`
 
 ## 4. Keyboard Map
 
-Global shortcuts (disabled while typing in inputs/textareas/contenteditable):
+Global shortcuts, disabled while typing in editable fields:
 
 - `ArrowRight`: next slide
 - `ArrowLeft`: previous slide
 - `1-9`: jump to slide index
-- `Enter` / `Space`: take current slide (manual trigger)
+- `Enter` / `Space`: take current slide
 - `Delete` / `Backspace`: delete selected element
-- `Cmd/Ctrl + 1`: library mode
-- `Cmd/Ctrl + 2`: playlist mode
-- `Cmd/Ctrl + 3`: presentation mode
-- `Cmd/Ctrl + 4`: slide editor mode
-- `Alt + 1`: single slide view
-- `Alt + 2`: slide grid view
-- `Alt + 3`: slide strip view
+- `Alt + 1`: `focus` slide browser mode
+- `Alt + 2`: `grid` slide browser mode
+- `Alt + 3`: `list` slide browser mode
+- `Alt + Shift + 1`: `current` playlist browser mode
+- `Alt + Shift + 2`: `tabs` playlist browser mode
+- `Alt + Shift + 3`: `continuous` playlist browser mode
 
-## 5. Accessibility and Focus Rules
+## 5. Interaction Rules
 
-- Tree uses `role="tree"`, nested items use `role="treeitem"`.
-- Slide grid uses `role="grid"` and slide cards use `role="gridcell"`.
-- All interactive controls have visible focus states.
-- Color is never the only state indicator; all states include text/icon labels.
+- Show mode focuses browsing and output preview.
+- Slide editor and overlay editor keep changes local until the user pushes them.
+- `StageViewport` is shared across show, slide editing, overlay editing, preview, and NDI output flows through the shared stage/rendering feature.
+- `LibraryPanelView` is UI state owned by the library browser, not navigation/domain state.
 
-## 6. Minimum Implementation Guarantees
+## 6. Implementation Guarantees
 
-- Hierarchy references remain reusable (presentation references in playlists).
-- Media drag/drop to canvas remains intact.
-- Overlay toggles remain global to library context.
-- NDI output frame updates remain tied to active slide/render updates.
+- Library references and playlist references remain reusable.
+- Media drag/drop to the stage remains intact.
+- Overlay assignment remains available from the Overlay Bin.
+- NDI output remains driven by the shared render scene provider.
+- Persisted presentation kinds remain `canvas` or `lyrics`.

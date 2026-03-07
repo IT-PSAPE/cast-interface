@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
 import Database from 'better-sqlite3';
 import { createId, nowIso } from '@core/utils';
@@ -11,6 +13,7 @@ import type {
   MediaAsset,
   Overlay,
   OverlayCreateInput,
+  OverlayUpdateInput,
   Playlist,
   PlaylistEntry,
   PlaylistSegment,
@@ -20,7 +23,8 @@ import type {
   Slide,
   SlideElement,
   SlideElementPayload,
-  SlideCreateInput
+  SlideCreateInput,
+  SlideNotesUpdateInput
 } from '@core/types';
 
 const DEFAULT_W = 1920;
@@ -35,6 +39,79 @@ const parseJson = <T>(value: string): T => {
   }
 };
 
+function emptyOverlayPayload(): SlideElementPayload {
+  return {
+    text: '',
+    fontFamily: 'Avenir Next',
+    fontSize: 48,
+    color: '#FFFFFF',
+    alignment: 'left',
+    weight: '700',
+  };
+}
+
+function summarizeOverlayElements(elements: SlideElement[]): Pick<Overlay, 'type' | 'x' | 'y' | 'width' | 'height' | 'opacity' | 'zIndex' | 'payload'> {
+  const primary = elements
+    .slice()
+    .sort((a, b) => a.zIndex - b.zIndex)
+    .at(-1);
+
+  if (!primary) {
+    return {
+      type: 'text',
+      x: 0,
+      y: 0,
+      width: DEFAULT_W,
+      height: DEFAULT_H,
+      opacity: 1,
+      zIndex: 0,
+      payload: emptyOverlayPayload(),
+    };
+  }
+
+  return {
+    type: primary.type === 'shape' ? 'shape' : primary.type === 'text' ? 'text' : primary.type === 'video' ? 'video' : 'image',
+    x: primary.x,
+    y: primary.y,
+    width: primary.width,
+    height: primary.height,
+    opacity: primary.opacity,
+    zIndex: primary.zIndex,
+    payload: primary.payload,
+  };
+}
+
+function legacyOverlayElement(row: {
+  id: string;
+  type: Overlay['type'];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+  z_index: number;
+  payload_json: string;
+  created_at: string;
+  updated_at: string;
+}): SlideElement {
+  return {
+    id: row.id,
+    slideId: row.id,
+    type: row.type === 'shape' ? 'shape' : row.type === 'text' ? 'text' : row.type === 'video' ? 'video' : 'image',
+    x: row.x,
+    y: row.y,
+    width: row.width,
+    height: row.height,
+    rotation: 0,
+    opacity: row.opacity,
+    zIndex: row.z_index,
+    layer: 'content',
+    payload: parseJson<SlideElementPayload>(row.payload_json),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export class CastRepository {
   private db: Database.Database;
 
@@ -45,7 +122,8 @@ export class CastRepository {
     this.db.pragma('journal_mode = WAL');
     this.setupSchema();
     this.ensureOrderingColumns();
-    this.seedIfEmpty();
+    this.ensureSlideNotesColumn();
+    this.ensureOverlayCompositionColumns();
     this.migrateMediaSrcProtocol();
   }
 
@@ -74,6 +152,7 @@ export class CastRepository {
         presentation_id TEXT NOT NULL,
         width INTEGER NOT NULL,
         height INTEGER NOT NULL,
+        notes TEXT NOT NULL DEFAULT '',
         order_index INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -154,6 +233,7 @@ export class CastRepository {
         z_index INTEGER NOT NULL,
         enabled INTEGER NOT NULL,
         payload_json TEXT NOT NULL,
+        elements_json TEXT NOT NULL DEFAULT '[]',
         animation_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -193,9 +273,9 @@ export class CastRepository {
 
       this.db
         .prepare(
-          'INSERT INTO slides (id, presentation_id, width, height, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO slides (id, presentation_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         )
-        .run(slideId, presentationId, DEFAULT_W, DEFAULT_H, 0, now, now);
+        .run(slideId, presentationId, DEFAULT_W, DEFAULT_H, '', 0, now, now);
 
       const titlePayload = JSON.stringify({
         text: 'Welcome to Cast Interface',
@@ -245,8 +325,8 @@ export class CastRepository {
 
       this.db
         .prepare(
-          `INSERT INTO overlays (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO overlays (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           createId(),
@@ -268,6 +348,31 @@ export class CastRepository {
             alignment: 'right',
             weight: '600'
           }),
+          JSON.stringify([
+            {
+              id: createId(),
+              slideId: '__seed_overlay__',
+              type: 'text',
+              x: 1540,
+              y: 1010,
+              width: 340,
+              height: 40,
+              rotation: 0,
+              opacity: 0.65,
+              zIndex: 999,
+              layer: 'content',
+              payload: {
+                text: 'CAST INTERFACE',
+                fontFamily: 'Helvetica',
+                fontSize: 28,
+                color: '#FFFFFF',
+                alignment: 'right',
+                weight: '600'
+              },
+              createdAt: now,
+              updatedAt: now,
+            },
+          ]),
           JSON.stringify({ kind: 'pulse', durationMs: 2000 }),
           now,
           now
@@ -278,38 +383,91 @@ export class CastRepository {
   }
 
   private migrateMediaSrcProtocol(): void {
-    const toNewSrc = (src: string): string | null => {
-      if (src.startsWith('file://')) {
-        const filePath = src.slice('file://'.length);
-        return `cast-media://${encodeURIComponent(filePath)}`;
-      }
+    const toCastMediaSrc = (src: string): string | null => {
       if (src.startsWith('blob:')) return null;
-      return null;
+
+      if (src.startsWith('file://')) {
+        const normalizedPath = filePathFromFileUrl(src);
+        if (!normalizedPath) return null;
+        return `cast-media://${encodeURIComponent(normalizedPath)}`;
+      }
+
+      if (src.startsWith('cast-media://')) {
+        const normalizedPath = decodeCastMediaPath(src);
+        if (!normalizedPath) return null;
+        return `cast-media://${encodeURIComponent(normalizedPath)}`;
+      }
+
+      return src;
+    };
+
+    const filePathFromFileUrl = (src: string): string | null => {
+      try {
+        return fileURLToPath(new URL(src));
+      } catch {
+        const rawPath = src.slice('file://'.length);
+        if (!rawPath) return null;
+        try {
+          return decodeURIComponent(rawPath);
+        } catch {
+          return rawPath;
+        }
+      }
+    };
+
+    const decodeCastMediaPath = (src: string): string | null => {
+      const encodedPath = src.slice('cast-media://'.length);
+      if (!encodedPath) return null;
+
+      let decodedOnce: string;
+      try {
+        decodedOnce = decodeURIComponent(encodedPath);
+      } catch {
+        return null;
+      }
+
+      if (!encodedPath.includes('%25')) return decodedOnce;
+
+      try {
+        const decodedTwice = decodeURIComponent(decodedOnce);
+        if (decodedTwice === decodedOnce) return decodedOnce;
+        if (existsSync(decodedOnce)) return decodedOnce;
+        if (existsSync(decodedTwice)) return decodedTwice;
+        return decodedTwice;
+      } catch {
+        return decodedOnce;
+      }
     };
 
     const tx = this.db.transaction(() => {
       const assets = this.db
-        .prepare("SELECT id, src FROM media_assets WHERE src LIKE 'file://%' OR src LIKE 'blob:%'")
+        .prepare("SELECT id, src FROM media_assets WHERE src LIKE 'cast-media://%' OR src LIKE 'file://%' OR src LIKE 'blob:%'")
         .all() as Array<{ id: string; src: string }>;
 
       const updateAsset = this.db.prepare('UPDATE media_assets SET src = ? WHERE id = ?');
       const deleteAsset = this.db.prepare('DELETE FROM media_assets WHERE id = ?');
       for (const asset of assets) {
-        const newSrc = toNewSrc(asset.src);
-        if (newSrc) updateAsset.run(newSrc, asset.id);
-        else deleteAsset.run(asset.id);
+        const newSrc = toCastMediaSrc(asset.src);
+        if (!newSrc) {
+          deleteAsset.run(asset.id);
+          continue;
+        }
+        if (newSrc !== asset.src) {
+          updateAsset.run(newSrc, asset.id);
+        }
       }
 
       const elements = this.db
-        .prepare("SELECT id, payload_json FROM slide_elements WHERE type IN ('image', 'video') AND (payload_json LIKE '%file://%' OR payload_json LIKE '%blob:%')")
+        .prepare("SELECT id, payload_json FROM slide_elements WHERE type IN ('image', 'video') AND (payload_json LIKE '%cast-media://%' OR payload_json LIKE '%file://%' OR payload_json LIKE '%blob:%')")
         .all() as Array<{ id: string; payload_json: string }>;
 
       const updateElement = this.db.prepare('UPDATE slide_elements SET payload_json = ? WHERE id = ?');
       const deleteElement = this.db.prepare('DELETE FROM slide_elements WHERE id = ?');
       for (const el of elements) {
         const payload = parseJson<{ src: string }>(el.payload_json);
-        const newSrc = toNewSrc(payload.src);
+        const newSrc = toCastMediaSrc(payload.src);
         if (newSrc) {
+          if (newSrc === payload.src) continue;
           payload.src = newSrc;
           updateElement.run(JSON.stringify(payload), el.id);
         } else {
@@ -358,6 +516,46 @@ export class CastRepository {
     const segmentColumns = this.db.prepare('PRAGMA table_info(playlist_segments)').all() as Array<{ name: string }>;
     if (!segmentColumns.some((column) => column.name === 'color_key')) {
       this.db.prepare('ALTER TABLE playlist_segments ADD COLUMN color_key TEXT').run();
+    }
+  }
+
+  private ensureOverlayCompositionColumns(): void {
+    const overlayColumns = this.db.prepare('PRAGMA table_info(overlays)').all() as Array<{ name: string }>;
+    if (!overlayColumns.some((column) => column.name === 'elements_json')) {
+      this.db.prepare("ALTER TABLE overlays ADD COLUMN elements_json TEXT NOT NULL DEFAULT '[]'").run();
+    }
+
+    const rows = this.db
+      .prepare(
+        `SELECT id, type, x, y, width, height, opacity, z_index, payload_json, created_at, updated_at, elements_json
+         FROM overlays`
+      )
+      .all() as Array<{
+      id: string;
+      type: Overlay['type'];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      opacity: number;
+      z_index: number;
+      payload_json: string;
+      created_at: string;
+      updated_at: string;
+      elements_json: string | null;
+    }>;
+
+    const updateElements = this.db.prepare('UPDATE overlays SET elements_json = ? WHERE id = ?');
+    for (const row of rows) {
+      if (row.elements_json) continue;
+      updateElements.run(JSON.stringify([legacyOverlayElement(row)]), row.id);
+    }
+  }
+
+  private ensureSlideNotesColumn(): void {
+    const slideColumns = this.db.prepare('PRAGMA table_info(slides)').all() as Array<{ name: string }>;
+    if (!slideColumns.some((column) => column.name === 'notes')) {
+      this.db.prepare("ALTER TABLE slides ADD COLUMN notes TEXT NOT NULL DEFAULT ''").run();
     }
   }
 
@@ -570,13 +768,14 @@ export class CastRepository {
 
     this.db
       .prepare(
-        'INSERT INTO slides (id, presentation_id, width, height, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO slides (id, presentation_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
         slideId,
         input.presentationId,
         input.width ?? DEFAULT_W,
         input.height ?? DEFAULT_H,
+        '',
         currentOrder + 1,
         now,
         now
@@ -607,6 +806,14 @@ export class CastRepository {
         );
     }
 
+    return this.getSnapshot();
+  }
+
+  updateSlideNotes(input: SlideNotesUpdateInput): AppSnapshot {
+    const now = nowIso();
+    this.db
+      .prepare('UPDATE slides SET notes = ?, updated_at = ? WHERE id = ?')
+      .run(input.notes, now, input.slideId);
     return this.getSnapshot();
   }
 
@@ -773,6 +980,7 @@ export class CastRepository {
   }
 
   createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): AppSnapshot {
+    this.assertMediaSource(asset.src);
     const now = nowIso();
     this.db
       .prepare(
@@ -788,34 +996,88 @@ export class CastRepository {
   }
 
   updateMediaAssetSrc(id: Id, src: string): AppSnapshot {
+    this.assertMediaSource(src);
     this.db.prepare('UPDATE media_assets SET src = ?, updated_at = ? WHERE id = ?').run(src, nowIso(), id);
     return this.getSnapshot();
   }
 
   createOverlay(input: OverlayCreateInput): AppSnapshot {
     const now = nowIso();
+    const elements = input.elements ?? [];
+    const summary = summarizeOverlayElements(elements);
     this.db
       .prepare(
         `INSERT INTO overlays
-         (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         createId(),
         input.libraryId,
         input.name,
-        input.type,
-        input.x,
-        input.y,
-        input.width,
-        input.height,
-        input.opacity,
-        input.zIndex,
+        summary.type,
+        summary.x,
+        summary.y,
+        summary.width,
+        summary.height,
+        summary.opacity,
+        summary.zIndex,
         1,
-        JSON.stringify(input.payload),
+        JSON.stringify(summary.payload),
+        JSON.stringify(elements),
         JSON.stringify(input.animation ?? { kind: 'none', durationMs: 0 }),
         now,
         now
+      );
+
+    return this.getSnapshot();
+  }
+
+  updateOverlay(input: OverlayUpdateInput): AppSnapshot {
+    const existing = this.db
+      .prepare('SELECT * FROM overlays WHERE id = ?')
+      .get(input.id) as
+      | {
+      id: string;
+      name: string;
+      type: Overlay['type'];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      opacity: number;
+      z_index: number;
+      payload_json: string;
+      elements_json: string;
+      animation_json: string;
+      }
+      | undefined;
+
+    if (!existing) return this.getSnapshot();
+
+    const nextElements = input.elements ?? parseJson<SlideElement[]>(existing.elements_json);
+    const summary = summarizeOverlayElements(nextElements);
+
+    this.db
+      .prepare(
+        `UPDATE overlays
+         SET name = ?, type = ?, x = ?, y = ?, width = ?, height = ?, opacity = ?, z_index = ?, payload_json = ?, elements_json = ?, animation_json = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        input.name ?? existing.name,
+        summary.type,
+        summary.x,
+        summary.y,
+        summary.width,
+        summary.height,
+        summary.opacity,
+        summary.zIndex,
+        JSON.stringify(summary.payload),
+        JSON.stringify(nextElements),
+        JSON.stringify(input.animation ?? parseJson(existing.animation_json)),
+        nowIso(),
+        input.id,
       );
 
     return this.getSnapshot();
@@ -980,6 +1242,11 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  deleteOverlay(overlayId: Id): AppSnapshot {
+    this.db.prepare('DELETE FROM overlays WHERE id = ?').run(overlayId);
+    return this.getSnapshot();
+  }
+
   private newLyricsTextPayload() {
     return {
       text: 'Verse line one\nVerse line two',
@@ -997,6 +1264,12 @@ export class CastRepository {
       strokeEnabled: false,
       shadowEnabled: false,
     };
+  }
+
+  private assertMediaSource(src: string): void {
+    if (src.startsWith('blob:')) {
+      throw new Error('Transient blob media sources are not allowed. Import from a local file path.');
+    }
   }
 
   private normalizePresentationKind(kind: string | null | undefined): PresentationKind {
@@ -1049,7 +1322,7 @@ export class CastRepository {
   private getSlidesByLibrary(libraryId: Id): Slide[] {
     const rows = this.db
       .prepare(
-        `SELECT s.id, s.presentation_id, s.width, s.height, s.order_index, s.created_at, s.updated_at
+        `SELECT s.id, s.presentation_id, s.width, s.height, s.notes, s.order_index, s.created_at, s.updated_at
          FROM slides s
          JOIN presentations p ON p.id = s.presentation_id
          WHERE p.library_id = ?
@@ -1060,6 +1333,7 @@ export class CastRepository {
       presentation_id: string;
       width: number;
       height: number;
+      notes: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -1070,6 +1344,7 @@ export class CastRepository {
       presentationId: row.presentation_id,
       width: row.width,
       height: row.height,
+      notes: row.notes,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -1238,10 +1513,10 @@ export class CastRepository {
   private getOverlaysByLibrary(libraryId: Id): Overlay[] {
     const rows = this.db
       .prepare(
-        `SELECT id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at
+        `SELECT id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
          FROM overlays
          WHERE library_id = ?
-         ORDER BY z_index ASC`
+         ORDER BY created_at ASC, id ASC`
       )
       .all(libraryId) as Array<{
       id: string;
@@ -1256,6 +1531,7 @@ export class CastRepository {
       z_index: number;
       enabled: number;
       payload_json: string;
+      elements_json: string;
       animation_json: string;
       created_at: string;
       updated_at: string;
@@ -1274,6 +1550,7 @@ export class CastRepository {
       zIndex: row.z_index,
       enabled: row.enabled === 1,
       payload: parseJson(row.payload_json),
+      elements: parseJson<SlideElement[]>(row.elements_json),
       animation: parseJson(row.animation_json),
       createdAt: row.created_at,
       updatedAt: row.updated_at

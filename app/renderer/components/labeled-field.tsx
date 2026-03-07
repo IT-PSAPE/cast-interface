@@ -45,9 +45,11 @@ export function FieldInput({ type = 'text', value, onChange, min, max, step }: F
 interface FieldTextareaProps {
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
 }
 
-export function FieldTextarea({ value, onChange }: FieldTextareaProps) {
+export function FieldTextarea({ value, onChange, placeholder, className = '' }: FieldTextareaProps) {
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     onChange(e.target.value);
   }
@@ -56,7 +58,8 @@ export function FieldTextarea({ value, onChange }: FieldTextareaProps) {
     <textarea
       value={value}
       onChange={handleChange}
-      className="rounded border border-stroke bg-surface-1 px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-focus focus:outline-none transition-colors"
+      placeholder={placeholder}
+      className={`rounded border border-stroke bg-surface-1 px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-focus focus:outline-none transition-colors ${className}`}
     />
   );
 }

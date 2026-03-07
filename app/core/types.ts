@@ -50,6 +50,7 @@ export interface Slide {
   presentationId: Id;
   width: number;
   height: number;
+  notes: string;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -173,6 +174,7 @@ export interface Overlay {
   zIndex: number;
   enabled: boolean;
   payload: SlideElementPayload;
+  elements: SlideElement[];
   animation: OverlayAnimation;
   createdAt: string;
   updatedAt: string;
@@ -217,12 +219,17 @@ export interface PlaybackState {
   slideIndex: number;
 }
 
-export type WorkspaceMode = 'library' | 'playlist' | 'presentation' | 'slide-editor';
+export type SlideBrowserMode = 'library' | 'playlist' | 'presentation' | 'slide-editor';
 
 export interface SlideCreateInput {
   presentationId: Id;
   width?: number;
   height?: number;
+}
+
+export interface SlideNotesUpdateInput {
+  slideId: Id;
+  notes: string;
 }
 
 export interface ElementCreateInput {
@@ -253,23 +260,22 @@ export interface ElementUpdateInput {
   payload?: SlideElementPayload;
 }
 
-export type NdiOutputName = 'audience' | 'stage';
+export type NdiOutputName = 'audience';
 
 export interface NdiOutputState {
   audience: boolean;
-  stage: boolean;
 }
 
 export interface OverlayCreateInput {
   libraryId: Id;
   name: string;
-  type: OverlayType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  opacity: number;
-  zIndex: number;
-  payload: SlideElementPayload;
+  elements?: SlideElement[];
+  animation?: OverlayAnimation;
+}
+
+export interface OverlayUpdateInput {
+  id: Id;
+  name?: string;
+  elements?: SlideElement[];
   animation?: OverlayAnimation;
 }

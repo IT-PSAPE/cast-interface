@@ -1,13 +1,11 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback, type ReactNode } from 'react';
 import type { Id, LibraryBundle, Presentation, PresentationKind } from '@core/types';
-import type { SidebarStage } from '../types/ui';
 import { useCast } from './cast-context';
 
 interface NavigationContextValue {
   currentLibraryId: Id | null;
   currentPlaylistId: Id | null;
   currentPresentationId: Id | null;
-  sidebarStage: SidebarStage;
   activeBundle: LibraryBundle | null;
   currentPresentation: Presentation | null;
   slideCountByPresentation: Map<Id, number>;
@@ -16,7 +14,6 @@ interface NavigationContextValue {
   openPresentation: (id: Id) => void;
   setCurrentPlaylistId: (id: Id | null) => void;
   setCurrentPresentationId: (id: Id | null) => void;
-  setSidebarStage: (stage: SidebarStage) => void;
   clearRecentlyCreated: () => void;
   createLibrary: () => Promise<void>;
   createPlaylist: () => Promise<void>;
@@ -32,13 +29,17 @@ interface NavigationContextValue {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
+export function resolveCurrentPresentationId(currentPresentationId: Id | null, presentationIds: Id[]): Id | null {
+  if (!currentPresentationId) return null;
+  return presentationIds.includes(currentPresentationId) ? currentPresentationId : null;
+}
+
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const { snapshot, mutate, setStatusText } = useCast();
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
   const [currentPlaylistId, setCurrentPlaylistId] = useState<Id | null>(null);
   const [currentPresentationId, setCurrentPresentationId] = useState<Id | null>(null);
-  const [sidebarStage, setSidebarStage] = useState<SidebarStage>('libraries');
   const [recentlyCreatedId, setRecentlyCreatedId] = useState<Id | null>(null);
 
   useEffect(() => {
@@ -49,9 +50,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
     const bundle = snapshot.bundles.find((b) => b.library.id === currentLibraryId);
     if (!bundle) return;
-    if (!currentPresentationId || !bundle.presentations.some((p) => p.id === currentPresentationId)) {
-      const nextPresentationId = bundle.presentations[0]?.id ?? null;
-      if (nextPresentationId !== currentPresentationId) setCurrentPresentationId(nextPresentationId);
+    const nextPresentationId = resolveCurrentPresentationId(
+      currentPresentationId,
+      bundle.presentations.map((presentation) => presentation.id),
+    );
+    if (nextPresentationId !== currentPresentationId) {
+      setCurrentPresentationId(nextPresentationId);
     }
     if (!currentPlaylistId || !bundle.playlists.some((p) => p.playlist.id === currentPlaylistId)) {
       const nextPlaylistId = bundle.playlists[0]?.playlist.id ?? null;
@@ -92,9 +96,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     const bundle = snapshot.bundles.find((b) => b.library.id === libraryId);
     if (!bundle) return;
     setCurrentLibraryId(libraryId);
-    setCurrentPresentationId(bundle.presentations[0]?.id ?? null);
+    setCurrentPresentationId(null);
     setCurrentPlaylistId(bundle.playlists[0]?.playlist.id ?? null);
-    setSidebarStage('playlists');
     setStatusText(`Switched to ${bundle.library.name}`);
   }, [snapshot, setStatusText]);
 
@@ -106,7 +109,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const createLibrary = useCallback(async () => {
     const previousIds = new Set(snapshot?.libraries.map((l) => l.id) ?? []);
     const next = await mutate(() => window.castApi.createLibrary('New Library'));
-    setSidebarStage('libraries');
     setStatusText('Created library');
     const createdId = findNewId(previousIds, next.libraries.map((l) => l.id));
     if (createdId) setRecentlyCreatedId(createdId);
@@ -184,15 +186,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<NavigationContextValue>(
     () => ({
-      currentLibraryId, currentPlaylistId, currentPresentationId, sidebarStage,
+      currentLibraryId, currentPlaylistId, currentPresentationId,
       activeBundle, currentPresentation, slideCountByPresentation, recentlyCreatedId,
       selectLibrary, openPresentation, setCurrentPlaylistId, setCurrentPresentationId,
-      setSidebarStage, clearRecentlyCreated, createLibrary, createPlaylist, createPresentation,
+      clearRecentlyCreated, createLibrary, createPlaylist, createPresentation,
       createSegment, addPresentationToSegment, moveCurrentPresentationToSegment,
       renameLibrary: renameLibraryAction, renamePlaylist: renamePlaylistAction,
       renamePresentation: renamePresentationAction, setPresentationKind: setPresentationKindAction,
     }),
-    [currentLibraryId, currentPlaylistId, currentPresentationId, sidebarStage,
+    [currentLibraryId, currentPlaylistId, currentPresentationId,
      activeBundle, currentPresentation, slideCountByPresentation, recentlyCreatedId,
      selectLibrary, openPresentation, createLibrary, createPlaylist, createPresentation,
      createSegment, addPresentationToSegment, moveCurrentPresentationToSegment,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActionButton } from '../../../components/action-button';
+import { Button } from '../../../components/button';
 import { SegmentedControl, SegmentedControlItem } from '../../../components/segmented-control';
 import { FieldInput, FieldSelect, LabeledField } from '../../../components/labeled-field';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -106,9 +106,9 @@ export function PresentationInspector() {
         <span className="text-[11px] text-text-muted uppercase tracking-wider">Title</span>
         <div className="mt-0.5 grid gap-1.5">
           <FieldInput type="text" value={titleDraft} onChange={handleTitleChange} />
-          <ActionButton onClick={handleRenameTitle} disabled={!canRename} className="w-fit">
+          <Button onClick={handleRenameTitle} disabled={!canRename} className="w-fit">
             Rename
-          </ActionButton>
+          </Button>
         </div>
       </div>
 
@@ -154,9 +154,9 @@ export function PresentationInspector() {
         <LabeledField label="Playlist Segment" wide>
           <FieldSelect value={targetSegmentOption} onChange={handleSegmentChange} options={segmentOptions} />
         </LabeledField>
-        <ActionButton onClick={handleMoveSegment} disabled={!canMove || !hasPendingMove} className="w-fit">
+        <Button onClick={handleMoveSegment} disabled={!canMove || !hasPendingMove} className="w-fit">
           Move to Segment
-        </ActionButton>
+        </Button>
       </div>
     </div>
   );

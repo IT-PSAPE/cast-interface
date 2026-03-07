@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, NDI_EVENTS } from '@core/ipc';
 import type {
   ElementCreateInput,
@@ -9,11 +9,14 @@ import type {
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
+  OverlayUpdateInput,
   SlideCreateInput,
+  SlideNotesUpdateInput,
   SlideFrame
 } from '@core/types';
 
 const api = {
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
   createLibrary: (name: string) => ipcRenderer.invoke(IPC.createLibrary, name),
   createPlaylist: (libraryId: Id, name: string) => ipcRenderer.invoke(IPC.createPlaylist, libraryId, name),
@@ -30,6 +33,7 @@ const api = {
     ipcRenderer.invoke(IPC.createPresentation, libraryId, title, kind),
   setPresentationKind: (id: Id, kind: PresentationKind) => ipcRenderer.invoke(IPC.setPresentationKind, id, kind),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
+  updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
   createElement: (input: ElementCreateInput) => ipcRenderer.invoke(IPC.createElement, input),
   createElementsBatch: (inputs: ElementCreateInput[]) => ipcRenderer.invoke(IPC.createElementsBatch, inputs),
   updateElement: (input: ElementUpdateInput) => ipcRenderer.invoke(IPC.updateElement, input),
@@ -40,7 +44,9 @@ const api = {
   deleteMediaAsset: (id: Id) => ipcRenderer.invoke(IPC.deleteMediaAsset, id),
   updateMediaAssetSrc: (id: Id, src: string) => ipcRenderer.invoke(IPC.updateMediaAssetSrc, id, src),
   createOverlay: (overlay: OverlayCreateInput) => ipcRenderer.invoke(IPC.createOverlay, overlay),
+  updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => ipcRenderer.invoke(IPC.setOverlayEnabled, overlayId, enabled),
+  deleteOverlay: (overlayId: Id) => ipcRenderer.invoke(IPC.deleteOverlay, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
   renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
@@ -49,11 +55,6 @@ const api = {
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
   deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
   sendNdiFrame: (frame: SlideFrame) => ipcRenderer.invoke(IPC.sendNdiFrame, frame),
-  connectNdiFramePort: () => {
-    const channel = new MessageChannel();
-    ipcRenderer.postMessage(IPC.connectNdiFramePort, null, [channel.port1]);
-    return channel.port2;
-  },
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),
   getNdiOutputState: () => ipcRenderer.invoke(IPC.getNdiOutputState),

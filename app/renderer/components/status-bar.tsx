@@ -14,10 +14,6 @@ export function StatusBar() {
           <span className={`inline-block size-1.5 rounded-full ${outputState.audience ? 'bg-live' : 'bg-error'}`} />
           Audience
         </span>
-        <span className="flex items-center gap-1">
-          <span className={`inline-block size-1.5 rounded-full ${outputState.stage ? 'bg-live' : 'bg-error'}`} />
-          Stage
-        </span>
       </div>
     </div>
   );

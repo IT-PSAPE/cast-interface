@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { createId } from '@core/utils';
 import type { AppSnapshot, ElementCreateInput, ElementUpdateInput, Id, Slide, SlideElement } from '@core/types';
+import { createId } from '../utils/create-id';
 import { buildSnapshotDiff } from './element-history-utils';
 import { cloneElements, payloadSignature } from './element-context-utils';
 
@@ -58,24 +58,30 @@ interface UseElementHistoryInput {
   baseElements: SlideElement[];
   effectiveElements: SlideElement[];
   currentSlide: Slide | null;
+  historyKey: string | null;
   selectedElementIds: Id[];
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
   selectElements: (ids: Id[]) => void;
   setDraftElements: React.Dispatch<React.SetStateAction<Record<Id, Partial<SlideElement>>>>;
   setCanvasInteracting: React.Dispatch<React.SetStateAction<boolean>>;
+  saveElementUpdates: (updates: ElementUpdateInput[]) => Promise<void>;
+  replaceElements?: (elements: SlideElement[]) => Promise<void>;
 }
 
 export function useElementHistory({
   baseElements,
   effectiveElements,
   currentSlide,
+  historyKey,
   selectedElementIds,
   mutate,
   setStatusText,
   selectElements,
   setDraftElements,
   setCanvasInteracting,
+  saveElementUpdates,
+  replaceElements,
 }: UseElementHistoryInput) {
   const historyPastRef = useRef<SlideElement[][]>([]);
   const historyFutureRef = useRef<SlideElement[][]>([]);
@@ -87,7 +93,7 @@ export function useElementHistory({
     historyFutureRef.current = [];
     clipboardRef.current = [];
     pasteCountRef.current = 0;
-  }, [currentSlide?.id]);
+  }, [historyKey]);
 
   useEffect(() => {
     setDraftElements((current) => clearDraftElementsSyncedWithBase(current, baseElements));
@@ -100,6 +106,12 @@ export function useElementHistory({
   }, [baseElements]);
 
   const applySnapshot = useCallback(async (target: SlideElement[]) => {
+    if (replaceElements) {
+      await replaceElements(target);
+      setDraftElements({});
+      setCanvasInteracting(false);
+      return;
+    }
     const diff = buildSnapshotDiff(baseElements, target);
     if (diff.creates.length === 0 && diff.updates.length === 0 && diff.deletes.length === 0) return;
     await mutate(async () => {
@@ -112,16 +124,13 @@ export function useElementHistory({
     });
     setDraftElements({});
     setCanvasInteracting(false);
-  }, [baseElements, mutate, setCanvasInteracting, setDraftElements]);
+  }, [baseElements, mutate, replaceElements, setCanvasInteracting, setDraftElements]);
 
   const commitElementUpdates = useCallback(async (updates: ElementUpdateInput[], withHistory = true) => {
     if (updates.length === 0) return;
     if (withHistory) pushHistorySnapshot();
-    await mutate(() => {
-      if (updates.length === 1) return window.castApi.updateElement(updates[0]);
-      return window.castApi.updateElementsBatch(updates);
-    });
-  }, [mutate, pushHistorySnapshot]);
+    await saveElementUpdates(updates);
+  }, [pushHistorySnapshot, saveElementUpdates]);
 
   const copySelection = useCallback(() => {
     const targets = baseElements.filter((element) => selectedElementIds.includes(element.id));
@@ -150,10 +159,29 @@ export function useElementHistory({
       layer: element.layer,
       payload: JSON.parse(JSON.stringify(element.payload)) as SlideElement['payload'],
     }));
-    await mutate(() => window.castApi.createElementsBatch(creates));
+    if (replaceElements) {
+      await replaceElements([...baseElements, ...creates.map((input) => ({
+        id: input.id!,
+        slideId: input.slideId,
+        type: input.type,
+        x: input.x,
+        y: input.y,
+        width: input.width,
+        height: input.height,
+        rotation: input.rotation ?? 0,
+        opacity: input.opacity ?? 1,
+        zIndex: input.zIndex ?? 0,
+        layer: input.layer ?? 'content',
+        payload: input.payload,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))]);
+    } else {
+      await mutate(() => window.castApi.createElementsBatch(creates));
+    }
     selectElements(creates.map((input) => input.id!).reverse());
     setStatusText(`Pasted ${creates.length} object(s)`);
-  }, [currentSlide, mutate, pushHistorySnapshot, selectElements, setStatusText]);
+  }, [baseElements, currentSlide, mutate, pushHistorySnapshot, replaceElements, selectElements, setStatusText]);
 
   const nudgeSelection = useCallback(async (dx: number, dy: number) => {
     const targets = effectiveElements.filter((element) => selectedElementIds.includes(element.id) && !element.payload.locked);

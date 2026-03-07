@@ -1,0 +1,133 @@
+import { useRef, useState } from 'react';
+import type { Id, MediaAsset } from '@core/types';
+import { ContextMenu } from '../../../components/context-menu';
+import type { ContextMenuItem } from '../../../components/context-menu';
+import { IconButton } from '../../../components/icon-button';
+import { ThumbnailTile } from '../../../components/thumbnail-tile';
+import { useNavigation } from '../../../contexts/navigation-context';
+import { useElements } from '../../../contexts/element-context';
+import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
+
+interface MenuState { x: number; y: number; assetId: Id }
+
+interface MediaBinPanelProps {
+  filterText: string;
+}
+
+export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
+  const { activeBundle } = useNavigation();
+  const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationLayers();
+  const { deleteMedia, changeMediaSrc } = useElements();
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const changeSrcTargetRef = useRef<Id | null>(null);
+
+  if (!activeBundle) return null;
+
+  const normalizedFilter = filterText.trim().toLowerCase();
+  const mediaAssets = activeBundle.mediaAssets.filter((asset) => {
+    if (!normalizedFilter) return true;
+    return asset.name.toLowerCase().includes(normalizedFilter) || asset.type.toLowerCase().includes(normalizedFilter);
+  });
+
+  function openMenu(assetId: Id, button: HTMLButtonElement) {
+    const rect = button.getBoundingClientRect();
+    setMenuState({ x: rect.left, y: rect.bottom + 4, assetId });
+  }
+
+  function handleApply(assetId: Id) {
+    setMediaLayerAsset(assetId);
+  }
+
+  function handleChangeSrc(assetId: Id) {
+    changeSrcTargetRef.current = assetId;
+    fileInputRef.current?.click();
+  }
+
+  function handleDelete(assetId: Id) {
+    void deleteMedia(assetId);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const targetId = changeSrcTargetRef.current;
+    if (file && targetId) void changeMediaSrc(targetId, file);
+    changeSrcTargetRef.current = null;
+    e.target.value = '';
+  }
+
+  function buildMenuItems(assetId: Id): ContextMenuItem[] {
+    return [
+      { id: 'apply', label: 'Apply to Layer', onSelect: () => handleApply(assetId) },
+      { id: 'change-src', label: 'Change Source', onSelect: () => handleChangeSrc(assetId) },
+      { id: 'delete', label: 'Delete', danger: true, onSelect: () => handleDelete(assetId) },
+    ];
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+        {mediaAssets.map((asset, index) => {
+          function handleDragStart(e: React.DragEvent) { e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset)); }
+          function handleAssignLayer() { setMediaLayerAsset(asset.id); }
+          function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
+            e.stopPropagation();
+            openMenu(asset.id, e.currentTarget);
+          }
+
+          return (
+            <div
+              key={asset.id}
+              className="group cursor-grab"
+              draggable
+              onDragStart={handleDragStart}
+            >
+              <ThumbnailTile
+                onClick={handleAssignLayer}
+                selected={mediaLayerAssetId === asset.id}
+                body={
+                  <>
+                    <MediaThumbnail asset={asset} />
+                    <div className="absolute right-1 top-1 hidden group-hover:block">
+                      <IconButton label="Media options" onClick={handleMenuClick} className="h-5 w-5 border-stroke bg-surface-2/80 text-[11px] leading-none">
+                        <span aria-hidden="true">···</span>
+                      </IconButton>
+                    </div>
+                  </>
+                }
+                caption={<><span className="text-text-muted">{index + 1}</span> {asset.name}</>}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {menuState ? (
+        <ContextMenu
+          x={menuState.x}
+          y={menuState.y}
+          items={buildMenuItems(menuState.assetId)}
+          onClose={() => setMenuState(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function MediaThumbnail({ asset }: { asset: MediaAsset }) {
+  if (asset.type === 'image') {
+    return <img src={asset.src} alt={asset.name} loading="lazy" draggable={false} className="w-full h-full object-cover block" />;
+  }
+  if (asset.type === 'video') {
+    return <video src={asset.src} muted playsInline preload="metadata" className="w-full h-full object-cover block" />;
+  }
+  return <span className="text-text-muted text-[11px] font-bold tracking-wider uppercase">{asset.type}</span>;
+}

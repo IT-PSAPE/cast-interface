@@ -2,10 +2,10 @@ import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVe
 import { applyVisualPayload, readTextFormatting, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element-context';
-import { ActionButton } from '../../../components/action-button';
+import { Button } from '../../../components/button';
 import { FieldInput, FieldSelect, FieldTextarea, LabeledField } from '../../../components/labeled-field';
 import { SegmentedControl, SegmentedControlItem } from '../../../components/segmented-control';
-import { ToggleSection } from '../../../components/toggle-section';
+import { CheckboxSection } from '../../../components/checkbox-section';
 import { useSystemFonts } from '../hooks/use-system-fonts';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
@@ -16,6 +16,8 @@ const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
 
 export function TextElementInspector() {
   const { selectedElement, elementPayloadDraft, setElementPayloadDraft, deleteSelected } = useElements();
+  const activeFont = selectedElement?.type === 'text' && elementPayloadDraft ? (elementPayloadDraft as TextElementPayload).fontFamily : '';
+  const fontOptions = useSystemFonts(activeFont);
 
   if (!selectedElement || !elementPayloadDraft) {
     return <div className="text-[12px] text-text-muted">Select an object to edit text properties.</div>;
@@ -28,7 +30,6 @@ export function TextElementInspector() {
   const textPayload = elementPayloadDraft as TextElementPayload;
   const formatting = readTextFormatting(textPayload);
   const visual = readVisualPayload('text', textPayload);
-  const fontOptions = useSystemFonts(formatting.fontFamily);
   const isBold = Number.parseInt(formatting.weight, 10) >= 600;
 
   function updateText(patch: Partial<TextElementPayload>) { setElementPayloadDraft({ ...textPayload, ...patch }); }
@@ -111,25 +112,25 @@ export function TextElementInspector() {
           </SegmentedControl>
         </div>
 
-        <ToggleSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
+        <CheckboxSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
           <div className="grid grid-cols-2 gap-2">
             <LabeledField label="Color"><FieldInput type="text" value={visual.strokeColor} onChange={handleStrokeColorChange} /></LabeledField>
             <LabeledField label="Width"><FieldInput type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} /></LabeledField>
           </div>
-        </ToggleSection>
+        </CheckboxSection>
 
-        <ToggleSection label="Shadow" enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
+        <CheckboxSection label="Shadow" enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
           <div className="grid grid-cols-2 gap-2">
             <LabeledField label="Color"><FieldInput type="text" value={visual.shadowColor} onChange={handleShadowColorChange} /></LabeledField>
             <LabeledField label="Blur"><FieldInput type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} /></LabeledField>
             <LabeledField label="Offset X"><FieldInput type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} /></LabeledField>
             <LabeledField label="Offset Y"><FieldInput type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} /></LabeledField>
           </div>
-        </ToggleSection>
+        </CheckboxSection>
       </fieldset>
 
       <div className="mt-2 border-t border-stroke-light pt-2">
-        <ActionButton variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</ActionButton>
+        <Button variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</Button>
       </div>
     </div>
   );

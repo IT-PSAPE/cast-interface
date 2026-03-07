@@ -1,9 +1,10 @@
 import { applyVisualPayload, readVisualPayload, supportsVisualStyling, type VisualPayloadState } from '@core/element-payload';
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element-context';
-import { ActionButton } from '../../../components/action-button';
+import { Button } from '../../../components/button';
+import { CheckboxField } from '../../../components/checkbox-field';
 import { LabeledField, FieldInput } from '../../../components/labeled-field';
-import { ToggleSection } from '../../../components/toggle-section';
+import { CheckboxSection } from '../../../components/checkbox-section';
 import type { ElementInspectorDraft } from '../../../types/ui';
 
 export function ShapeElementInspector() {
@@ -58,7 +59,6 @@ export function ShapeElementInspector() {
   function handleOpacityChange(value: string) {
     updateDraft((current) => ({ ...current, opacity: Math.max(0, Math.min(1, parseNumber(value, current.opacity * 100) / 100)) }));
   }
-  function handleAspectLockToggle(event: React.ChangeEvent<HTMLInputElement>) { setLockAspectRatio(event.target.checked); }
   function handleFlipX() { updateVisual({ flipX: !visual.flipX }); }
   function handleFlipY() { updateVisual({ flipY: !visual.flipY }); }
   function handleVisibilityToggle(enabled: boolean) { updateVisual({ visible: enabled }); }
@@ -87,39 +87,36 @@ export function ShapeElementInspector() {
         </div>
 
         <div className="flex items-center gap-2 border-t border-stroke-light pt-1.5">
-          <label className="flex items-center gap-2 text-[12px] text-text-secondary">
-            <input type="checkbox" checked={lockAspectRatio} onChange={handleAspectLockToggle} />
-            <span>Lock ratio</span>
-          </label>
-          <ActionButton onClick={handleFlipX} className={visual.flipX ? 'border-focus text-text-primary' : ''}>Flip H</ActionButton>
-          <ActionButton onClick={handleFlipY} className={visual.flipY ? 'border-focus text-text-primary' : ''}>Flip V</ActionButton>
+          <CheckboxField checked={lockAspectRatio} onChange={setLockAspectRatio} label="Lock ratio" />
+          <Button onClick={handleFlipX} className={visual.flipX ? 'border-focus text-text-primary' : ''}>Flip H</Button>
+          <Button onClick={handleFlipY} className={visual.flipY ? 'border-focus text-text-primary' : ''}>Flip V</Button>
         </div>
 
-        <ToggleSection label="Visibility" enabled={visual.visible} onToggle={handleVisibilityToggle} />
+        <CheckboxSection label="Visibility" enabled={visual.visible} onToggle={handleVisibilityToggle} />
 
         {canStyle ? (
           <>
-            <ToggleSection label="Fill" enabled={visual.fillEnabled} onToggle={handleFillToggle}>
+            <CheckboxSection label="Fill" enabled={visual.fillEnabled} onToggle={handleFillToggle}>
               <LabeledField label="Color" wide>
                 <FieldInput type="text" value={visual.fillColor} onChange={handleFillColorChange} />
               </LabeledField>
-            </ToggleSection>
+            </CheckboxSection>
 
-            <ToggleSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
+            <CheckboxSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
               <div className="grid grid-cols-2 gap-2">
                 <LabeledField label="Color"><FieldInput type="text" value={visual.strokeColor} onChange={handleStrokeColorChange} /></LabeledField>
                 <LabeledField label="Width"><FieldInput type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} /></LabeledField>
               </div>
-            </ToggleSection>
+            </CheckboxSection>
 
-            <ToggleSection label="Shadow" enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
+            <CheckboxSection label="Shadow" enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
               <div className="grid grid-cols-2 gap-2">
                 <LabeledField label="Color"><FieldInput type="text" value={visual.shadowColor} onChange={handleShadowColorChange} /></LabeledField>
                 <LabeledField label="Blur"><FieldInput type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} /></LabeledField>
                 <LabeledField label="Offset X"><FieldInput type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} /></LabeledField>
                 <LabeledField label="Offset Y"><FieldInput type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} /></LabeledField>
               </div>
-            </ToggleSection>
+            </CheckboxSection>
           </>
         ) : (
           <div className="border-t border-stroke-light pt-1.5 text-[12px] text-text-muted">Fill, stroke, and shadow are available for shape and text objects.</div>
@@ -127,7 +124,7 @@ export function ShapeElementInspector() {
       </fieldset>
 
       <div className="mt-2 border-t border-stroke-light pt-2">
-        <ActionButton variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</ActionButton>
+        <Button variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</Button>
       </div>
     </div>
   );
