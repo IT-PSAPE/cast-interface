@@ -48,7 +48,10 @@ export function StagePanel() {
   }, [createFromMedia]);
 
   return (
-    <section className="grid h-full min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-background-primary/50">
+    <section
+      data-ui-region="stage-panel"
+      className="grid h-full min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-background-primary/50"
+    >
       <div className="relative min-h-0 overflow-hidden p-2">
         {hasCanvasSource ? (
           <>

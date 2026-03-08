@@ -3,162 +3,443 @@ import path from 'node:path';
 import process from 'node:process';
 import { _electron as electron } from 'playwright';
 
-const OUTPUT_DIR = path.resolve('out/playwright');
+const OUTPUT_ROOT = path.resolve('docs/ui-spec-assets');
+const SHARED_OUTPUT_DIR = path.join(OUTPUT_ROOT, 'shared');
+const APP_OUTPUT_DIR = path.join(OUTPUT_ROOT, 'app');
+const FEATURE_OUTPUT_DIR = path.join(OUTPUT_ROOT, 'features');
+const TEMP_USER_DATA_DIR = path.resolve('out/playwright/user-data');
+const ELECTRON_ENTRY = path.resolve('out/main/index.js');
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-async function waitForUi(page) {
-  await page.getByRole('tab', { name: 'Show' }).waitFor({ state: 'visible', timeout: 30000 });
+function resetCaptureEnvironment() {
+  fs.rmSync(TEMP_USER_DATA_DIR, { recursive: true, force: true });
+  ensureDir(TEMP_USER_DATA_DIR);
+  ensureDir(OUTPUT_ROOT);
+  ensureDir(SHARED_OUTPUT_DIR);
+  ensureDir(APP_OUTPUT_DIR);
+  ensureDir(FEATURE_OUTPUT_DIR);
+}
+
+async function waitForUiSpec(page) {
+  await page.locator('[data-ui-spec="shared-actions"]').waitFor({ state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(250);
+}
+
+async function waitForApp(page) {
+  await page.locator('[data-ui-region="app-toolbar"]').waitFor({ state: 'visible', timeout: 30000 });
   await page.waitForTimeout(500);
 }
 
-async function seedDataIfEmpty(page) {
-  const hasLibraries = await page.evaluate(async () => {
-    const snapshot = await window.castApi.getSnapshot();
-    return snapshot.libraries.length > 0;
-  });
-  if (hasLibraries) return;
-
-  await page.evaluate(async () => {
-    const librarySnapshot = await window.castApi.createLibrary('Auto Library');
-    const library = librarySnapshot.libraries[librarySnapshot.libraries.length - 1];
-    if (!library) return;
-
-    const presentationSnapshot = await window.castApi.createPresentation('Auto Presentation');
-    const presentation = presentationSnapshot.presentations[presentationSnapshot.presentations.length - 1];
-    if (!presentation) return;
-
-    await window.castApi.createSlide({ presentationId: presentation.id });
-
-    await window.castApi.createPlaylist(library.id, 'Auto Playlist');
-    const playlistSnapshot = await window.castApi.getSnapshot();
-    const bundleAfterPlaylist = playlistSnapshot.libraryBundles.find((entry) => entry.library.id === library.id);
-    const playlistId = bundleAfterPlaylist?.playlists[0]?.playlist.id;
-    if (!playlistId) return;
-
-    await window.castApi.createPlaylistSegment(playlistId, 'Auto Segment');
-    const segmentSnapshot = await window.castApi.getSnapshot();
-    const bundleAfterSegment = segmentSnapshot.libraryBundles.find((entry) => entry.library.id === library.id);
-    const segmentId = bundleAfterSegment?.playlists[0]?.segments[0]?.segment.id;
-    if (!segmentId) return;
-
-    await window.castApi.addPresentationToSegment(segmentId, presentation.id);
+async function launchRenderer({ uiSpec, viewport }) {
+  const app = await electron.launch({
+    executablePath: process.env.ELECTRON_BINARY ?? (await import('electron')).default,
+    args: [
+      ELECTRON_ENTRY,
+      `--user-data-dir=${TEMP_USER_DATA_DIR}`,
+      ...(uiSpec ? ['--ui-spec'] : []),
+    ],
   });
 
-  await page.reload();
-  await waitForUi(page);
+  const page = await app.firstWindow();
+  await page.setViewportSize(viewport);
+  if (uiSpec) {
+    await waitForUiSpec(page);
+  } else {
+    await waitForApp(page);
+  }
+
+  return { app, page };
 }
 
-async function screenshotFull(page, name) {
-  await page.screenshot({ path: path.join(OUTPUT_DIR, name), fullPage: true });
+async function captureLocator(locator, filePath) {
+  await locator.first().scrollIntoViewIfNeeded();
+  await locator.first().screenshot({
+    path: filePath,
+    animations: 'disabled',
+    caret: 'hide',
+  });
 }
 
-async function screenshotLocator(locator, name) {
-  await locator.first().screenshot({ path: path.join(OUTPUT_DIR, name) });
+async function clickToolbarView(page, label) {
+  await page.locator('[data-ui-region="app-toolbar"]').getByRole('button', { name: label }).click();
+  await page.waitForTimeout(350);
 }
 
-async function clickTab(page, tabName) {
-  await page.getByRole('tab', { name: tabName }).click();
+async function clickTab(page, label) {
+  await page.getByRole('tab', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickSlideBrowserMode(page, label) {
+  await page.locator('[data-ui-region="slide-browser"]').getByRole('button', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickPlaylistBrowserMode(page, label) {
+  await page.locator('[data-ui-region="slide-browser"]').getByRole('button', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function ensureLibrarySelectorView(page) {
+  const backButton = page.locator('[data-ui-region="library-panel"]').getByRole('button', { name: 'Back to libraries' });
+  const hasBackButton = await backButton.isVisible().catch(() => false);
+  if (hasBackButton) {
+    await backButton.click();
+    await page.waitForTimeout(350);
+  }
+}
+
+async function ensurePlaylistView(page) {
+  const backButton = page.locator('[data-ui-region="library-panel"]').getByRole('button', { name: 'Back to libraries' });
+  const isPlaylistView = await backButton.isVisible().catch(() => false);
+  if (isPlaylistView) return;
+
+  await page.locator('[data-ui-region="library-panel"]').getByRole('listitem').first().click();
   await page.waitForTimeout(400);
 }
 
-async function ensurePresentationSelected(page) {
-  const noPresentation = page.getByText('No presentation selected');
-  const noPresentationVisible = await noPresentation.first().isVisible().catch(() => false);
-  if (!noPresentationVisible) return;
-
-  const firstLibrary = page.locator('[role=\"list\"][aria-label=\"Libraries\"] [role=\"listitem\"]').first();
-  const libraryVisible = await firstLibrary.isVisible().catch(() => false);
-  if (libraryVisible) {
-    await firstLibrary.click();
-    await page.waitForTimeout(500);
-  }
-
-  const libraryPresentationSection = page
-    .getByText('Project Presentations', { exact: true })
-    .first()
-    .locator('xpath=ancestor::section[1]');
-  const firstLibraryPresentation = libraryPresentationSection
-    .locator('.group.relative > button:not([aria-label^=\"Open \"])')
-    .first();
-  const presentationVisible = await firstLibraryPresentation.isVisible().catch(() => false);
-  if (presentationVisible) {
-    await firstLibraryPresentation.click();
-    await page.waitForTimeout(600);
-  }
-}
-
-async function tryClick(page, locator) {
-  const target = locator.first();
-  const visible = await target.isVisible().catch(() => false);
-  if (!visible) return false;
-  await target.click();
+async function selectPresentation(page, title) {
+  await ensurePlaylistView(page);
+  await page.locator('[data-ui-region="library-panel"]').getByRole('button', { name: title }).first().click();
   await page.waitForTimeout(500);
-  return true;
 }
 
-async function captureShowView(page) {
-  await clickTab(page, 'Show');
-  await ensurePresentationSelected(page);
+async function selectSlideInEditor(page, index) {
+  await page.locator('[data-ui-region="slide-list-panel"] [role="grid"] > button').nth(index).click();
+  await page.waitForTimeout(400);
+}
 
-  await screenshotFull(page, 'show-full.png');
-
-  await screenshotLocator(page.locator('header', { hasText: 'Views' }), 'show-command-bar.png');
-  await screenshotLocator(page.locator('aside', { hasText: 'Library' }), 'show-sidebar.png');
-  await screenshotLocator(page.locator('main'), 'show-workspace-main.png');
-  await screenshotLocator(page.locator('footer', { hasText: 'Media' }), 'show-resource-drawer-media.png');
-  await screenshotLocator(page.locator('aside', { hasText: 'Clear All Layers' }), 'show-preview-rail.png');
-
-  await clickTab(page, 'Outline view');
-  await screenshotLocator(page.locator('main'), 'show-workspace-outline-mode.png');
-
-  await clickTab(page, 'Grid view');
-
-  await clickTab(page, 'Overlays');
-  await screenshotLocator(page.locator('footer', { hasText: 'Overlays' }), 'show-resource-drawer-overlays.png');
-
-  await clickTab(page, 'Shortcuts');
-  await screenshotLocator(page.locator('footer', { hasText: 'Shortcuts' }), 'show-resource-drawer-shortcuts.png');
-
+async function assignMediaLayer(page) {
   await clickTab(page, 'Media');
+  await page.locator('[data-ui-region="resource-drawer"]').getByRole('button', { name: /Gradient Backdrop/i }).click();
+  await page.waitForTimeout(350);
 }
 
-async function captureEditView(page) {
-  await clickTab(page, 'Edit');
+async function assignOverlayLayer(page) {
+  await clickTab(page, 'Overlays');
+  await page.locator('[data-ui-region="resource-drawer"]').getByRole('button', { name: /Watermark/i }).click();
+  await page.waitForTimeout(350);
+}
 
-  await screenshotFull(page, 'edit-full.png');
+async function seedScenario(page) {
+  const gradientBackdrop = createSvgDataUrl('#0f172a', '#2563eb', 'Gradient Backdrop');
 
-  await screenshotLocator(page.locator('aside', { hasText: 'Objects' }), 'edit-slide-list-panel.png');
-  await screenshotLocator(page.locator('section', { hasText: 'Selection' }), 'edit-canvas-panel.png');
-  await screenshotLocator(page.locator('aside').filter({ has: page.getByRole('tab', { name: 'Presentation' }) }), 'edit-inspector-presentation.png');
+  await page.evaluate(async ({ gradientBackdropSrc }) => {
+    async function getSnapshot() {
+      return window.castApi.getSnapshot();
+    }
 
-  await clickTab(page, 'Slide');
-  await screenshotLocator(page.locator('aside').filter({ has: page.getByRole('tab', { name: 'Slide' }) }), 'edit-inspector-slide.png');
+    function sortByOrder(items) {
+      return items.slice().sort((left, right) => left.order - right.order);
+    }
 
-  const createdText = await tryClick(page, page.getByRole('button', { name: 'Add Text' }));
-  if (!createdText) return;
+    function createTextElement(text, x, y, width, height) {
+      return {
+        type: 'text',
+        x,
+        y,
+        width,
+        height,
+        zIndex: 10,
+        layer: 'content',
+        payload: {
+          text,
+          fontFamily: 'Avenir Next',
+          fontSize: 52,
+          color: '#FFFFFF',
+          alignment: 'center',
+          verticalAlign: 'middle',
+          lineHeight: 1.2,
+          weight: '700',
+        },
+      };
+    }
 
-  await tryClick(page, page.getByRole('button').filter({ hasText: 'New Text Element' }));
+    function createShapeElement(fillColor, x, y, width, height) {
+      return {
+        type: 'shape',
+        x,
+        y,
+        width,
+        height,
+        zIndex: 1,
+        layer: 'background',
+        payload: {
+          fillColor,
+          borderColor: '#FFFFFF33',
+          borderWidth: 2,
+          borderRadius: 18,
+        },
+      };
+    }
 
-  const hasShapeTab = await page.getByRole('tab', { name: 'Shape' }).first().isVisible().catch(() => false);
-  if (hasShapeTab) {
-    await clickTab(page, 'Shape');
-    await screenshotLocator(page.locator('aside').filter({ has: page.getByRole('tab', { name: 'Shape' }) }), 'edit-inspector-shape.png');
+    async function ensureBaseStructure() {
+      let snapshot = await getSnapshot();
+      let library = snapshot.libraries[0] ?? null;
+      if (!library) {
+        await window.castApi.createLibrary('Church Library');
+        snapshot = await getSnapshot();
+        library = snapshot.libraries[0] ?? null;
+      }
+
+      let bundle = snapshot.libraryBundles.find((entry) => entry.library.id === library.id) ?? snapshot.libraryBundles[0] ?? null;
+      let playlist = bundle?.playlists[0]?.playlist ?? null;
+      if (!playlist) {
+        await window.castApi.createPlaylist(library.id, 'Sunday Service');
+        snapshot = await getSnapshot();
+        bundle = snapshot.libraryBundles.find((entry) => entry.library.id === library.id) ?? snapshot.libraryBundles[0] ?? null;
+        playlist = bundle?.playlists[0]?.playlist ?? null;
+      }
+
+      let segment = bundle?.playlists[0]?.segments[0]?.segment ?? null;
+      if (!segment) {
+        await window.castApi.createPlaylistSegment(playlist.id, 'Opening');
+        snapshot = await getSnapshot();
+        bundle = snapshot.libraryBundles.find((entry) => entry.library.id === library.id) ?? snapshot.libraryBundles[0] ?? null;
+        segment = bundle?.playlists[0]?.segments[0]?.segment ?? null;
+      }
+
+      return {
+        libraryId: library.id,
+        playlistId: playlist.id,
+        segmentId: segment.id,
+      };
+    }
+
+    async function ensureMediaAsset(name, src) {
+      const snapshot = await getSnapshot();
+      const existing = snapshot.mediaAssets.find((asset) => asset.name === name);
+      if (existing) return existing.id;
+      await window.castApi.createMediaAsset({ name, src, type: 'image' });
+      const next = await getSnapshot();
+      return next.mediaAssets.find((asset) => asset.name === name)?.id ?? null;
+    }
+
+    async function ensurePresentation(ids, title, slideSpecs) {
+      let snapshot = await getSnapshot();
+      let presentation = snapshot.presentations.find((item) => item.title === title) ?? null;
+
+      if (!presentation) {
+        await window.castApi.createPresentation(title, 'canvas');
+        snapshot = await getSnapshot();
+        presentation = snapshot.presentations.find((item) => item.title === title) ?? null;
+      }
+
+      let slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === presentation.id));
+      while (slides.length < slideSpecs.length) {
+        await window.castApi.createSlide({ presentationId: presentation.id });
+        snapshot = await getSnapshot();
+        slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === presentation.id));
+      }
+
+      for (let index = 0; index < slideSpecs.length; index += 1) {
+        const spec = slideSpecs[index];
+        const slide = slides[index];
+        if (!slide) continue;
+
+        if (slide.notes !== spec.notes) {
+          await window.castApi.updateSlideNotes({ slideId: slide.id, notes: spec.notes });
+        }
+
+        snapshot = await getSnapshot();
+        const existingElements = snapshot.slideElements.filter((element) => element.slideId === slide.id);
+        if (existingElements.length === 0 && spec.elements.length > 0) {
+          await window.castApi.createElementsBatch(
+            spec.elements.map((element) => ({
+              slideId: slide.id,
+              ...element,
+            })),
+          );
+        }
+      }
+
+      snapshot = await getSnapshot();
+      const bundle = snapshot.libraryBundles.find((entry) => entry.library.id === ids.libraryId) ?? null;
+      const playlistTree = bundle?.playlists.find((tree) => tree.playlist.id === ids.playlistId) ?? null;
+      const alreadyInSegment = playlistTree?.segments.some((entry) => entry.entries.some((item) => item.presentation.id === presentation.id)) ?? false;
+      if (!alreadyInSegment) {
+        await window.castApi.addPresentationToSegment(ids.segmentId, presentation.id);
+      }
+    }
+
+    const ids = await ensureBaseStructure();
+
+    await ensureMediaAsset('Gradient Backdrop', gradientBackdropSrc);
+
+    await ensurePresentation(ids, 'Welcome Slides', [
+      { notes: 'Live welcome slide for the opening state.', elements: [] },
+      {
+        notes: 'Editor-selected slide with notes and objects.',
+        elements: [
+          createShapeElement('#0F172ACC', 200, 320, 1520, 340),
+          createTextElement('Service begins in 5 minutes', 280, 430, 1360, 140),
+        ],
+      },
+      { notes: 'Intentional empty slide for warning-state coverage.', elements: [] },
+    ]);
+
+    await ensurePresentation(ids, 'Announcements', [
+      {
+        notes: 'Announcements presentation overview.',
+        elements: [
+          createShapeElement('#1E1B4BCC', 180, 300, 1560, 400),
+          createTextElement('Community announcements', 260, 420, 1400, 120),
+        ],
+      },
+      {
+        notes: 'Second announcements slide.',
+        elements: [
+          createShapeElement('#0C4A6ECC', 220, 340, 1480, 320),
+          createTextElement('Midweek prayer gathering', 280, 430, 1360, 110),
+        ],
+      },
+    ]);
+  }, { gradientBackdropSrc: gradientBackdrop });
+
+  await page.reload();
+  await waitForApp(page);
+}
+
+async function captureSharedScreenshots() {
+  const { app, page } = await launchRenderer({
+    uiSpec: true,
+    viewport: { width: 1720, height: 2600 },
+  });
+
+  try {
+    await captureLocator(page.locator('[data-ui-spec="shared-actions"]'), path.join(SHARED_OUTPUT_DIR, 'shared-actions.png'));
+    await captureLocator(page.locator('[data-ui-spec="shared-fields"]'), path.join(SHARED_OUTPUT_DIR, 'shared-fields.png'));
+    await captureLocator(page.locator('[data-ui-spec="shared-navigation"]'), path.join(SHARED_OUTPUT_DIR, 'shared-navigation.png'));
+    await captureLocator(page.locator('[data-ui-spec="shared-display"]'), path.join(SHARED_OUTPUT_DIR, 'shared-display.png'));
+    await captureLocator(page.locator('[data-ui-spec="shared-dialogs"]'), path.join(SHARED_OUTPUT_DIR, 'shared-dialogs.png'));
+  } finally {
+    await app.close();
   }
+}
 
-  const hasTextTab = await page.getByRole('tab', { name: 'Text' }).first().isVisible().catch(() => false);
-  if (hasTextTab) {
+async function captureAppScreenshots() {
+  const { app, page } = await launchRenderer({
+    uiSpec: false,
+    viewport: { width: 1720, height: 1180 },
+  });
+
+  try {
+    await seedScenario(page);
+
+    await ensureLibrarySelectorView(page);
+    await captureLocator(page.locator('[data-ui-region="library-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'library-panel-libraries.png'));
+
+    await selectPresentation(page, 'Welcome Slides');
+
+    await clickToolbarView(page, 'Slides');
+    await captureLocator(page.locator('[data-ui-region="app-toolbar"]'), path.join(APP_OUTPUT_DIR, 'app-toolbar-slide-editor.png'));
+
+    await selectSlideInEditor(page, 1);
+    await captureLocator(page.locator('[data-ui-region="slide-editor-layout"]'), path.join(APP_OUTPUT_DIR, 'slide-editor-layout.png'));
+    await captureLocator(page.locator('[data-ui-region="slide-list-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-list-panel.png'));
+    await captureLocator(page.locator('[data-ui-region="slide-notes-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-notes-panel.png'));
+    await captureLocator(page.locator('[data-ui-region="stage-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'stage-panel-slide-editor.png'));
+    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-presentation.png'));
+
+    await clickTab(page, 'Slide');
+    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-slide.png'));
+
+    await page.locator('[data-ui-region="object-list-panel"] button', { hasText: 'Shape' }).first().click();
+    await page.waitForTimeout(350);
+    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-shape.png'));
+
+    await page.locator('[data-ui-region="object-list-panel"] button', { hasText: 'Service begins in 5 minutes' }).first().click();
+    await page.waitForTimeout(350);
     await clickTab(page, 'Text');
-    await screenshotLocator(page.locator('aside').filter({ has: page.getByRole('tab', { name: 'Text' }) }), 'edit-inspector-text.png');
+    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-text.png'));
+
+    await page.locator('[data-ui-region="stage-panel"]').getByRole('button', { name: 'Add Media' }).click();
+    await page.waitForTimeout(350);
+    await captureLocator(page.locator('[data-ui-region="media-picker-dialog"]'), path.join(FEATURE_OUTPUT_DIR, 'media-picker-dialog.png'));
+    await page.locator('[data-ui-region="media-picker-dialog"]').getByRole('button', { name: 'Close' }).click();
+    await page.waitForTimeout(350);
+
+    await clickToolbarView(page, 'Overlay');
+    await captureLocator(page.locator('[data-ui-region="app-toolbar"]'), path.join(APP_OUTPUT_DIR, 'app-toolbar-overlay-editor.png'));
+    await page.locator('[data-ui-region="overlay-list-panel"] [role="grid"] > button').first().click();
+    await page.waitForTimeout(350);
+    await captureLocator(page.locator('[data-ui-region="overlay-editor-layout"]'), path.join(APP_OUTPUT_DIR, 'overlay-editor-layout.png'));
+    await captureLocator(page.locator('[data-ui-region="overlay-list-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'overlay-list-panel.png'));
+    await captureLocator(page.locator('[data-ui-region="stage-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'stage-panel-overlay-editor.png'));
+    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-overlay.png'));
+
+    await clickToolbarView(page, 'Show');
+    await captureLocator(page.locator('[data-ui-region="app-toolbar"]'), path.join(APP_OUTPUT_DIR, 'app-toolbar-show.png'));
+    await captureLocator(page.locator('[data-ui-region="library-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'library-panel-playlist.png'));
+
+    await assignMediaLayer(page);
+    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-media.png'));
+
+    await assignOverlayLayer(page);
+    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-overlays.png'));
+
+    await clickTab(page, 'Presentations');
+    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-presentations.png'));
+
+    await clickTab(page, 'Media');
+    await clickSlideBrowserMode(page, 'Grid view');
+    await clickPlaylistBrowserMode(page, 'Current');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-grid-current.png'));
+    await captureLocator(page.locator('[data-ui-region="show-mode-layout"]'), path.join(APP_OUTPUT_DIR, 'show-mode-layout.png'));
+    await captureLocator(page.locator('[data-ui-region="preview-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'preview-panel.png'));
+    await captureLocator(page.locator('[data-ui-region="status-bar"]'), path.join(APP_OUTPUT_DIR, 'status-bar.png'));
+
+    await clickSlideBrowserMode(page, 'List view');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-list-current.png'));
+
+    await clickSlideBrowserMode(page, 'Focus view');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-focus.png'));
+
+    await clickSlideBrowserMode(page, 'Grid view');
+    await clickPlaylistBrowserMode(page, 'Tabs');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-tabs.png'));
+
+    await clickPlaylistBrowserMode(page, 'Continuous');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-continuous-grid.png'));
+
+    await clickSlideBrowserMode(page, 'List view');
+    await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-continuous-list.png'));
+
+    await page.locator('[data-ui-region="app-toolbar"]').getByRole('button', { name: 'Settings' }).click();
+    await page.waitForTimeout(350);
+    await captureLocator(page.locator('[data-ui-region="settings-dialog"]'), path.join(APP_OUTPUT_DIR, 'settings-dialog.png'));
+  } finally {
+    await app.close();
   }
 }
 
-async function writeManifest() {
-  const pngFiles = fs
-    .readdirSync(OUTPUT_DIR)
-    .filter((file) => file.endsWith('.png'))
+function createSvgDataUrl(background, accent, label) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="${background}" />
+          <stop offset="100%" stop-color="${accent}" />
+        </linearGradient>
+      </defs>
+      <rect width="320" height="180" rx="18" fill="url(#g)" />
+      <circle cx="70" cy="72" r="46" fill="rgba(255,255,255,0.16)" />
+      <rect x="122" y="58" width="124" height="20" rx="10" fill="rgba(255,255,255,0.24)" />
+      <rect x="122" y="90" width="82" height="14" rx="7" fill="rgba(255,255,255,0.16)" />
+      <text x="24" y="152" fill="white" font-size="18" font-family="Avenir Next, Helvetica, Arial" font-weight="700">${label}</text>
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function writeManifest() {
+  const files = fs
+    .readdirSync(OUTPUT_ROOT, { recursive: true })
+    .filter((file) => typeof file === 'string' && file.endsWith('.png'))
     .sort();
 
   const lines = [
@@ -166,32 +447,25 @@ async function writeManifest() {
     '',
     `Generated: ${new Date().toISOString()}`,
     '',
-    ...pngFiles.map((file) => `- ${file}`),
+    '## Shared',
+    ...files.filter((file) => file.startsWith('shared/')).map((file) => `- ${file}`),
+    '',
+    '## App',
+    ...files.filter((file) => file.startsWith('app/')).map((file) => `- ${file}`),
+    '',
+    '## Features',
+    ...files.filter((file) => file.startsWith('features/')).map((file) => `- ${file}`),
     '',
   ];
 
-  fs.writeFileSync(path.join(OUTPUT_DIR, 'manifest.md'), lines.join('\n'), 'utf8');
+  fs.writeFileSync(path.join(OUTPUT_ROOT, 'manifest.md'), lines.join('\n'), 'utf8');
 }
 
 async function main() {
-  ensureDir(OUTPUT_DIR);
-
-  const app = await electron.launch({
-    executablePath: process.env.ELECTRON_BINARY ?? (await import('electron')).default,
-    args: [path.resolve('out/main/index.js')],
-  });
-
-  try {
-    const page = await app.firstWindow();
-    await waitForUi(page);
-    await seedDataIfEmpty(page);
-
-    await captureShowView(page);
-    await captureEditView(page);
-    await writeManifest();
-  } finally {
-    await app.close();
-  }
+  resetCaptureEnvironment();
+  await captureSharedScreenshots();
+  await captureAppScreenshots();
+  writeManifest();
 }
 
 main().catch((error) => {

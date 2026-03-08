@@ -47,7 +47,10 @@ export function OverlayListPanel() {
   }
 
   return (
-    <aside className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-background-primary_alt">
+    <aside
+      data-ui-region="overlay-list-panel"
+      className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-background-primary_alt"
+    >
       <TwoPaneVerticalSplit
         className="h-full"
         topPaneId="overlay-list"

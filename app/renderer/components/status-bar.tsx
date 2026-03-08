@@ -6,7 +6,10 @@ export function StatusBar() {
   const { outputState } = useNdi();
 
   return (
-    <div className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-[11px]">
+    <div
+      data-ui-region="status-bar"
+      className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-[11px]"
+    >
       <span className="text-text-secondary">{statusText}</span>
 
       <div className="ml-auto flex items-center gap-2 text-text-tertiary">

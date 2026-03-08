@@ -46,7 +46,7 @@ export function OverlayEditorLayout({ liveLayouts, startDrag, updateDrag, endDra
   }
 
   return (
-    <section className="h-full min-h-0 overflow-hidden">
+    <section data-ui-region="overlay-editor-layout" className="h-full min-h-0 overflow-hidden">
       <ResizableSplitRoot
         orientation="horizontal"
         className="h-full"

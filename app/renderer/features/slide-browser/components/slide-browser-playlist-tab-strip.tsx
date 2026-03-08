@@ -34,12 +34,12 @@ function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
 }
 
 export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrowserPlaylistTabStripProps) {
-  const { currentPlaylistPresentationId, openPresentation } = useNavigation();
-  const { slides } = useSlides();
+  const { currentPlaylistPresentationId } = useNavigation();
+  const { slides, selectPlaylistPresentation } = useSlides();
 
   const handleSelectPresentation = useCallback((presentationId: Id) => {
-    openPresentation(presentationId);
-  }, [openPresentation]);
+    selectPlaylistPresentation(presentationId);
+  }, [selectPlaylistPresentation]);
 
   const renderTabItem = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (

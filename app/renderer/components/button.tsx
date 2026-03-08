@@ -30,7 +30,7 @@ export function Button({
       type={type}
       disabled={disabled}
       {...buttonProps}
-      className={`rounded border px-1.5 py-0.5 text-[12px] leading-tight cursor-pointer transition-colors ${VARIANT_CLASSES[variant]} ${disabledClasses} ${className}`}
+      className={`rounded border px-1.5 py-0.5 text-left text-[12px] leading-tight cursor-pointer transition-colors ${VARIANT_CLASSES[variant]} ${disabledClasses} ${className}`}
     >
       {children}
     </button>

@@ -12,7 +12,7 @@ interface LibraryPresentationListProps {
 }
 
 export function LibraryPresentationList({ editingPresentationId, onLibraryPresentationContextMenu, onLibraryPresentationMenuButtonClick, onClearEditingPresentation }: LibraryPresentationListProps) {
-  const { currentPresentationId, openPresentation, createPresentation, renamePresentation } = useNavigation();
+  const { browsePresentation, createPresentation, currentDrawerPresentationId, isDetachedPresentationBrowser, renamePresentation } = useNavigation();
   const { presentations } = useProjectContent();
 
   function handleNewPresentation() { void createPresentation(); }
@@ -35,10 +35,10 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
 
       <div className="px-1 pb-1">
         {presentations.map((presentation) => {
-          const isSelected = presentation.id === currentPresentationId;
+          const isSelected = isDetachedPresentationBrowser && presentation.id === currentDrawerPresentationId;
           const isEditing = presentation.id === editingPresentationId;
 
-          function handleSelect() { openPresentation(presentation.id); }
+          function handleSelect() { browsePresentation(presentation.id); }
           function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onLibraryPresentationContextMenu(event, presentation.id); }
           function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
             event.stopPropagation();
@@ -55,7 +55,7 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
                 variant="ghost"
                 onClick={handleSelect}
                 onContextMenu={handleContextMenu}
-                className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-[13px] transition-colors ${
+                className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-left text-[13px] transition-colors ${
                   isSelected
                     ? 'bg-brand-400/15 text-text-primary'
                     : 'bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'

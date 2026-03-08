@@ -7,7 +7,7 @@ interface BuildPresentationMenuItemsOptions {
   currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
   presentationIds: Id[];
-  openPresentation: (id: Id) => void;
+  selectPresentation: (id: Id) => void;
   movePresentation: (id: Id, direction: 'up' | 'down') => Promise<void>;
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<void>;
   beginRenamePresentation: (id: Id) => void;
@@ -20,7 +20,7 @@ export function buildPresentationMenuItems({
   currentPlaylistId,
   selectedTree,
   presentationIds,
-  openPresentation,
+  selectPresentation,
   movePresentation,
   movePresentationToSegment,
   beginRenamePresentation,
@@ -67,7 +67,7 @@ export function buildPresentationMenuItems({
     onSelect: () => {
       if (!currentPlaylistId) return;
       void movePresentationToSegment(currentPlaylistId, presentationId, segment.segment.id);
-      openPresentation(presentationId);
+      selectPresentation(presentationId);
     }
   }));
 
@@ -87,7 +87,7 @@ export function buildPresentationMenuItems({
           onSelect: () => {
             if (!currentPlaylistId) return;
             void movePresentationToSegment(currentPlaylistId, presentationId, null);
-            openPresentation(presentationId);
+            selectPresentation(presentationId);
           }
         }
       ]
@@ -99,7 +99,7 @@ export function buildPresentationMenuItems({
       onSelect: () => {
         if (!currentPlaylistId) return;
         void movePresentationToSegment(currentPlaylistId, presentationId, null);
-        openPresentation(presentationId);
+        selectPresentation(presentationId);
       }
     },
     deleteItem

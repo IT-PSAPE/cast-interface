@@ -32,7 +32,7 @@ export function selectThumbnailElements(policy: SceneSourcePolicy, effectiveElem
 }
 
 export function RenderSceneProvider({ children }: { children: ReactNode }) {
-  const { currentSlide, liveSlide, slides, slideElementsById } = useSlides();
+  const { currentSlide, liveSlide, liveElements, slides, slideElementsById } = useSlides();
   const { effectiveElements } = useElements();
   const { currentOverlay } = useOverlayEditor();
   const { getSlideElements } = useSlideEditor();
@@ -50,7 +50,6 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   }, [currentSlide, slideElementsById]);
 
   const liveScene = useMemo(() => {
-    const liveElements = liveSlide ? (slideElementsById.get(liveSlide.id) ?? []) : [];
     return buildLayeredRenderScene({
       slide: liveSlide,
       contentElements: liveElements,
@@ -58,7 +57,7 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       overlay: overlayLayer,
       includeContent: contentLayerVisible,
     });
-  }, [contentLayerVisible, liveSlide, mediaLayerAsset, overlayLayer, slideElementsById]);
+  }, [contentLayerVisible, liveElements, liveSlide, mediaLayerAsset, overlayLayer]);
 
   // Freeze the output scene when editing so NDI output stays stable
   const isEditing = workbenchMode !== 'show';

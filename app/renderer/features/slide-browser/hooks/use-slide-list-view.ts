@@ -28,11 +28,11 @@ interface OutlineViewModel {
 
 export function useOutlineView(): OutlineViewModel {
   const { mutate, setStatusText } = useCast();
-  const { currentPresentation, currentPresentationId, currentPlaylistPresentationId, isDetachedPresentationBrowser } = useNavigation();
+  const { currentPresentation, currentPresentationId, currentOutputPresentationId, isDetachedPresentationBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const textEditable = currentPresentation?.kind === 'lyrics';
-  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentPlaylistPresentationId;
+  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
 
   const rows = useMemo(() => {
     return slides.map((slide, index) => {

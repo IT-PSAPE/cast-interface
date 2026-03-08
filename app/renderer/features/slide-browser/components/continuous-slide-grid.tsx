@@ -16,7 +16,7 @@ interface ContinuousSlideGridProps {
 interface GridSectionProps {
   item: PlaylistPresentationSequenceItem;
   currentPresentationId: Id | null;
-  currentPlaylistPresentationId: Id | null;
+  currentOutputPresentationId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
@@ -27,7 +27,7 @@ interface GridSectionProps {
 function GridSection({
   item,
   currentPresentationId,
-  currentPlaylistPresentationId,
+  currentOutputPresentationId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
@@ -35,7 +35,7 @@ function GridSection({
   onEditSlide,
 }: GridSectionProps) {
   const isCurrentPresentation = item.presentation.id === currentPresentationId;
-  const isLivePresentation = item.presentation.id === currentPlaylistPresentationId;
+  const isLivePresentation = item.presentation.id === currentOutputPresentationId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -82,7 +82,7 @@ function GridSection({
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { currentPresentationId, currentPlaylistPresentationId } = useNavigation();
+  const { currentPresentationId, currentOutputPresentationId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, activatePresentationSlide, focusPresentationSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
@@ -102,7 +102,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
         key={item.entryId}
         item={item}
         currentPresentationId={currentPresentationId}
-        currentPlaylistPresentationId={currentPlaylistPresentationId}
+        currentOutputPresentationId={currentOutputPresentationId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
         slideElementsById={slideElementsBySlideId}
@@ -110,7 +110,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
         onEditSlide={handleEditSlide}
       />
     );
-  }, [currentPlaylistPresentationId, currentPresentationId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
+  }, [currentOutputPresentationId, currentPresentationId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (

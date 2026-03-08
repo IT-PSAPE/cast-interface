@@ -1,6 +1,7 @@
 import type { PlaylistTree } from '@core/types';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useSlides } from '../../../contexts/slide-context';
 import { PlaylistSegmentGroup } from './playlist-segment-group';
 
 interface PlaylistItemListProps {
@@ -18,7 +19,8 @@ interface PlaylistItemListProps {
 }
 
 export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId, onSegmentContextMenu, onSegmentMenuButtonClick, onSegmentPresentationContextMenu, onSegmentPresentationMenuButtonClick, onRenameSegment, onRenamePresentation, onClearEditingSegment, onClearEditingPresentation }: PlaylistItemListProps) {
-  const { currentPlaylistPresentationId, openPresentation, createSegment } = useNavigation();
+  const { currentPlaylistPresentationId, createSegment } = useNavigation();
+  const { selectPlaylistPresentation } = useSlides();
 
   function handleNewSegment() { void createSegment(); }
 
@@ -47,7 +49,7 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
             selectedPresentationId={currentPlaylistPresentationId}
             editingSegmentId={editingSegmentId}
             editingPresentationId={editingPresentationId}
-            onSelectPresentation={openPresentation}
+            onSelectPresentation={selectPlaylistPresentation}
             onSegmentContextMenu={onSegmentContextMenu}
             onSegmentMenuButtonClick={onSegmentMenuButtonClick}
             onPresentationContextMenu={onSegmentPresentationContextMenu}

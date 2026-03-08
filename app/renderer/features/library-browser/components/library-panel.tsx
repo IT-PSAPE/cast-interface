@@ -2,6 +2,7 @@ import { ContextMenu } from '../../../components/context-menu';
 import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
+import { useSlides } from '../../../contexts/slide-context';
 import { useLibraryPanelState } from '../contexts/library-panel-context';
 import { useLibraryPanelContextMenu } from '../hooks/use-library-panel-context-menu';
 import { useLibraryPanelManagement } from '../hooks/use-library-panel-management';
@@ -11,8 +12,9 @@ import { PlaylistItemList } from './playlist-item-list';
 import { PlaylistList } from './playlist-list';
 
 export function LibraryPanel() {
-  const { currentLibraryBundle, currentLibraryId, currentPlaylistId, openPresentation } = useNavigation();
+  const { currentLibraryBundle, currentLibraryId, currentPlaylistId } = useNavigation();
   const { presentations } = useProjectContent();
+  const { selectPlaylistPresentation } = useSlides();
   const { libraryPanelView, setLibraryPanelView } = useLibraryPanelState();
   const {
     renameSegment,
@@ -63,7 +65,7 @@ export function LibraryPanel() {
     playlistIds,
     presentationIds,
     setLibraryPanelView,
-    openPresentation,
+    selectPlaylistPresentation,
     deleteLibrary,
     deletePlaylist,
     deleteSegment,
@@ -77,7 +79,10 @@ export function LibraryPanel() {
   });
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-primary bg-background-primary_alt">
+    <aside
+      data-ui-region="library-panel"
+      className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-primary bg-background-primary_alt"
+    >
       {libraryPanelView === 'libraries' ? (
         <LibrarySelector
           editingLibraryId={editingLibraryId}

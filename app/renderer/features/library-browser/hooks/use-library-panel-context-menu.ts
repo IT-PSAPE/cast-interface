@@ -17,7 +17,7 @@ interface LibraryPanelContextMenuOptions {
   playlistIds: Id[];
   presentationIds: Id[];
   setLibraryPanelView: (stage: LibraryPanelView) => void;
-  openPresentation: (id: Id) => void;
+  selectPlaylistPresentation: (id: Id) => void;
   deleteLibrary: (id: Id) => Promise<void>;
   deletePlaylist: (id: Id) => Promise<void>;
   deleteSegment: (id: Id) => Promise<void>;
@@ -30,7 +30,7 @@ interface LibraryPanelContextMenuOptions {
   createPresentationInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
 }
 
-export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, openPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment }: LibraryPanelContextMenuOptions) {
+export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment }: LibraryPanelContextMenuOptions) {
   const [menuState, setMenuState] = useState<{ x: number; y: number; target: LibraryPanelMenuTarget } | null>(null);
   const [editingLibraryId, setEditingLibraryId] = useState<string | null>(null);
   const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId
       playlistIds,
       presentationIds,
       setLibraryPanelView,
-      openPresentation,
+      selectPlaylistPresentation,
       deleteLibrary,
       deletePlaylist,
       deleteSegment,
@@ -78,7 +78,7 @@ export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId
       beginRenameSegment: setEditingSegmentId,
       beginRenamePresentation: setEditingPresentationId
     });
-  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, openPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment]);
+  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment]);
 
   return {
     menuState,

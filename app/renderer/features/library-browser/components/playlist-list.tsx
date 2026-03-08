@@ -52,7 +52,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                 variant="ghost"
                 onClick={handleSelect}
                 onContextMenu={handleContextMenu}
-                className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-[13px] transition-colors ${
+                className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-left text-[13px] transition-colors ${
                   isSelected
                     ? 'bg-brand-400/15 text-text-primary'
                     : 'bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'

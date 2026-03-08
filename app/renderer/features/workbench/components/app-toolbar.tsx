@@ -45,7 +45,10 @@ export function AppToolbar({ panelToggles }: AppToolbarProps) {
   }
 
   return (
-    <header className="border-b border-border-primary bg-gradient-to-b from-background-quaternary to-background-tertiary px-3 py-1.5">
+    <header
+      data-ui-region="app-toolbar"
+      className="border-b border-border-primary bg-gradient-to-b from-background-quaternary to-background-tertiary px-3 py-1.5"
+    >
       <div className="flex items-center gap-3">
         <div className="flex items-center">
           <SegmentedControl

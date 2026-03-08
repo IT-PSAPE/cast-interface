@@ -17,7 +17,7 @@ interface ContinuousSlideListProps {
 interface OutlineSectionProps {
   item: PlaylistPresentationSequenceItem;
   currentPresentationId: Id | null;
-  currentPlaylistPresentationId: Id | null;
+  currentOutputPresentationId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
@@ -30,7 +30,7 @@ function noopPrimaryTextCommit(_slideId: Id, _nextPrimary: string) {}
 function OutlineSection({
   item,
   currentPresentationId,
-  currentPlaylistPresentationId,
+  currentOutputPresentationId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
@@ -38,7 +38,7 @@ function OutlineSection({
   onOpenSlide,
 }: OutlineSectionProps) {
   const isCurrentPresentation = item.presentation.id === currentPresentationId;
-  const isLivePresentation = item.presentation.id === currentPlaylistPresentationId;
+  const isLivePresentation = item.presentation.id === currentOutputPresentationId;
 
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -94,7 +94,7 @@ function OutlineSection({
 }
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
-  const { currentPresentationId, currentPlaylistPresentationId } = useNavigation();
+  const { currentPresentationId, currentOutputPresentationId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, focusPresentationSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
@@ -114,7 +114,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
         key={item.entryId}
         item={item}
         currentPresentationId={currentPresentationId}
-        currentPlaylistPresentationId={currentPlaylistPresentationId}
+        currentOutputPresentationId={currentOutputPresentationId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
         slideElementsById={slideElementsBySlideId}
@@ -122,7 +122,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
         onOpenSlide={handleOpenSlide}
       />
     );
-  }, [currentPlaylistPresentationId, currentPresentationId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsBySlideId]);
+  }, [currentOutputPresentationId, currentPresentationId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (

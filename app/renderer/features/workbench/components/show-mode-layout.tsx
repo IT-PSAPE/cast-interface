@@ -70,7 +70,7 @@ export function ShowModeLayout({ liveLayouts, startDrag, updateDrag, endDrag }: 
   }
 
   return (
-    <section className="h-full min-h-0 overflow-hidden">
+    <section data-ui-region="show-mode-layout" className="h-full min-h-0 overflow-hidden">
       <ResizableSplitRoot
         orientation="horizontal"
         className="h-full"

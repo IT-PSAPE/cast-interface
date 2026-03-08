@@ -34,7 +34,10 @@ export function SlideBrowser() {
   const headerAction = showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null;
 
   return (
-    <main className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-gradient-to-b from-background-primary/90 to-background-primary">
+    <main
+      data-ui-region="slide-browser"
+      className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-gradient-to-b from-background-primary/90 to-background-primary"
+    >
       {hasPresentation ? (
         <div className="row-start-1 min-h-0">
           {showTabsStrip ? (

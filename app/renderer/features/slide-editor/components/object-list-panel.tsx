@@ -50,11 +50,18 @@ export function ObjectListPanel() {
   }
 
   if (orderedElements.length === 0) {
-    return <div className="grid h-full place-items-center rounded border border-border-secondary bg-background-tertiary/20 text-[12px] text-text-tertiary">{isOverlayEdit ? 'No objects in this overlay.' : 'No objects on this slide.'}</div>;
+    return (
+      <div
+        data-ui-region="object-list-panel"
+        className="grid h-full place-items-center rounded border border-border-secondary bg-background-tertiary/20 text-[12px] text-text-tertiary"
+      >
+        {isOverlayEdit ? 'No objects in this overlay.' : 'No objects on this slide.'}
+      </div>
+    );
   }
 
   return (
-    <div className="grid content-start gap-1.5">
+    <div data-ui-region="object-list-panel" className="grid content-start gap-1.5">
       {orderedElements.map(renderRow)}
     </div>
   );

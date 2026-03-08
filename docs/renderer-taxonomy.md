@@ -1,6 +1,6 @@
 # Renderer Taxonomy
 
-Updated on 2026-03-07.
+Updated on 2026-03-08.
 
 This document is the canonical naming and boundary reference for the renderer.
 
@@ -18,13 +18,15 @@ User-facing surface terms:
 
 - `Library`
 - `Playlist`
+- `Segments`
+- `Presentations`
 - `Continuous Playlist`
 - `Slide Browser`
 - `Preview`
 - `Slide Editor`
 - `Overlay Editor`
-- `Media Bin`
-- `Overlay Bin`
+- `Media`
+- `Overlays`
 - `Inspector`
 
 ## 2. Rename Matrix
@@ -61,7 +63,7 @@ User-facing surface terms:
 |---|---|
 | `workbench` | App shell, toolbar, mode switching, split layouts, panel visibility |
 | `library-browser` | Library tree, playlist tree, library panel view state |
-| `resource-drawer` | Media Bin, Overlay Bin, drawer tab state |
+| `resource-drawer` | Media tab, Overlays tab, Presentations tab, drawer tab state |
 | `slide-browser` | Focus/grid/list browsing, current/tabs/continuous playlist browsing |
 | `stage` | Stage viewport, stage toolbar, render scene provider, shared thumbnails |
 | `slide-editor` | Slide drafts, notes, object list, slide editing composition |

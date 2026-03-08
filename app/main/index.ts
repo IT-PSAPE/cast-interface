@@ -10,6 +10,16 @@ protocol.registerSchemesAsPrivileged([{
   privileges: { secure: true, supportFetchAPI: true, stream: true },
 }]);
 
+interface CliOptions {
+  rendererView: 'app' | 'ui-spec';
+  userDataDir: string | null;
+}
+
+const cliOptions = resolveCliOptions(process.argv);
+if (cliOptions.userDataDir) {
+  app.setPath('userData', path.resolve(cliOptions.userDataDir));
+}
+
 let mainWindow: BrowserWindow | null = null;
 const repository = new CastRepository();
 const ndiService = new NdiService();
@@ -58,9 +68,18 @@ const createWindow = (): void => {
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    const targetUrl = new URL(process.env.ELECTRON_RENDERER_URL);
+    if (cliOptions.rendererView === 'ui-spec') {
+      targetUrl.searchParams.set('view', 'ui-spec');
+    }
+    void mainWindow.loadURL(targetUrl.toString());
   } else {
-    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    const rendererFile = path.join(__dirname, '../renderer/index.html');
+    if (cliOptions.rendererView === 'ui-spec') {
+      void mainWindow.loadFile(rendererFile, { query: { view: 'ui-spec' } });
+    } else {
+      void mainWindow.loadFile(rendererFile);
+    }
   }
 };
 
@@ -92,3 +111,22 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   teardownNdi('will-quit');
 });
+
+function resolveCliOptions(argv: string[]): CliOptions {
+  let rendererView: CliOptions['rendererView'] = 'app';
+  let userDataDir: string | null = null;
+
+  for (const arg of argv.slice(2)) {
+    if (arg === '--ui-spec') {
+      rendererView = 'ui-spec';
+      continue;
+    }
+
+    if (arg.startsWith('--user-data-dir=')) {
+      const value = arg.slice('--user-data-dir='.length).trim();
+      userDataDir = value ? value : null;
+    }
+  }
+
+  return { rendererView, userDataDir };
+}

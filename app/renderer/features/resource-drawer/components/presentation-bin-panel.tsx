@@ -120,7 +120,13 @@ function PresentationCard({
 }
 
 export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) {
-  const { currentPresentationId, currentPlaylistId, currentLibraryBundle, browsePresentation } = useNavigation();
+  const {
+    currentDrawerPresentationId,
+    currentPlaylistId,
+    currentLibraryBundle,
+    browsePresentation,
+    isDetachedPresentationBrowser,
+  } = useNavigation();
   const { presentations, slidesByPresentationId } = useProjectContent();
   const {
     renamePresentation,
@@ -153,7 +159,7 @@ export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) 
       currentPlaylistId,
       selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
       presentationIds: presentations.map((presentation) => presentation.id),
-      openPresentation: browsePresentation,
+      selectPresentation: browsePresentation,
       movePresentation,
       movePresentationToSegment,
       beginRenamePresentation: setEditingPresentationId,
@@ -193,7 +199,7 @@ export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) 
             index={index}
             presentation={presentation}
             slides={slidesByPresentationId.get(presentation.id) ?? []}
-            isSelected={currentPresentationId === presentation.id}
+            isSelected={isDetachedPresentationBrowser && currentDrawerPresentationId === presentation.id}
             isEditing={editingPresentationId === presentation.id}
             onOpen={browsePresentation}
             onOpenMenu={handleMenuButtonClick}

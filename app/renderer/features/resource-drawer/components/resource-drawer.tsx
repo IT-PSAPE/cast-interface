@@ -78,6 +78,7 @@ export function ResourceDrawer() {
 
   return (
     <footer
+      data-ui-region="resource-drawer"
       className={footerClass}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

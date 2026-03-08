@@ -36,6 +36,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
   return (
     <div
       ref={backdropRef}
+      data-ui-region="settings-dialog"
       className="pointer-events-auto absolute inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >

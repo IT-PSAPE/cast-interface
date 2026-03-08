@@ -23,7 +23,7 @@ const PresentationLayerContext = createContext<PresentationLayerContextValue | n
 
 export function PresentationLayerProvider({ children }: { children: ReactNode }) {
   const { setStatusText } = useCast();
-  const { currentPlaylistPresentationId } = useNavigation();
+  const { currentOutputPresentationId, outputArmVersion, clearOutputPresentation } = useNavigation();
   const { mediaAssetsById, overlaysById } = useProjectContent();
 
   const [mediaLayerAssetId, setMediaLayerAssetId] = useState<Id | null>(null);
@@ -31,8 +31,9 @@ export function PresentationLayerProvider({ children }: { children: ReactNode })
   const [contentLayerVisible, setContentLayerVisible] = useState(true);
 
   useEffect(() => {
+    if (!currentOutputPresentationId) return;
     setContentLayerVisible(true);
-  }, [currentPlaylistPresentationId]);
+  }, [currentOutputPresentationId, outputArmVersion]);
 
   useEffect(() => {
     const hasMedia = mediaLayerAssetId ? mediaAssetsById.has(mediaLayerAssetId) : false;
@@ -91,8 +92,9 @@ export function PresentationLayerProvider({ children }: { children: ReactNode })
     setMediaLayerAssetId(null);
     setContentLayerVisible(false);
     setOverlayLayerId(null);
+    clearOutputPresentation();
     setStatusText('All layers cleared');
-  }, [setStatusText]);
+  }, [clearOutputPresentation, setStatusText]);
 
   const value = useMemo<PresentationLayerContextValue>(
     () => ({

@@ -48,7 +48,10 @@ export function SlideListPanel() {
   }
 
   return (
-    <aside className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-background-primary_alt">
+    <aside
+      data-ui-region="slide-list-panel"
+      className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-background-primary_alt"
+    >
       <TwoPaneVerticalSplit
         className="h-full"
         topPaneId="slide-list"

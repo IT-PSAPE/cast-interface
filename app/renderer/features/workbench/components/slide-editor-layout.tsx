@@ -69,7 +69,7 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
   }
 
   return (
-    <section className="h-full min-h-0 overflow-hidden">
+    <section data-ui-region="slide-editor-layout" className="h-full min-h-0 overflow-hidden">
       <ResizableSplitRoot
         orientation="horizontal"
         className="h-full"

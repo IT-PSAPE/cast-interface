@@ -19,7 +19,7 @@ interface BuildMenuItemsOptions {
   playlistIds: Id[];
   presentationIds: Id[];
   setLibraryPanelView: (stage: LibraryPanelView) => void;
-  openPresentation: (id: Id) => void;
+  selectPlaylistPresentation: (id: Id) => void;
   deleteLibrary: (id: Id) => Promise<void>;
   deletePlaylist: (id: Id) => Promise<void>;
   deleteSegment: (id: Id) => Promise<void>;
@@ -37,7 +37,7 @@ interface BuildMenuItemsOptions {
 }
 
 export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): ContextMenuItem[] {
-  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, openPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
+  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
 
   if (target.type === 'library') {
     return [
@@ -80,7 +80,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
       label: presentation.title,
       onSelect: () => {
         void addPresentationToSegment(target.id, presentation.id);
-        openPresentation(presentation.id);
+        selectPlaylistPresentation(presentation.id);
       }
     }));
     const colorChildren: ContextMenuItem[] = SEGMENT_COLOR_OPTIONS.map((option) => ({
@@ -118,7 +118,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
           if (!currentLibraryId) return;
           void createPresentationInSegment(currentLibraryId, target.id).then((createdPresentationId) => {
             if (!createdPresentationId) return;
-            openPresentation(createdPresentationId);
+            selectPlaylistPresentation(createdPresentationId);
           });
         }
       },
@@ -134,5 +134,16 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
     ];
   }
 
-  return buildPresentationMenuItems({ presentationId: target.id, scope: target.scope, currentPlaylistId, selectedTree, presentationIds, openPresentation, movePresentation, movePresentationToSegment, beginRenamePresentation, deletePresentation });
+  return buildPresentationMenuItems({
+    presentationId: target.id,
+    scope: target.scope,
+    currentPlaylistId,
+    selectedTree,
+    presentationIds,
+    selectPresentation: selectPlaylistPresentation,
+    movePresentation,
+    movePresentationToSegment,
+    beginRenamePresentation,
+    deletePresentation,
+  });
 }

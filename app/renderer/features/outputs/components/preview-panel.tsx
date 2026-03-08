@@ -30,7 +30,10 @@ export function PreviewPanel() {
   }
 
   return (
-    <aside className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden border-l border-border-primary bg-background-primary_alt">
+    <aside
+      data-ui-region="preview-panel"
+      className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden border-l border-border-primary bg-background-primary_alt"
+    >
       <LivePreview />
 
       <div className="border-b border-border-primary p-2">
