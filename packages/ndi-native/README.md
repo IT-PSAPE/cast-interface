@@ -27,6 +27,7 @@ Typical library names searched:
 
 - `initializeSender({ senderName, width, height, withAlpha })`
 - `sendRgbaFrame(senderName, frame, width, height, stride)`
+- `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
-Frames are accepted in RGBA and converted to BGRA before NDI send, preserving alpha.
+Frames are accepted in RGBA and converted to BGRA/BGRX before NDI send.

@@ -1,5 +1,6 @@
 #include <napi.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -30,6 +31,7 @@ constexpr uint32_t MakeFourCC(char a, char b, char c, char d) {
 }
 
 constexpr uint32_t kFourCCBgra = MakeFourCC('B', 'G', 'R', 'A');
+constexpr uint32_t kFourCCBgrx = MakeFourCC('B', 'G', 'R', 'X');
 
 struct NDIlib_send_create_t {
   const char* p_ndi_name;
@@ -60,6 +62,7 @@ using FnNdiDestroy = void (*)();
 using FnNdiSendCreate = NDIlib_send_instance_t (*)(const NDIlib_send_create_t*);
 using FnNdiSendDestroy = void (*)(NDIlib_send_instance_t);
 using FnNdiSendVideoV2 = void (*)(NDIlib_send_instance_t, const NDIlib_video_frame_v2_t*);
+using FnNdiSendGetNoConnections = int32_t (*)(NDIlib_send_instance_t, uint32_t);
 
 struct NdiSymbols {
   FnNdiInitialize initialize = nullptr;
@@ -67,12 +70,12 @@ struct NdiSymbols {
   FnNdiSendCreate sendCreate = nullptr;
   FnNdiSendDestroy sendDestroy = nullptr;
   FnNdiSendVideoV2 sendVideoV2 = nullptr;
+  FnNdiSendGetNoConnections sendGetNoConnections = nullptr;
 };
 
 class DynamicLibrary {
  public:
   DynamicLibrary() = default;
-
   ~DynamicLibrary() { Unload(); }
 
   DynamicLibrary(const DynamicLibrary&) = delete;
@@ -85,6 +88,10 @@ class DynamicLibrary {
     attempts.reserve(candidates.size());
 
     for (const auto& candidate : candidates) {
+      if (candidate.empty()) {
+        continue;
+      }
+
       attempts.push_back(candidate);
 #ifdef _WIN32
       handle_ = reinterpret_cast<void*>(LoadLibraryA(candidate.c_str()));
@@ -102,9 +109,9 @@ class DynamicLibrary {
     if (error != nullptr) {
       std::ostringstream stream;
       stream << "Unable to load NDI runtime. Tried: ";
-      for (size_t i = 0; i < attempts.size(); ++i) {
-        stream << attempts[i];
-        if (i + 1 < attempts.size()) {
+      for (size_t index = 0; index < attempts.size(); ++index) {
+        stream << attempts[index];
+        if (index + 1 < attempts.size()) {
           stream << ", ";
         }
       }
@@ -177,6 +184,15 @@ std::string GetEnvOrEmpty(const char* key) {
   return value != nullptr ? std::string(value) : std::string();
 }
 
+void AddCandidateIfMissing(std::vector<std::string>* candidates, const std::string& candidate) {
+  if (candidate.empty()) {
+    return;
+  }
+  if (std::find(candidates->begin(), candidates->end(), candidate) == candidates->end()) {
+    candidates->push_back(candidate);
+  }
+}
+
 std::vector<std::string> BuildRuntimeCandidates() {
 #ifdef _WIN32
   constexpr const char* fileName = "Processing.NDI.Lib.x64.dll";
@@ -189,36 +205,48 @@ std::vector<std::string> BuildRuntimeCandidates() {
   std::vector<std::string> candidates;
   const std::string explicitFile = GetEnvOrEmpty("CAST_NDI_RUNTIME_PATH");
   const std::string explicitDir = GetEnvOrEmpty("NDI_RUNTIME_DIR");
+  const std::string explicitLegacyDir = GetEnvOrEmpty("NDI_RUNTIME_DIR_V5");
 
-  if (!explicitFile.empty()) {
-    candidates.push_back(explicitFile);
-  }
+  AddCandidateIfMissing(&candidates, explicitFile);
 
   if (!explicitDir.empty()) {
 #ifdef _WIN32
-    candidates.push_back(explicitDir + "\\" + fileName);
+    AddCandidateIfMissing(&candidates, explicitDir + "\\" + fileName);
 #else
-    candidates.push_back(explicitDir + "/" + fileName);
+    AddCandidateIfMissing(&candidates, explicitDir + "/" + fileName);
+#endif
+  }
+
+  if (!explicitLegacyDir.empty()) {
+#ifdef _WIN32
+    AddCandidateIfMissing(&candidates, explicitLegacyDir + "\\" + fileName);
+#else
+    AddCandidateIfMissing(&candidates, explicitLegacyDir + "/" + fileName);
 #endif
   }
 
 #ifdef _WIN32
-  candidates.push_back(fileName);
-  candidates.push_back("C:\\Program Files\\NDI\\NDI 6 Runtime\\" + std::string(fileName));
-  candidates.push_back("C:\\Program Files\\NDI\\NDI 5 Runtime\\" + std::string(fileName));
+  AddCandidateIfMissing(&candidates, fileName);
+  AddCandidateIfMissing(&candidates, "C:\\Program Files\\NDI\\NDI 6 Runtime\\" + std::string(fileName));
+  AddCandidateIfMissing(&candidates, "C:\\Program Files\\NDI\\NDI 5 Runtime\\" + std::string(fileName));
 #elif __APPLE__
-  candidates.push_back(fileName);
-  candidates.push_back("/usr/local/lib/libndi.dylib");
-  candidates.push_back("/Library/NDI SDK for Apple/lib/macOS/libndi.dylib");
-  candidates.push_back("/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi.dylib");
-  candidates.push_back("/Applications/NDI Scan Converter.app/Contents/Frameworks/libndi.dylib");
-  candidates.push_back("/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/Current/Frameworks/libndi.dylib");
-  candidates.push_back("/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/A/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(&candidates, fileName);
+  AddCandidateIfMissing(&candidates, "/usr/local/lib/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/opt/homebrew/lib/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Library/NDI SDK for Apple/lib/macOS/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Applications/NDI Scan Converter.app/Contents/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(
+      &candidates,
+      "/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/Current/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(
+      &candidates,
+      "/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/A/Frameworks/libndi.dylib");
 #else
-  candidates.push_back("libndi.so.6");
-  candidates.push_back("libndi.so");
-  candidates.push_back("/usr/lib/libndi.so");
-  candidates.push_back("/usr/local/lib/libndi.so");
+  AddCandidateIfMissing(&candidates, "libndi.so.6");
+  AddCandidateIfMissing(&candidates, "libndi.so");
+  AddCandidateIfMissing(&candidates, "/usr/lib/libndi.so");
+  AddCandidateIfMissing(&candidates, "/usr/local/lib/libndi.so");
 #endif
 
   return candidates;
@@ -233,13 +261,54 @@ T ResolveRequired(const DynamicLibrary& runtime, const char* symbolName) {
   return reinterpret_cast<T>(symbol);
 }
 
+template <typename T>
+T ResolveOptional(const DynamicLibrary& runtime, const char* symbolName) {
+  void* symbol = runtime.Resolve(symbolName);
+  if (symbol == nullptr) {
+    return nullptr;
+  }
+  return reinterpret_cast<T>(symbol);
+}
+
+bool DimensionsAreValid(int32_t width, int32_t height) {
+  if (width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const int64_t totalPixels = static_cast<int64_t>(width) * static_cast<int64_t>(height);
+  if (totalPixels <= 0 || totalPixels > static_cast<int64_t>(std::numeric_limits<int32_t>::max())) {
+    return false;
+  }
+
+  return true;
+}
+
+bool TryComputeSize(int32_t stride, int32_t height, size_t* out) {
+  if (stride <= 0 || height <= 0) {
+    return false;
+  }
+
+  const int64_t value = static_cast<int64_t>(stride) * static_cast<int64_t>(height);
+  if (value <= 0) {
+    return false;
+  }
+
+  const uint64_t unsignedValue = static_cast<uint64_t>(value);
+  if (unsignedValue > std::numeric_limits<size_t>::max()) {
+    return false;
+  }
+
+  *out = static_cast<size_t>(unsignedValue);
+  return true;
+}
+
 void LoadRuntimeIfNeeded(SenderState& state) {
   if (state.runtimeLoaded) {
     return;
   }
 
   std::string error;
-  const auto candidates = BuildRuntimeCandidates();
+  const std::vector<std::string> candidates = BuildRuntimeCandidates();
   if (!state.runtime.Load(candidates, &state.loadedRuntimePath, &error)) {
     throw std::runtime_error(error);
   }
@@ -249,6 +318,8 @@ void LoadRuntimeIfNeeded(SenderState& state) {
   state.symbols.sendCreate = ResolveRequired<FnNdiSendCreate>(state.runtime, "NDIlib_send_create");
   state.symbols.sendDestroy = ResolveRequired<FnNdiSendDestroy>(state.runtime, "NDIlib_send_destroy");
   state.symbols.sendVideoV2 = ResolveRequired<FnNdiSendVideoV2>(state.runtime, "NDIlib_send_send_video_v2");
+  state.symbols.sendGetNoConnections =
+      ResolveOptional<FnNdiSendGetNoConnections>(state.runtime, "NDIlib_send_get_no_connections");
 
   state.runtimeLoaded = true;
 }
@@ -265,17 +336,25 @@ void InitializeNdiIfNeeded(SenderState& state) {
   state.ndiInitialized = true;
 }
 
-void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance& sender) {
-  if (sender.sender != nullptr && state.symbols.sendDestroy != nullptr) {
-    state.symbols.sendDestroy(sender.sender);
+void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance* sender) {
+  if (sender == nullptr) {
+    return;
   }
-  sender.sender = nullptr;
-  sender.bgraScratch.clear();
+
+  if (sender->sender != nullptr && state.symbols.sendDestroy != nullptr) {
+    state.symbols.sendDestroy(sender->sender);
+  }
+
+  sender->sender = nullptr;
+  sender->width = 0;
+  sender->height = 0;
+  sender->withAlpha = true;
+  std::vector<uint8_t>().swap(sender->bgraScratch);
 }
 
 void DestroyAllSendersUnlocked(SenderState& state) {
   for (auto& entry : state.senders) {
-    DestroySenderInstanceUnlocked(state, entry.second);
+    DestroySenderInstanceUnlocked(state, &entry.second);
   }
   state.senders.clear();
 }
@@ -288,7 +367,6 @@ void ShutdownRuntimeUnlocked(SenderState& state) {
   }
 
   state.runtime.Unload();
-
   state.runtimeLoaded = false;
   state.ndiInitialized = false;
   state.loadedRuntimePath.clear();
@@ -305,14 +383,12 @@ void EnsureSender(SenderState& state,
 
   auto existing = state.senders.find(senderName);
   if (existing != state.senders.end()) {
-    const SenderInstance& instance = existing->second;
-    if (instance.sender != nullptr &&
-        instance.width == width &&
-        instance.height == height &&
-        instance.withAlpha == withAlpha) {
+    const SenderInstance& sender = existing->second;
+    if (sender.sender != nullptr && sender.width == width && sender.height == height && sender.withAlpha == withAlpha) {
       return;
     }
-    DestroySenderInstanceUnlocked(state, existing->second);
+
+    DestroySenderInstanceUnlocked(state, &existing->second);
     state.senders.erase(existing);
   }
 
@@ -332,7 +408,15 @@ void EnsureSender(SenderState& state,
   instance.width = width;
   instance.height = height;
   instance.withAlpha = withAlpha;
-  instance.bgraScratch.resize(static_cast<size_t>(width) * static_cast<size_t>(height) * 4U);
+
+  const int32_t stride = width * 4;
+  size_t size = 0;
+  if (!TryComputeSize(stride, height, &size)) {
+    state.symbols.sendDestroy(sender);
+    throw std::runtime_error("invalid sender dimensions");
+  }
+
+  instance.bgraScratch.resize(size);
   state.senders[senderName] = std::move(instance);
 }
 
@@ -341,7 +425,8 @@ void ConvertRgbaToBgra(const uint8_t* source,
                        int32_t width,
                        int32_t height,
                        int32_t sourceStride,
-                       int32_t targetStride) {
+                       int32_t targetStride,
+                       bool withAlpha) {
   for (int32_t y = 0; y < height; ++y) {
     const uint8_t* srcLine = source + static_cast<size_t>(y) * static_cast<size_t>(sourceStride);
     uint8_t* dstLine = target + static_cast<size_t>(y) * static_cast<size_t>(targetStride);
@@ -355,7 +440,7 @@ void ConvertRgbaToBgra(const uint8_t* source,
       dstLine[x * 4 + 0] = b;
       dstLine[x * 4 + 1] = g;
       dstLine[x * 4 + 2] = r;
-      dstLine[x * 4 + 3] = a;
+      dstLine[x * 4 + 3] = withAlpha ? a : 255;
     }
   }
 }
@@ -378,8 +463,9 @@ Napi::Value InitializeSender(const Napi::CallbackInfo& info) {
     Napi::TypeError::New(env, "senderName must be non-empty").ThrowAsJavaScriptException();
     return env.Undefined();
   }
-  if (width <= 0 || height <= 0) {
-    Napi::TypeError::New(env, "width and height must be positive").ThrowAsJavaScriptException();
+
+  if (!DimensionsAreValid(width, height)) {
+    Napi::TypeError::New(env, "width and height must be positive and within limits").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -401,7 +487,7 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   if (info.Length() != 5 || !info[0].IsString() || !info[1].IsTypedArray() || !info[2].IsNumber() ||
       !info[3].IsNumber() || !info[4].IsNumber()) {
     Napi::TypeError::New(env, "sendRgbaFrame expects (senderName, Uint8Array, width, height, stride)")
-      .ThrowAsJavaScriptException();
+        .ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -416,12 +502,17 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  if (width <= 0 || height <= 0 || stride < width * 4) {
+  if (!DimensionsAreValid(width, height) || stride < width * 4) {
     Napi::TypeError::New(env, "invalid frame dimensions or stride").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
-  const size_t requiredSize = static_cast<size_t>(stride) * static_cast<size_t>(height);
+  size_t requiredSize = 0;
+  if (!TryComputeSize(stride, height, &requiredSize)) {
+    Napi::TypeError::New(env, "invalid frame size").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
   if (rgba.ByteLength() < requiredSize) {
     Napi::TypeError::New(env, "frame buffer is too small for provided dimensions").ThrowAsJavaScriptException();
     return env.Undefined();
@@ -437,25 +528,34 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   }
 
   SenderInstance& sender = senderIt->second;
-
   if (width != sender.width || height != sender.height) {
     Napi::Error::New(env, "frame dimensions do not match sender configuration").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
   const int32_t targetStride = width * 4;
-  const size_t targetSize = static_cast<size_t>(targetStride) * static_cast<size_t>(height);
+  size_t targetSize = 0;
+  if (!TryComputeSize(targetStride, height, &targetSize)) {
+    Napi::Error::New(env, "invalid target frame size").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 
   if (sender.bgraScratch.size() < targetSize) {
     sender.bgraScratch.resize(targetSize);
   }
 
-  ConvertRgbaToBgra(rgba.Data(), sender.bgraScratch.data(), width, height, stride, targetStride);
+  ConvertRgbaToBgra(rgba.Data(),
+                    sender.bgraScratch.data(),
+                    width,
+                    height,
+                    stride,
+                    targetStride,
+                    sender.withAlpha);
 
   NDIlib_video_frame_v2_t frame{};
   frame.xres = width;
   frame.yres = height;
-  frame.FourCC = kFourCCBgra;
+  frame.FourCC = sender.withAlpha ? kFourCCBgra : kFourCCBgrx;
   frame.frame_rate_N = 60000;
   frame.frame_rate_D = 1001;
   frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
@@ -466,13 +566,42 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  try {
-    state.symbols.sendVideoV2(sender.sender, &frame);
-  } catch (const std::exception& error) {
-    Napi::Error::New(env, error.what()).ThrowAsJavaScriptException();
+  state.symbols.sendVideoV2(sender.sender, &frame);
+  return env.Undefined();
+}
+
+Napi::Value GetSenderConnections(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || info.Length() > 2 || !info[0].IsString() || (info.Length() == 2 && !info[1].IsNumber())) {
+    Napi::TypeError::New(env, "getSenderConnections expects (senderName, timeoutMs?)").ThrowAsJavaScriptException();
+    return env.Undefined();
   }
 
-  return env.Undefined();
+  const std::string senderName = info[0].As<Napi::String>().Utf8Value();
+  const uint32_t timeoutMs = info.Length() == 2
+      ? static_cast<uint32_t>(std::max<int32_t>(0, info[1].As<Napi::Number>().Int32Value()))
+      : 0U;
+
+  if (senderName.empty()) {
+    Napi::TypeError::New(env, "senderName must be non-empty").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto& state = State();
+  std::lock_guard<std::mutex> guard(state.mutex);
+
+  if (state.symbols.sendGetNoConnections == nullptr) {
+    return Napi::Number::New(env, -1);
+  }
+
+  auto senderIt = state.senders.find(senderName);
+  if (senderIt == state.senders.end() || senderIt->second.sender == nullptr) {
+    return Napi::Number::New(env, 0);
+  }
+
+  const int32_t count = state.symbols.sendGetNoConnections(senderIt->second.sender, timeoutMs);
+  return Napi::Number::New(env, count);
 }
 
 Napi::Value DestroySender(const Napi::CallbackInfo& info) {
@@ -494,7 +623,7 @@ Napi::Value DestroySender(const Napi::CallbackInfo& info) {
   const std::string senderName = info[0].As<Napi::String>().Utf8Value();
   const auto senderIt = state.senders.find(senderName);
   if (senderIt != state.senders.end()) {
-    DestroySenderInstanceUnlocked(state, senderIt->second);
+    DestroySenderInstanceUnlocked(state, &senderIt->second);
     state.senders.erase(senderIt);
   }
 
@@ -515,6 +644,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   env.AddCleanupHook(CleanupHook);
   exports.Set("initializeSender", Napi::Function::New(env, InitializeSender));
   exports.Set("sendRgbaFrame", Napi::Function::New(env, SendRgbaFrame));
+  exports.Set("getSenderConnections", Napi::Function::New(env, GetSenderConnections));
   exports.Set("destroySender", Napi::Function::New(env, DestroySender));
   return exports;
 }

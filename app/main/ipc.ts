@@ -12,7 +12,7 @@ import type {
   SlideCreateInput,
   SlideFrame
 } from '@core/types';
-import { NdiService } from './ndi/ndiService';
+import { NdiService } from './ndi/ndi-service';
 
 function safeHandle<Args extends unknown[], R>(
   channel: string,
@@ -34,13 +34,26 @@ export const registerIpcHandlers = (
   ndiService: NdiService,
   getMainWindow: () => BrowserWindow | null
 ): void => {
+  ndiService.onOutputStateChanged((state) => {
+    getMainWindow()?.webContents.send(NDI_EVENTS.outputStateChanged, state);
+  });
+
   ipcMain.on(IPC.connectNdiFramePort, (event) => {
     const port = event.ports[0];
     if (!port) return;
-    port.on('message', (messageEvent) => {
+
+    function handlePortMessage(messageEvent: { data: SlideFrame }) {
       const frame = messageEvent.data as SlideFrame;
       ndiService.sendFrame(frame);
-    });
+    }
+
+    function handlePortClose() {
+      port.off('message', handlePortMessage);
+      port.off('close', handlePortClose);
+    }
+
+    port.on('message', handlePortMessage);
+    port.on('close', handlePortClose);
     port.start();
   });
 
@@ -99,9 +112,7 @@ export const registerIpcHandlers = (
     ndiService.sendFrame(frame);
   });
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
-    const state = ndiService.setOutputEnabled(name, enabled);
-    getMainWindow()?.webContents.send(NDI_EVENTS.outputStateChanged, state);
-    return state;
+    return ndiService.setOutputEnabled(name, enabled);
   });
   safeHandle(IPC.getNdiOutputState, () => ndiService.getOutputState());
 };
