@@ -1,17 +1,17 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSnapshot, LibraryBundle, Overlay } from '@core/types';
+import type { AppSnapshot, Overlay } from '@core/types';
 import { OverlayEditorProvider, useOverlayEditor } from './overlay-editor-context';
 import { useCast } from './cast-context';
-import { useNavigation } from './navigation-context';
+import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
 vi.mock('./cast-context', () => ({
   useCast: vi.fn(),
 }));
 
-vi.mock('./navigation-context', () => ({
-  useNavigation: vi.fn(),
+vi.mock('./use-project-content', () => ({
+  useProjectContent: vi.fn(),
 }));
 
 vi.mock('./workbench-context', () => ({
@@ -30,7 +30,6 @@ function Probe() {
 function createOverlay(overrides: Partial<Overlay> = {}): Overlay {
   return {
     id: 'overlay-1',
-    libraryId: 'library-1',
     name: 'Overlay One',
     type: 'text',
     x: 0,
@@ -56,23 +55,6 @@ function createOverlay(overrides: Partial<Overlay> = {}): Overlay {
   };
 }
 
-function createBundle(overlays: Overlay[]): LibraryBundle {
-  return {
-    library: {
-      id: 'library-1',
-      name: 'Library',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    },
-    presentations: [],
-    slides: [],
-    slideElements: [],
-    playlists: [],
-    mediaAssets: [],
-    overlays,
-  };
-}
-
 function createSnapshot(overlays: Overlay[]): AppSnapshot {
   return {
     libraries: [{
@@ -81,7 +63,20 @@ function createSnapshot(overlays: Overlay[]): AppSnapshot {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     }],
-    bundles: [createBundle(overlays)],
+    libraryBundles: [{
+      library: {
+        id: 'library-1',
+        name: 'Library',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      playlists: [],
+    }],
+    presentations: [],
+    slides: [],
+    slideElements: [],
+    mediaAssets: [],
+    overlays,
   };
 }
 
@@ -93,14 +88,12 @@ describe('OverlayEditorProvider', () => {
   const mutate = vi.fn(async (action: () => Promise<AppSnapshot>) => action());
   const setStatusText = vi.fn();
 
-  let activeBundle: LibraryBundle;
   let workbenchMode: 'show' | 'slide-editor' | 'overlay-editor';
 
   beforeEach(() => {
     vi.clearAllMocks();
     probeValue = null;
 
-    activeBundle = createBundle([createOverlay()]);
     workbenchMode = 'overlay-editor';
 
     window.castApi = {
@@ -111,14 +104,23 @@ describe('OverlayEditorProvider', () => {
     } as unknown as Window['castApi'];
 
     vi.mocked(useCast).mockReturnValue({
-      snapshot: createSnapshot(activeBundle.overlays),
+      snapshot: createSnapshot([createOverlay()]),
       statusText: 'Ready',
       setStatusText,
       mutate,
     });
-    vi.mocked(useNavigation).mockImplementation(() => ({
-      activeBundle,
-    } as ReturnType<typeof useNavigation>));
+    vi.mocked(useProjectContent).mockReturnValue({
+      presentations: [],
+      slides: [],
+      slideElements: [],
+      mediaAssets: [],
+      overlays: [createOverlay()],
+      presentationsById: new Map(),
+      slidesByPresentationId: new Map(),
+      slideElementsBySlideId: new Map(),
+      mediaAssetsById: new Map(),
+      overlaysById: new Map([['overlay-1', createOverlay()]]),
+    });
     vi.mocked(useWorkbench).mockImplementation(() => ({
       workbenchMode,
     } as ReturnType<typeof useWorkbench>));
@@ -145,7 +147,7 @@ describe('OverlayEditorProvider', () => {
   it('pushes pending overlay edits when leaving overlay edit', async () => {
     const pushedOverlay = createOverlay({ name: 'Overlay Draft' });
     updateOverlay.mockResolvedValue(createSnapshot([pushedOverlay]));
-    getSnapshot.mockResolvedValue(createSnapshot(activeBundle.overlays));
+    getSnapshot.mockResolvedValue(createSnapshot([createOverlay()]));
 
     const view = render(
       <OverlayEditorProvider>

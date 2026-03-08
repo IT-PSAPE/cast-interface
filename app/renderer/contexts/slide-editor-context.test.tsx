@@ -1,9 +1,9 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSnapshot, LibraryBundle, Slide, SlideElement } from '@core/types';
+import type { AppSnapshot, Slide, SlideElement } from '@core/types';
 import { SlideEditorProvider, useSlideEditor } from './slide-editor-context';
 import { useCast } from './cast-context';
-import { useNavigation } from './navigation-context';
+import { useProjectContent } from './use-project-content';
 import { useSlides } from './slide-context';
 import { useWorkbench } from './workbench-context';
 
@@ -11,8 +11,8 @@ vi.mock('./cast-context', () => ({
   useCast: vi.fn(),
 }));
 
-vi.mock('./navigation-context', () => ({
-  useNavigation: vi.fn(),
+vi.mock('./use-project-content', () => ({
+  useProjectContent: vi.fn(),
 }));
 
 vi.mock('./slide-context', () => ({
@@ -70,23 +70,6 @@ function createElement(overrides: Partial<SlideElement> = {}): SlideElement {
   };
 }
 
-function createBundle(slideElements: SlideElement[]): LibraryBundle {
-  return {
-    library: {
-      id: 'library-1',
-      name: 'Library',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    },
-    presentations: [],
-    slides: [createSlide()],
-    slideElements,
-    playlists: [],
-    mediaAssets: [],
-    overlays: [],
-  };
-}
-
 function createSnapshot(slideElements: SlideElement[]): AppSnapshot {
   return {
     libraries: [{
@@ -95,7 +78,26 @@ function createSnapshot(slideElements: SlideElement[]): AppSnapshot {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     }],
-    bundles: [createBundle(slideElements)],
+    libraryBundles: [{
+      library: {
+        id: 'library-1',
+        name: 'Library',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      playlists: [],
+    }],
+    presentations: [{
+      id: 'presentation-1',
+      title: 'Presentation',
+      kind: 'canvas',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }],
+    slides: [createSlide()],
+    slideElements,
+    mediaAssets: [],
+    overlays: [],
   };
 }
 
@@ -109,13 +111,11 @@ describe('SlideEditorProvider', () => {
   const mutate = vi.fn(async (action: () => Promise<AppSnapshot>) => action());
   const setStatusText = vi.fn();
 
-  let activeBundle: LibraryBundle;
   let workbenchMode: 'show' | 'slide-editor' | 'overlay-editor';
 
   beforeEach(() => {
     vi.clearAllMocks();
     probeValue = null;
-    activeBundle = createBundle([createElement()]);
     workbenchMode = 'slide-editor';
 
     window.castApi = {
@@ -128,14 +128,23 @@ describe('SlideEditorProvider', () => {
     } as unknown as Window['castApi'];
 
     vi.mocked(useCast).mockReturnValue({
-      snapshot: createSnapshot(activeBundle.slideElements),
+      snapshot: createSnapshot([createElement()]),
       statusText: 'Ready',
       setStatusText,
       mutate,
     });
-    vi.mocked(useNavigation).mockImplementation(() => ({
-      activeBundle,
-    } as ReturnType<typeof useNavigation>));
+    vi.mocked(useProjectContent).mockReturnValue({
+      presentations: [],
+      slides: [createSlide()],
+      slideElements: [createElement()],
+      mediaAssets: [],
+      overlays: [],
+      presentationsById: new Map(),
+      slidesByPresentationId: new Map([['presentation-1', [createSlide()]]]),
+      slideElementsBySlideId: new Map([['slide-1', [createElement()]]]),
+      mediaAssetsById: new Map(),
+      overlaysById: new Map(),
+    });
     vi.mocked(useSlides).mockImplementation(() => ({
       currentSlide: createSlide(),
     } as ReturnType<typeof useSlides>));

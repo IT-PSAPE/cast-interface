@@ -29,8 +29,8 @@ const api = {
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) =>
     ipcRenderer.invoke(IPC.movePresentationToSegment, playlistId, presentationId, segmentId),
   movePresentation: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.movePresentation, id, direction),
-  createPresentation: (libraryId: Id, title: string, kind?: PresentationKind) =>
-    ipcRenderer.invoke(IPC.createPresentation, libraryId, title, kind),
+  createPresentation: (title: string, kind?: PresentationKind) =>
+    ipcRenderer.invoke(IPC.createPresentation, title, kind),
   setPresentationKind: (id: Id, kind: PresentationKind) => ipcRenderer.invoke(IPC.setPresentationKind, id, kind),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),

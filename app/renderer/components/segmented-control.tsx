@@ -72,7 +72,7 @@ export function SegmentedControl({ label, children, className = '', selectionMod
 
   return (
     <SegmentedControlContext.Provider value={contextValue}>
-      <div role="group" aria-label={label} className={`inline-flex items-center rounded-lg bg-surface-2/40 p-0.5 ${className}`}>
+      <div role="group" aria-label={label} className={`inline-flex items-center rounded-lg bg-background-tertiary/40 p-0.5 ${className}`}>
         {children}
       </div>
     </SegmentedControlContext.Provider>
@@ -95,8 +95,8 @@ export function SegmentedControlItem({ value, title, children, variant = 'label'
     ? 'min-w-7 px-1.5'
     : 'px-3';
   const stateClass = resolvedActive
-    ? 'bg-accent text-text-primary'
-    : 'bg-transparent text-text-muted hover:text-text-secondary';
+    ? 'bg-background-brand_primary text-text-primary'
+    : 'bg-transparent text-text-tertiary hover:text-text-secondary';
 
   return (
     <button

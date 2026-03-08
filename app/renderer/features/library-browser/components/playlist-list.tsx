@@ -11,16 +11,16 @@ interface PlaylistListProps {
 }
 
 export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlaylistMenuButtonClick, onClearEditingPlaylist }: PlaylistListProps) {
-  const { activeBundle, currentPlaylistId, setCurrentPlaylistId, createPlaylist, renamePlaylist, recentlyCreatedId, clearRecentlyCreated } = useNavigation();
+  const { currentLibraryBundle, currentPlaylistId, setCurrentPlaylistId, createPlaylist, renamePlaylist, recentlyCreatedId, clearRecentlyCreated } = useNavigation();
 
   function handleCreate() { void createPlaylist(); }
 
-  if (!activeBundle) return null;
+  if (!currentLibraryBundle) return null;
 
   return (
-    <section className="border-b border-stroke">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden border-b border-border-primary">
       <div className="flex items-center justify-between px-3 py-1.5">
-        <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Playlist</span>
+        <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
         <IconButton label="New playlist" onClick={handleCreate} className="h-5 w-5">
           <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
             <path d="M8 3.5V12.5" strokeWidth="1.25" strokeLinecap="round" />
@@ -29,8 +29,8 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
         </IconButton>
       </div>
 
-      <div className="px-1 pb-1" role="list" aria-label="Playlists">
-        {activeBundle.playlists.map((tree) => {
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1" role="list" aria-label="Playlists">
+        {currentLibraryBundle.playlists.map((tree) => {
           const isSelected = tree.playlist.id === currentPlaylistId;
           const isEditing = tree.playlist.id === recentlyCreatedId || tree.playlist.id === editingPlaylistId;
 
@@ -54,8 +54,8 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                 onContextMenu={handleContextMenu}
                 className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-[13px] transition-colors ${
                   isSelected
-                    ? 'bg-selected/15 text-text-primary'
-                    : 'bg-transparent text-text-secondary hover:bg-surface-3/50 hover:text-text-primary'
+                    ? 'bg-brand-400/15 text-text-primary'
+                    : 'bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'
                 }`}
               >
                 <EditableText
@@ -69,7 +69,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
               <IconButton
                 label={`Open ${tree.playlist.name} menu`}
                 onClick={handleMenuButtonClick}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-stroke hover:text-text-primary"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
               >
                 ⋮
               </IconButton>

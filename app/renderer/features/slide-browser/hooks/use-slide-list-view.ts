@@ -28,16 +28,17 @@ interface OutlineViewModel {
 
 export function useOutlineView(): OutlineViewModel {
   const { mutate, setStatusText } = useCast();
-  const { currentPresentation } = useNavigation();
+  const { currentPresentation, currentPresentationId, currentPlaylistPresentationId, isDetachedPresentationBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const textEditable = currentPresentation?.kind === 'lyrics';
+  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentPlaylistPresentationId;
 
   const rows = useMemo(() => {
     return slides.map((slide, index) => {
       const elements = slideElementsById.get(slide.id) ?? [];
       const details = slideTextDetails(elements);
-      const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+      const state = getSlideVisualState(index, showLiveState ? liveSlideIndex : -1, currentSlideIndex, elements);
 
       return {
         slide,
@@ -50,7 +51,7 @@ export function useOutlineView(): OutlineViewModel {
         textEditable,
       } satisfies OutlineSlideRow;
     });
-  }, [slides, slideElementsById, liveSlideIndex, currentSlideIndex, textEditable]);
+  }, [slides, slideElementsById, liveSlideIndex, currentSlideIndex, showLiveState, textEditable]);
 
   const rowBySlideId = useMemo(() => {
     const map = new Map<Id, OutlineSlideRow>();

@@ -2,6 +2,7 @@ import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
 
 interface LibraryPresentationListProps {
   editingPresentationId: string | null;
@@ -11,17 +12,16 @@ interface LibraryPresentationListProps {
 }
 
 export function LibraryPresentationList({ editingPresentationId, onLibraryPresentationContextMenu, onLibraryPresentationMenuButtonClick, onClearEditingPresentation }: LibraryPresentationListProps) {
-  const { activeBundle, currentPresentationId, openPresentation, createPresentation, renamePresentation } = useNavigation();
+  const { currentPresentationId, openPresentation, createPresentation, renamePresentation } = useNavigation();
+  const { presentations } = useProjectContent();
 
   function handleNewPresentation() { void createPresentation(); }
 
-  if (!activeBundle) return null;
-
   return (
-    <section className="border-t border-stroke min-h-0 overflow-auto">
-      <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-surface-1 z-10">
-        <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
-          Library Presentations
+    <section className="border-t border-border-primary min-h-0 overflow-auto">
+      <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-background-primary_alt z-10">
+        <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">
+          Project Presentations
         </span>
         <IconButton label="New presentation" onClick={handleNewPresentation} className="h-5 w-5">
           <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
@@ -34,7 +34,7 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
       </div>
 
       <div className="px-1 pb-1">
-        {activeBundle.presentations.map((presentation) => {
+        {presentations.map((presentation) => {
           const isSelected = presentation.id === currentPresentationId;
           const isEditing = presentation.id === editingPresentationId;
 
@@ -57,8 +57,8 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
                 onContextMenu={handleContextMenu}
                 className={`block w-full rounded-sm border-0 px-2 py-1 pr-7 text-[13px] transition-colors ${
                   isSelected
-                    ? 'bg-selected/15 text-text-primary'
-                    : 'bg-transparent text-text-secondary hover:bg-surface-3/50 hover:text-text-primary'
+                    ? 'bg-brand-400/15 text-text-primary'
+                    : 'bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'
                 }`}
               >
                 <EditableText
@@ -72,7 +72,7 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
               <IconButton
                 label={`Open ${presentation.title} menu`}
                 onClick={handleMenuButtonClick}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-stroke hover:text-text-primary"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
               >
                 ⋮
               </IconButton>

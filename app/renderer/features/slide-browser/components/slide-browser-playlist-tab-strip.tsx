@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import type { Id } from '@core/types';
 import { Tab, TabBar } from '../../../components/tab-bar';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -7,6 +7,7 @@ import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-pre
 
 interface SlideBrowserPlaylistTabStripProps {
   items: PlaylistPresentationSequenceItem[];
+  action?: ReactNode;
 }
 
 interface PlaylistTabItemProps {
@@ -32,8 +33,8 @@ function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
   );
 }
 
-export function SlideBrowserPlaylistTabStrip({ items }: SlideBrowserPlaylistTabStripProps) {
-  const { currentPresentationId, openPresentation } = useNavigation();
+export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrowserPlaylistTabStripProps) {
+  const { currentPlaylistPresentationId, openPresentation } = useNavigation();
   const { slides } = useSlides();
 
   const handleSelectPresentation = useCallback((presentationId: Id) => {
@@ -45,14 +46,14 @@ export function SlideBrowserPlaylistTabStrip({ items }: SlideBrowserPlaylistTabS
       <PlaylistTabItem
         key={item.entryId}
         item={item}
-        active={item.presentation.id === currentPresentationId}
+        active={item.presentation.id === currentPlaylistPresentationId}
         onSelect={handleSelectPresentation}
       />
     );
-  }, [currentPresentationId, handleSelectPresentation]);
+  }, [currentPlaylistPresentationId, handleSelectPresentation]);
 
   return (
-    <header className="flex h-8 items-center gap-3 border-b border-stroke bg-surface-1/70 px-3">
+    <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-background-primary_alt/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
           <TabBar label="Playlist presentations" bordered={false}>
@@ -60,9 +61,10 @@ export function SlideBrowserPlaylistTabStrip({ items }: SlideBrowserPlaylistTabS
           </TabBar>
         </div>
       </div>
-      <span className="shrink-0 text-[11px] text-text-muted tabular-nums">
+      <span className="shrink-0 text-[11px] text-text-tertiary tabular-nums">
         {slides.length} slide{slides.length === 1 ? '' : 's'}
       </span>
+      {action ? <div className="shrink-0">{action}</div> : null}
     </header>
   );
 }

@@ -5,7 +5,6 @@ import { flattenPlaylistPresentationSequence } from './use-playlist-presentation
 function presentation(id: string, title: string): Presentation {
   return {
     id,
-    libraryId: 'library-1',
     title,
     kind: 'canvas',
     createdAt: '2026-01-01T00:00:00.000Z',

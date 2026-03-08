@@ -52,11 +52,11 @@ export function SlideInspector() {
   }
 
   if (!isOverlayEdit && !currentSlide) {
-    return <div className="text-[12px] text-text-muted">No slide selected.</div>;
+    return <div className="text-[12px] text-text-tertiary">No slide selected.</div>;
   }
 
   if (isOverlayEdit && !currentOverlay && effectiveElements.length === 0) {
-    return <div className="text-[12px] text-text-muted">No overlay selected.</div>;
+    return <div className="text-[12px] text-text-tertiary">No overlay selected.</div>;
   }
 
   return (
@@ -76,28 +76,28 @@ export function SlideInspector() {
         {!isOverlayEdit && currentSlide ? (
           <>
             <div>
-              <span className="text-[11px] text-text-muted uppercase tracking-wider">Width</span>
+              <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Width</span>
               <p className="text-[14px] text-text-primary m-0 mt-0.5">{currentSlide.width}</p>
             </div>
             <div>
-              <span className="text-[11px] text-text-muted uppercase tracking-wider">Height</span>
+              <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Height</span>
               <p className="text-[14px] text-text-primary m-0 mt-0.5">{currentSlide.height}</p>
             </div>
           </>
         ) : null}
         <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">{isOverlayEdit ? 'Objects' : 'Elements'}</span>
+          <span className="text-[11px] text-text-tertiary uppercase tracking-wider">{isOverlayEdit ? 'Objects' : 'Elements'}</span>
           <p className="text-[14px] text-text-primary m-0 mt-0.5">{effectiveElements.length}</p>
         </div>
       </div>
 
       <div>
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Output</span>
+        <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Output</span>
         <p className="text-[12px] text-text-secondary m-0 mt-0.5">1920 × 1080 RGBA</p>
       </div>
 
       {isLyricsPresentation ? (
-        <div className="grid gap-2 rounded-md border border-stroke bg-surface-2/60 p-2">
+        <div className="grid gap-2 rounded-md border border-border-primary bg-background-tertiary/60 p-2">
           <p className="m-0 text-[12px] text-text-secondary">
             Lyrics presentations support one text element per slide. Shapes and media are disabled until you switch this presentation to Canvas.
           </p>

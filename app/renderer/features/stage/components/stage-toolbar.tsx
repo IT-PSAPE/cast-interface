@@ -102,7 +102,7 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   }
 
   return (
-    <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-stroke bg-surface-2/90 px-1 py-0.5 shadow-elevated backdrop-blur-sm">
+    <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-border-primary bg-background-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
       <ToolbarButton label="Add Text" onClick={handleAddText} disabled={isLyricsPresentation}>
         <TextIcon />
       </ToolbarButton>

@@ -15,7 +15,7 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   if (asset.type === 'video' || asset.type === 'animation') {
     return <video src={asset.src} muted playsInline preload="metadata" className="block h-full w-full object-cover" />;
   }
-  return <span className="text-[11px] font-bold uppercase tracking-wider text-text-muted">{asset.type}</span>;
+  return <span className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">{asset.type}</span>;
 }
 
 export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDialogProps) {
@@ -60,13 +60,13 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
       className="pointer-events-auto absolute inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="grid w-[480px] max-h-[420px] grid-rows-[auto_1fr_auto] rounded-lg border border-stroke bg-surface-1 shadow-elevated">
-        <header className="flex items-center justify-between border-b border-stroke px-4 py-3">
+      <div className="grid w-[480px] max-h-[420px] grid-rows-[auto_1fr_auto] rounded-lg border border-border-primary bg-background-primary_alt shadow-2xl">
+        <header className="flex items-center justify-between border-b border-border-primary px-4 py-3">
           <h2 className="m-0 text-[14px] font-semibold text-text-primary">Add Media</h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
+            className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
             aria-label="Close"
           >
             &times;
@@ -75,14 +75,14 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
 
         <div className="min-h-0 overflow-auto p-4">
           {mediaAssets.length === 0 ? (
-            <p className="m-0 text-center text-[12px] text-text-muted">
-              No media assets in this library. Import media from the drawer first.
+            <p className="m-0 text-center text-[12px] text-text-tertiary">
+              No media assets in the project. Import media from the drawer first.
             </p>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
               {mediaAssets.map((asset) => {
                 const isSelected = selectedIds.has(asset.id);
-                const borderClass = isSelected ? 'border-focus ring-1 ring-focus' : 'border-stroke';
+                const borderClass = isSelected ? 'border-brand ring-1 ring-brand-400' : 'border-border-primary';
 
                 function handleClick() {
                   toggleAsset(asset.id);
@@ -93,7 +93,7 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
                     key={asset.id}
                     type="button"
                     onClick={handleClick}
-                    className={`group cursor-pointer rounded border bg-surface-0 p-0 text-left transition-colors ${borderClass}`}
+                    className={`group cursor-pointer rounded border bg-background-primary p-0 text-left transition-colors ${borderClass}`}
                   >
                     <div className="grid aspect-square place-items-center overflow-hidden rounded-t">
                       <MediaThumbnail asset={asset} />
@@ -108,8 +108,8 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
           )}
         </div>
 
-        <footer className="flex items-center justify-between border-t border-stroke px-4 py-3">
-          <span className="text-[12px] text-text-muted">
+        <footer className="flex items-center justify-between border-t border-border-primary px-4 py-3">
+          <span className="text-[12px] text-text-tertiary">
             {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select media to add'}
           </span>
           <div className="flex gap-2">

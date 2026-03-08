@@ -18,18 +18,18 @@ interface PlaylistItemListProps {
 }
 
 export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId, onSegmentContextMenu, onSegmentMenuButtonClick, onSegmentPresentationContextMenu, onSegmentPresentationMenuButtonClick, onRenameSegment, onRenamePresentation, onClearEditingSegment, onClearEditingPresentation }: PlaylistItemListProps) {
-  const { currentPresentationId, openPresentation, createSegment } = useNavigation();
+  const { currentPlaylistPresentationId, openPresentation, createSegment } = useNavigation();
 
   function handleNewSegment() { void createSegment(); }
 
   if (!tree) {
-    return <div className="grid place-items-center p-4 text-[12px] text-text-muted">Select a playlist</div>;
+    return <div className="grid h-full min-h-0 place-items-center p-4 text-[12px] text-text-tertiary">Select a playlist</div>;
   }
 
   return (
-    <section className="min-h-0 overflow-auto">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-1 px-3 py-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Segments</span>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border-primary bg-background-primary_alt px-3 py-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
         <IconButton label="New segment" onClick={handleNewSegment} className="h-5 w-5">
           <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
             <path d="M2.5 4.5H7.5L9 6H13.5V12.5H2.5V4.5Z" strokeWidth="1.25" />
@@ -39,12 +39,12 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
         </IconButton>
       </div>
 
-      <div className="px-1 pb-1">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
         {tree.segments.map((segment) => (
           <PlaylistSegmentGroup
             key={segment.segment.id}
             segment={segment}
-            selectedPresentationId={currentPresentationId}
+            selectedPresentationId={currentPlaylistPresentationId}
             editingSegmentId={editingSegmentId}
             editingPresentationId={editingPresentationId}
             onSelectPresentation={openPresentation}

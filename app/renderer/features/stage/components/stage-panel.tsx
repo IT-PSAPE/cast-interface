@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 import type { MediaAsset } from '@core/types';
 import { MediaPickerDialog } from '../../../components/media-picker-dialog';
 import { useElements } from '../../../contexts/element-context';
-import { useNavigation } from '../../../contexts/navigation-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { useSlides } from '../../../contexts/slide-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { StageViewport } from '../../stage/components/stage-viewport';
 import { StageToolbar } from './stage-toolbar';
@@ -19,7 +19,7 @@ export function StagePanel() {
   const { currentOverlay } = useOverlayEditor();
   const { selectedElement, elementDraft, createFromMedia } = useElements();
   const { workbenchMode } = useWorkbench();
-  const { activeBundle } = useNavigation();
+  const { mediaAssets } = useProjectContent();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const hasCanvasSource = isOverlayEdit ? Boolean(currentOverlay) : Boolean(currentSlide);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
@@ -48,7 +48,7 @@ export function StagePanel() {
   }, [createFromMedia]);
 
   return (
-    <section className="grid h-full min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-surface-0/50">
+    <section className="grid h-full min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-background-primary/50">
       <div className="relative min-h-0 overflow-hidden p-2">
         {hasCanvasSource ? (
           <>
@@ -58,21 +58,21 @@ export function StagePanel() {
             </div>
             {showMediaPicker ? (
               <MediaPickerDialog
-                assets={activeBundle?.mediaAssets ?? []}
+                assets={mediaAssets}
                 onConfirm={handleConfirmMedia}
                 onClose={handleCloseMediaPicker}
               />
             ) : null}
           </>
         ) : (
-          <div className="grid h-full min-h-0 place-items-center rounded-md border border-stroke bg-surface-0 text-[12px] text-text-muted">
+          <div className="grid h-full min-h-0 place-items-center rounded-md border border-border-primary bg-background-primary text-[12px] text-text-tertiary">
             {isOverlayEdit ? 'No overlay selected.' : 'No slide selected.'}
           </div>
         )}
       </div>
 
-      <footer className="flex items-center gap-4 border-t border-stroke bg-surface-1/80 px-3 py-1 text-[11px] text-text-secondary">
-        <span className="font-medium text-text-muted">Selection</span>
+      <footer className="flex items-center gap-4 border-t border-border-primary bg-background-primary_alt/80 px-3 py-1 text-[11px] text-text-secondary">
+        <span className="font-medium text-text-tertiary">Selection</span>
         <span>X: {formatMetric(x)}</span>
         <span>Y: {formatMetric(y)}</span>
         <span>W: {formatMetric(width)}</span>

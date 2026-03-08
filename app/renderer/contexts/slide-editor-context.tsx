@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AppSnapshot, Id, SlideElement } from '@core/types';
 import { buildSnapshotDiff } from './element-history-utils';
 import { useCast } from './cast-context';
-import { useNavigation } from './navigation-context';
 import { useSlides } from './slide-context';
+import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
 interface SlideEditorContextValue {
@@ -18,33 +18,29 @@ const SlideEditorContext = createContext<SlideEditorContextValue | null>(null);
 
 export function SlideEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { activeBundle } = useNavigation();
   const { currentSlide } = useSlides();
   const { workbenchMode } = useWorkbench();
+  const { slideElementsBySlideId } = useProjectContent();
   const [stagedSlides, setStagedSlides] = useState<Record<Id, SlideElement[]>>({});
   const [isPushingChanges, setIsPushingChanges] = useState(false);
   const previousWorkbenchModeRef = useRef(workbenchMode);
 
   const persistedElementsBySlideId = useMemo(() => {
     const map = new Map<Id, SlideElement[]>();
-    if (!activeBundle) return map;
-    for (const element of activeBundle.slideElements) {
-      const existing = map.get(element.slideId) ?? [];
-      existing.push(element);
-      map.set(element.slideId, existing);
+    for (const [slideId, elements] of slideElementsBySlideId.entries()) {
+      map.set(slideId, elements);
     }
     return map;
-  }, [activeBundle]);
+  }, [slideElementsBySlideId]);
 
   const hasPendingChanges = useMemo(() => {
-    if (!activeBundle) return false;
     for (const slideId of Object.keys(stagedSlides)) {
       const persisted = persistedElementsBySlideId.get(slideId) ?? [];
       const staged = stagedSlides[slideId] ?? [];
       if (slideElementsSignature(persisted) !== slideElementsSignature(staged)) return true;
     }
     return false;
-  }, [activeBundle, persistedElementsBySlideId, stagedSlides]);
+  }, [persistedElementsBySlideId, stagedSlides]);
 
   const getSlideElements = useCallback((slideId: Id) => {
     return stagedSlides[slideId] ?? persistedElementsBySlideId.get(slideId) ?? [];
@@ -58,7 +54,7 @@ export function SlideEditorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const pushChanges = useCallback(async () => {
-    if (!activeBundle || isPushingChanges) return;
+    if (isPushingChanges) return;
     const pendingSlideIds = Object.keys(stagedSlides).filter((slideId) => {
       const persisted = persistedElementsBySlideId.get(slideId) ?? [];
       const staged = stagedSlides[slideId] ?? [];
@@ -94,7 +90,7 @@ export function SlideEditorProvider({ children }: { children: ReactNode }) {
       });
 
       setStagedSlides({});
-      if (currentSlide && !next.bundles.some((bundle) => bundle.slides.some((slide) => slide.id === currentSlide.id))) {
+      if (currentSlide && !next.slides.some((slide) => slide.id === currentSlide.id)) {
         setStatusText('Slide changes pushed');
         return;
       }
@@ -102,7 +98,7 @@ export function SlideEditorProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPushingChanges(false);
     }
-  }, [activeBundle, currentSlide, isPushingChanges, mutate, persistedElementsBySlideId, setStatusText, stagedSlides]);
+  }, [currentSlide, isPushingChanges, mutate, persistedElementsBySlideId, setStatusText, stagedSlides]);
 
   useEffect(() => {
     const previousWorkbenchMode = previousWorkbenchModeRef.current;

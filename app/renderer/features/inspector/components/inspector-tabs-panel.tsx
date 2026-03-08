@@ -38,7 +38,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
 
   return (
     <section className={`grid min-h-0 grid-rows-[auto_1fr] ${className}`}>
-      <div className="border-b border-stroke">
+      <div className="border-b border-border-primary">
         <TabBar label="Inspector">
           {!isOverlayEdit && !hasSelection && <Tab active={inspectorTab === 'presentation'} onClick={showPresentationTab}>Presentation</Tab>}
           {(!hasSelection || isOverlayEdit) && <Tab active={inspectorTab === 'slide'} onClick={showSlideTab}>{isOverlayEdit ? 'Overlay' : 'Slide'}</Tab>}

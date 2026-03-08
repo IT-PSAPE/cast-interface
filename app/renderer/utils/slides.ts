@@ -1,4 +1,4 @@
-import type { Id, MediaAsset, Slide, SlideElement } from '@core/types';
+import type { MediaAsset, Slide, SlideElement } from '@core/types';
 import type { SlideBrowserMode, PlaylistBrowserMode, ShortcutItem, SlideVisualState } from '../types/ui';
 import { LAYER_ORDER } from '../types/ui';
 
@@ -8,8 +8,8 @@ export const SHORTCUTS: ShortcutItem[] = [
   { keys: '1-9', action: 'Take slide by index' },
   { keys: 'Enter / Space', action: 'Take selected slide' },
   { keys: 'Delete / Backspace', action: 'Delete selected element' },
-  { keys: 'Alt + 1..3', action: 'Switch slide view (single/grid/outline)' },
-  { keys: 'Shift + Alt + 1..3', action: 'Switch playlist view (single/tabs/continuous)' },
+  { keys: 'Alt + 1..3', action: 'Switch slide view (focus/grid/list)' },
+  { keys: 'Shift + Alt + 1..3', action: 'Switch playlist view (current/tabs/continuous)' },
 ];
 
 export const CANVAS_VIEW_LABELS: Record<SlideBrowserMode, string> = {
@@ -115,9 +115,8 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function getOverlayDefaults(libraryId: Id) {
+export function getOverlayDefaults() {
   return {
-    libraryId,
     name: 'New Overlay',
     elements: [],
     animation: { kind: 'fade' as const, durationMs: 2500 },

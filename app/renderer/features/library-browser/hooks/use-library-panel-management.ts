@@ -87,17 +87,14 @@ export function useLibraryPanelManagement() {
     setStatusText('Added presentation to segment');
   }, [mutate, setStatusText]);
 
-  const createPresentationInSegment = useCallback(async (libraryId: Id, segmentId: Id) => {
-    const previousPresentationIds = new Set(
-      snapshot?.bundles.find((bundle) => bundle.library.id === libraryId)?.presentations.map((presentation) => presentation.id) ?? []
-    );
+  const createPresentationInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
+    const previousPresentationIds = new Set(snapshot?.presentations.map((presentation) => presentation.id) ?? []);
 
-    const next = await mutate(() => window.castApi.createPresentation(libraryId, 'New Presentation'));
-    const updatedBundle = next.bundles.find((bundle) => bundle.library.id === libraryId);
+    const next = await mutate(() => window.castApi.createPresentation('New Presentation'));
     const createdPresentationId = findCreatedId(
       previousPresentationIds,
-      updatedBundle?.presentations.map((presentation) => presentation.id) ?? []
-    ) ?? updatedBundle?.presentations.at(-1)?.id ?? null;
+      next.presentations.map((presentation) => presentation.id)
+    ) ?? next.presentations.at(-1)?.id ?? null;
     if (!createdPresentationId) return null;
 
     await mutate(() => window.castApi.createSlide({ presentationId: createdPresentationId }));

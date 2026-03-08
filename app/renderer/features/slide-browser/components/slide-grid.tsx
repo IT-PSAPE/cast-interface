@@ -1,13 +1,16 @@
 import { useSlides } from '../../../contexts/slide-context';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
+import { useNavigation } from '../../../contexts/navigation-context';
 import { getSlideVisualState } from '../../../utils/slides';
 import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
 import { SlideCard } from '../../slide-browser/components/slide-card';
 
 export function SlideGrid() {
+  const { currentPresentationId, currentPlaylistPresentationId, isDetachedPresentationBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { getThumbnailScene } = useRenderScenes();
+  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentPlaylistPresentationId;
 
   return (
     <section className="min-h-0 overflow-y-auto p-2">
@@ -16,7 +19,7 @@ export function SlideGrid() {
           const elements = slideElementsById.get(slide.id) ?? [];
           const scene = getThumbnailScene(slide.id, 'show');
           if (!scene) return null;
-          const state = getSlideVisualState(idx, liveSlideIndex, currentSlideIndex, elements);
+          const state = getSlideVisualState(idx, showLiveState ? liveSlideIndex : -1, currentSlideIndex, elements);
 
           function handleActivate() { activateSlide(idx); }
           function handleEdit() { setCurrentSlideIndex(idx); setSlideBrowserMode('focus'); }

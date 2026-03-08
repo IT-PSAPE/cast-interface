@@ -38,7 +38,6 @@ export type PresentationKind = 'canvas' | 'lyrics';
 
 export interface Presentation {
   id: Id;
-  libraryId: Id;
   title: string;
   kind: PresentationKind;
   createdAt: string;
@@ -146,7 +145,6 @@ export type MediaAssetType = 'image' | 'video' | 'audio' | 'animation';
 
 export interface MediaAsset {
   id: Id;
-  libraryId: Id;
   name: string;
   type: MediaAssetType;
   src: string;
@@ -163,7 +161,6 @@ export interface OverlayAnimation {
 
 export interface Overlay {
   id: Id;
-  libraryId: Id;
   name: string;
   type: OverlayType;
   x: number;
@@ -191,19 +188,19 @@ export interface PlaylistTree {
   }>;
 }
 
-export interface LibraryBundle {
+export interface LibraryPlaylistBundle {
   library: Library;
-  presentations: Presentation[];
-  slides: Slide[];
-  slideElements: SlideElement[];
   playlists: PlaylistTree[];
-  mediaAssets: MediaAsset[];
-  overlays: Overlay[];
 }
 
 export interface AppSnapshot {
   libraries: Library[];
-  bundles: LibraryBundle[];
+  libraryBundles: LibraryPlaylistBundle[];
+  presentations: Presentation[];
+  slides: Slide[];
+  slideElements: SlideElement[];
+  mediaAssets: MediaAsset[];
+  overlays: Overlay[];
 }
 
 export interface SlideFrame {
@@ -267,7 +264,6 @@ export interface NdiOutputState {
 }
 
 export interface OverlayCreateInput {
-  libraryId: Id;
   name: string;
   elements?: SlideElement[];
   animation?: OverlayAnimation;

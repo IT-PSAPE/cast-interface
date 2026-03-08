@@ -4,6 +4,7 @@ import { StagePanel } from '../../stage/components/stage-panel';
 
 const useCastMock = vi.fn();
 const useNavigationMock = vi.fn();
+const useProjectContentMock = vi.fn();
 const useSlidesMock = vi.fn();
 const useElementsMock = vi.fn();
 const useOverlayEditorMock = vi.fn();
@@ -11,6 +12,10 @@ const useWorkbenchMock = vi.fn();
 
 vi.mock('../../../contexts/cast-context', () => ({
   useCast: () => useCastMock(),
+}));
+
+vi.mock('../../../contexts/use-project-content', () => ({
+  useProjectContent: () => useProjectContentMock(),
 }));
 
 vi.mock('../../../contexts/navigation-context', () => ({
@@ -42,7 +47,8 @@ vi.mock('../../stage/components/stage-viewport', () => ({
 describe('StagePanel', () => {
   it('renders the overlay canvas when overlay-editor has overlay elements', () => {
     useCastMock.mockReturnValue({ setStatusText: vi.fn() });
-    useNavigationMock.mockReturnValue({ activeBundle: { mediaAssets: [] } });
+    useNavigationMock.mockReturnValue({ currentPresentation: null });
+    useProjectContentMock.mockReturnValue({ mediaAssets: [] });
     useSlidesMock.mockReturnValue({ currentSlide: null });
     useOverlayEditorMock.mockReturnValue({ currentOverlay: { id: 'overlay-1' } });
     useWorkbenchMock.mockReturnValue({ workbenchMode: 'overlay-editor' });
@@ -62,7 +68,8 @@ describe('StagePanel', () => {
 
   it('renders the overlay empty state when no overlay is selected', () => {
     useCastMock.mockReturnValue({ setStatusText: vi.fn() });
-    useNavigationMock.mockReturnValue({ activeBundle: { mediaAssets: [] } });
+    useNavigationMock.mockReturnValue({ currentPresentation: null });
+    useProjectContentMock.mockReturnValue({ mediaAssets: [] });
     useSlidesMock.mockReturnValue({ currentSlide: null });
     useOverlayEditorMock.mockReturnValue({ currentOverlay: null });
     useWorkbenchMock.mockReturnValue({ workbenchMode: 'overlay-editor' });

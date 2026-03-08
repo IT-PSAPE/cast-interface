@@ -19,10 +19,10 @@ interface SlideOutlineRowProps {
 export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPrimaryTextCommit }: SlideOutlineRowProps) {
 
   const rowStateClass = row.state === 'live'
-    ? 'border-live/70 bg-live/10'
+    ? 'border-green-500/70 bg-green-500/10'
     : isFocused
-      ? 'border-focus/80 bg-focus/10'
-      : 'border-stroke bg-surface-1/40';
+      ? 'border-brand-400/80 bg-brand-400/10'
+      : 'border-border-primary bg-background-primary_alt/40';
 
   function handleSelect() {
     onSelect(row.index);
@@ -62,9 +62,9 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
       onDoubleClick={handleOpen}
       className={`grid w-full grid-cols-[220px_1fr] overflow-hidden rounded border px-0 py-0 text-left transition-colors ${rowStateClass}`}
     >
-      <SceneFrame width={scene.width} height={scene.height} className="border-r border-stroke bg-thumb-bg" stageClassName="absolute inset-0">
+      <SceneFrame width={scene.width} height={scene.height} className="border-r border-border-primary bg-background-tertiary" stageClassName="absolute inset-0">
         {row.elements.length === 0 && (
-          <div className="absolute inset-0 grid place-items-center text-[11px] uppercase tracking-wider text-text-muted">
+          <div className="absolute inset-0 grid place-items-center text-[11px] uppercase tracking-wider text-text-tertiary">
             Empty
           </div>
         )}
@@ -79,7 +79,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
         </div>
 
         {row.secondaryText && (
-          <p className="m-0 truncate text-[12px] text-text-muted" title={row.secondaryText}>
+          <p className="m-0 truncate text-[12px] text-text-tertiary" title={row.secondaryText}>
             {row.secondaryText}
           </p>
         )}

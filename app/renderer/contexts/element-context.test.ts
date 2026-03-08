@@ -4,7 +4,6 @@ import { isOverlaySelectionValid } from './element-context';
 
 const baseOverlay: Overlay = {
   id: 'overlay-1',
-  libraryId: 'library-1',
   name: 'Overlay',
   type: 'text',
   x: 0,

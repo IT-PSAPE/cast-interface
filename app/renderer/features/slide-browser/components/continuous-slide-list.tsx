@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
 import { useSlides } from '../../../contexts/slide-context';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
-import { getSlideVisualState, slideTextDetails, sortElements } from '../../../utils/slides';
+import { getSlideVisualState, slideTextDetails } from '../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../../stage/rendering/build-render-scene';
 import type { OutlineSlideRow } from '../hooks/use-slide-list-view';
@@ -16,9 +17,10 @@ interface ContinuousSlideListProps {
 interface OutlineSectionProps {
   item: PlaylistPresentationSequenceItem;
   currentPresentationId: Id | null;
+  currentPlaylistPresentationId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
-  slideElementsById: Map<Id, SlideElement[]>;
+  slideElementsById: ReadonlyMap<Id, SlideElement[]>;
   onSelectSlide: (presentationId: Id, slideIndex: number) => void;
   onOpenSlide: (presentationId: Id, slideIndex: number) => void;
 }
@@ -28,6 +30,7 @@ function noopPrimaryTextCommit(_slideId: Id, _nextPrimary: string) {}
 function OutlineSection({
   item,
   currentPresentationId,
+  currentPlaylistPresentationId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
@@ -35,6 +38,7 @@ function OutlineSection({
   onOpenSlide,
 }: OutlineSectionProps) {
   const isCurrentPresentation = item.presentation.id === currentPresentationId;
+  const isLivePresentation = item.presentation.id === currentPlaylistPresentationId;
 
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -45,7 +49,7 @@ function OutlineSection({
       index,
       state: getSlideVisualState(
         index,
-        isCurrentPresentation ? liveSlideIndex : -1,
+        isLivePresentation ? liveSlideIndex : -1,
         isCurrentPresentation ? currentSlideIndex : -1,
         elements,
       ),
@@ -75,7 +79,7 @@ function OutlineSection({
         onPrimaryTextCommit={noopPrimaryTextCommit}
       />
     );
-  }, [currentSlideIndex, isCurrentPresentation, item.presentation.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById]);
+  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById]);
 
   return (
     <section className="grid gap-2">
@@ -90,27 +94,10 @@ function OutlineSection({
 }
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
-  const { activeBundle, currentPresentationId } = useNavigation();
+  const { currentPresentationId, currentPlaylistPresentationId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, focusPresentationSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
-
-  const slideElementsById = useMemo(() => {
-    const bySlide = new Map<Id, SlideElement[]>();
-    if (!activeBundle) return bySlide;
-
-    for (const slide of activeBundle.slides) {
-      bySlide.set(slide.id, []);
-    }
-    for (const element of activeBundle.slideElements) {
-      const existing = bySlide.get(element.slideId);
-      if (!existing) continue;
-      existing.push(element);
-    }
-    bySlide.forEach((elements, slideId) => {
-      bySlide.set(slideId, sortElements(elements));
-    });
-    return bySlide;
-  }, [activeBundle]);
+  const { slideElementsBySlideId } = useProjectContent();
 
   const handleSelectSlide = useCallback((presentationId: Id, slideIndex: number) => {
     focusPresentationSlide(presentationId, slideIndex);
@@ -127,18 +114,19 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
         key={item.entryId}
         item={item}
         currentPresentationId={currentPresentationId}
+        currentPlaylistPresentationId={currentPlaylistPresentationId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
-        slideElementsById={slideElementsById}
+        slideElementsById={slideElementsBySlideId}
         onSelectSlide={handleSelectSlide}
         onOpenSlide={handleOpenSlide}
       />
     );
-  }, [currentPresentationId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsById]);
+  }, [currentPlaylistPresentationId, currentPresentationId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-muted">
+      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-tertiary">
         No playlist presentations available.
       </section>
     );

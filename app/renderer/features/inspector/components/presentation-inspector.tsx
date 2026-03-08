@@ -17,7 +17,7 @@ function segmentIdFromOptionValue(value: string): string | null {
 
 export function PresentationInspector() {
   const {
-    activeBundle,
+    currentLibraryBundle,
     currentPresentation,
     currentPlaylistId,
     currentPresentationId,
@@ -29,7 +29,7 @@ export function PresentationInspector() {
   const [titleDraft, setTitleDraft] = useState('');
   const [targetSegmentOption, setTargetSegmentOption] = useState(segmentOptionValue(null));
 
-  const selectedTree = activeBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null;
+  const selectedTree = currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null;
 
   const segmentOptions = useMemo(() => {
     const options = [{ value: segmentOptionValue(null), label: 'Not in selected playlist' }];
@@ -97,13 +97,13 @@ export function PresentationInspector() {
   }
 
   if (!currentPresentation) {
-    return <div className="text-[12px] text-text-muted">No presentation selected.</div>;
+    return <div className="text-[12px] text-text-tertiary">No presentation selected.</div>;
   }
 
   return (
     <div className="grid gap-3">
       <div>
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Title</span>
+        <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Title</span>
         <div className="mt-0.5 grid gap-1.5">
           <FieldInput type="text" value={titleDraft} onChange={handleTitleChange} />
           <Button onClick={handleRenameTitle} disabled={!canRename} className="w-fit">
@@ -113,12 +113,12 @@ export function PresentationInspector() {
       </div>
 
       <div>
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Library</span>
-        <p className="text-[14px] text-text-primary m-0 mt-0.5">{activeBundle?.library.name ?? '—'}</p>
+        <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Project Scope</span>
+        <p className="text-[14px] text-text-primary m-0 mt-0.5">Global presentation</p>
       </div>
 
       <div className="grid gap-1.5">
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Presentation Type</span>
+        <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Presentation Type</span>
         <SegmentedControl label="Presentation type">
           <SegmentedControlItem
             active={currentPresentation.kind === 'canvas'}
@@ -139,11 +139,11 @@ export function PresentationInspector() {
 
       <div className="flex gap-4">
         <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">Slides</span>
+          <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Slides</span>
           <p className="text-[14px] text-text-primary m-0 mt-0.5">{slides.length}</p>
         </div>
         <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">Created</span>
+          <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Created</span>
           <p className="text-[12px] text-text-secondary m-0 mt-0.5">
             {new Date(currentPresentation.createdAt).toLocaleDateString()}
           </p>

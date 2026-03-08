@@ -30,7 +30,7 @@ export function Tab({ active, onClick, children }: TabProps) {
       className={`-mb-px border-0 border-b-2 px-2 py-1.5 text-[12px] leading-tight cursor-pointer transition-colors ${
         active
           ? 'border-b-selected text-text-primary font-medium'
-          : 'border-b-transparent text-text-muted hover:text-text-secondary'
+          : 'border-b-transparent text-text-tertiary hover:text-text-secondary'
       }`}
     >
       {children}

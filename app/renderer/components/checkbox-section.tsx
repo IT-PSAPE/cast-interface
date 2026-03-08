@@ -11,7 +11,7 @@ interface CheckboxSectionProps {
 
 export function CheckboxSection({ label, enabled, onToggle, children, className = '' }: CheckboxSectionProps) {
   return (
-    <section className={`grid gap-1.5 border-t border-stroke-light pt-1.5 ${className}`}>
+    <section className={`grid gap-1.5 border-t border-border-secondary pt-1.5 ${className}`}>
       <CheckboxField checked={enabled} label={label} onChange={onToggle} />
       {enabled ? children : null}
     </section>

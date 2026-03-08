@@ -26,7 +26,7 @@ export interface MainApi {
   addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<AppSnapshot>;
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
   movePresentation: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
-  createPresentation: (libraryId: Id, title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
+  createPresentation: (title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
   setPresentationKind: (id: Id, kind: PresentationKind) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;

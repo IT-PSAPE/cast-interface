@@ -3,10 +3,10 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 export type ButtonVariant = 'default' | 'take' | 'danger' | 'ghost';
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  default: 'bg-surface-2 border-stroke hover:border-focus text-text-primary',
-  take: 'bg-take border-take-border hover:brightness-110 text-text-primary',
-  danger: 'bg-danger border-danger-border hover:brightness-110 text-text-primary',
-  ghost: 'bg-transparent border-transparent hover:border-stroke text-text-secondary',
+  default: 'bg-background-tertiary border-border-primary hover:border-brand text-text-primary',
+  take: 'bg-background-success_primary border-green-500 hover:brightness-110 text-text-primary',
+  danger: 'bg-background-error_primary border-red-400 hover:brightness-110 text-text-primary',
+  ghost: 'bg-transparent border-transparent hover:border-border-primary text-text-secondary',
 };
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className'> {

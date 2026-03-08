@@ -26,22 +26,21 @@ async function seedDataIfEmpty(page) {
     const library = librarySnapshot.libraries[librarySnapshot.libraries.length - 1];
     if (!library) return;
 
-    const presentationSnapshot = await window.castApi.createPresentation(library.id, 'Auto Presentation');
-    const bundleAfterPresentation = presentationSnapshot.bundles.find((entry) => entry.library.id === library.id);
-    const presentation = bundleAfterPresentation?.presentations[bundleAfterPresentation.presentations.length - 1];
+    const presentationSnapshot = await window.castApi.createPresentation('Auto Presentation');
+    const presentation = presentationSnapshot.presentations[presentationSnapshot.presentations.length - 1];
     if (!presentation) return;
 
     await window.castApi.createSlide({ presentationId: presentation.id });
 
     await window.castApi.createPlaylist(library.id, 'Auto Playlist');
     const playlistSnapshot = await window.castApi.getSnapshot();
-    const bundleAfterPlaylist = playlistSnapshot.bundles.find((entry) => entry.library.id === library.id);
+    const bundleAfterPlaylist = playlistSnapshot.libraryBundles.find((entry) => entry.library.id === library.id);
     const playlistId = bundleAfterPlaylist?.playlists[0]?.playlist.id;
     if (!playlistId) return;
 
     await window.castApi.createPlaylistSegment(playlistId, 'Auto Segment');
     const segmentSnapshot = await window.castApi.getSnapshot();
-    const bundleAfterSegment = segmentSnapshot.bundles.find((entry) => entry.library.id === library.id);
+    const bundleAfterSegment = segmentSnapshot.libraryBundles.find((entry) => entry.library.id === library.id);
     const segmentId = bundleAfterSegment?.playlists[0]?.segments[0]?.segment.id;
     if (!segmentId) return;
 
@@ -78,7 +77,7 @@ async function ensurePresentationSelected(page) {
   }
 
   const libraryPresentationSection = page
-    .getByText('Library Presentations', { exact: true })
+    .getByText('Project Presentations', { exact: true })
     .first()
     .locator('xpath=ancestor::section[1]');
   const firstLibraryPresentation = libraryPresentationSection

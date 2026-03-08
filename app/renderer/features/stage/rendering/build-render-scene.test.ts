@@ -50,7 +50,6 @@ describe('buildRenderScene', () => {
   it('renders assigned show media behind all slide content in the layered preview', () => {
     const mediaAsset: MediaAsset = {
       id: 'asset-1',
-      libraryId: 'library-1',
       name: 'Background',
       type: 'image',
       src: '/background.png',
@@ -60,7 +59,6 @@ describe('buildRenderScene', () => {
 
     const overlay: Overlay = {
       id: 'overlay-1',
-      libraryId: 'library-1',
       name: 'Overlay',
       type: 'text',
       x: 0,

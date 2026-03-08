@@ -44,6 +44,11 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
     return buildRenderScene(isOverlayEdit ? null : currentSlide, effectiveElements);
   }, [currentSlide, effectiveElements, isOverlayEdit, currentOverlay?.id]);
 
+  const showScene = useMemo(() => {
+    const currentElements = currentSlide ? (slideElementsById.get(currentSlide.id) ?? []) : [];
+    return buildRenderScene(currentSlide, currentElements);
+  }, [currentSlide, slideElementsById]);
+
   const liveScene = useMemo(() => {
     const liveElements = liveSlide ? (slideElementsById.get(liveSlide.id) ?? []) : [];
     return buildLayeredRenderScene({
@@ -54,8 +59,6 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       includeContent: contentLayerVisible,
     });
   }, [contentLayerVisible, liveSlide, mediaLayerAsset, overlayLayer, slideElementsById]);
-
-  const showScene = liveScene;
 
   // Freeze the output scene when editing so NDI output stays stable
   const isEditing = workbenchMode !== 'show';

@@ -57,8 +57,8 @@ export function StageViewport() {
   }
 
   return (
-    <div className="grid h-full min-h-0 place-items-center overflow-hidden bg-surface-0">
-      <SceneFrame width={scene.width} height={scene.height} className="max-h-full border border-canvas-border shadow-elevated" stageClassName="z-10" checkerboard>
+    <div className="grid h-full min-h-0 place-items-center overflow-hidden bg-background-primary">
+      <SceneFrame width={scene.width} height={scene.height} className="max-h-full border border-border-primary shadow-2xl" stageClassName="z-10" checkerboard>
         <SceneStage
           scene={scene}
           editable={isEditable}

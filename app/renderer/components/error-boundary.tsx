@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={this.handleReload}
-            className="justify-self-center rounded border border-accent-border bg-accent px-4 py-2 text-sm text-text-primary transition-colors hover:bg-accent/80"
+            className="justify-self-center rounded border border-brand-400 bg-background-brand_primary px-4 py-2 text-sm text-text-primary transition-colors hover:bg-background-brand_primary/80"
           >
             Reload
           </button>

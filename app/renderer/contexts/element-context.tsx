@@ -19,7 +19,7 @@ const ElementContext = createContext<ElementContextValue | null>(null);
 
 export function ElementProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { activeBundle, currentPresentation } = useNavigation();
+  const { currentPresentation } = useNavigation();
   const { currentSlide } = useSlides();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
@@ -35,9 +35,9 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       if (!currentOverlay) return [];
       return sortElements(overlayToLayerElements(currentOverlay));
     }
-    if (!activeBundle || !currentSlide) return [];
+    if (!currentSlide) return [];
     return sortElements(getSlideElements(currentSlide.id));
-  }, [activeBundle, currentOverlay, currentSlide, getSlideElements, isOverlayEdit]);
+  }, [currentOverlay, currentSlide, getSlideElements, isOverlayEdit]);
 
   const effectiveElements = useMemo(
     () => sortElements(baseElements.map((element) => ({ ...element, ...(draftElements[element.id] ?? {}) }))),
@@ -166,7 +166,6 @@ export function ElementProvider({ children }: { children: ReactNode }) {
   }, [effectiveElements, inspector, saveElementUpdate, selection.primarySelectedElementId]);
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
-    activeBundle,
     currentSlide,
     currentPresentation,
     mutate,

@@ -21,9 +21,9 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
   const isEmpty = state === 'warning';
 
   const outlineClass = isLive
-    ? 'ring-2 ring-live ring-offset-1 ring-offset-surface-0'
+    ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-background-primary'
     : isFocused
-      ? 'ring-1 ring-focus ring-offset-1 ring-offset-surface-0'
+      ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary'
       : '';
 
   return (
@@ -32,9 +32,9 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       onDoubleClick={onEdit}
       className={outlineClass}
       body={(
-        <SceneFrame width={scene.width} height={scene.height} className="bg-thumb-bg" stageClassName="absolute inset-0">
+        <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
           {isEmpty ? (
-            <div className="absolute inset-0 z-10 grid place-items-center text-[11px] uppercase tracking-wider text-text-muted">
+            <div className="absolute inset-0 z-10 grid place-items-center text-[11px] uppercase tracking-wider text-text-tertiary">
               Empty
             </div>
           ) : null}
@@ -44,7 +44,7 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       caption={(
         <div className="flex items-center gap-2">
           <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{index + 1}</span>
-          <span className="truncate text-[11px] text-text-muted">{slideTextPreview(elements)}</span>
+          <span className="truncate text-[11px] text-text-tertiary">{slideTextPreview(elements)}</span>
         </div>
       )}
     />

@@ -50,7 +50,7 @@ export function ObjectListPanel() {
   }
 
   if (orderedElements.length === 0) {
-    return <div className="grid h-full place-items-center rounded border border-stroke-light bg-surface-2/20 text-[12px] text-text-muted">{isOverlayEdit ? 'No objects in this overlay.' : 'No objects on this slide.'}</div>;
+    return <div className="grid h-full place-items-center rounded border border-border-secondary bg-background-tertiary/20 text-[12px] text-text-tertiary">{isOverlayEdit ? 'No objects in this overlay.' : 'No objects on this slide.'}</div>;
   }
 
   return (

@@ -20,7 +20,7 @@ export function ShapeElementInspector() {
   } = useElements();
 
   if (!selectedElement || !elementDraft || !elementPayloadDraft) {
-    return <div className="text-[12px] text-text-muted">Select an object to edit shape properties.</div>;
+    return <div className="text-[12px] text-text-tertiary">Select an object to edit shape properties.</div>;
   }
 
   const activeElement = selectedElement;
@@ -86,10 +86,10 @@ export function ShapeElementInspector() {
           <LabeledField label="Opacity"><FieldInput type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1} /></LabeledField>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-stroke-light pt-1.5">
+        <div className="flex items-center gap-2 border-t border-border-secondary pt-1.5">
           <CheckboxField checked={lockAspectRatio} onChange={setLockAspectRatio} label="Lock ratio" />
-          <Button onClick={handleFlipX} className={visual.flipX ? 'border-focus text-text-primary' : ''}>Flip H</Button>
-          <Button onClick={handleFlipY} className={visual.flipY ? 'border-focus text-text-primary' : ''}>Flip V</Button>
+          <Button onClick={handleFlipX} className={visual.flipX ? 'border-brand text-text-primary' : ''}>Flip H</Button>
+          <Button onClick={handleFlipY} className={visual.flipY ? 'border-brand text-text-primary' : ''}>Flip V</Button>
         </div>
 
         <CheckboxSection label="Visibility" enabled={visual.visible} onToggle={handleVisibilityToggle} />
@@ -119,11 +119,11 @@ export function ShapeElementInspector() {
             </CheckboxSection>
           </>
         ) : (
-          <div className="border-t border-stroke-light pt-1.5 text-[12px] text-text-muted">Fill, stroke, and shadow are available for shape and text objects.</div>
+          <div className="border-t border-border-secondary pt-1.5 text-[12px] text-text-tertiary">Fill, stroke, and shadow are available for shape and text objects.</div>
         )}
       </fieldset>
 
-      <div className="mt-2 border-t border-stroke-light pt-2">
+      <div className="mt-2 border-t border-border-secondary pt-2">
         <Button variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</Button>
       </div>
     </div>

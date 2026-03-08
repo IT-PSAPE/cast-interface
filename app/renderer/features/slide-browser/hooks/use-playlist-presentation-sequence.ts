@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Id, PlaylistTree, Presentation, Slide } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
-import { sortSlides } from '../../../utils/slides';
+import { useProjectContent } from '../../../contexts/use-project-content';
 
 export interface PlaylistPresentationSequenceItem {
   entryId: Id;
@@ -17,7 +17,7 @@ interface PlaylistPresentationSequence {
 
 export function flattenPlaylistPresentationSequence(
   selectedTree: PlaylistTree | null,
-  slidesByPresentationId: Map<Id, Slide[]>,
+  slidesByPresentationId: ReadonlyMap<Id, Slide[]>,
 ): PlaylistPresentationSequenceItem[] {
   if (!selectedTree) return [];
   const countsByPresentationId = new Map<Id, number>();
@@ -41,29 +41,13 @@ export function flattenPlaylistPresentationSequence(
 }
 
 export function usePlaylistPresentationSequence(): PlaylistPresentationSequence {
-  const { activeBundle, currentPlaylistId } = useNavigation();
+  const { currentLibraryBundle, currentPlaylistId } = useNavigation();
+  const { slidesByPresentationId } = useProjectContent();
 
   const selectedTree = useMemo(() => {
-    if (!activeBundle || !currentPlaylistId) return null;
-    return activeBundle.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null;
-  }, [activeBundle, currentPlaylistId]);
-
-  const slidesByPresentationId = useMemo(() => {
-    const map = new Map<Id, Slide[]>();
-    if (!activeBundle) return map;
-    for (const presentation of activeBundle.presentations) {
-      map.set(presentation.id, []);
-    }
-    for (const slide of activeBundle.slides) {
-      const existing = map.get(slide.presentationId);
-      if (!existing) continue;
-      existing.push(slide);
-    }
-    map.forEach((slides, presentationId) => {
-      map.set(presentationId, sortSlides(slides));
-    });
-    return map;
-  }, [activeBundle]);
+    if (!currentLibraryBundle || !currentPlaylistId) return null;
+    return currentLibraryBundle.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null;
+  }, [currentLibraryBundle, currentPlaylistId]);
 
   const items = useMemo(() => flattenPlaylistPresentationSequence(selectedTree, slidesByPresentationId), [selectedTree, slidesByPresentationId]);
 

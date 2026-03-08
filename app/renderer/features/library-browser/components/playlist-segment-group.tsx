@@ -45,7 +45,7 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
         <IconButton
           label={`Open ${segment.segment.name} menu`}
           onClick={handleSegmentMenuButtonClick}
-          className="h-5 w-5 border-transparent bg-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-stroke"
+          className="h-5 w-5 border-transparent bg-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
         >
           ⋮
         </IconButton>
@@ -75,8 +75,8 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
               onContextMenu={handleContextMenu}
               className={`flex w-full items-center gap-2 rounded-sm border-0 py-1 pl-4 pr-8 text-left text-[13px] transition-colors ${
                 isSelected
-                  ? 'cursor-pointer bg-selected/15 text-text-primary'
-                  : 'cursor-pointer bg-transparent text-text-secondary hover:bg-surface-3/50 hover:text-text-primary'
+                  ? 'cursor-pointer bg-brand-400/15 text-text-primary'
+                  : 'cursor-pointer bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'
               }`}
             >
               <EditableText value={entry.presentation.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-[13px]" />
@@ -85,7 +85,7 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
             <IconButton
               label={`Open ${entry.presentation.title} menu`}
               onClick={handleMenuButtonClick}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-stroke hover:text-text-primary"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
             >
               ⋮
             </IconButton>

@@ -35,7 +35,7 @@ export function ResizableSplitHandle({
     ? 'absolute top-0 bottom-0 w-4 cursor-ew-resize'
     : 'absolute left-0 right-0 h-4 cursor-ns-resize';
 
-  const highlightClass = active || hovered ? 'bg-focus' : 'bg-transparent';
+  const highlightClass = active || hovered ? 'bg-brand-400' : 'bg-transparent';
   const lineClass = isHorizontal
     ? `pointer-events-none absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 transition-colors ${highlightClass}`
     : `pointer-events-none absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 transition-colors ${highlightClass}`;

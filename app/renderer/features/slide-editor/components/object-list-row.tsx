@@ -65,11 +65,11 @@ function capitalize(value: string): string {
 }
 
 function TypeIcon({ type }: { type: SlideElement['type'] }) {
-  if (type === 'text') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-muted">T</span>;
-  if (type === 'shape') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-muted">#</span>;
-  if (type === 'image') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-muted">I</span>;
-  if (type === 'video') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-muted">V</span>;
-  return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-muted">G</span>;
+  if (type === 'text') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">T</span>;
+  if (type === 'shape') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">#</span>;
+  if (type === 'image') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">I</span>;
+  if (type === 'video') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">V</span>;
+  return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">G</span>;
 }
 
 interface IconControlButtonProps {
@@ -82,7 +82,7 @@ interface IconControlButtonProps {
 function IconControlButton({ active, label, onClick, children }: IconControlButtonProps) {
   const classes = active
     ? 'text-text-primary hover:text-text-primary'
-    : 'text-text-muted hover:text-text-secondary';
+    : 'text-text-tertiary hover:text-text-secondary';
   return (
     <Button
       variant="ghost"

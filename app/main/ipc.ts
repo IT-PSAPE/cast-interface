@@ -64,8 +64,8 @@ export const registerIpcHandlers = (
   safeHandle(IPC.movePresentation, (_event, id: Id, direction: 'up' | 'down') =>
     repo.movePresentation(id, direction)
   );
-  safeHandle(IPC.createPresentation, (_event, libraryId: Id, title: string, kind?: PresentationKind) =>
-    repo.createPresentation(libraryId, title, kind)
+  safeHandle(IPC.createPresentation, (_event, title: string, kind?: PresentationKind) =>
+    repo.createPresentation(title, kind)
   );
   safeHandle(IPC.setPresentationKind, (_event, id: Id, kind: PresentationKind) =>
     repo.setPresentationKind(id, kind)

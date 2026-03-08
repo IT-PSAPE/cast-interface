@@ -4,9 +4,9 @@ import { ContextMenu } from '../../../components/context-menu';
 import type { ContextMenuItem } from '../../../components/context-menu';
 import { IconButton } from '../../../components/icon-button';
 import { ThumbnailTile } from '../../../components/thumbnail-tile';
-import { useNavigation } from '../../../contexts/navigation-context';
 import { useElements } from '../../../contexts/element-context';
 import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
 
 interface MenuState { x: number; y: number; assetId: Id }
 
@@ -15,17 +15,15 @@ interface MediaBinPanelProps {
 }
 
 export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
-  const { activeBundle } = useNavigation();
+  const { mediaAssets: allMediaAssets } = useProjectContent();
   const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationLayers();
   const { deleteMedia, changeMediaSrc } = useElements();
   const [menuState, setMenuState] = useState<MenuState | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const changeSrcTargetRef = useRef<Id | null>(null);
 
-  if (!activeBundle) return null;
-
   const normalizedFilter = filterText.trim().toLowerCase();
-  const mediaAssets = activeBundle.mediaAssets.filter((asset) => {
+  const mediaAssets = allMediaAssets.filter((asset) => {
     if (!normalizedFilter) return true;
     return asset.name.toLowerCase().includes(normalizedFilter) || asset.type.toLowerCase().includes(normalizedFilter);
   });
@@ -89,13 +87,13 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
                   <>
                     <MediaThumbnail asset={asset} />
                     <div className="absolute right-1 top-1 hidden group-hover:block">
-                      <IconButton label="Media options" onClick={handleMenuClick} className="h-5 w-5 border-stroke bg-surface-2/80 text-[11px] leading-none">
+                      <IconButton label="Media options" onClick={handleMenuClick} className="h-5 w-5 border-border-primary bg-background-tertiary/80 text-[11px] leading-none">
                         <span aria-hidden="true">···</span>
                       </IconButton>
                     </div>
                   </>
                 }
-                caption={<><span className="text-text-muted">{index + 1}</span> {asset.name}</>}
+                caption={<><span className="text-text-tertiary">{index + 1}</span> {asset.name}</>}
               />
             </div>
           );
@@ -124,10 +122,10 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
 
 function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   if (asset.type === 'image') {
-    return <img src={asset.src} alt={asset.name} loading="lazy" draggable={false} className="w-full h-full object-cover block" />;
+    return <img src={asset.src} alt={asset.name} loading="lazy" draggable={false} className="absolute inset-0 h-full w-full object-cover" />;
   }
   if (asset.type === 'video') {
-    return <video src={asset.src} muted playsInline preload="metadata" className="w-full h-full object-cover block" />;
+    return <video src={asset.src} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />;
   }
-  return <span className="text-text-muted text-[11px] font-bold tracking-wider uppercase">{asset.type}</span>;
+  return <span className="text-text-tertiary text-[11px] font-bold tracking-wider uppercase">{asset.type}</span>;
 }

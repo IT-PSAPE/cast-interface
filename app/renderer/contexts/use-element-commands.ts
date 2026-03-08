@@ -1,23 +1,24 @@
 import { useCallback } from 'react';
-import type { AppSnapshot, ElementCreateInput, Id, LibraryBundle, MediaAsset, Presentation, Slide } from '@core/types';
+import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../utils/slides';
 import { createId } from '../utils/create-id';
 import { useOverlayEditor } from './overlay-editor-context';
+import { useProjectContent } from './use-project-content';
 import { useSlideEditor } from './slide-editor-context';
 import { useWorkbench } from './workbench-context';
 
 interface CommandsParams {
-  activeBundle: LibraryBundle | null;
   currentSlide: Slide | null;
   currentPresentation: Presentation | null;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ activeBundle, currentSlide, currentPresentation, mutate, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentPresentation, mutate, setStatusText }: CommandsParams) {
   const isLyricsPresentation = currentPresentation?.kind === 'lyrics';
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { slideElementsBySlideId } = useProjectContent();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const isSlideEdit = workbenchMode === 'slide-editor';
@@ -55,8 +56,8 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
       return;
     }
     if (!currentSlide) return;
-    if (isLyricsPresentation && activeBundle) {
-      const existingLyricsText = activeBundle.slideElements.find((element) => {
+    if (isLyricsPresentation) {
+      const existingLyricsText = (slideElementsBySlideId.get(currentSlide.id) ?? []).find((element) => {
         return element.slideId === currentSlide.id && element.type === 'text' && 'text' in element.payload;
       });
       if (existingLyricsText) {
@@ -79,7 +80,7 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
       zIndex: 20, layer: 'content', payload: newTextPayload('New Text Element', 72, 'center', '700'),
     }));
     setStatusText('Added text element');
-  }, [activeBundle, currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText]);
+  }, [currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText, slideElementsBySlideId]);
 
   const createShape = useCallback(async () => {
     if (isOverlayEdit) {
@@ -193,10 +194,9 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
   }, [currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText]);
 
   const createOverlay = useCallback(async () => {
-    if (!activeBundle) return;
-    await mutate(() => window.castApi.createOverlay(getOverlayDefaults(activeBundle.library.id)));
+    await mutate(() => window.castApi.createOverlay(getOverlayDefaults()));
     setStatusText('Created overlay');
-  }, [activeBundle, mutate, setStatusText]);
+  }, [mutate, setStatusText]);
 
   const toggleOverlay = useCallback(async (overlayId: Id, enabled: boolean) => {
     await mutate(() => window.castApi.setOverlayEnabled(overlayId, enabled));
@@ -204,7 +204,7 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
   }, [mutate, setStatusText]);
 
   const importMedia = useCallback(async (files: FileList) => {
-    if (!activeBundle || files.length === 0) return;
+    if (files.length === 0) return;
     let importedCount = 0;
     let skippedCount = 0;
     for (const file of Array.from(files)) {
@@ -214,7 +214,7 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
         continue;
       }
       await mutate(() => window.castApi.createMediaAsset({
-        libraryId: activeBundle.library.id, name: file.name, type: typeFromFile(file), src,
+        name: file.name, type: typeFromFile(file), src,
       }));
       importedCount += 1;
     }
@@ -227,7 +227,7 @@ export function useElementCommands({ activeBundle, currentSlide, currentPresenta
       return;
     }
     setStatusText('No media imported. Selected files did not expose absolute file paths.');
-  }, [activeBundle, mutate, setStatusText]);
+  }, [mutate, setStatusText]);
 
   const deleteMedia = useCallback(async (id: Id) => {
     await mutate(() => window.castApi.deleteMediaAsset(id));

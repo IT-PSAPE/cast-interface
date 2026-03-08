@@ -30,10 +30,10 @@ export function PreviewPanel() {
   }
 
   return (
-    <aside className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden border-l border-stroke bg-surface-1">
+    <aside className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden border-l border-border-primary bg-background-primary_alt">
       <LivePreview />
 
-      <div className="border-b border-stroke p-2">
+      <div className="border-b border-border-primary p-2">
         <Button variant="danger" onClick={handleClearAll} className="w-full text-center">
           Clear All Layers
         </Button>
@@ -47,7 +47,7 @@ export function PreviewPanel() {
         </div>
       </div>
 
-      <div className="min-h-0 overflow-auto p-3 text-[12px] text-text-muted">
+      <div className="min-h-0 overflow-auto p-3 text-[12px] text-text-tertiary">
         Media is rendered below content, with overlay on top.
       </div>
     </aside>
@@ -63,8 +63,8 @@ interface LayerClearButtonProps {
 
 function LayerClearButton({ active, label, icon, onClick }: LayerClearButtonProps) {
   const stateClass = active
-    ? 'border-selected/50 text-text-primary'
-    : 'border-stroke text-text-muted';
+    ? 'border-brand-400/50 text-text-primary'
+    : 'border-border-primary text-text-tertiary';
 
   return (
     <Button variant="ghost" onClick={onClick} className={`grid h-8 w-8 place-items-center p-0 ${stateClass}`}>

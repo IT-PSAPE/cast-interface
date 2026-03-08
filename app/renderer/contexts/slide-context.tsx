@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState, useMemo, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react';
 import type { AppSnapshot, Id, Slide, SlideElement } from '@core/types';
-import { sortSlides, sortElements, clamp } from '../utils/slides';
+import { sortSlides, clamp } from '../utils/slides';
 import { useCast } from './cast-context';
 import { useNavigation } from './navigation-context';
 import { usePresentationLayers } from './presentation-layer-context';
+import { useProjectContent } from './use-project-content';
 
 interface SlideContextValue {
   slides: Slide[];
@@ -28,90 +29,113 @@ const SlideContext = createContext<SlideContextValue | null>(null);
 
 export function SlideProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { activeBundle, currentPresentationId, openPresentation } = useNavigation();
+  const {
+    currentPresentationId,
+    currentPlaylistPresentationId,
+    isDetachedPresentationBrowser,
+    openPresentation,
+  } = useNavigation();
   const { showContentLayer } = usePresentationLayers();
-  const pendingPresentationSlideActionRef = useRef<{ presentationId: Id; index: number; action: 'focus' | 'activate' } | null>(null);
+  const { slidesByPresentationId, slideElementsBySlideId } = useProjectContent();
 
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [liveSlideIndex, setLiveSlideIndex] = useState(0);
+  const [selectedSlideIndices, setSelectedSlideIndices] = useState<Record<Id, number>>({});
+  const [liveSlideIndices, setLiveSlideIndices] = useState<Record<Id, number>>({});
 
   const slides = useMemo(() => {
-    if (!activeBundle || !currentPresentationId) return [];
-    return sortSlides(activeBundle.slides.filter((s) => s.presentationId === currentPresentationId));
-  }, [activeBundle, currentPresentationId]);
+    if (!currentPresentationId) return [];
+    return slidesByPresentationId.get(currentPresentationId) ?? [];
+  }, [currentPresentationId, slidesByPresentationId]);
 
-  useEffect(() => {
-    if (slides.length === 0) {
-      if (currentSlideIndex !== 0) setCurrentSlideIndex(0);
-      if (liveSlideIndex !== 0) setLiveSlideIndex(0);
-      return;
-    }
-    if (currentSlideIndex >= slides.length) setCurrentSlideIndex(slides.length - 1);
-    if (liveSlideIndex >= slides.length) setLiveSlideIndex(slides.length - 1);
-  }, [slides.length, currentSlideIndex, liveSlideIndex]);
+  const playlistSlides = useMemo(() => {
+    if (!currentPlaylistPresentationId) return [];
+    return slidesByPresentationId.get(currentPlaylistPresentationId) ?? [];
+  }, [currentPlaylistPresentationId, slidesByPresentationId]);
 
-  // Reset indices when presentation changes
-  useEffect(() => {
-    setCurrentSlideIndex(0);
-    setLiveSlideIndex(0);
-  }, [currentPresentationId]);
+  const currentSlideIndex = useMemo(
+    () => resolveSlideIndex(currentPresentationId, selectedSlideIndices, slides.length),
+    [currentPresentationId, selectedSlideIndices, slides.length],
+  );
 
-  useEffect(() => {
-    const pendingAction = pendingPresentationSlideActionRef.current;
-    if (!pendingAction) return;
-    if (pendingAction.presentationId !== currentPresentationId) return;
-    if (slides.length === 0) {
-      pendingPresentationSlideActionRef.current = null;
-      return;
-    }
-
-    const nextIndex = clamp(pendingAction.index, 0, slides.length - 1);
-    if (pendingAction.action === 'activate') {
-      setCurrentSlideIndex(nextIndex);
-      setLiveSlideIndex(nextIndex);
-      showContentLayer();
-      setStatusText(`Live slide ${nextIndex + 1}`);
-    } else {
-      setCurrentSlideIndex(nextIndex);
-    }
-    pendingPresentationSlideActionRef.current = null;
-  }, [currentPresentationId, setStatusText, showContentLayer, slides.length]);
+  const liveSlideIndex = useMemo(
+    () => resolveSlideIndex(currentPlaylistPresentationId, liveSlideIndices, playlistSlides.length),
+    [currentPlaylistPresentationId, liveSlideIndices, playlistSlides.length],
+  );
 
   const currentSlide = slides[currentSlideIndex] ?? null;
-  const liveSlide = slides[liveSlideIndex] ?? null;
+  const liveSlide = playlistSlides[liveSlideIndex] ?? null;
 
   const liveElements = useMemo(() => {
-    if (!activeBundle || !liveSlide) return [];
-    return sortElements(activeBundle.slideElements.filter((el) => el.slideId === liveSlide.id));
-  }, [activeBundle, liveSlide]);
+    if (!liveSlide) return [];
+    return slideElementsBySlideId.get(liveSlide.id) ?? [];
+  }, [liveSlide, slideElementsBySlideId]);
 
   const slideElementsById = useMemo(() => {
     const bySlide = new Map<Id, SlideElement[]>();
-    for (const slide of slides) bySlide.set(slide.id, []);
-    if (!activeBundle) return bySlide;
-    for (const el of activeBundle.slideElements) {
-      if (!bySlide.has(el.slideId)) continue;
-      bySlide.get(el.slideId)!.push(el);
+    for (const slide of slides) {
+      bySlide.set(slide.id, slideElementsBySlideId.get(slide.id) ?? []);
     }
-    bySlide.forEach((elements, slideId) => bySlide.set(slideId, sortElements(elements)));
     return bySlide;
-  }, [activeBundle, slides]);
+  }, [slideElementsBySlideId, slides]);
+
+  const updateSelectedSlideIndex = useCallback((presentationId: Id, nextIndex: number) => {
+    setSelectedSlideIndices((current) => ({
+      ...current,
+      [presentationId]: nextIndex,
+    }));
+  }, []);
+
+  const updateLiveSlideIndex = useCallback((presentationId: Id, nextIndex: number) => {
+    setLiveSlideIndices((current) => ({
+      ...current,
+      [presentationId]: nextIndex,
+    }));
+  }, []);
+
+  const setCurrentSlideIndex = useCallback((index: number) => {
+    if (!currentPresentationId || slides.length === 0) return;
+    updateSelectedSlideIndex(currentPresentationId, clamp(index, 0, slides.length - 1));
+  }, [currentPresentationId, slides.length, updateSelectedSlideIndex]);
+
+  const canControlOutput = Boolean(
+    currentPresentationId
+    && currentPlaylistPresentationId
+    && currentPresentationId === currentPlaylistPresentationId
+    && !isDetachedPresentationBrowser,
+  );
 
   const activateSlide = useCallback((index: number) => {
-    if (slides.length === 0) return;
+    if (!currentPresentationId || slides.length === 0) return;
     const next = clamp(index, 0, slides.length - 1);
-    setCurrentSlideIndex(next);
-    setLiveSlideIndex(next);
+    updateSelectedSlideIndex(currentPresentationId, next);
+    if (!canControlOutput || !currentPlaylistPresentationId) return;
+    updateLiveSlideIndex(currentPlaylistPresentationId, next);
     showContentLayer();
     setStatusText(`Live slide ${next + 1}`);
-  }, [slides.length, showContentLayer, setStatusText]);
+  }, [
+    canControlOutput,
+    currentPlaylistPresentationId,
+    currentPresentationId,
+    setStatusText,
+    showContentLayer,
+    slides.length,
+    updateLiveSlideIndex,
+    updateSelectedSlideIndex,
+  ]);
 
   const takeSlide = useCallback(() => {
-    if (slides.length === 0) return;
-    setLiveSlideIndex(currentSlideIndex);
+    if (!canControlOutput || !currentPlaylistPresentationId || slides.length === 0) return;
+    updateLiveSlideIndex(currentPlaylistPresentationId, currentSlideIndex);
     showContentLayer();
     setStatusText(`Taken slide ${currentSlideIndex + 1}`);
-  }, [slides.length, currentSlideIndex, showContentLayer, setStatusText]);
+  }, [
+    canControlOutput,
+    currentPlaylistPresentationId,
+    currentSlideIndex,
+    setStatusText,
+    showContentLayer,
+    slides.length,
+    updateLiveSlideIndex,
+  ]);
 
   const goNext = useCallback(() => {
     if (slides.length === 0) return;
@@ -128,9 +152,9 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const previousSlideIds = new Set(slides.map((slide) => slide.id));
     const nextSnapshot = await mutate(() => window.castApi.createSlide({ presentationId: currentPresentationId }));
     const createdSlideIndex = findCreatedSlideIndex(nextSnapshot, currentPresentationId, previousSlideIds);
-    if (createdSlideIndex !== null) setCurrentSlideIndex(createdSlideIndex);
+    if (createdSlideIndex !== null) updateSelectedSlideIndex(currentPresentationId, createdSlideIndex);
     setStatusText('Created slide');
-  }, [currentPresentationId, mutate, setStatusText, slides]);
+  }, [currentPresentationId, mutate, setStatusText, slides, updateSelectedSlideIndex]);
 
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;
@@ -139,35 +163,23 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   }, [currentSlide, mutate, setStatusText]);
 
   const focusPresentationSlide = useCallback((presentationId: Id, index: number) => {
-    if (!activeBundle) return;
-    const presentationSlides = sortSlides(activeBundle.slides.filter((slide) => slide.presentationId === presentationId));
+    const presentationSlides = slidesByPresentationId.get(presentationId) ?? [];
     if (presentationSlides.length === 0) return;
     const nextIndex = clamp(index, 0, presentationSlides.length - 1);
-    if (presentationId === currentPresentationId) {
-      setCurrentSlideIndex(nextIndex);
-      return;
-    }
-
-    pendingPresentationSlideActionRef.current = { presentationId, index: nextIndex, action: 'focus' };
+    updateSelectedSlideIndex(presentationId, nextIndex);
     openPresentation(presentationId);
-  }, [activeBundle, currentPresentationId, openPresentation]);
+  }, [openPresentation, slidesByPresentationId, updateSelectedSlideIndex]);
 
   const activatePresentationSlide = useCallback((presentationId: Id, index: number) => {
-    if (!activeBundle) return;
-    const presentationSlides = sortSlides(activeBundle.slides.filter((slide) => slide.presentationId === presentationId));
+    const presentationSlides = slidesByPresentationId.get(presentationId) ?? [];
     if (presentationSlides.length === 0) return;
     const nextIndex = clamp(index, 0, presentationSlides.length - 1);
-    if (presentationId === currentPresentationId) {
-      setCurrentSlideIndex(nextIndex);
-      setLiveSlideIndex(nextIndex);
-      showContentLayer();
-      setStatusText(`Live slide ${nextIndex + 1}`);
-      return;
-    }
-
-    pendingPresentationSlideActionRef.current = { presentationId, index: nextIndex, action: 'activate' };
+    updateSelectedSlideIndex(presentationId, nextIndex);
+    updateLiveSlideIndex(presentationId, nextIndex);
     openPresentation(presentationId);
-  }, [activeBundle, currentPresentationId, openPresentation, setStatusText, showContentLayer]);
+    showContentLayer();
+    setStatusText(`Live slide ${nextIndex + 1}`);
+  }, [openPresentation, setStatusText, showContentLayer, slidesByPresentationId, updateLiveSlideIndex, updateSelectedSlideIndex]);
 
   const value = useMemo<SlideContextValue>(
     () => ({
@@ -193,11 +205,13 @@ export function useSlides(): SlideContextValue {
 }
 
 export function findCreatedSlideIndex(snapshot: AppSnapshot, presentationId: Id, previousSlideIds: Set<Id>): number | null {
-  for (const bundle of snapshot.bundles) {
-    const presentationSlides = sortSlides(bundle.slides.filter((slide) => slide.presentationId === presentationId));
-    if (presentationSlides.length === 0) continue;
-    const createdIndex = presentationSlides.findIndex((slide) => !previousSlideIds.has(slide.id));
-    if (createdIndex !== -1) return createdIndex;
-  }
-  return null;
+  const presentationSlides = sortSlides(snapshot.slides.filter((slide) => slide.presentationId === presentationId));
+  const createdIndex = presentationSlides.findIndex((slide) => !previousSlideIds.has(slide.id));
+  return createdIndex === -1 ? null : createdIndex;
+}
+
+function resolveSlideIndex(presentationId: Id | null, indicesByPresentationId: Record<Id, number>, slideCount: number): number {
+  if (!presentationId || slideCount <= 0) return 0;
+  const rawIndex = indicesByPresentationId[presentationId] ?? 0;
+  return clamp(rawIndex, 0, slideCount - 1);
 }

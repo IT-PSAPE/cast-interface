@@ -1,4 +1,5 @@
 import { CastProvider, useCast } from './contexts/cast-context';
+import { ThemeProvider } from './contexts/theme-context';
 import { NdiProvider } from './contexts/ndi-context';
 import { NavigationProvider } from './contexts/navigation-context';
 import { PresentationLayerProvider } from './contexts/presentation-layer-context';
@@ -25,6 +26,7 @@ import { useWorkbenchPanelLayout } from './features/workbench/hooks/use-workbenc
 export function App() {
   return (
     <ErrorBoundary>
+      <ThemeProvider>
       <CastProvider>
         <NdiProvider>
           <NavigationProvider>
@@ -54,6 +56,7 @@ export function App() {
           </NavigationProvider>
         </NdiProvider>
       </CastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
 import { useSlides } from '../../../contexts/slide-context';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
-import { getSlideVisualState, sortElements } from '../../../utils/slides';
+import { getSlideVisualState } from '../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../../stage/rendering/build-render-scene';
 import { SlideCard } from '../../slide-browser/components/slide-card';
@@ -15,9 +16,10 @@ interface ContinuousSlideGridProps {
 interface GridSectionProps {
   item: PlaylistPresentationSequenceItem;
   currentPresentationId: Id | null;
+  currentPlaylistPresentationId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
-  slideElementsById: Map<Id, SlideElement[]>;
+  slideElementsById: ReadonlyMap<Id, SlideElement[]>;
   onActivateSlide: (presentationId: Id, slideIndex: number) => void;
   onEditSlide: (presentationId: Id, slideIndex: number) => void;
 }
@@ -25,6 +27,7 @@ interface GridSectionProps {
 function GridSection({
   item,
   currentPresentationId,
+  currentPlaylistPresentationId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
@@ -32,12 +35,13 @@ function GridSection({
   onEditSlide,
 }: GridSectionProps) {
   const isCurrentPresentation = item.presentation.id === currentPresentationId;
+  const isLivePresentation = item.presentation.id === currentPlaylistPresentationId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
     const state = getSlideVisualState(
       index,
-      isCurrentPresentation ? liveSlideIndex : -1,
+      isLivePresentation ? liveSlideIndex : -1,
       isCurrentPresentation ? currentSlideIndex : -1,
       elements,
     );
@@ -63,7 +67,7 @@ function GridSection({
         onEdit={handleEdit}
       />
     );
-  }, [currentSlideIndex, isCurrentPresentation, item.presentation.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
+  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
 
   return (
     <section className="grid gap-2">
@@ -78,27 +82,10 @@ function GridSection({
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { activeBundle, currentPresentationId } = useNavigation();
+  const { currentPresentationId, currentPlaylistPresentationId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, activatePresentationSlide, focusPresentationSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
-
-  const slideElementsById = useMemo(() => {
-    const bySlide = new Map<Id, SlideElement[]>();
-    if (!activeBundle) return bySlide;
-
-    for (const slide of activeBundle.slides) {
-      bySlide.set(slide.id, []);
-    }
-    for (const element of activeBundle.slideElements) {
-      const existing = bySlide.get(element.slideId);
-      if (!existing) continue;
-      existing.push(element);
-    }
-    bySlide.forEach((elements, slideId) => {
-      bySlide.set(slideId, sortElements(elements));
-    });
-    return bySlide;
-  }, [activeBundle]);
+  const { slideElementsBySlideId } = useProjectContent();
 
   const handleActivateSlide = useCallback((presentationId: Id, slideIndex: number) => {
     activatePresentationSlide(presentationId, slideIndex);
@@ -115,18 +102,19 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
         key={item.entryId}
         item={item}
         currentPresentationId={currentPresentationId}
+        currentPlaylistPresentationId={currentPlaylistPresentationId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
-        slideElementsById={slideElementsById}
+        slideElementsById={slideElementsBySlideId}
         onActivateSlide={handleActivateSlide}
         onEditSlide={handleEditSlide}
       />
     );
-  }, [currentPresentationId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsById]);
+  }, [currentPlaylistPresentationId, currentPresentationId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-muted">
+      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-tertiary">
         No playlist presentations available.
       </section>
     );

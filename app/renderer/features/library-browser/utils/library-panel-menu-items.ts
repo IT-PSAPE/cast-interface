@@ -47,7 +47,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
         label: 'Delete',
         danger: true,
         onSelect: () => {
-          if (!window.confirm('Delete this library and everything inside it?')) return;
+          if (!window.confirm('Delete this library and its playlists? Project presentations, media, and overlays will remain.')) return;
           void deleteLibrary(target.id);
           setLibraryPanelView('libraries');
         }

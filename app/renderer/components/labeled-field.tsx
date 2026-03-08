@@ -37,7 +37,7 @@ export function FieldInput({ type = 'text', value, onChange, min, max, step }: F
       min={min}
       max={max}
       step={step}
-      className="rounded border border-stroke bg-surface-1 px-1.5 py-1 text-[12px] text-text-primary focus:border-focus focus:outline-none transition-colors"
+      className="rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors"
     />
   );
 }
@@ -59,7 +59,7 @@ export function FieldTextarea({ value, onChange, placeholder, className = '' }: 
       value={value}
       onChange={handleChange}
       placeholder={placeholder}
-      className={`rounded border border-stroke bg-surface-1 px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-focus focus:outline-none transition-colors ${className}`}
+      className={`rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
     />
   );
 }
@@ -79,7 +79,7 @@ export function FieldSelect({ value, onChange, options }: FieldSelectProps) {
     <select
       value={value}
       onChange={handleChange}
-      className="rounded border border-stroke bg-surface-1 px-1.5 py-1 text-[12px] text-text-primary focus:border-focus focus:outline-none transition-colors"
+      className="rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value} style={opt.style}>

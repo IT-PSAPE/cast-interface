@@ -3,7 +3,7 @@ import type { AppSnapshot, Id, Overlay, OverlayCreateInput, OverlayUpdateInput, 
 import { getOverlayDefaults } from '../utils/slides';
 import { createId } from '../utils/create-id';
 import { useCast } from './cast-context';
-import { useNavigation } from './navigation-context';
+import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
 interface OverlayEditorContextValue {
@@ -23,14 +23,13 @@ const OverlayEditorContext = createContext<OverlayEditorContextValue | null>(nul
 
 export function OverlayEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { activeBundle } = useNavigation();
   const { workbenchMode } = useWorkbench();
+  const { overlays: persistedOverlays } = useProjectContent();
   const [currentOverlayId, setCurrentOverlayId] = useState<Id | null>(null);
   const [stagedOverlays, setStagedOverlays] = useState<Overlay[] | null>(null);
   const [isPushingChanges, setIsPushingChanges] = useState(false);
   const previousWorkbenchModeRef = useRef(workbenchMode);
 
-  const persistedOverlays = activeBundle?.overlays ?? [];
   const overlays = stagedOverlays ?? persistedOverlays;
   const hasPendingChanges = useMemo(() => {
     if (!stagedOverlays) return false;
@@ -71,7 +70,6 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
   }, [persistedOverlays]);
 
   const createOverlay = useCallback(async () => {
-    if (!activeBundle) return;
     const now = new Date().toISOString();
     const draft: Overlay = {
       id: createId(),
@@ -93,12 +91,12 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
       },
       createdAt: now,
       updatedAt: now,
-      ...getOverlayDefaults(activeBundle.library.id),
+      ...getOverlayDefaults(),
     };
     setStagedOverlays((current) => [...(current ?? persistedOverlays), draft]);
     setCurrentOverlayId(draft.id);
     setStatusText('Created overlay');
-  }, [activeBundle, persistedOverlays, setStatusText]);
+  }, [persistedOverlays, setStatusText]);
 
   const deleteCurrentOverlay = useCallback(async () => {
     if (!currentOverlayId) return;
@@ -110,7 +108,7 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
   }, [currentOverlayId, persistedOverlays, setStatusText]);
 
   const pushChanges = useCallback(async () => {
-    if (!activeBundle || !stagedOverlays || isPushingChanges) return;
+    if (!stagedOverlays || isPushingChanges) return;
     if (overlayCollectionSignature(stagedOverlays) === overlayCollectionSignature(persistedOverlays)) {
       setStagedOverlays(null);
       return;
@@ -121,21 +119,21 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
       let resolvedCurrentOverlayId = currentOverlayId;
       const next = await mutate(async () => {
         let snapshot: AppSnapshot | null = null;
-        let knownOverlays = activeBundle.overlays;
+        let knownOverlays = persistedOverlays;
         const persistedById = new Map(persistedOverlays.map((overlay) => [overlay.id, overlay]));
         const stagedById = new Map(stagedOverlays.map((overlay) => [overlay.id, overlay]));
 
         for (const overlay of persistedOverlays) {
           if (stagedById.has(overlay.id)) continue;
           snapshot = await window.castApi.deleteOverlay(overlay.id);
-          knownOverlays = getBundleOverlays(snapshot, activeBundle.library.id);
+          knownOverlays = snapshot.overlays;
         }
 
         for (const overlay of stagedOverlays) {
           if (persistedById.has(overlay.id)) continue;
           const previousIds = new Set(knownOverlays.map((item) => item.id));
           snapshot = await window.castApi.createOverlay(toOverlayCreateInput(overlay));
-          knownOverlays = getBundleOverlays(snapshot, activeBundle.library.id);
+          knownOverlays = snapshot.overlays;
           const createdOverlay = knownOverlays.find((item) => !previousIds.has(item.id)) ?? null;
           if (createdOverlay && resolvedCurrentOverlayId === overlay.id) {
             resolvedCurrentOverlayId = createdOverlay.id;
@@ -152,7 +150,7 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
             elements: cloneElements(overlay.elements),
             animation: overlay.animation,
           });
-          knownOverlays = getBundleOverlays(snapshot, activeBundle.library.id);
+          knownOverlays = snapshot.overlays;
         }
 
         if (snapshot) return snapshot;
@@ -160,7 +158,7 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
       });
 
       setStagedOverlays(null);
-      const nextOverlays = getBundleOverlays(next, activeBundle.library.id);
+      const nextOverlays = next.overlays;
       const currentOverlayStillExists = resolvedCurrentOverlayId
         ? nextOverlays.some((overlay) => overlay.id === resolvedCurrentOverlayId)
         : false;
@@ -172,7 +170,7 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPushingChanges(false);
     }
-  }, [activeBundle, currentOverlayId, isPushingChanges, mutate, persistedOverlays, setStatusText, stagedOverlays]);
+  }, [currentOverlayId, isPushingChanges, mutate, persistedOverlays, setStatusText, stagedOverlays]);
 
   useEffect(() => {
     const previousWorkbenchMode = previousWorkbenchModeRef.current;
@@ -207,13 +205,8 @@ export function useOverlayEditor(): OverlayEditorContextValue {
   return context;
 }
 
-function getBundleOverlays(snapshot: AppSnapshot, libraryId: Id): Overlay[] {
-  return snapshot.bundles.find((bundle) => bundle.library.id === libraryId)?.overlays ?? [];
-}
-
 function toOverlayCreateInput(overlay: Overlay): OverlayCreateInput {
   return {
-    libraryId: overlay.libraryId,
     name: overlay.name,
     elements: cloneElements(overlay.elements),
     animation: overlay.animation,

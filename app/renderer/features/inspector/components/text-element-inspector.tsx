@@ -20,11 +20,11 @@ export function TextElementInspector() {
   const fontOptions = useSystemFonts(activeFont);
 
   if (!selectedElement || !elementPayloadDraft) {
-    return <div className="text-[12px] text-text-muted">Select an object to edit text properties.</div>;
+    return <div className="text-[12px] text-text-tertiary">Select an object to edit text properties.</div>;
   }
 
   if (selectedElement.type !== 'text') {
-    return <div className="text-[12px] text-text-muted">Text controls are available only when a text object is selected.</div>;
+    return <div className="text-[12px] text-text-tertiary">Text controls are available only when a text object is selected.</div>;
   }
 
   const textPayload = elementPayloadDraft as TextElementPayload;
@@ -78,8 +78,8 @@ export function TextElementInspector() {
           <LabeledField label="Line Height"><FieldInput type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} /></LabeledField>
         </div>
 
-        <div className="grid gap-1 border-t border-stroke-light pt-1.5">
-          <span className="text-[11px] uppercase tracking-wider text-text-muted">Formatting</span>
+        <div className="grid gap-1 border-t border-border-secondary pt-1.5">
+          <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Formatting</span>
           <SegmentedControl label="Text formatting">
             <SegmentedControlItem active={isBold} onClick={handleBoldToggle} title="Bold"><BoldIcon /></SegmentedControlItem>
             <SegmentedControlItem active={formatting.italic} onClick={handleItalicToggle} title="Italic"><ItalicIcon /></SegmentedControlItem>
@@ -93,8 +93,8 @@ export function TextElementInspector() {
           <LabeledField label="Text Color"><FieldInput type="text" value={visual.fillColor} onChange={handleTextColorChange} /></LabeledField>
         </div>
 
-        <div className="grid gap-1 border-t border-stroke-light pt-1.5">
-          <span className="text-[11px] uppercase tracking-wider text-text-muted">Horizontal Align</span>
+        <div className="grid gap-1 border-t border-border-secondary pt-1.5">
+          <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Horizontal Align</span>
           <SegmentedControl label="Horizontal alignment">
             <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'left')} onClick={handleAlignLeft} title="Align left"><AlignLeftIcon /></SegmentedControlItem>
             <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'center')} onClick={handleAlignCenter} title="Align center"><AlignCenterIcon /></SegmentedControlItem>
@@ -104,7 +104,7 @@ export function TextElementInspector() {
         </div>
 
         <div className="grid gap-1">
-          <span className="text-[11px] uppercase tracking-wider text-text-muted">Vertical Align</span>
+          <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Vertical Align</span>
           <SegmentedControl label="Vertical alignment">
             <SegmentedControlItem active={formatting.verticalAlign === 'top'} onClick={handleVerticalTop} title="Align top"><AlignTopIcon /></SegmentedControlItem>
             <SegmentedControlItem active={formatting.verticalAlign === 'middle'} onClick={handleVerticalMiddle} title="Align middle"><AlignMiddleIcon /></SegmentedControlItem>
@@ -129,7 +129,7 @@ export function TextElementInspector() {
         </CheckboxSection>
       </fieldset>
 
-      <div className="mt-2 border-t border-stroke-light pt-2">
+      <div className="mt-2 border-t border-border-secondary pt-2">
         <Button variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</Button>
       </div>
     </div>

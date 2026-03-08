@@ -35,22 +35,15 @@ export function InspectorPanel() {
   }
 
   return (
-    <aside className="grid h-full min-h-0 grid-rows-[auto_1fr] overflow-hidden border-l border-stroke bg-surface-1">
+    <aside className="flex flex-col h-full min-h-0 overflow-hidden border-l border-border-primary bg-background-primary_alt">
+      <InspectorTabsPanel bodyClassName="p-3" />
       {isOverlayEdit || isSlideEdit ? (
-        <div className="border-b border-stroke p-3">
-          <Panel title="Output Push">
-            <div className="grid gap-2">
-              <p className="m-0 text-[12px] text-text-muted">
-                Edits stay local until you push them or switch to another workbench mode.
-              </p>
-              <Button onClick={handlePushChanges} disabled={!hasPendingChanges || isPushingChanges}>
-                {isPushingChanges ? 'Pushing…' : pushLabel}
-              </Button>
-            </div>
-          </Panel>
+        <div className="border-t border-border-primary p-3">
+          <Button onClick={handlePushChanges} disabled={!hasPendingChanges || isPushingChanges} className='w-full'>
+            {isPushingChanges ? 'Pushing…' : pushLabel}
+          </Button>
         </div>
       ) : null}
-      <InspectorTabsPanel bodyClassName="p-3" />
     </aside>
   );
 }

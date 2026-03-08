@@ -4,16 +4,19 @@ import { SearchField } from '../../../components/search-field';
 import { useResourceDrawer } from '../../../contexts/resource-drawer-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useElements } from '../../../contexts/element-context';
+import { useNavigation } from '../../../contexts/navigation-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { TabBar, Tab } from '../../../components/tab-bar';
 import { MediaBinPanel } from './media-bin-panel';
 import { OverlayBinPanel } from './overlay-bin-panel';
+import { PresentationBinPanel } from './presentation-bin-panel';
 import type { DrawerTab } from '../../../types/ui';
 import { Button } from '@renderer/components/button';
 
 const TABS: Array<{ key: DrawerTab; label: string }> = [
   { key: 'media', label: 'Media' },
   { key: 'overlays', label: 'Overlays' },
+  { key: 'presentations', label: 'Presentations' },
 ];
 
 const ACCEPTED_TYPES = ['image/', 'video/'];
@@ -29,6 +32,7 @@ export function ResourceDrawer() {
   const { setWorkbenchMode } = useWorkbench();
   const { importMedia } = useElements();
   const { createOverlay } = useOverlayEditor();
+  const { createPresentation } = useNavigation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [filterText, setFilterText] = useState('');
 
@@ -63,8 +67,12 @@ export function ResourceDrawer() {
     });
   }
 
+  function handleCreatePresentation() {
+    void createPresentation();
+  }
+
   const footerClass = [
-    'h-full border-t border-stroke bg-surface-1 grid min-h-0 grid-rows-[auto_1fr]',
+    'h-full border-t border-border-primary bg-background-primary_alt grid min-h-0 grid-rows-[auto_1fr]',
     isDragOver ? 'border-t-focus' : '',
   ].join(' ');
 
@@ -89,13 +97,23 @@ export function ResourceDrawer() {
 
         <div className="ml-auto flex items-center gap-2 px-2">
           {drawerTab === 'media' && (
-            <label className="text-text-muted hover:text-text-primary cursor-pointer text-[16px] leading-none transition-colors" aria-label="Import media" title="Import media">
+            <label className="text-text-tertiary hover:text-text-primary cursor-pointer text-[16px] leading-none transition-colors" aria-label="Import media" title="Import media">
               +
               <input type="file" multiple accept="image/*,video/*,audio/*" onChange={handleImport} className="hidden" />
             </label>
           )}
           {drawerTab === 'overlays' && (
             <Button type="button" onClick={handleCreateOverlay} aria-label="Create overlay" title="Create overlay">
+              +
+            </Button>
+          )}
+          {drawerTab === 'presentations' && (
+            <Button
+              type="button"
+              onClick={handleCreatePresentation}
+              aria-label="Create presentation"
+              title="Create presentation"
+            >
               +
             </Button>
           )}
@@ -106,6 +124,7 @@ export function ResourceDrawer() {
       <div className="min-h-0 overflow-auto px-2 py-2">
         {drawerTab === 'media' && <MediaBinPanel filterText={filterText} />}
         {drawerTab === 'overlays' && <OverlayBinPanel filterText={filterText} />}
+        {drawerTab === 'presentations' && <PresentationBinPanel filterText={filterText} />}
       </div>
     </footer>
   );

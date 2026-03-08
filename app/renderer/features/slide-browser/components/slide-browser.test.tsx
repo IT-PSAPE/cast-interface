@@ -6,6 +6,7 @@ const useNavigationMock = vi.fn();
 const useSlidesMock = vi.fn();
 const useSlideBrowserMock = vi.fn();
 const usePlaylistPresentationSequenceMock = vi.fn();
+const useWorkbenchMock = vi.fn();
 
 vi.mock('../../../contexts/navigation-context', () => ({
   useNavigation: () => useNavigationMock(),
@@ -23,9 +24,19 @@ vi.mock('../hooks/use-playlist-presentation-sequence', () => ({
   usePlaylistPresentationSequence: () => usePlaylistPresentationSequenceMock(),
 }));
 
+vi.mock('../../../contexts/workbench-context', () => ({
+  useWorkbench: () => useWorkbenchMock(),
+}));
+
 vi.mock('./slide-browser-toolbar', () => ({
   SlideBrowserToolbar: function SlideBrowserToolbar() {
     return <div>Toolbar</div>;
+  },
+}));
+
+vi.mock('./playlist-browser-mode-control', () => ({
+  PlaylistBrowserModeControl: function PlaylistBrowserModeControl() {
+    return <div>Playlist View Control</div>;
   },
 }));
 
@@ -60,8 +71,13 @@ vi.mock('./continuous-slide-list', () => ({
 }));
 
 vi.mock('./slide-browser-playlist-tab-strip', () => ({
-  SlideBrowserPlaylistTabStrip: function SlideBrowserPlaylistTabStrip() {
-    return <div>Tabs Header</div>;
+  SlideBrowserPlaylistTabStrip: function SlideBrowserPlaylistTabStrip({ action }: { action?: React.ReactNode }) {
+    return (
+      <div>
+        <span>Tabs Header</span>
+        {action}
+      </div>
+    );
   },
 }));
 
@@ -69,9 +85,13 @@ describe('SlideBrowser', () => {
   beforeEach(() => {
     useNavigationMock.mockReturnValue({
       currentPresentation: { id: 'presentation-1', title: 'Hello World' },
+      isDetachedPresentationBrowser: false,
     });
     useSlidesMock.mockReturnValue({
       slides: [{ id: 'slide-1' }, { id: 'slide-2' }],
+    });
+    useWorkbenchMock.mockReturnValue({
+      workbenchMode: 'show',
     });
     usePlaylistPresentationSequenceMock.mockReturnValue({
       items: [
@@ -101,6 +121,7 @@ describe('SlideBrowser', () => {
 
     expect(screen.getByText('Hello World')).not.toBeNull();
     expect(screen.getByText('2 slides')).not.toBeNull();
+    expect(screen.getByText('Playlist View Control')).not.toBeNull();
     expect(screen.queryByText('Tabs Header')).toBeNull();
   });
 
@@ -114,6 +135,7 @@ describe('SlideBrowser', () => {
 
     expect(screen.getByText('Tabs Header')).not.toBeNull();
     expect(screen.queryByText('2 slides')).toBeNull();
+    expect(screen.getByText('Playlist View Control')).not.toBeNull();
   });
 
   it('shows playlist summary metadata in continuous playlist mode', () => {
@@ -127,5 +149,22 @@ describe('SlideBrowser', () => {
     expect(screen.getByText('Playlist presentations')).not.toBeNull();
     expect(screen.getByText('2 presentations · 3 slides')).not.toBeNull();
     expect(screen.getByText('Continuous Grid')).not.toBeNull();
+  });
+
+  it('hides playlist controls and falls back to single-presentation browsing in detached mode', () => {
+    useNavigationMock.mockReturnValue({
+      currentPresentation: { id: 'presentation-1', title: 'Hello World' },
+      isDetachedPresentationBrowser: true,
+    });
+    useSlideBrowserMock.mockReturnValue({
+      slideBrowserMode: 'grid',
+      playlistBrowserMode: 'continuous',
+    });
+
+    render(<SlideBrowser />);
+
+    expect(screen.queryByText('Playlist View Control')).toBeNull();
+    expect(screen.getByText('Slide Grid')).not.toBeNull();
+    expect(screen.queryByText('Continuous Grid')).toBeNull();
   });
 });
