@@ -9,7 +9,7 @@ interface EmptyStatePanelProps {
 export function EmptyStatePanel({ glyph, title, description }: EmptyStatePanelProps) {
   return (
     <section className="grid h-full min-h-0 place-items-center p-6">
-      <div className="grid max-w-md place-items-center gap-3 rounded-lg border border-border-primary bg-background-primary_alt/50 px-8 py-10 text-center">
+      <div className="grid max-w-md place-items-center gap-3 rounded-lg border border-border-primary bg-primary/50 px-8 py-10 text-center">
         <div className="grid h-16 w-16 place-items-center rounded-xl border border-border-primary bg-background-tertiary text-text-tertiary">
           {glyph}
         </div>

@@ -1,4 +1,5 @@
 import { Button } from '../../../components/button';
+import { Icon } from '../../../components/icon';
 import { PanelSection } from '../../../components/panel-section';
 import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { SceneFrame } from '../../../components/scene-frame';
@@ -49,7 +50,7 @@ export function OverlayListPanel() {
   return (
     <aside
       data-ui-region="overlay-list-panel"
-      className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-background-primary_alt"
+      className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-primary"
     >
       <TwoPaneVerticalSplit
         className="h-full"
@@ -64,7 +65,7 @@ export function OverlayListPanel() {
             title={<span className="truncate text-[12px] font-medium text-text-primary">Overlays</span>}
             action={(
               <Button onClick={handleAddOverlay} className="grid h-6 w-6 place-items-center p-0 text-[14px] leading-none">
-                <span aria-hidden="true">+</span>
+                <Icon.plus size={14} strokeWidth={2} />
                 <span className="sr-only">Add overlay</span>
               </Button>
             )}

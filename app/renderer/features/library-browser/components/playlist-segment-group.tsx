@@ -1,4 +1,5 @@
 import type { PlaylistTree } from '@core/types';
+import { Icon } from '../../../components/icon';
 import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
@@ -47,7 +48,7 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
           onClick={handleSegmentMenuButtonClick}
           className="h-5 w-5 border-transparent bg-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
         >
-          ⋮
+          <Icon.dots_vertical size={14} strokeWidth={2} />
         </IconButton>
       </div>
 
@@ -87,7 +88,7 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
               onClick={handleMenuButtonClick}
               className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
             >
-              ⋮
+              <Icon.dots_vertical size={14} strokeWidth={2} />
             </IconButton>
           </div>
         );

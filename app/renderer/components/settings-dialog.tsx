@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { Icon } from './icon';
 import { useTheme } from '../contexts/theme-context';
 import type { ThemeMode } from '../types/ui';
 
@@ -40,7 +41,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
       className="pointer-events-auto absolute inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="w-[360px] rounded-lg border border-border-primary bg-background-primary_alt shadow-2xl">
+      <div className="w-[360px] rounded-lg border border-border-primary bg-primary shadow-2xl">
         <header className="flex items-center justify-between border-b border-border-primary px-4 py-3">
           <h2 className="m-0 text-[14px] font-semibold text-text-primary">Settings</h2>
           <button
@@ -49,7 +50,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
             className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
             aria-label="Close"
           >
-            &times;
+            <Icon.x_close size={14} strokeWidth={2} />
           </button>
         </header>
 

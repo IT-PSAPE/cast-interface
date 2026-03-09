@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Id, Presentation, Slide } from '@core/types';
 import { ContextMenu, type ContextMenuItem } from '../../../components/context-menu';
+import { Icon } from '../../../components/icon';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
 import { SceneFrame } from '../../../components/scene-frame';
@@ -93,7 +94,7 @@ function PresentationCard({
                 onClick={handleMenuClick}
                 className="h-5 w-5 border-border-primary bg-background-tertiary/80 text-[11px] leading-none"
               >
-                <span aria-hidden="true">···</span>
+                <Icon.dots_horizontal size={14} strokeWidth={2} />
               </IconButton>
             </div>
           </>

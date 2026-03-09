@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from 'react';
 import type { Id, SlideElement, TextElementPayload } from '@core/types';
 import { Button } from '../../../components/button';
+import { Icon } from '../../../components/icon';
 import { SelectableRow } from '../../../components/selectable-row';
 import { compactText } from '../../../utils/slides';
 
@@ -65,11 +66,12 @@ function capitalize(value: string): string {
 }
 
 function TypeIcon({ type }: { type: SlideElement['type'] }) {
-  if (type === 'text') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">T</span>;
-  if (type === 'shape') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">#</span>;
-  if (type === 'image') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">I</span>;
-  if (type === 'video') return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">V</span>;
-  return <span className="grid h-4 w-4 place-items-center text-[10px] font-bold text-text-tertiary">G</span>;
+  const className = "text-text-tertiary";
+  if (type === 'text') return <Icon.type_01 size={12} strokeWidth={2} className={className} />;
+  if (type === 'shape') return <Icon.square size={12} strokeWidth={2} className={className} />;
+  if (type === 'image') return <Icon.image_03 size={12} strokeWidth={2} className={className} />;
+  if (type === 'video') return <Icon.film_01 size={12} strokeWidth={2} className={className} />;
+  return <Icon.box size={12} strokeWidth={2} className={className} />;
 }
 
 interface IconControlButtonProps {
@@ -96,27 +98,13 @@ function IconControlButton({ active, label, onClick, children }: IconControlButt
 }
 
 function LockIcon({ closed }: { closed: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-      <rect x="4" y="7" width="8" height="6" rx="1.2" strokeWidth="1.25" />
-      {closed ? <path d="M5.5 7V5.4a2.5 2.5 0 0 1 5 0V7" strokeWidth="1.25" /> : <path d="M8 7V5.4a2.5 2.5 0 0 1 2.8-2.4" strokeWidth="1.25" />}
-    </svg>
-  );
+  return closed
+    ? <Icon.lock_01 size={14} strokeWidth={1.5} />
+    : <Icon.lock_unlocked_01 size={14} strokeWidth={1.5} />;
 }
 
 function VisibilityIcon({ visible }: { visible: boolean }) {
-  if (!visible) {
-    return (
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-        <path d="M2 8c1.5-2.5 3.5-3.7 6-3.7S12.5 5.5 14 8c-1.5 2.5-3.5 3.7-6 3.7S3.5 10.5 2 8Z" strokeWidth="1.1" />
-        <path d="m3 13 10-10" strokeWidth="1.25" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-      <path d="M2 8c1.5-2.5 3.5-3.7 6-3.7S12.5 5.5 14 8c-1.5 2.5-3.5 3.7-6 3.7S3.5 10.5 2 8Z" strokeWidth="1.1" />
-      <circle cx="8" cy="8" r="1.8" strokeWidth="1.1" />
-    </svg>
-  );
+  return visible
+    ? <Icon.eye size={14} strokeWidth={1.5} />
+    : <Icon.eye_off size={14} strokeWidth={1.5} />;
 }

@@ -53,7 +53,7 @@ export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrow
   }, [currentPlaylistPresentationId, handleSelectPresentation]);
 
   return (
-    <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-background-primary_alt/70 px-3">
+    <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
           <TabBar label="Playlist presentations" bordered={false}>

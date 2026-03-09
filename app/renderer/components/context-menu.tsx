@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from './icon';
 import { createPortal } from 'react-dom';
 
 export interface ContextMenuItem {
@@ -139,7 +140,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
           >
             <span className="flex items-center justify-between">
               <span className="truncate">{item.label}</span>
-              {item.children?.length ? <span className="text-[10px]">›</span> : null}
+              {item.children?.length ? <Icon.chevron_right size={10} strokeWidth={2.5} /> : null}
             </span>
           </button>
 

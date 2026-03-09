@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Icon } from './icon';
 import type { Id, MediaAsset } from '@core/types';
 import { Button } from './button';
 
@@ -61,7 +62,7 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
       className="pointer-events-auto absolute inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="grid w-[480px] max-h-[420px] grid-rows-[auto_1fr_auto] rounded-lg border border-border-primary bg-background-primary_alt shadow-2xl">
+      <div className="grid w-[480px] max-h-[420px] grid-rows-[auto_1fr_auto] rounded-lg border border-border-primary bg-primary shadow-2xl">
         <header className="flex items-center justify-between border-b border-border-primary px-4 py-3">
           <h2 className="m-0 text-[14px] font-semibold text-text-primary">Add Media</h2>
           <button
@@ -70,7 +71,7 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
             className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
             aria-label="Close"
           >
-            &times;
+            <Icon.x_close size={14} strokeWidth={2} />
           </button>
         </header>
 

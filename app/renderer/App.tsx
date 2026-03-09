@@ -21,6 +21,7 @@ import { OverlayEditorLayout } from './features/workbench/components/overlay-edi
 import { ErrorBoundary } from './components/error-boundary';
 import { RenderSceneProvider } from './features/stage/rendering/render-scene-provider';
 import { StatusBar } from './components/status-bar';
+import { useNdi } from './contexts/ndi-context';
 import { useWorkbenchPanelLayout } from './features/workbench/hooks/use-workbench-panel-layout';
 
 export function App() {
@@ -64,6 +65,7 @@ export function App() {
 function AppLayout() {
   useKeyboardShortcuts();
   const { snapshot } = useCast();
+  const { outputState, toggleAudienceOutput } = useNdi();
   const { workbenchMode } = useWorkbench();
   const panelLayout = useWorkbenchPanelLayout();
 
@@ -133,7 +135,11 @@ function AppLayout() {
   return (
     <div className="relative grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
       <NdiOutputEmitter />
-      <AppToolbar panelToggles={panelToggles} />
+      <AppToolbar
+        audienceOutputActive={outputState.audience}
+        onToggleAudienceOutput={toggleAudienceOutput}
+        panelToggles={panelToggles}
+      />
       {workbenchMode === 'show' && (
         <ShowModeLayout
           liveLayouts={panelLayout.liveLayouts}

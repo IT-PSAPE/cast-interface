@@ -1,4 +1,5 @@
 import type { PlaylistTree } from '@core/types';
+import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useSlides } from '../../../contexts/slide-context';
@@ -30,14 +31,10 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border-primary bg-background-primary_alt px-3 py-1.5">
+      <div className="flex items-center justify-between border-b border-border-primary bg-primary px-3 py-1.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
         <IconButton label="New segment" onClick={handleNewSegment} className="h-5 w-5">
-          <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
-            <path d="M2.5 4.5H7.5L9 6H13.5V12.5H2.5V4.5Z" strokeWidth="1.25" />
-            <path d="M8 7.5V11.5" strokeWidth="1.25" strokeLinecap="round" />
-            <path d="M6 9.5H10" strokeWidth="1.25" strokeLinecap="round" />
-          </svg>
+          <Icon.folder_plus size={12} strokeWidth={1.5} />
         </IconButton>
       </div>
 

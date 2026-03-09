@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react';
-import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon, type SegmentedControlValue } from '../../../components/segmented-control';
+import { SegmentedControl as Control } from '../../../components/segmented-controls';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
-import type { PlaylistBrowserMode } from '../../../types/ui';
 
 interface PlaylistViewOption {
-  mode: PlaylistBrowserMode;
+  mode: 'current' | 'tabs' | 'continuous';
   label: string;
   icon: ReactNode;
 }
@@ -45,32 +44,29 @@ export function PlaylistBrowserModeControl() {
     { mode: 'continuous', label: 'Continuous', icon: <PlaylistContinuousIcon /> },
   ];
 
-  function handleValueChange(nextValue: SegmentedControlValue) {
-    if (!isPlaylistBrowserMode(nextValue)) return;
+  function handleValueChange(nextValue: string) {
+    if (!isPlaylistBrowserMode(nextValue)) {
+      return;
+    }
+
     setPlaylistBrowserMode(nextValue);
   }
 
   function renderPlaylistViewItem(option: PlaylistViewOption) {
     return (
-      <SegmentedControlItem key={option.mode} value={option.mode} title={option.label} variant="icon">
-        <SegmentedControlItemIcon>{option.icon}</SegmentedControlItemIcon>
-        <span className="sr-only">{option.label}</span>
-      </SegmentedControlItem>
+      <Control.Icon key={option.mode} value={option.mode} title={option.label} aria-label={option.label}>
+        {option.icon}
+      </Control.Icon>
     );
   }
 
   return (
-    <SegmentedControl
-      label="Playlist browser mode"
-      selectionMode="single"
-      value={playlistBrowserMode}
-      onValueChange={handleValueChange}
-    >
+    <Control.Root value={playlistBrowserMode} onValueChange={handleValueChange} aria-label="Playlist browser mode">
       {playlistViewOptions.map(renderPlaylistViewItem)}
-    </SegmentedControl>
+    </Control.Root>
   );
 }
 
-function isPlaylistBrowserMode(value: SegmentedControlValue): value is PlaylistBrowserMode {
+function isPlaylistBrowserMode(value: string): value is PlaylistViewOption['mode'] {
   return value === 'current' || value === 'tabs' || value === 'continuous';
 }

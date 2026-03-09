@@ -74,7 +74,7 @@ export function StagePanel() {
         )}
       </div>
 
-      <footer className="flex items-center gap-4 border-t border-border-primary bg-background-primary_alt/80 px-3 py-1 text-[11px] text-text-secondary">
+      <footer className="flex items-center gap-4 border-t border-border-primary bg-primary/80 px-3 py-1 text-[11px] text-text-secondary">
         <span className="font-medium text-text-tertiary">Selection</span>
         <span>X: {formatMetric(x)}</span>
         <span>Y: {formatMetric(y)}</span>

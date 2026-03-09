@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
+import { Icon } from '../../../components/icon';
 import { ContextMenu } from '../../../components/context-menu';
 import type { ContextMenuItem } from '../../../components/context-menu';
 import { IconButton } from '../../../components/icon-button';
@@ -88,7 +89,7 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
                     <MediaThumbnail asset={asset} />
                     <div className="absolute right-1 top-1 hidden group-hover:block">
                       <IconButton label="Media options" onClick={handleMenuClick} className="h-5 w-5 border-border-primary bg-background-tertiary/80 text-[11px] leading-none">
-                        <span aria-hidden="true">···</span>
+                        <Icon.dots_horizontal size={14} strokeWidth={2} />
                       </IconButton>
                     </div>
                   </>

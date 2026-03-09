@@ -1,5 +1,6 @@
 import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
+import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -19,17 +20,12 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
 
   return (
     <section className="border-t border-border-primary min-h-0 overflow-auto">
-      <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-background-primary_alt z-10">
+      <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-primary z-10">
         <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">
           Project Presentations
         </span>
         <IconButton label="New presentation" onClick={handleNewPresentation} className="h-5 w-5">
-          <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
-            <path d="M4 2.5H9.5L12.5 5.5V13.5H4V2.5Z" strokeWidth="1.25" />
-            <path d="M9.5 2.5V5.5H12.5" strokeWidth="1.25" />
-            <path d="M8.25 7.5V11.5" strokeWidth="1.25" strokeLinecap="round" />
-            <path d="M6.25 9.5H10.25" strokeWidth="1.25" strokeLinecap="round" />
-          </svg>
+          <Icon.file_plus_02 size={12} strokeWidth={1.5} />
         </IconButton>
       </div>
 
@@ -74,7 +70,7 @@ export function LibraryPresentationList({ editingPresentationId, onLibraryPresen
                 onClick={handleMenuButtonClick}
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
               >
-                ⋮
+                <Icon.dots_vertical size={14} strokeWidth={2} />
               </IconButton>
             </div>
           );

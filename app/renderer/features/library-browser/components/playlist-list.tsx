@@ -1,4 +1,5 @@
 import { Button } from '../../../components/button';
+import { Icon } from '../../../components/icon';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -22,10 +23,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
       <div className="flex items-center justify-between px-3 py-1.5">
         <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
         <IconButton label="New playlist" onClick={handleCreate} className="h-5 w-5">
-          <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
-            <path d="M8 3.5V12.5" strokeWidth="1.25" strokeLinecap="round" />
-            <path d="M3.5 8H12.5" strokeWidth="1.25" strokeLinecap="round" />
-          </svg>
+          <Icon.plus size={12} strokeWidth={1.5} />
         </IconButton>
       </div>
 
@@ -71,7 +69,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                 onClick={handleMenuButtonClick}
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
               >
-                ⋮
+                <Icon.dots_vertical size={14} strokeWidth={2} />
               </IconButton>
             </div>
           );

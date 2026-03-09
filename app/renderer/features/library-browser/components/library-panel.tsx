@@ -81,7 +81,7 @@ export function LibraryPanel() {
   return (
     <aside
       data-ui-region="library-panel"
-      className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-primary bg-background-primary_alt"
+      className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border-primary bg-primary"
     >
       {libraryPanelView === 'libraries' ? (
         <LibrarySelector

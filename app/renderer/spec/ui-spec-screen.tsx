@@ -7,6 +7,7 @@ import { CheckboxSection } from '../components/checkbox-section';
 import { EditableText } from '../components/editable-text';
 import { EmptyStatePanel } from '../components/empty-state-panel';
 import { FieldInput, FieldSelect, FieldTextarea, LabeledField } from '../components/labeled-field';
+import { Icon } from '../components/icon';
 import { IconButton } from '../components/icon-button';
 import { MediaPickerDialog } from '../components/media-picker-dialog';
 import { Panel } from '../components/panel';
@@ -65,13 +66,13 @@ export function UiSpecScreen() {
           <SpecCard title="Icon Button States">
             <div className="flex flex-wrap items-center gap-3">
               <IconButton label="Add library" onClick={EMPTY_CALLBACK}>
-                <span aria-hidden="true">+</span>
+                <Icon.plus size={14} strokeWidth={2} />
               </IconButton>
               <IconButton label="Open menu" onClick={EMPTY_CALLBACK}>
-                <span aria-hidden="true">⋮</span>
+                <Icon.dots_vertical size={14} strokeWidth={2} />
               </IconButton>
               <IconButton label="Disabled" onClick={EMPTY_CALLBACK} disabled>
-                <span aria-hidden="true">×</span>
+                <Icon.x_close size={14} strokeWidth={2} />
               </IconButton>
             </div>
           </SpecCard>
@@ -156,17 +157,17 @@ export function UiSpecScreen() {
               <SegmentedControl label="Panel visibility" selectionMode="multiple" value={['left', 'right']} onValueChange={EMPTY_SEGMENTED_CALLBACK}>
                 <SegmentedControlItem value="left" title="Left panel" variant="icon">
                   <SegmentedControlItemIcon>
-                    <span aria-hidden="true">L</span>
+                    <Icon.layout_left size={14} strokeWidth={1.5} />
                   </SegmentedControlItemIcon>
                 </SegmentedControlItem>
                 <SegmentedControlItem value="bottom" title="Bottom panel" variant="icon">
                   <SegmentedControlItemIcon>
-                    <span aria-hidden="true">B</span>
+                    <Icon.layout_bottom size={14} strokeWidth={1.5} />
                   </SegmentedControlItemIcon>
                 </SegmentedControlItem>
                 <SegmentedControlItem value="right" title="Right panel" variant="icon">
                   <SegmentedControlItemIcon>
-                    <span aria-hidden="true">R</span>
+                    <Icon.layout_right size={14} strokeWidth={1.5} />
                   </SegmentedControlItemIcon>
                 </SegmentedControlItem>
               </SegmentedControl>
@@ -221,10 +222,10 @@ export function UiSpecScreen() {
                   <p className="m-0 text-[12px] text-text-secondary">Media is rendered below content, with overlay on top.</p>
                 </Panel>
 
-                <div className="rounded-md border border-border-primary bg-background-primary_alt">
+                <div className="rounded-md border border-border-primary bg-primary">
                   <PanelSection
                     title={<span className="text-[12px] font-medium text-text-primary">Presentation slides</span>}
-                    action={<Button className="grid h-6 w-6 place-items-center p-0 text-[14px]">+</Button>}
+                    action={<Button className="grid h-6 w-6 place-items-center p-0"><Icon.plus size={14} strokeWidth={2} /></Button>}
                     headerClassName="border-b border-border-primary"
                     bodyClassName="p-2"
                   >
@@ -267,7 +268,7 @@ export function UiSpecScreen() {
             </SpecCard>
 
             <SpecCard title="Empty State">
-              <div className="min-h-[280px] rounded-md border border-border-primary bg-background-primary_alt">
+              <div className="min-h-[280px] rounded-md border border-border-primary bg-primary">
                 <EmptyStatePanel
                   glyph={<span className="text-[26px] text-text-tertiary">∅</span>}
                   title="No presentation selected"
@@ -311,7 +312,7 @@ interface SpecSectionProps {
 
 function SpecSection({ id, title, description, children }: SpecSectionProps) {
   return (
-    <section data-ui-spec={id} className="rounded-2xl border border-border-primary bg-background-primary_alt/70 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+    <section data-ui-spec={id} className="rounded-2xl border border-border-primary bg-primary/70 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
       <div className="mb-4 flex flex-col gap-1">
         <h2 className="m-0 text-[18px] font-semibold">{title}</h2>
         <p className="m-0 text-[12px] leading-5 text-text-tertiary">{description}</p>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../../components/button';
-import { SegmentedControl, SegmentedControlItem } from '../../../components/segmented-control';
+import { SegmentedControl as Control } from '../../../components/segmented-controls';
 import { FieldInput, FieldSelect, LabeledField } from '../../../components/labeled-field';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useSlides } from '../../../contexts/slide-context';
@@ -96,6 +96,17 @@ export function PresentationInspector() {
     void setPresentationKind(currentPresentation.id, 'lyrics');
   }
 
+  function handlePresentationTypeChange(nextValue: string) {
+    if (nextValue === 'canvas') {
+      handleSetCanvasType();
+      return;
+    }
+
+    if (nextValue === 'lyrics') {
+      handleSetLyricsType();
+    }
+  }
+
   if (!currentPresentation) {
     return <div className="text-[12px] text-text-tertiary">No presentation selected.</div>;
   }
@@ -119,22 +130,10 @@ export function PresentationInspector() {
 
       <div className="grid gap-1.5">
         <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Presentation Type</span>
-        <SegmentedControl label="Presentation type">
-          <SegmentedControlItem
-            active={currentPresentation.kind === 'canvas'}
-            onClick={handleSetCanvasType}
-            title="Canvas presentation"
-          >
-            Canvas
-          </SegmentedControlItem>
-          <SegmentedControlItem
-            active={currentPresentation.kind === 'lyrics'}
-            onClick={handleSetLyricsType}
-            title="Lyrics presentation"
-          >
-            Lyrics
-          </SegmentedControlItem>
-        </SegmentedControl>
+        <Control.Root value={currentPresentation.kind} onValueChange={handlePresentationTypeChange} aria-label="Presentation type">
+          <Control.Label value="canvas" title="Canvas presentation">Canvas</Control.Label>
+          <Control.Label value="lyrics" title="Lyrics presentation">Lyrics</Control.Label>
+        </Control.Root>
       </div>
 
       <div className="flex gap-4">

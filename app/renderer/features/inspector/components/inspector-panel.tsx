@@ -35,10 +35,7 @@ export function InspectorPanel() {
   }
 
   return (
-    <aside
-      data-ui-region="inspector-panel"
-      className="flex flex-col h-full min-h-0 overflow-hidden border-l border-border-primary bg-background-primary_alt"
-    >
+    <aside data-ui-region="inspector-panel" className="flex flex-col h-full min-h-0 overflow-hidden border-l border-border-primary bg-primary" >
       <InspectorTabsPanel bodyClassName="p-3" />
       {isOverlayEdit || isSlideEdit ? (
         <div className="border-t border-border-primary p-3">

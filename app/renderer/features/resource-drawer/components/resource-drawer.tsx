@@ -72,7 +72,7 @@ export function ResourceDrawer() {
   }
 
   const footerClass = [
-    'h-full border-t border-border-primary bg-background-primary_alt grid min-h-0 grid-rows-[auto_1fr]',
+    'h-full border-t border-border-primary bg-primary grid min-h-0 grid-rows-[auto_1fr]',
     isDragOver ? 'border-t-focus' : '',
   ].join(' ');
 

@@ -22,7 +22,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
     ? 'border-green-500/70 bg-green-500/10'
     : isFocused
       ? 'border-brand-400/80 bg-brand-400/10'
-      : 'border-border-primary bg-background-primary_alt/40';
+      : 'border-border-primary bg-primary/40';
 
   function handleSelect() {
     onSelect(row.index);

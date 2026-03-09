@@ -8,6 +8,19 @@ import { SegmentedControl, SegmentedControlItem } from '../../../components/segm
 import { CheckboxSection } from '../../../components/checkbox-section';
 import { useSystemFonts } from '../hooks/use-system-fonts';
 
+import { SegmentedControl as Control } from '../../../components/segmented-controls';
+import { AlignTop01 } from '@renderer/components/icon/align-top-01';
+import { AlignBottom01 } from '@renderer/components/icon/align-bottom-01';
+import { AlignVerticalCenter01 } from '@renderer/components/icon/align-vertical-center-01';
+import { AlignLeft } from '@renderer/components/icon/align-left';
+import { AlignCenter } from '@renderer/components/icon/align-center';
+import { AlignJustify } from '@renderer/components/icon/align-justify';
+import { AlignRight } from '@renderer/components/icon/align-right';
+import { Bold02 } from '@renderer/components/icon/bold-02';
+import { Italic01 } from '@renderer/components/icon/italic-01';
+import { Underline01 } from '@renderer/components/icon/underline-01';
+import { Strikethrough01 } from '@renderer/components/icon/strikethrough-01';
+
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
   { value: 'uppercase', label: 'Uppercase' },
@@ -45,13 +58,6 @@ export function TextElementInspector() {
   function handleLineHeightChange(value: string) { updateText({ lineHeight: Math.max(0.6, parseNumber(value, formatting.lineHeight)) }); }
   function handleTextColorChange(value: string) { updateVisual({ fillColor: value }); }
   function handleCaseChange(value: string) { updateText({ caseTransform: value as TextCaseTransform }); }
-  function handleAlignLeft() { updateText({ alignment: 'left' }); }
-  function handleAlignCenter() { updateText({ alignment: 'center' }); }
-  function handleAlignRight() { updateText({ alignment: 'right' }); }
-  function handleAlignJustify() { updateText({ alignment: 'justify' }); }
-  function handleVerticalTop() { updateText({ verticalAlign: 'top' }); }
-  function handleVerticalMiddle() { updateText({ verticalAlign: 'middle' }); }
-  function handleVerticalBottom() { updateText({ verticalAlign: 'bottom' }); }
   function handleBoldToggle() { updateText({ weight: isBold ? '400' : '700' }); }
   function handleItalicToggle() { updateText({ italic: !formatting.italic }); }
   function handleUnderlineToggle() { updateText({ underline: !formatting.underline }); }
@@ -65,6 +71,31 @@ export function TextElementInspector() {
   function handleShadowOffsetXChange(value: string) { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetX) }); }
   function handleShadowOffsetYChange(value: string) { updateVisual({ shadowOffsetY: parseNumber(value, visual.shadowOffsetY) }); }
   function handleDelete() { void deleteSelected(); }
+
+  function handleVerticalAlighmentChange(value: string) {
+    updateText({ verticalAlign: value as TextVerticalAlign });
+  }
+
+  function handleHorizontalAlighmentChange(value: string) {
+    updateText({ alignment: value as TextHorizontalAlign });
+  }
+
+  function handleTextStyleChange(value: string) {
+    switch (value) {
+      case 'bold':
+        handleBoldToggle();
+        break;
+      case 'italic':
+        handleItalicToggle();
+        break;
+      case 'underline':
+        handleUnderlineToggle();
+        break;
+      case 'strikethrough':
+        handleStrikeToggle();
+        break;
+    }
+  }
 
   return (
     <div className="grid gap-2">
@@ -80,12 +111,26 @@ export function TextElementInspector() {
 
         <div className="grid gap-1 border-t border-border-secondary pt-1.5">
           <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Formatting</span>
-          <SegmentedControl label="Text formatting">
+          {/* <SegmentedControl label="Text formatting">
             <SegmentedControlItem active={isBold} onClick={handleBoldToggle} title="Bold"><BoldIcon /></SegmentedControlItem>
             <SegmentedControlItem active={formatting.italic} onClick={handleItalicToggle} title="Italic"><ItalicIcon /></SegmentedControlItem>
             <SegmentedControlItem active={formatting.underline} onClick={handleUnderlineToggle} title="Underline"><UnderlineIcon /></SegmentedControlItem>
             <SegmentedControlItem active={formatting.strikethrough} onClick={handleStrikeToggle} title="Strikethrough"><StrikeIcon /></SegmentedControlItem>
-          </SegmentedControl>
+          </SegmentedControl> */}
+          <Control.Root fill className="w-full" value={formatting.alignment} onValueChange={handleTextStyleChange} aria-label="Horizontal text alignment">
+            <Control.Icon fill value="bold" title="Bold" aria-label="Bolc Text">
+              <Bold02 />
+            </Control.Icon>
+            <Control.Icon fill value="italic" title="Italic" aria-label="Italic Text">
+              <Italic01 />
+            </Control.Icon>
+            <Control.Icon fill value="underline" title="Underline" aria-label="Underline Text">
+              <Underline01 />
+            </Control.Icon>
+            <Control.Icon fill value="strikethrough" title="Strikethrough" aria-label="Strikethrough Text">
+              <Strikethrough01 />
+            </Control.Icon>
+          </Control.Root>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -93,23 +138,33 @@ export function TextElementInspector() {
           <LabeledField label="Text Color"><FieldInput type="text" value={visual.fillColor} onChange={handleTextColorChange} /></LabeledField>
         </div>
 
-        <div className="grid gap-1 border-t border-border-secondary pt-1.5">
-          <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Horizontal Align</span>
-          <SegmentedControl label="Horizontal alignment">
-            <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'left')} onClick={handleAlignLeft} title="Align left"><AlignLeftIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'center')} onClick={handleAlignCenter} title="Align center"><AlignCenterIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'right')} onClick={handleAlignRight} title="Align right"><AlignRightIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={isActiveHorizontal(formatting.alignment, 'justify')} onClick={handleAlignJustify} title="Justify"><AlignJustifyIcon /></SegmentedControlItem>
-          </SegmentedControl>
-        </div>
+        <div className="flex gap-2 pt-1.5">
+          <Control.Root fill className="w-full" value={formatting.alignment} onValueChange={handleHorizontalAlighmentChange} aria-label="Horizontal text alignment">
+            <Control.Icon fill value="left" title="Align left" aria-label="Align left">
+              <AlignLeft />
+            </Control.Icon>
+            <Control.Icon fill value="center" title="Align center" aria-label="Align center">
+              <AlignCenter />
+            </Control.Icon>
+            <Control.Icon fill value="right" title="Align right" aria-label="Align right">
+              <AlignRight />
+            </Control.Icon>
+            <Control.Icon fill value="justify" title="Justify text" aria-label="Justify text">
+              <AlignJustify />
+            </Control.Icon>
+          </Control.Root>
 
-        <div className="grid gap-1">
-          <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Vertical Align</span>
-          <SegmentedControl label="Vertical alignment">
-            <SegmentedControlItem active={formatting.verticalAlign === 'top'} onClick={handleVerticalTop} title="Align top"><AlignTopIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={formatting.verticalAlign === 'middle'} onClick={handleVerticalMiddle} title="Align middle"><AlignMiddleIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={formatting.verticalAlign === 'bottom'} onClick={handleVerticalBottom} title="Align bottom"><AlignBottomIcon /></SegmentedControlItem>
-          </SegmentedControl>
+          <Control.Root fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
+            <Control.Icon fill value="top" title="Align top" aria-label="Align top">
+              <AlignTop01 />
+            </Control.Icon>
+            <Control.Icon fill value="middle" title="Align middle" aria-label="Align middle">
+              <AlignVerticalCenter01 />
+            </Control.Icon>
+            <Control.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
+              <AlignBottom01 />
+            </Control.Icon>
+          </Control.Root>
         </div>
 
         <CheckboxSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
@@ -135,16 +190,7 @@ export function TextElementInspector() {
     </div>
   );
 }
-
-function isActiveHorizontal(current: TextHorizontalAlign, target: TextHorizontalAlign): boolean { return current === target; }
 function BoldIcon() { return <span className="text-[12px] font-black">B</span>; }
 function ItalicIcon() { return <span className="text-[12px] italic">I</span>; }
 function UnderlineIcon() { return <span className="text-[12px] underline">U</span>; }
 function StrikeIcon() { return <span className="text-[12px] line-through">S</span>; }
-function AlignLeftIcon() { return <span className="text-[12px]">≡</span>; }
-function AlignCenterIcon() { return <span className="text-[12px]">≣</span>; }
-function AlignRightIcon() { return <span className="text-[12px]">☰</span>; }
-function AlignJustifyIcon() { return <span className="text-[12px]">☷</span>; }
-function AlignTopIcon() { return <span className="text-[12px]">↥</span>; }
-function AlignMiddleIcon() { return <span className="text-[12px]">↕</span>; }
-function AlignBottomIcon() { return <span className="text-[12px]">↧</span>; }

@@ -37,7 +37,7 @@ export function FieldInput({ type = 'text', value, onChange, min, max, step }: F
       min={min}
       max={max}
       step={step}
-      className="rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors"
+      className="rounded bg-secondary px-2 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors"
     />
   );
 }
@@ -59,7 +59,7 @@ export function FieldTextarea({ value, onChange, placeholder, className = '' }: 
       value={value}
       onChange={handleChange}
       placeholder={placeholder}
-      className={`rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
+      className={`rounded border border-border-primary bg-primary px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
     />
   );
 }
@@ -76,11 +76,7 @@ export function FieldSelect({ value, onChange, options }: FieldSelectProps) {
   }
 
   return (
-    <select
-      value={value}
-      onChange={handleChange}
-      className="rounded border border-border-primary bg-background-primary_alt px-1.5 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors"
-    >
+    <select value={value} onChange={handleChange} className="rounded-md bg-secondary px-1.5 py-1 text-[12px] text-text-primary focus:border-brand focus:outline-none transition-colors" >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value} style={opt.style}>
           {opt.label}
