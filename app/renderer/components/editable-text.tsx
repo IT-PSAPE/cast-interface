@@ -84,7 +84,7 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
         onMouseDown={handleMouseDownInput}
         onClick={handleClickInput}
         placeholder={placeholder}
-        className={`bg-surface-1 border border-focus rounded-sm px-1 py-0 text-text-primary outline-none ${className}`}
+        className={`bg-primary border border-brand rounded-sm px-1 py-0 text-text-primary outline-none ${className}`}
       />
     );
   }

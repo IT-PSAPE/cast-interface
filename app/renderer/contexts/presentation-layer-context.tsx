@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Id, MediaAsset, Overlay } from '@core/types';
 import { useCast } from './cast-context';
 import { useNavigation } from './navigation-context';
+import { useProjectContent } from './use-project-content';
 
 export type PresentationLayerKey = 'media' | 'content' | 'overlay';
 
@@ -22,55 +23,49 @@ const PresentationLayerContext = createContext<PresentationLayerContextValue | n
 
 export function PresentationLayerProvider({ children }: { children: ReactNode }) {
   const { setStatusText } = useCast();
-  const { activeBundle, currentPresentationId } = useNavigation();
+  const { currentOutputPresentationId, outputArmVersion, clearOutputPresentation } = useNavigation();
+  const { mediaAssetsById, overlaysById } = useProjectContent();
 
   const [mediaLayerAssetId, setMediaLayerAssetId] = useState<Id | null>(null);
   const [overlayLayerId, setOverlayLayerId] = useState<Id | null>(null);
   const [contentLayerVisible, setContentLayerVisible] = useState(true);
 
   useEffect(() => {
+    if (!currentOutputPresentationId) return;
     setContentLayerVisible(true);
-  }, [currentPresentationId]);
+  }, [currentOutputPresentationId, outputArmVersion]);
 
   useEffect(() => {
-    if (!activeBundle) {
-      setMediaLayerAssetId(null);
-      setOverlayLayerId(null);
-      return;
-    }
-
-    const hasMedia = mediaLayerAssetId && activeBundle.mediaAssets.some((asset) => asset.id === mediaLayerAssetId);
+    const hasMedia = mediaLayerAssetId ? mediaAssetsById.has(mediaLayerAssetId) : false;
     if (!hasMedia) setMediaLayerAssetId(null);
 
-    const hasOverlay = overlayLayerId && activeBundle.overlays.some((overlay) => overlay.id === overlayLayerId);
+    const hasOverlay = overlayLayerId ? overlaysById.has(overlayLayerId) : false;
     if (!hasOverlay) setOverlayLayerId(null);
-  }, [activeBundle, mediaLayerAssetId, overlayLayerId]);
+  }, [mediaAssetsById, mediaLayerAssetId, overlayLayerId, overlaysById]);
 
   const mediaLayerAsset = useMemo(() => {
-    if (!activeBundle || !mediaLayerAssetId) return null;
-    return activeBundle.mediaAssets.find((asset) => asset.id === mediaLayerAssetId) ?? null;
-  }, [activeBundle, mediaLayerAssetId]);
+    if (!mediaLayerAssetId) return null;
+    return mediaAssetsById.get(mediaLayerAssetId) ?? null;
+  }, [mediaAssetsById, mediaLayerAssetId]);
 
   const overlayLayer = useMemo(() => {
-    if (!activeBundle || !overlayLayerId) return null;
-    return activeBundle.overlays.find((overlay) => overlay.id === overlayLayerId) ?? null;
-  }, [activeBundle, overlayLayerId]);
+    if (!overlayLayerId) return null;
+    return overlaysById.get(overlayLayerId) ?? null;
+  }, [overlayLayerId, overlaysById]);
 
   const setMediaLayerAsset = useCallback((assetId: Id) => {
-    if (!activeBundle) return;
-    const asset = activeBundle.mediaAssets.find((item) => item.id === assetId);
+    const asset = mediaAssetsById.get(assetId);
     if (!asset) return;
     setMediaLayerAssetId(asset.id);
     setStatusText(`Media layer: ${asset.name}`);
-  }, [activeBundle, setStatusText]);
+  }, [mediaAssetsById, setStatusText]);
 
   const setOverlayLayer = useCallback((overlayId: Id) => {
-    if (!activeBundle) return;
-    const overlay = activeBundle.overlays.find((item) => item.id === overlayId);
+    const overlay = overlaysById.get(overlayId);
     if (!overlay) return;
     setOverlayLayerId(overlay.id);
     setStatusText(`Overlay layer: ${overlay.name}`);
-  }, [activeBundle, setStatusText]);
+  }, [overlaysById, setStatusText]);
 
   const showContentLayer = useCallback(() => {
     setContentLayerVisible(true);
@@ -97,8 +92,9 @@ export function PresentationLayerProvider({ children }: { children: ReactNode })
     setMediaLayerAssetId(null);
     setContentLayerVisible(false);
     setOverlayLayerId(null);
+    clearOutputPresentation();
     setStatusText('All layers cleared');
-  }, [setStatusText]);
+  }, [clearOutputPresentation, setStatusText]);
 
   const value = useMemo<PresentationLayerContextValue>(
     () => ({

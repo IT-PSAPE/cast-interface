@@ -35,21 +35,33 @@ export interface PlaylistEntry {
 }
 
 export type PresentationKind = 'canvas' | 'lyrics';
+export type PresentationEntityType = 'presentation' | 'lyric';
 
-export interface Presentation {
+interface PresentationBase {
   id: Id;
-  libraryId: Id;
   title: string;
-  kind: PresentationKind;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CanvasPresentation extends PresentationBase {
+  entityType: 'presentation';
+  kind: 'canvas';
+}
+
+export interface Lyric extends PresentationBase {
+  entityType: 'lyric';
+  kind: 'lyrics';
+}
+
+export type Presentation = CanvasPresentation | Lyric;
 
 export interface Slide {
   id: Id;
   presentationId: Id;
   width: number;
   height: number;
+  notes: string;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -83,6 +95,7 @@ export interface ElementVisualPayload {
   flipX?: boolean;
   flipY?: boolean;
   fillEnabled?: boolean;
+  fillColor?: string;
   strokeEnabled?: boolean;
   strokeColor?: string;
   strokeWidth?: number;
@@ -106,6 +119,14 @@ export interface TextElementPayload extends ElementVisualPayload {
   strikethrough?: boolean;
   lineHeight?: number;
   weight?: string;
+  textStrokeEnabled?: boolean;
+  textStrokeColor?: string;
+  textStrokeWidth?: number;
+  textShadowEnabled?: boolean;
+  textShadowColor?: string;
+  textShadowBlur?: number;
+  textShadowOffsetX?: number;
+  textShadowOffsetY?: number;
 }
 
 export interface ImageElementPayload extends ElementVisualPayload {
@@ -145,7 +166,6 @@ export type MediaAssetType = 'image' | 'video' | 'audio' | 'animation';
 
 export interface MediaAsset {
   id: Id;
-  libraryId: Id;
   name: string;
   type: MediaAssetType;
   src: string;
@@ -162,7 +182,6 @@ export interface OverlayAnimation {
 
 export interface Overlay {
   id: Id;
-  libraryId: Id;
   name: string;
   type: OverlayType;
   x: number;
@@ -173,6 +192,7 @@ export interface Overlay {
   zIndex: number;
   enabled: boolean;
   payload: SlideElementPayload;
+  elements: SlideElement[];
   animation: OverlayAnimation;
   createdAt: string;
   updatedAt: string;
@@ -189,19 +209,19 @@ export interface PlaylistTree {
   }>;
 }
 
-export interface LibraryBundle {
+export interface LibraryPlaylistBundle {
   library: Library;
-  presentations: Presentation[];
-  slides: Slide[];
-  slideElements: SlideElement[];
   playlists: PlaylistTree[];
-  mediaAssets: MediaAsset[];
-  overlays: Overlay[];
 }
 
 export interface AppSnapshot {
   libraries: Library[];
-  bundles: LibraryBundle[];
+  libraryBundles: LibraryPlaylistBundle[];
+  presentations: Presentation[];
+  slides: Slide[];
+  slideElements: SlideElement[];
+  mediaAssets: MediaAsset[];
+  overlays: Overlay[];
 }
 
 export interface SlideFrame {
@@ -217,12 +237,17 @@ export interface PlaybackState {
   slideIndex: number;
 }
 
-export type WorkspaceMode = 'library' | 'playlist' | 'presentation' | 'slide-editor';
+export type SlideBrowserMode = 'library' | 'playlist' | 'presentation' | 'slide-editor';
 
 export interface SlideCreateInput {
   presentationId: Id;
   width?: number;
   height?: number;
+}
+
+export interface SlideNotesUpdateInput {
+  slideId: Id;
+  notes: string;
 }
 
 export interface ElementCreateInput {
@@ -253,23 +278,21 @@ export interface ElementUpdateInput {
   payload?: SlideElementPayload;
 }
 
-export type NdiOutputName = 'audience' | 'stage';
+export type NdiOutputName = 'audience';
 
 export interface NdiOutputState {
   audience: boolean;
-  stage: boolean;
 }
 
 export interface OverlayCreateInput {
-  libraryId: Id;
   name: string;
-  type: OverlayType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  opacity: number;
-  zIndex: number;
-  payload: SlideElementPayload;
+  elements?: SlideElement[];
+  animation?: OverlayAnimation;
+}
+
+export interface OverlayUpdateInput {
+  id: Id;
+  name?: string;
+  elements?: SlideElement[];
   animation?: OverlayAnimation;
 }

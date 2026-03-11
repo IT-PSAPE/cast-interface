@@ -1,6 +1,9 @@
 import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
 import Database from 'better-sqlite3';
+import { buildPresentationEntity } from '@core/presentation-entities';
 import { createId, nowIso } from '@core/utils';
 import type {
   AppSnapshot,
@@ -11,6 +14,7 @@ import type {
   MediaAsset,
   Overlay,
   OverlayCreateInput,
+  OverlayUpdateInput,
   Playlist,
   PlaylistEntry,
   PlaylistSegment,
@@ -20,11 +24,14 @@ import type {
   Slide,
   SlideElement,
   SlideElementPayload,
-  SlideCreateInput
+  SlideCreateInput,
+  SlideNotesUpdateInput
 } from '@core/types';
 
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
+const LATEST_SCHEMA_VERSION = 3;
+const LEGACY_SCHEMA_VERSION = 2;
 
 const parseJson = <T>(value: string): T => {
   try {
@@ -35,6 +42,79 @@ const parseJson = <T>(value: string): T => {
   }
 };
 
+function emptyOverlayPayload(): SlideElementPayload {
+  return {
+    text: '',
+    fontFamily: 'Avenir Next',
+    fontSize: 48,
+    color: '#FFFFFF',
+    alignment: 'left',
+    weight: '700',
+  };
+}
+
+function summarizeOverlayElements(elements: SlideElement[]): Pick<Overlay, 'type' | 'x' | 'y' | 'width' | 'height' | 'opacity' | 'zIndex' | 'payload'> {
+  const primary = elements
+    .slice()
+    .sort((a, b) => a.zIndex - b.zIndex)
+    .at(-1);
+
+  if (!primary) {
+    return {
+      type: 'text',
+      x: 0,
+      y: 0,
+      width: DEFAULT_W,
+      height: DEFAULT_H,
+      opacity: 1,
+      zIndex: 0,
+      payload: emptyOverlayPayload(),
+    };
+  }
+
+  return {
+    type: primary.type === 'shape' ? 'shape' : primary.type === 'text' ? 'text' : primary.type === 'video' ? 'video' : 'image',
+    x: primary.x,
+    y: primary.y,
+    width: primary.width,
+    height: primary.height,
+    opacity: primary.opacity,
+    zIndex: primary.zIndex,
+    payload: primary.payload,
+  };
+}
+
+function legacyOverlayElement(row: {
+  id: string;
+  type: Overlay['type'];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+  z_index: number;
+  payload_json: string;
+  created_at: string;
+  updated_at: string;
+}): SlideElement {
+  return {
+    id: row.id,
+    slideId: row.id,
+    type: row.type === 'shape' ? 'shape' : row.type === 'text' ? 'text' : row.type === 'video' ? 'video' : 'image',
+    x: row.x,
+    y: row.y,
+    width: row.width,
+    height: row.height,
+    rotation: 0,
+    opacity: row.opacity,
+    zIndex: row.z_index,
+    layer: 'content',
+    payload: parseJson<SlideElementPayload>(row.payload_json),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export class CastRepository {
   private db: Database.Database;
 
@@ -43,13 +123,47 @@ export class CastRepository {
     const dbPath = path.join(userData, 'cast-interface.sqlite');
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
-    this.setupSchema();
-    this.ensureOrderingColumns();
+    this.db.pragma('foreign_keys = ON');
+    this.initializeSchema();
     this.seedIfEmpty();
-    this.migrateMediaSrcProtocol();
   }
 
-  private setupSchema(): void {
+  private initializeSchema(): void {
+    const currentVersion = this.getUserVersion();
+
+    if (currentVersion === 0) {
+      if (!this.hasTable('libraries')) {
+        this.createGlobalSchema();
+        this.setUserVersion(LATEST_SCHEMA_VERSION);
+        return;
+      }
+
+      this.prepareLegacySchema();
+      this.setUserVersion(LEGACY_SCHEMA_VERSION);
+    }
+
+    if (this.getUserVersion() < LATEST_SCHEMA_VERSION) {
+      this.migrateLegacyProjectContentToGlobalScope();
+    }
+  }
+
+  private getUserVersion(): number {
+    return this.db.pragma('user_version', { simple: true }) as number;
+  }
+
+  private setUserVersion(version: number): void {
+    this.db.pragma(`user_version = ${version}`);
+  }
+
+  private hasTable(name: string): boolean {
+    const row = this.db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(name) as { name: string } | undefined;
+
+    return row?.name === name;
+  }
+
+  private createLegacySchema(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS libraries (
         id TEXT PRIMARY KEY,
@@ -74,6 +188,7 @@ export class CastRepository {
         presentation_id TEXT NOT NULL,
         width INTEGER NOT NULL,
         height INTEGER NOT NULL,
+        notes TEXT NOT NULL DEFAULT '',
         order_index INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -154,6 +269,7 @@ export class CastRepository {
         z_index INTEGER NOT NULL,
         enabled INTEGER NOT NULL,
         payload_json TEXT NOT NULL,
+        elements_json TEXT NOT NULL DEFAULT '[]',
         animation_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -169,6 +285,249 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_media_assets_library_id ON media_assets(library_id);
       CREATE INDEX IF NOT EXISTS idx_overlays_library_id ON overlays(library_id);
     `);
+  }
+
+  private createGlobalSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS libraries (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS presentations (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'canvas',
+        order_index INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS slides (
+        id TEXT PRIMARY KEY,
+        presentation_id TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        notes TEXT NOT NULL DEFAULT '',
+        order_index INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(presentation_id) REFERENCES presentations(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS slide_elements (
+        id TEXT PRIMARY KEY,
+        slide_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        width REAL NOT NULL,
+        height REAL NOT NULL,
+        rotation REAL NOT NULL,
+        opacity REAL NOT NULL,
+        z_index INTEGER NOT NULL,
+        layer TEXT NOT NULL DEFAULT 'content',
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(slide_id) REFERENCES slides(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS playlists (
+        id TEXT PRIMARY KEY,
+        library_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(library_id) REFERENCES libraries(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS playlist_segments (
+        id TEXT PRIMARY KEY,
+        playlist_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        color_key TEXT,
+        order_index INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(playlist_id) REFERENCES playlists(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS playlist_entries (
+        id TEXT PRIMARY KEY,
+        segment_id TEXT NOT NULL,
+        presentation_id TEXT NOT NULL,
+        order_index INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(segment_id) REFERENCES playlist_segments(id),
+        FOREIGN KEY(presentation_id) REFERENCES presentations(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS media_assets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        src TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS overlays (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        width REAL NOT NULL,
+        height REAL NOT NULL,
+        opacity REAL NOT NULL,
+        z_index INTEGER NOT NULL,
+        enabled INTEGER NOT NULL,
+        payload_json TEXT NOT NULL,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        animation_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.createCommonIndexes();
+    this.createGlobalContentIndexes();
+  }
+
+  private createCommonIndexes(): void {
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_slides_presentation_id ON slides(presentation_id);
+      CREATE INDEX IF NOT EXISTS idx_slide_elements_slide_id ON slide_elements(slide_id);
+      CREATE INDEX IF NOT EXISTS idx_playlists_library_id ON playlists(library_id);
+      CREATE INDEX IF NOT EXISTS idx_playlist_segments_playlist_id ON playlist_segments(playlist_id);
+      CREATE INDEX IF NOT EXISTS idx_playlist_entries_segment_id ON playlist_entries(segment_id);
+      CREATE INDEX IF NOT EXISTS idx_playlist_entries_presentation_id ON playlist_entries(presentation_id);
+    `);
+  }
+
+  private createGlobalContentIndexes(): void {
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_presentations_order_index ON presentations(order_index);
+      CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at);
+      CREATE INDEX IF NOT EXISTS idx_overlays_created_at ON overlays(created_at);
+    `);
+  }
+
+  private prepareLegacySchema(): void {
+    this.createLegacySchema();
+    this.ensureOrderingColumns();
+    this.ensureSlideNotesColumn();
+    this.ensureOverlayCompositionColumns();
+    this.migrateMediaSrcProtocol();
+  }
+
+  private migrateLegacyProjectContentToGlobalScope(): void {
+    const previousForeignKeys = this.db.pragma('foreign_keys', { simple: true }) as number;
+    this.db.pragma('foreign_keys = OFF');
+
+    try {
+      const tx = this.db.transaction(() => {
+        this.db.exec(`
+          CREATE TABLE presentations_v3 (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'canvas',
+            order_index INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+
+          CREATE TABLE media_assets_v3 (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            src TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+
+          CREATE TABLE overlays_v3 (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            width REAL NOT NULL,
+            height REAL NOT NULL,
+            opacity REAL NOT NULL,
+            z_index INTEGER NOT NULL,
+            enabled INTEGER NOT NULL,
+            payload_json TEXT NOT NULL,
+            elements_json TEXT NOT NULL DEFAULT '[]',
+            animation_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+        `);
+
+        this.db.exec(`
+          INSERT INTO presentations_v3 (id, title, kind, order_index, created_at, updated_at)
+          SELECT
+            p.id,
+            p.title,
+            p.kind,
+            ROW_NUMBER() OVER (
+              ORDER BY
+                COALESCE(l.created_at, p.created_at) ASC,
+                COALESCE(lp.order_index, 0) ASC,
+                p.order_index ASC,
+                p.created_at ASC,
+                p.id ASC
+            ) - 1,
+            p.created_at,
+            p.updated_at
+          FROM presentations p
+          LEFT JOIN libraries l ON l.id = p.library_id
+          LEFT JOIN (
+            SELECT library_id, MIN(order_index) AS order_index
+            FROM playlists
+            GROUP BY library_id
+          ) lp ON lp.library_id = p.library_id;
+
+          INSERT INTO media_assets_v3 (id, name, type, src, created_at, updated_at)
+          SELECT id, name, type, src, created_at, updated_at
+          FROM media_assets
+          ORDER BY created_at ASC, id ASC;
+
+          INSERT INTO overlays_v3 (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
+          SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
+          FROM overlays
+          ORDER BY created_at ASC, id ASC;
+        `);
+
+        this.db.exec(`
+          DROP INDEX IF EXISTS idx_presentations_library_id;
+          DROP INDEX IF EXISTS idx_media_assets_library_id;
+          DROP INDEX IF EXISTS idx_overlays_library_id;
+
+          DROP TABLE overlays;
+          DROP TABLE media_assets;
+          DROP TABLE presentations;
+
+          ALTER TABLE presentations_v3 RENAME TO presentations;
+          ALTER TABLE media_assets_v3 RENAME TO media_assets;
+          ALTER TABLE overlays_v3 RENAME TO overlays;
+        `);
+
+        this.createCommonIndexes();
+        this.createGlobalContentIndexes();
+        this.setUserVersion(LATEST_SCHEMA_VERSION);
+      });
+
+      tx();
+    } finally {
+      this.db.pragma(`foreign_keys = ${previousForeignKeys ? 'ON' : 'OFF'}`);
+    }
   }
 
   private seedIfEmpty(): void {
@@ -188,14 +547,14 @@ export class CastRepository {
         .run(libraryId, 'Church Library', now, now);
 
       this.db
-        .prepare('INSERT INTO presentations (id, library_id, title, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(presentationId, libraryId, 'Welcome Slides', 'canvas', now, now);
+        .prepare('INSERT INTO presentations (id, title, kind, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(presentationId, 'Welcome Slides', 'canvas', 0, now, now);
 
       this.db
         .prepare(
-          'INSERT INTO slides (id, presentation_id, width, height, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO slides (id, presentation_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         )
-        .run(slideId, presentationId, DEFAULT_W, DEFAULT_H, 0, now, now);
+        .run(slideId, presentationId, DEFAULT_W, DEFAULT_H, '', 0, now, now);
 
       const titlePayload = JSON.stringify({
         text: 'Welcome to Cast Interface',
@@ -228,8 +587,8 @@ export class CastRepository {
         .run(createId(), slideId, 'shape', 160, 380, 1600, 220, 0, 1, 1, 'background', shapePayload, now, now);
 
       this.db
-        .prepare('INSERT INTO playlists (id, library_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
-        .run(playlistId, libraryId, 'Sunday Service', now, now);
+        .prepare('INSERT INTO playlists (id, library_id, name, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(playlistId, libraryId, 'Sunday Service', 0, now, now);
 
       this.db
         .prepare(
@@ -245,12 +604,11 @@ export class CastRepository {
 
       this.db
         .prepare(
-          `INSERT INTO overlays (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at)
+          `INSERT INTO overlays (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           createId(),
-          libraryId,
           'Watermark',
           'text',
           1540,
@@ -268,6 +626,31 @@ export class CastRepository {
             alignment: 'right',
             weight: '600'
           }),
+          JSON.stringify([
+            {
+              id: createId(),
+              slideId: '__seed_overlay__',
+              type: 'text',
+              x: 1540,
+              y: 1010,
+              width: 340,
+              height: 40,
+              rotation: 0,
+              opacity: 0.65,
+              zIndex: 999,
+              layer: 'content',
+              payload: {
+                text: 'CAST INTERFACE',
+                fontFamily: 'Helvetica',
+                fontSize: 28,
+                color: '#FFFFFF',
+                alignment: 'right',
+                weight: '600'
+              },
+              createdAt: now,
+              updatedAt: now,
+            },
+          ]),
           JSON.stringify({ kind: 'pulse', durationMs: 2000 }),
           now,
           now
@@ -278,38 +661,91 @@ export class CastRepository {
   }
 
   private migrateMediaSrcProtocol(): void {
-    const toNewSrc = (src: string): string | null => {
-      if (src.startsWith('file://')) {
-        const filePath = src.slice('file://'.length);
-        return `cast-media://${encodeURIComponent(filePath)}`;
-      }
+    const toCastMediaSrc = (src: string): string | null => {
       if (src.startsWith('blob:')) return null;
-      return null;
+
+      if (src.startsWith('file://')) {
+        const normalizedPath = filePathFromFileUrl(src);
+        if (!normalizedPath) return null;
+        return `cast-media://${encodeURIComponent(normalizedPath)}`;
+      }
+
+      if (src.startsWith('cast-media://')) {
+        const normalizedPath = decodeCastMediaPath(src);
+        if (!normalizedPath) return null;
+        return `cast-media://${encodeURIComponent(normalizedPath)}`;
+      }
+
+      return src;
+    };
+
+    const filePathFromFileUrl = (src: string): string | null => {
+      try {
+        return fileURLToPath(new URL(src));
+      } catch {
+        const rawPath = src.slice('file://'.length);
+        if (!rawPath) return null;
+        try {
+          return decodeURIComponent(rawPath);
+        } catch {
+          return rawPath;
+        }
+      }
+    };
+
+    const decodeCastMediaPath = (src: string): string | null => {
+      const encodedPath = src.slice('cast-media://'.length);
+      if (!encodedPath) return null;
+
+      let decodedOnce: string;
+      try {
+        decodedOnce = decodeURIComponent(encodedPath);
+      } catch {
+        return null;
+      }
+
+      if (!encodedPath.includes('%25')) return decodedOnce;
+
+      try {
+        const decodedTwice = decodeURIComponent(decodedOnce);
+        if (decodedTwice === decodedOnce) return decodedOnce;
+        if (existsSync(decodedOnce)) return decodedOnce;
+        if (existsSync(decodedTwice)) return decodedTwice;
+        return decodedTwice;
+      } catch {
+        return decodedOnce;
+      }
     };
 
     const tx = this.db.transaction(() => {
       const assets = this.db
-        .prepare("SELECT id, src FROM media_assets WHERE src LIKE 'file://%' OR src LIKE 'blob:%'")
+        .prepare("SELECT id, src FROM media_assets WHERE src LIKE 'cast-media://%' OR src LIKE 'file://%' OR src LIKE 'blob:%'")
         .all() as Array<{ id: string; src: string }>;
 
       const updateAsset = this.db.prepare('UPDATE media_assets SET src = ? WHERE id = ?');
       const deleteAsset = this.db.prepare('DELETE FROM media_assets WHERE id = ?');
       for (const asset of assets) {
-        const newSrc = toNewSrc(asset.src);
-        if (newSrc) updateAsset.run(newSrc, asset.id);
-        else deleteAsset.run(asset.id);
+        const newSrc = toCastMediaSrc(asset.src);
+        if (!newSrc) {
+          deleteAsset.run(asset.id);
+          continue;
+        }
+        if (newSrc !== asset.src) {
+          updateAsset.run(newSrc, asset.id);
+        }
       }
 
       const elements = this.db
-        .prepare("SELECT id, payload_json FROM slide_elements WHERE type IN ('image', 'video') AND (payload_json LIKE '%file://%' OR payload_json LIKE '%blob:%')")
+        .prepare("SELECT id, payload_json FROM slide_elements WHERE type IN ('image', 'video') AND (payload_json LIKE '%cast-media://%' OR payload_json LIKE '%file://%' OR payload_json LIKE '%blob:%')")
         .all() as Array<{ id: string; payload_json: string }>;
 
       const updateElement = this.db.prepare('UPDATE slide_elements SET payload_json = ? WHERE id = ?');
       const deleteElement = this.db.prepare('DELETE FROM slide_elements WHERE id = ?');
       for (const el of elements) {
         const payload = parseJson<{ src: string }>(el.payload_json);
-        const newSrc = toNewSrc(payload.src);
+        const newSrc = toCastMediaSrc(payload.src);
         if (newSrc) {
+          if (newSrc === payload.src) continue;
           payload.src = newSrc;
           updateElement.run(JSON.stringify(payload), el.id);
         } else {
@@ -361,19 +797,64 @@ export class CastRepository {
     }
   }
 
+  private ensureOverlayCompositionColumns(): void {
+    const overlayColumns = this.db.prepare('PRAGMA table_info(overlays)').all() as Array<{ name: string }>;
+    if (!overlayColumns.some((column) => column.name === 'elements_json')) {
+      this.db.prepare("ALTER TABLE overlays ADD COLUMN elements_json TEXT NOT NULL DEFAULT '[]'").run();
+    }
+
+    const rows = this.db
+      .prepare(
+        `SELECT id, type, x, y, width, height, opacity, z_index, payload_json, created_at, updated_at, elements_json
+         FROM overlays`
+      )
+      .all() as Array<{
+      id: string;
+      type: Overlay['type'];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      opacity: number;
+      z_index: number;
+      payload_json: string;
+      created_at: string;
+      updated_at: string;
+      elements_json: string | null;
+    }>;
+
+    const updateElements = this.db.prepare('UPDATE overlays SET elements_json = ? WHERE id = ?');
+    for (const row of rows) {
+      if (row.elements_json) continue;
+      updateElements.run(JSON.stringify([legacyOverlayElement(row)]), row.id);
+    }
+  }
+
+  private ensureSlideNotesColumn(): void {
+    const slideColumns = this.db.prepare('PRAGMA table_info(slides)').all() as Array<{ name: string }>;
+    if (!slideColumns.some((column) => column.name === 'notes')) {
+      this.db.prepare("ALTER TABLE slides ADD COLUMN notes TEXT NOT NULL DEFAULT ''").run();
+    }
+  }
+
   getSnapshot(): AppSnapshot {
     const libraries = this.getLibraries();
-    const bundles = libraries.map((library) => ({
+    const presentations = this.getPresentations();
+    const presentationsById = new Map(presentations.map((presentation) => [presentation.id, presentation]));
+    const libraryBundles = libraries.map((library) => ({
       library,
-      presentations: this.getPresentationsByLibrary(library.id),
-      slides: this.getSlidesByLibrary(library.id),
-      slideElements: this.getSlideElementsByLibrary(library.id),
-      playlists: this.getPlaylistTreesByLibrary(library.id),
-      mediaAssets: this.getMediaByLibrary(library.id),
-      overlays: this.getOverlaysByLibrary(library.id)
+      playlists: this.getPlaylistTreesByLibrary(library.id, presentationsById)
     }));
 
-    return { libraries, bundles };
+    return {
+      libraries,
+      libraryBundles,
+      presentations,
+      slides: this.getSlides(),
+      slideElements: this.getSlideElements(),
+      mediaAssets: this.getMediaAssets(),
+      overlays: this.getOverlays()
+    };
   }
 
   createLibrary(name: string): AppSnapshot {
@@ -467,16 +948,20 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  createPresentation(libraryId: Id, title: string, kind: PresentationKind = 'canvas'): AppSnapshot {
+  createPresentation(title: string, kind: PresentationKind = 'canvas'): AppSnapshot {
     const now = nowIso();
     const currentOrder =
-      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM presentations WHERE library_id = ?').get(libraryId) as {
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM presentations').get() as {
         maxOrder: number | null;
       }).maxOrder ?? -1;
     this.db
-      .prepare('INSERT INTO presentations (id, library_id, title, kind, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(createId(), libraryId, title, this.normalizePresentationKind(kind), currentOrder + 1, now, now);
+      .prepare('INSERT INTO presentations (id, title, kind, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(createId(), title, this.normalizePresentationKind(kind), currentOrder + 1, now, now);
     return this.getSnapshot();
+  }
+
+  createLyric(title: string): AppSnapshot {
+    return this.createPresentation(title, 'lyrics');
   }
 
   setPresentationKind(id: Id, kind: PresentationKind): AppSnapshot {
@@ -523,22 +1008,22 @@ export class CastRepository {
 
   movePresentation(id: Id, direction: 'up' | 'down'): AppSnapshot {
     const current = this.db
-      .prepare('SELECT id, library_id, order_index FROM presentations WHERE id = ?')
-      .get(id) as { id: string; library_id: string; order_index: number } | undefined;
+      .prepare('SELECT id, order_index FROM presentations WHERE id = ?')
+      .get(id) as { id: string; order_index: number } | undefined;
 
     if (!current) return this.getSnapshot();
 
     const neighbor = direction === 'up'
       ? this.db
         .prepare(
-          'SELECT id, order_index FROM presentations WHERE library_id = ? AND order_index < ? ORDER BY order_index DESC LIMIT 1'
+          'SELECT id, order_index FROM presentations WHERE order_index < ? ORDER BY order_index DESC LIMIT 1'
         )
-        .get(current.library_id, current.order_index)
+        .get(current.order_index)
       : this.db
         .prepare(
-          'SELECT id, order_index FROM presentations WHERE library_id = ? AND order_index > ? ORDER BY order_index ASC LIMIT 1'
+          'SELECT id, order_index FROM presentations WHERE order_index > ? ORDER BY order_index ASC LIMIT 1'
         )
-        .get(current.library_id, current.order_index);
+        .get(current.order_index);
 
     if (!neighbor) return this.getSnapshot();
 
@@ -570,13 +1055,14 @@ export class CastRepository {
 
     this.db
       .prepare(
-        'INSERT INTO slides (id, presentation_id, width, height, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO slides (id, presentation_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
         slideId,
         input.presentationId,
         input.width ?? DEFAULT_W,
         input.height ?? DEFAULT_H,
+        '',
         currentOrder + 1,
         now,
         now
@@ -607,6 +1093,14 @@ export class CastRepository {
         );
     }
 
+    return this.getSnapshot();
+  }
+
+  updateSlideNotes(input: SlideNotesUpdateInput): AppSnapshot {
+    const now = nowIso();
+    this.db
+      .prepare('UPDATE slides SET notes = ?, updated_at = ? WHERE id = ?')
+      .run(input.notes, now, input.slideId);
     return this.getSnapshot();
   }
 
@@ -773,12 +1267,13 @@ export class CastRepository {
   }
 
   createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): AppSnapshot {
+    this.assertMediaSource(asset.src);
     const now = nowIso();
     this.db
       .prepare(
-        'INSERT INTO media_assets (id, library_id, name, type, src, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO media_assets (id, name, type, src, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
       )
-      .run(createId(), asset.libraryId, asset.name, asset.type, asset.src, now, now);
+      .run(createId(), asset.name, asset.type, asset.src, now, now);
     return this.getSnapshot();
   }
 
@@ -788,34 +1283,87 @@ export class CastRepository {
   }
 
   updateMediaAssetSrc(id: Id, src: string): AppSnapshot {
+    this.assertMediaSource(src);
     this.db.prepare('UPDATE media_assets SET src = ?, updated_at = ? WHERE id = ?').run(src, nowIso(), id);
     return this.getSnapshot();
   }
 
   createOverlay(input: OverlayCreateInput): AppSnapshot {
     const now = nowIso();
+    const elements = input.elements ?? [];
+    const summary = summarizeOverlayElements(elements);
     this.db
       .prepare(
         `INSERT INTO overlays
-         (id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at)
+         (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         createId(),
-        input.libraryId,
         input.name,
-        input.type,
-        input.x,
-        input.y,
-        input.width,
-        input.height,
-        input.opacity,
-        input.zIndex,
+        summary.type,
+        summary.x,
+        summary.y,
+        summary.width,
+        summary.height,
+        summary.opacity,
+        summary.zIndex,
         1,
-        JSON.stringify(input.payload),
+        JSON.stringify(summary.payload),
+        JSON.stringify(elements),
         JSON.stringify(input.animation ?? { kind: 'none', durationMs: 0 }),
         now,
         now
+      );
+
+    return this.getSnapshot();
+  }
+
+  updateOverlay(input: OverlayUpdateInput): AppSnapshot {
+    const existing = this.db
+      .prepare('SELECT * FROM overlays WHERE id = ?')
+      .get(input.id) as
+      | {
+      id: string;
+      name: string;
+      type: Overlay['type'];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      opacity: number;
+      z_index: number;
+      payload_json: string;
+      elements_json: string;
+      animation_json: string;
+      }
+      | undefined;
+
+    if (!existing) return this.getSnapshot();
+
+    const nextElements = input.elements ?? parseJson<SlideElement[]>(existing.elements_json);
+    const summary = summarizeOverlayElements(nextElements);
+
+    this.db
+      .prepare(
+        `UPDATE overlays
+         SET name = ?, type = ?, x = ?, y = ?, width = ?, height = ?, opacity = ?, z_index = ?, payload_json = ?, elements_json = ?, animation_json = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        input.name ?? existing.name,
+        summary.type,
+        summary.x,
+        summary.y,
+        summary.width,
+        summary.height,
+        summary.opacity,
+        summary.zIndex,
+        JSON.stringify(summary.payload),
+        JSON.stringify(nextElements),
+        JSON.stringify(input.animation ?? parseJson(existing.animation_json)),
+        nowIso(),
+        input.id,
       );
 
     return this.getSnapshot();
@@ -846,24 +1394,6 @@ export class CastRepository {
     const tx = this.db.transaction((libraryId: Id) => {
       this.db
         .prepare(
-          `DELETE FROM slide_elements
-           WHERE slide_id IN (
-             SELECT s.id
-             FROM slides s
-             JOIN presentations p ON p.id = s.presentation_id
-             WHERE p.library_id = ?
-           )`
-        )
-        .run(libraryId);
-
-      this.db
-        .prepare(
-          'DELETE FROM slides WHERE presentation_id IN (SELECT id FROM presentations WHERE library_id = ?)'
-        )
-        .run(libraryId);
-
-      this.db
-        .prepare(
           `DELETE FROM playlist_entries
            WHERE segment_id IN (
              SELECT ps.id
@@ -883,18 +1413,6 @@ export class CastRepository {
 
       this.db
         .prepare('DELETE FROM playlists WHERE library_id = ?')
-        .run(libraryId);
-
-      this.db
-        .prepare('DELETE FROM presentations WHERE library_id = ?')
-        .run(libraryId);
-
-      this.db
-        .prepare('DELETE FROM media_assets WHERE library_id = ?')
-        .run(libraryId);
-
-      this.db
-        .prepare('DELETE FROM overlays WHERE library_id = ?')
         .run(libraryId);
 
       this.db
@@ -946,10 +1464,6 @@ export class CastRepository {
   }
 
   deletePresentation(id: Id): AppSnapshot {
-    const row = this.db
-      .prepare('SELECT library_id FROM presentations WHERE id = ?')
-      .get(id) as { library_id: string } | undefined;
-
     const tx = this.db.transaction((presentationId: Id) => {
       this.db
         .prepare(
@@ -969,7 +1483,7 @@ export class CastRepository {
     });
 
     tx(id);
-    if (row) this.normalizePresentationOrder(row.library_id);
+    this.normalizePresentationOrder();
     return this.getSnapshot();
   }
 
@@ -977,6 +1491,11 @@ export class CastRepository {
     this.db
       .prepare('UPDATE overlays SET enabled = ?, updated_at = ? WHERE id = ?')
       .run(enabled ? 1 : 0, nowIso(), overlayId);
+    return this.getSnapshot();
+  }
+
+  deleteOverlay(overlayId: Id): AppSnapshot {
+    this.db.prepare('DELETE FROM overlays WHERE id = ?').run(overlayId);
     return this.getSnapshot();
   }
 
@@ -993,10 +1512,17 @@ export class CastRepository {
       weight: '700',
       visible: true,
       locked: false,
-      fillEnabled: true,
+      fillEnabled: false,
+      fillColor: '#00000000',
       strokeEnabled: false,
       shadowEnabled: false,
     };
+  }
+
+  private assertMediaSource(src: string): void {
+    if (src.startsWith('blob:')) {
+      throw new Error('Transient blob media sources are not allowed. Import from a local file path.');
+    }
   }
 
   private normalizePresentationKind(kind: string | null | undefined): PresentationKind {
@@ -1022,23 +1548,21 @@ export class CastRepository {
     }));
   }
 
-  private getPresentationsByLibrary(libraryId: Id): Presentation[] {
+  private getPresentations(): Presentation[] {
     const rows = this.db
       .prepare(
-        'SELECT id, library_id, title, kind, created_at, updated_at FROM presentations WHERE library_id = ? ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, kind, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
       )
-      .all(libraryId) as Array<{
+      .all() as Array<{
       id: string;
-      library_id: string;
       title: string;
       kind: string;
       created_at: string;
       updated_at: string;
     }>;
 
-    return rows.map((row) => ({
+    return rows.map((row) => buildPresentationEntity({
       id: row.id,
-      libraryId: row.library_id,
       title: row.title,
       kind: this.normalizePresentationKind(row.kind),
       createdAt: row.created_at,
@@ -1046,20 +1570,20 @@ export class CastRepository {
     }));
   }
 
-  private getSlidesByLibrary(libraryId: Id): Slide[] {
+  private getSlides(): Slide[] {
     const rows = this.db
       .prepare(
-        `SELECT s.id, s.presentation_id, s.width, s.height, s.order_index, s.created_at, s.updated_at
+        `SELECT s.id, s.presentation_id, s.width, s.height, s.notes, s.order_index, s.created_at, s.updated_at
          FROM slides s
          JOIN presentations p ON p.id = s.presentation_id
-         WHERE p.library_id = ?
          ORDER BY p.order_index ASC, s.order_index ASC`
       )
-      .all(libraryId) as Array<{
+      .all() as Array<{
       id: string;
       presentation_id: string;
       width: number;
       height: number;
+      notes: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -1070,23 +1594,23 @@ export class CastRepository {
       presentationId: row.presentation_id,
       width: row.width,
       height: row.height,
+      notes: row.notes,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));
   }
 
-  private getSlideElementsByLibrary(libraryId: Id): SlideElement[] {
+  private getSlideElements(): SlideElement[] {
     const rows = this.db
       .prepare(
         `SELECT se.*
          FROM slide_elements se
          JOIN slides s ON s.id = se.slide_id
          JOIN presentations p ON p.id = s.presentation_id
-         WHERE p.library_id = ?
-         ORDER BY se.layer ASC, se.z_index ASC`
+         ORDER BY p.order_index ASC, s.order_index ASC, se.layer ASC, se.z_index ASC`
       )
-      .all(libraryId) as Array<{
+      .all() as Array<{
       id: string;
       slide_id: string;
       type: SlideElement['type'];
@@ -1185,10 +1709,7 @@ export class CastRepository {
     }));
   }
 
-  private getPlaylistTreesByLibrary(libraryId: Id): PlaylistTree[] {
-    const presentations = this.getPresentationsByLibrary(libraryId);
-    const presentationsById = new Map(presentations.map((p) => [p.id, p]));
-
+  private getPlaylistTreesByLibrary(libraryId: Id, presentationsById: ReadonlyMap<Id, Presentation>): PlaylistTree[] {
     return this.getPlaylistsByLibrary(libraryId).map((playlist) => {
       const segments = this.getPlaylistSegments(playlist.id).map((segment) => {
         const entries = this.getPlaylistEntries(segment.id)
@@ -1209,14 +1730,13 @@ export class CastRepository {
     });
   }
 
-  private getMediaByLibrary(libraryId: Id): MediaAsset[] {
+  private getMediaAssets(): MediaAsset[] {
     const rows = this.db
       .prepare(
-        'SELECT id, library_id, name, type, src, created_at, updated_at FROM media_assets WHERE library_id = ? ORDER BY created_at ASC'
+        'SELECT id, name, type, src, created_at, updated_at FROM media_assets ORDER BY created_at ASC, id ASC'
       )
-      .all(libraryId) as Array<{
+      .all() as Array<{
       id: string;
-      library_id: string;
       name: string;
       type: MediaAsset['type'];
       src: string;
@@ -1226,7 +1746,6 @@ export class CastRepository {
 
     return rows.map((row) => ({
       id: row.id,
-      libraryId: row.library_id,
       name: row.name,
       type: row.type,
       src: row.src,
@@ -1235,17 +1754,15 @@ export class CastRepository {
     }));
   }
 
-  private getOverlaysByLibrary(libraryId: Id): Overlay[] {
+  private getOverlays(): Overlay[] {
     const rows = this.db
       .prepare(
-        `SELECT id, library_id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, animation_json, created_at, updated_at
+        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
          FROM overlays
-         WHERE library_id = ?
-         ORDER BY z_index ASC`
+         ORDER BY created_at ASC, id ASC`
       )
-      .all(libraryId) as Array<{
+      .all() as Array<{
       id: string;
-      library_id: string;
       name: string;
       type: Overlay['type'];
       x: number;
@@ -1256,6 +1773,7 @@ export class CastRepository {
       z_index: number;
       enabled: number;
       payload_json: string;
+      elements_json: string;
       animation_json: string;
       created_at: string;
       updated_at: string;
@@ -1263,7 +1781,6 @@ export class CastRepository {
 
     return rows.map((row) => ({
       id: row.id,
-      libraryId: row.library_id,
       name: row.name,
       type: row.type,
       x: row.x,
@@ -1274,6 +1791,7 @@ export class CastRepository {
       zIndex: row.z_index,
       enabled: row.enabled === 1,
       payload: parseJson(row.payload_json),
+      elements: parseJson<SlideElement[]>(row.elements_json),
       animation: parseJson(row.animation_json),
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -1295,18 +1813,17 @@ export class CastRepository {
       .run(libraryId, libraryId);
   }
 
-  private normalizePresentationOrder(libraryId: Id): void {
+  private normalizePresentationOrder(): void {
     this.db
       .prepare(
         `WITH ranked AS (
            SELECT id, ROW_NUMBER() OVER (ORDER BY order_index ASC, created_at ASC, id ASC) - 1 AS next_order
            FROM presentations
-           WHERE library_id = ?
          )
          UPDATE presentations
          SET order_index = (SELECT next_order FROM ranked WHERE ranked.id = presentations.id)
-         WHERE library_id = ?`
+         WHERE id IN (SELECT id FROM ranked)`
       )
-      .run(libraryId, libraryId);
+      .run();
   }
 }

@@ -8,11 +8,14 @@ import type {
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
+  OverlayUpdateInput,
   SlideCreateInput,
+  SlideNotesUpdateInput,
   SlideFrame
 } from './types';
 
 export interface MainApi {
+  getPathForFile: (file: File) => string;
   getSnapshot: () => Promise<AppSnapshot>;
   createLibrary: (name: string) => Promise<AppSnapshot>;
   createPlaylist: (libraryId: Id, name: string) => Promise<AppSnapshot>;
@@ -23,9 +26,11 @@ export interface MainApi {
   addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<AppSnapshot>;
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
   movePresentation: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
-  createPresentation: (libraryId: Id, title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
+  createPresentation: (title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
+  createLyric: (title: string) => Promise<AppSnapshot>;
   setPresentationKind: (id: Id, kind: PresentationKind) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
+  updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
   createElement: (input: ElementCreateInput) => Promise<AppSnapshot>;
   createElementsBatch: (inputs: ElementCreateInput[]) => Promise<AppSnapshot>;
   updateElement: (input: ElementUpdateInput) => Promise<AppSnapshot>;
@@ -36,7 +41,9 @@ export interface MainApi {
   deleteMediaAsset: (id: Id) => Promise<AppSnapshot>;
   updateMediaAssetSrc: (id: Id, src: string) => Promise<AppSnapshot>;
   createOverlay: (overlay: OverlayCreateInput) => Promise<AppSnapshot>;
+  updateOverlay: (input: OverlayUpdateInput) => Promise<AppSnapshot>;
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => Promise<AppSnapshot>;
+  deleteOverlay: (overlayId: Id) => Promise<AppSnapshot>;
   renameLibrary: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylist: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePresentation: (id: Id, title: string) => Promise<AppSnapshot>;
@@ -45,7 +52,6 @@ export interface MainApi {
   deletePlaylistSegment: (id: Id) => Promise<AppSnapshot>;
   deletePresentation: (id: Id) => Promise<AppSnapshot>;
   sendNdiFrame: (frame: SlideFrame) => Promise<void>;
-  connectNdiFramePort: () => MessagePort;
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => Promise<NdiOutputState>;
   getNdiOutputState: () => Promise<NdiOutputState>;
 }
@@ -62,8 +68,10 @@ export const IPC = {
   movePresentationToSegment: 'cast:movePresentationToSegment',
   movePresentation: 'cast:movePresentation',
   createPresentation: 'cast:createPresentation',
+  createLyric: 'cast:createLyric',
   setPresentationKind: 'cast:setPresentationKind',
   createSlide: 'cast:createSlide',
+  updateSlideNotes: 'cast:updateSlideNotes',
   createElement: 'cast:createElement',
   createElementsBatch: 'cast:createElementsBatch',
   updateElement: 'cast:updateElement',
@@ -74,7 +82,9 @@ export const IPC = {
   deleteMediaAsset: 'cast:deleteMediaAsset',
   updateMediaAssetSrc: 'cast:updateMediaAssetSrc',
   createOverlay: 'cast:createOverlay',
+  updateOverlay: 'cast:updateOverlay',
   setOverlayEnabled: 'cast:setOverlayEnabled',
+  deleteOverlay: 'cast:deleteOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
   renamePresentation: 'cast:renamePresentation',
@@ -83,7 +93,6 @@ export const IPC = {
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
   deletePresentation: 'cast:deletePresentation',
   sendNdiFrame: 'cast:sendNdiFrame',
-  connectNdiFramePort: 'ndi:connectFramePort',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
   getNdiOutputState: 'ndi:getOutputState'
 } as const;

@@ -29,17 +29,10 @@ export const NDI_OUTPUT_DEFINITIONS: Record<NdiOutputName, NdiOutputDefinition> 
     defaultWidth: 1920,
     defaultHeight: 1080,
     withAlpha: true
-  },
-  stage: {
-    output: 'stage',
-    senderName: 'Cast Interface - Stage',
-    defaultWidth: 1920,
-    defaultHeight: 1080,
-    withAlpha: true
   }
 };
 
-export const NDI_OUTPUT_ORDER: NdiOutputName[] = ['audience', 'stage'];
+export const NDI_OUTPUT_ORDER: NdiOutputName[] = ['audience'];
 
 export function defaultNdiModuleLoader(): NdiNativeModule {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

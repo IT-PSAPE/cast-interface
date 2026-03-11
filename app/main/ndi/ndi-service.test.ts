@@ -107,7 +107,7 @@ function createIntervalController(): IntervalController {
 }
 
 describe('NdiService', () => {
-  it('enables audience and stage outputs simultaneously', () => {
+  it('enables the audience output', () => {
     const native = createNativeModuleMock();
     const intervals = createIntervalController();
     const service = new NdiService({
@@ -116,26 +116,19 @@ describe('NdiService', () => {
       clearIntervalFn: intervals.clearIntervalFn
     });
 
-    service.setOutputEnabled('audience', true);
-    const state = service.setOutputEnabled('stage', true);
+    const state = service.setOutputEnabled('audience', true);
 
-    expect(state).toEqual({ audience: true, stage: true });
-    expect(native.initializeSender).toHaveBeenCalledTimes(2);
-    expect(native.initializeSender).toHaveBeenNthCalledWith(1, {
+    expect(state).toEqual({ audience: true });
+    expect(native.initializeSender).toHaveBeenCalledTimes(1);
+    expect(native.initializeSender).toHaveBeenCalledWith({
       senderName: 'Cast Interface - Audience',
-      width: 1920,
-      height: 1080,
-      withAlpha: true
-    });
-    expect(native.initializeSender).toHaveBeenNthCalledWith(2, {
-      senderName: 'Cast Interface - Stage',
       width: 1920,
       height: 1080,
       withAlpha: true
     });
   });
 
-  it('fans one frame out to all enabled outputs', () => {
+  it('fans one frame out to the enabled audience output', () => {
     const native = createNativeModuleMock();
     const intervals = createIntervalController();
     const scheduled: Array<() => void> = [];
@@ -149,13 +142,11 @@ describe('NdiService', () => {
     });
 
     service.setOutputEnabled('audience', true);
-    service.setOutputEnabled('stage', true);
     service.sendFrame(createFrame(4, 4));
     flushAllScheduled(scheduled);
 
-    expect(native.sendRgbaFrame).toHaveBeenCalledTimes(2);
-    expect(native.sendRgbaFrame).toHaveBeenNthCalledWith(1, 'Cast Interface - Audience', expect.any(Uint8Array), 4, 4, 16);
-    expect(native.sendRgbaFrame).toHaveBeenNthCalledWith(2, 'Cast Interface - Stage', expect.any(Uint8Array), 4, 4, 16);
+    expect(native.sendRgbaFrame).toHaveBeenCalledTimes(1);
+    expect(native.sendRgbaFrame).toHaveBeenCalledWith('Cast Interface - Audience', expect.any(Uint8Array), 4, 4, 16);
   });
 
   it('keeps only the latest queued frame while back-pressured', () => {
@@ -180,7 +171,7 @@ describe('NdiService', () => {
     expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', expect.any(Uint8Array), 3, 3, 12);
   });
 
-  it('sends heartbeat black frames when input is stale', () => {
+  it('sends heartbeat black frames when input is stale and no live frame was sent yet', () => {
     const native = createNativeModuleMock();
     const intervals = createIntervalController();
     let now = 100;
@@ -201,6 +192,34 @@ describe('NdiService', () => {
     intervals.runByDelay(HEARTBEAT_INTERVAL_MS);
     expect(native.sendRgbaFrame).toHaveBeenCalledTimes(1);
     expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', expect.any(Uint8Array), 1920, 1080, 7680);
+  });
+
+  it('repeats the last live frame during heartbeat gaps', () => {
+    const native = createNativeModuleMock();
+    const intervals = createIntervalController();
+    const scheduled: Array<() => void> = [];
+    let now = 100;
+    const service = new NdiService({
+      loadNativeModule: () => native.module,
+      scheduleTask: (task) => {
+        scheduled.push(task);
+      },
+      now: () => now,
+      setIntervalFn: intervals.setIntervalFn,
+      clearIntervalFn: intervals.clearIntervalFn
+    });
+
+    service.setOutputEnabled('audience', true);
+    service.sendFrame(createFrame(4, 4));
+    flushAllScheduled(scheduled);
+
+    const lastLiveBuffer = native.sendRgbaFrame.mock.calls[0]?.[1];
+
+    now = 240;
+    intervals.runByDelay(HEARTBEAT_INTERVAL_MS);
+
+    expect(native.sendRgbaFrame).toHaveBeenCalledTimes(2);
+    expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', lastLiveBuffer, 4, 4, 16);
   });
 
   it('continues to send when connection probe is unavailable', () => {
@@ -284,7 +303,7 @@ describe('NdiService', () => {
       service.sendFrame(createFrame(4, 4));
       flushAllScheduled(scheduled);
 
-      expect(service.getOutputState()).toEqual({ audience: false, stage: false });
+      expect(service.getOutputState()).toEqual({ audience: false });
       expect(native.destroySender).toHaveBeenCalledWith('Cast Interface - Audience');
     } finally {
       errorSpy.mockRestore();

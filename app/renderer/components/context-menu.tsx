@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from './icon';
 import { createPortal } from 'react-dom';
 
 export interface ContextMenuItem {
   id: string;
   label: string;
+  icon?: ReactNode;
   danger?: boolean;
   disabled?: boolean;
   selected?: boolean;
@@ -58,9 +61,9 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   }
 
   function getItemClass(item: ContextMenuItem): string {
-    if (item.disabled) return 'cursor-not-allowed text-text-muted/50';
-    if (item.danger) return 'cursor-pointer text-error hover:bg-danger/20';
-    return 'cursor-pointer text-text-secondary hover:bg-surface-3 hover:text-text-primary';
+    if (item.disabled) return 'cursor-not-allowed text-text-tertiary/50';
+    if (item.danger) return 'cursor-pointer text-error hover:bg-red-500/10';
+    return 'cursor-pointer text-text-secondary hover:bg-background-quaternary hover:text-text-primary';
   }
 
   function renderSubmenuList(children: ContextMenuItem[]) {
@@ -71,7 +74,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         disabled={child.disabled}
         className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
       >
-        {child.label}
+        <span className="flex items-center gap-2">
+          {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
+          <span className="truncate">{child.label}</span>
+        </span>
       </button>
     ));
   }
@@ -93,7 +99,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
               className={`grid h-6 w-6 place-items-center rounded-md border transition-colors ${
                 child.selected
                   ? 'border-text-primary/90 shadow-[0_0_0_1px_rgba(255,255,255,0.3)]'
-                  : 'border-stroke hover:border-text-secondary'
+                  : 'border-border-primary hover:border-text-secondary'
               } ${child.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
             >
               <span className="h-4 w-4 rounded" style={{ backgroundColor: child.swatchColor }} />
@@ -101,7 +107,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
           ))}
         </div>
         {actionItems.length ? (
-          <div className="mt-1 border-t border-stroke pt-1">
+          <div className="mt-1 border-t border-border-primary pt-1">
             {actionItems.map((child) => (
               <button
                 key={child.id}
@@ -109,7 +115,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 disabled={child.disabled}
                 className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
               >
-                {child.label}
+                <span className="flex items-center gap-2">
+                  {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
+                  <span className="truncate">{child.label}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -121,7 +130,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return createPortal(
     <div
       ref={rootRef}
-      className="fixed z-[9999] min-w-[180px] rounded-md border border-stroke bg-surface-2 p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+      className="fixed z-[9999] min-w-[180px] rounded-md border border-border-primary bg-background-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
       style={{ left: x, top: y }}
     >
       {items.map((item) => (
@@ -131,21 +140,24 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
             disabled={item.disabled}
             className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${
               item.disabled
-                ? 'cursor-not-allowed text-text-muted/50'
+                ? 'cursor-not-allowed text-text-tertiary/50'
                 : item.danger
-                  ? 'cursor-pointer text-error hover:bg-danger/20'
-                  : 'cursor-pointer text-text-secondary hover:bg-surface-3 hover:text-text-primary'
+                  ? 'cursor-pointer text-error hover:bg-red-500/10'
+                  : 'cursor-pointer text-text-secondary hover:bg-background-quaternary hover:text-text-primary'
             }`}
           >
             <span className="flex items-center justify-between">
-              <span className="truncate">{item.label}</span>
-              {item.children?.length ? <span className="text-[10px]">›</span> : null}
+              <span className="flex min-w-0 items-center gap-2">
+                {item.icon ? <span className="shrink-0">{item.icon}</span> : null}
+                <span className="truncate">{item.label}</span>
+              </span>
+              {item.children?.length ? <Icon.chevron_right size={10} strokeWidth={2.5} /> : null}
             </span>
           </button>
 
           {item.children?.length && activeSubmenuId === item.id ? (
             <div
-              className={`absolute left-full top-0 ml-1 rounded-md border border-stroke bg-surface-2 p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)] ${
+              className={`absolute left-full top-0 ml-1 rounded-md border border-border-primary bg-background-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)] ${
                 item.childrenLayout === 'color-grid'
                   ? 'min-w-[236px]'
                   : 'min-w-[190px] max-h-56 overflow-y-auto'

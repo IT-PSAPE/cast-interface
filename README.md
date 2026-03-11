@@ -31,8 +31,8 @@ npm run build
 ## Architecture
 
 - `app/main/` Electron main process, IPC, and NDI adapter boundary.
-- `app/renderer/` React app with four persistent zones and editing workflow.
-- `app/renderer/features/workspace/rendering/` unified scene builder + Konva stage rendering for editor, thumbnails, preview, and output.
+- `app/renderer/` React app organized around a `workbench` shell plus feature-owned library-browser, resource-drawer, slide-browser, stage, editor, inspector, and output surfaces.
+- `app/renderer/features/stage/rendering/` unified scene builder + Konva stage rendering for editor, thumbnails, preview, and output.
 - `app/database/` SQLite schema, seed data, and repository operations.
 - `app/core/` shared domain types and IPC contracts.
 

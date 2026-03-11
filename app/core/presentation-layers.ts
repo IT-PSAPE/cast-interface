@@ -8,6 +8,7 @@ export const LAYER_PREVIEW_SLIDE: Slide = {
   presentationId: '__layer_preview__',
   width: OUTPUT_FRAME_WIDTH,
   height: OUTPUT_FRAME_HEIGHT,
+  notes: '',
   order: 0,
   createdAt: '',
   updatedAt: '',
@@ -64,21 +65,29 @@ export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
   };
 }
 
-export function overlayToLayerElement(overlay: Overlay, opacity: number): SlideElement {
-  return {
-    id: overlay.id,
+export function overlayToLayerElements(overlay: Overlay): SlideElement[] {
+  if (!overlay.elements || overlay.elements.length === 0) {
+    return [{
+      id: overlay.id,
+      slideId: '__overlay__',
+      type: overlay.type === 'shape' ? 'shape' : overlay.type === 'text' ? 'text' : overlay.type === 'video' ? 'video' : 'image',
+      x: overlay.x,
+      y: overlay.y,
+      width: overlay.width,
+      height: overlay.height,
+      rotation: 0,
+      opacity: overlay.opacity,
+      zIndex: overlay.zIndex,
+      layer: 'content',
+      payload: overlay.payload,
+      createdAt: overlay.createdAt,
+      updatedAt: overlay.updatedAt,
+    }];
+  }
+
+  return overlay.elements.map((element) => ({
+    ...element,
     slideId: '__overlay__',
-    type: overlay.type === 'shape' ? 'shape' : overlay.type === 'text' ? 'text' : overlay.type === 'video' ? 'video' : 'image',
-    x: overlay.x,
-    y: overlay.y,
-    width: overlay.width,
-    height: overlay.height,
-    rotation: 0,
-    opacity,
-    zIndex: overlay.zIndex,
     layer: 'content',
-    payload: overlay.payload,
-    createdAt: overlay.createdAt,
-    updatedAt: overlay.updatedAt,
-  };
+  }));
 }

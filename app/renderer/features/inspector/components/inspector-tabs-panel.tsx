@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { SidebarTabBar, SidebarTab } from '../../../components/tab-bar';
-import { useUI } from '../../../contexts/ui-context';
+import { TabBar, Tab } from '../../../components/tab-bar';
+import { useInspector } from '../../../contexts/inspector-context';
+import { useWorkbench } from '../../../contexts/workbench-context';
 import { useElements } from '../../../contexts/element-context';
 import { PresentationInspector } from './presentation-inspector';
 import { ShapeElementInspector } from './shape-element-inspector';
@@ -13,14 +14,22 @@ interface InspectorTabsPanelProps {
 }
 
 export function InspectorTabsPanel({ className = '', bodyClassName = '' }: InspectorTabsPanelProps) {
-  const { inspectorTab, setInspectorTab } = useUI();
+  const { inspectorTab, setInspectorTab } = useInspector();
+  const { workbenchMode } = useWorkbench();
   const { selectedElement } = useElements();
   const hasSelection = Boolean(selectedElement);
+  const isOverlayEdit = workbenchMode === 'overlay-editor';
+  const selectedInspectorTab = selectedElement?.type === 'text' ? 'text' : 'shape';
 
   useEffect(() => {
+    if (isOverlayEdit) {
+      if (hasSelection && inspectorTab !== 'slide' && inspectorTab !== 'shape' && inspectorTab !== 'text') setInspectorTab(selectedInspectorTab);
+      if (!hasSelection && (inspectorTab === 'shape' || inspectorTab === 'text')) setInspectorTab('slide');
+      return;
+    }
     if (hasSelection && (inspectorTab === 'presentation' || inspectorTab === 'slide')) setInspectorTab('shape');
-    if (!hasSelection && (inspectorTab === 'shape' || inspectorTab === 'text')) setInspectorTab('presentation');
-  }, [hasSelection, inspectorTab, setInspectorTab]);
+    if (!hasSelection && (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'slide')) setInspectorTab('presentation');
+  }, [hasSelection, inspectorTab, isOverlayEdit, selectedInspectorTab, setInspectorTab]);
 
   function showPresentationTab() { setInspectorTab('presentation'); }
   function showSlideTab() { setInspectorTab('slide'); }
@@ -29,18 +38,18 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
 
   return (
     <section className={`grid min-h-0 grid-rows-[auto_1fr] ${className}`}>
-      <div className="border-b border-stroke">
-        <SidebarTabBar label="Inspector">
-          {!hasSelection && <SidebarTab active={inspectorTab === 'presentation'} onClick={showPresentationTab}>Presentation</SidebarTab>}
-          {!hasSelection && <SidebarTab active={inspectorTab === 'slide'} onClick={showSlideTab}>Slide</SidebarTab>}
-          {hasSelection && <SidebarTab active={inspectorTab === 'shape'} onClick={showShapeTab}>Shape</SidebarTab>}
-          {hasSelection && <SidebarTab active={inspectorTab === 'text'} onClick={showTextTab}>Text</SidebarTab>}
-        </SidebarTabBar>
+      <div className="border-b border-border-primary">
+        <TabBar label="Inspector">
+          {!isOverlayEdit && !hasSelection && <Tab active={inspectorTab === 'presentation'} onClick={showPresentationTab}>Presentation</Tab>}
+          {isOverlayEdit && <Tab active={inspectorTab === 'slide'} onClick={showSlideTab}>Overlay</Tab>}
+          {hasSelection && <Tab active={inspectorTab === 'shape'} onClick={showShapeTab}>Shape</Tab>}
+          {hasSelection && selectedElement?.type === 'text' && <Tab active={inspectorTab === 'text'} onClick={showTextTab}>Text</Tab>}
+        </TabBar>
       </div>
 
       <div className={`min-h-0 overflow-auto p-3 ${bodyClassName}`}>
-        {inspectorTab === 'presentation' && <PresentationInspector />}
-        {inspectorTab === 'slide' && <SlideInspector />}
+        {!isOverlayEdit && inspectorTab === 'presentation' && <PresentationInspector />}
+        {isOverlayEdit && inspectorTab === 'slide' && <SlideInspector />}
         {inspectorTab === 'shape' && <ShapeElementInspector />}
         {inspectorTab === 'text' && <TextElementInspector />}
       </div>

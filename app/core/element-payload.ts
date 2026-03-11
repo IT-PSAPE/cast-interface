@@ -38,29 +38,51 @@ export interface TextFormattingState {
   lineHeight: number;
 }
 
+export interface TextVisualState {
+  color: string;
+  strokeEnabled: boolean;
+  strokeColor: string;
+  strokeWidth: number;
+  shadowEnabled: boolean;
+  shadowColor: string;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+}
+
+const DEFAULT_SHAPE_FILL_COLOR = '#FFFFFF';
+const DEFAULT_SHAPE_STROKE_COLOR = '#111111';
+const DEFAULT_SHAPE_STROKE_WIDTH = 1;
+const DEFAULT_TEXT_BOX_FILL_COLOR = '#00000000';
+const DEFAULT_BOX_SHADOW_COLOR = '#00000099';
+const DEFAULT_BOX_SHADOW_BLUR = 12;
+const DEFAULT_BOX_SHADOW_OFFSET_X = 0;
+const DEFAULT_BOX_SHADOW_OFFSET_Y = 6;
+
 export function supportsVisualStyling(type: SlideElement['type']): boolean {
   return type === 'shape' || type === 'text';
 }
 
 export function readVisualPayload(type: SlideElement['type'], payload: SlideElementPayload): VisualPayloadState {
-  const fillColor = type === 'shape' ? (payload as ShapeElementPayload).fillColor : type === 'text' ? (payload as TextElementPayload).color : '#FFFFFF';
-  const strokeColor = type === 'shape' ? (payload as ShapeElementPayload).borderColor : payload.strokeColor ?? '#111111';
-  const strokeWidth = type === 'shape' ? (payload as ShapeElementPayload).borderWidth : payload.strokeWidth ?? 1;
+  const shapePayload = payload as Partial<ShapeElementPayload>;
+  const fillColor = type === 'shape' ? shapePayload.fillColor ?? DEFAULT_SHAPE_FILL_COLOR : payload.fillColor ?? DEFAULT_TEXT_BOX_FILL_COLOR;
+  const strokeColor = type === 'shape' ? shapePayload.borderColor ?? DEFAULT_SHAPE_STROKE_COLOR : payload.strokeColor ?? DEFAULT_SHAPE_STROKE_COLOR;
+  const strokeWidth = type === 'shape' ? shapePayload.borderWidth ?? DEFAULT_SHAPE_STROKE_WIDTH : payload.strokeWidth ?? DEFAULT_SHAPE_STROKE_WIDTH;
   return {
     visible: payload.visible ?? true,
     locked: payload.locked ?? false,
     flipX: payload.flipX ?? false,
     flipY: payload.flipY ?? false,
-    fillEnabled: type === 'shape' || type === 'text' ? payload.fillEnabled ?? true : false,
+    fillEnabled: type === 'shape' ? payload.fillEnabled ?? true : payload.fillEnabled ?? false,
     fillColor,
     strokeEnabled: type === 'shape' ? payload.strokeEnabled ?? strokeWidth > 0 : payload.strokeEnabled ?? false,
     strokeColor,
     strokeWidth,
     shadowEnabled: payload.shadowEnabled ?? false,
-    shadowColor: payload.shadowColor ?? '#00000099',
-    shadowBlur: payload.shadowBlur ?? 12,
-    shadowOffsetX: payload.shadowOffsetX ?? 0,
-    shadowOffsetY: payload.shadowOffsetY ?? 6,
+    shadowColor: payload.shadowColor ?? DEFAULT_BOX_SHADOW_COLOR,
+    shadowBlur: payload.shadowBlur ?? DEFAULT_BOX_SHADOW_BLUR,
+    shadowOffsetX: payload.shadowOffsetX ?? DEFAULT_BOX_SHADOW_OFFSET_X,
+    shadowOffsetY: payload.shadowOffsetY ?? DEFAULT_BOX_SHADOW_OFFSET_Y,
   };
 }
 
@@ -96,7 +118,7 @@ export function applyVisualPayload(type: SlideElement['type'], payload: SlideEle
     return {
       ...textPayload,
       ...basePatch,
-      color: next.fillColor,
+      fillColor: next.fillColor,
     };
   }
   return { ...payload, ...basePatch };
@@ -114,5 +136,34 @@ export function readTextFormatting(payload: TextElementPayload): TextFormattingS
     verticalAlign: payload.verticalAlign ?? 'middle',
     caseTransform: payload.caseTransform ?? 'none',
     lineHeight: payload.lineHeight ?? 1.25,
+  };
+}
+
+export function readTextVisualPayload(payload: TextElementPayload): TextVisualState {
+  return {
+    color: payload.color,
+    strokeEnabled: payload.textStrokeEnabled ?? false,
+    strokeColor: payload.textStrokeColor ?? '#111111',
+    strokeWidth: payload.textStrokeWidth ?? 1,
+    shadowEnabled: payload.textShadowEnabled ?? false,
+    shadowColor: payload.textShadowColor ?? '#00000099',
+    shadowBlur: payload.textShadowBlur ?? 12,
+    shadowOffsetX: payload.textShadowOffsetX ?? 0,
+    shadowOffsetY: payload.textShadowOffsetY ?? 6,
+  };
+}
+
+export function applyTextVisualPayload(payload: TextElementPayload, next: TextVisualState): TextElementPayload {
+  return {
+    ...payload,
+    color: next.color,
+    textStrokeEnabled: next.strokeEnabled,
+    textStrokeColor: next.strokeColor,
+    textStrokeWidth: next.strokeWidth,
+    textShadowEnabled: next.shadowEnabled,
+    textShadowColor: next.shadowColor,
+    textShadowBlur: next.shadowBlur,
+    textShadowOffsetX: next.shadowOffsetX,
+    textShadowOffsetY: next.shadowOffsetY,
   };
 }

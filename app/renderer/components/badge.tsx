@@ -1,10 +1,10 @@
 import type { SlideVisualState } from '../types/ui';
 
 const STATE_CLASSES: Record<SlideVisualState, string> = {
-  live: 'text-live border-live/45 bg-live/12',
-  queued: 'text-queued border-queued/45 bg-queued/12',
-  selected: 'text-selected border-selected/45 bg-selected/12',
-  warning: 'text-warning border-warning/45 bg-warning/12',
+  live: 'text-green-500 border-green-500/45 bg-green-500/12',
+  queued: 'text-blue-400 border-blue-400/45 bg-blue-400/12',
+  selected: 'text-brand-400 border-brand-400/45 bg-brand-400/12',
+  warning: 'text-yellow-400 border-yellow-400/45 bg-yellow-400/12',
 };
 
 interface BadgeProps {

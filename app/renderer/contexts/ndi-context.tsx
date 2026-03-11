@@ -1,15 +1,15 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NdiOutputName, NdiOutputState } from '@core/types';
+import type { NdiOutputState } from '@core/types';
 
 interface NdiContextValue {
   outputState: NdiOutputState;
-  toggleOutput: (name: NdiOutputName) => void;
+  toggleAudienceOutput: () => void;
 }
 
 const NdiContext = createContext<NdiContextValue | null>(null);
 
 export function NdiProvider({ children }: { children: ReactNode }) {
-  const [outputState, setOutputState] = useState<NdiOutputState>({ audience: false, stage: false });
+  const [outputState, setOutputState] = useState<NdiOutputState>({ audience: false });
   const outputStateRef = useRef(outputState);
   outputStateRef.current = outputState;
 
@@ -21,16 +21,16 @@ export function NdiProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
-  const toggleOutput = useCallback((name: NdiOutputName) => {
+  const toggleAudienceOutput = useCallback(() => {
     void window.castApi
-      .setNdiOutputEnabled(name, !outputStateRef.current[name])
+      .setNdiOutputEnabled('audience', !outputStateRef.current.audience)
       .then(setOutputState)
       .catch((error) => {
         console.error('[NdiProvider] Failed to toggle output:', error);
       });
   }, []);
 
-  const value = useMemo(() => ({ outputState, toggleOutput }), [outputState, toggleOutput]);
+  const value = useMemo(() => ({ outputState, toggleAudienceOutput }), [outputState, toggleAudienceOutput]);
 
   return <NdiContext.Provider value={value}>{children}</NdiContext.Provider>;
 }

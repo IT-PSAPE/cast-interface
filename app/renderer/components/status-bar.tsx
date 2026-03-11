@@ -6,17 +6,16 @@ export function StatusBar() {
   const { outputState } = useNdi();
 
   return (
-    <div className="border-t border-stroke bg-surface-0/60 px-2 py-1 flex items-center gap-3 text-[11px]">
+    <div
+      data-ui-region="status-bar"
+      className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-[11px]"
+    >
       <span className="text-text-secondary">{statusText}</span>
 
-      <div className="ml-auto flex items-center gap-2 text-text-muted">
+      <div className="ml-auto flex items-center gap-2 text-text-tertiary">
         <span className="flex items-center gap-1">
-          <span className={`inline-block size-1.5 rounded-full ${outputState.audience ? 'bg-live' : 'bg-error'}`} />
+          <span className={`inline-block size-1.5 rounded-full ${outputState.audience ? 'bg-green-500' : 'bg-red-500'}`} />
           Audience
-        </span>
-        <span className="flex items-center gap-1">
-          <span className={`inline-block size-1.5 rounded-full ${outputState.stage ? 'bg-live' : 'bg-error'}`} />
-          Stage
         </span>
       </div>
     </div>

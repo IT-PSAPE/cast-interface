@@ -9,7 +9,9 @@ import type {
   PresentationKind,
   NdiOutputName,
   OverlayCreateInput,
+  OverlayUpdateInput,
   SlideCreateInput,
+  SlideNotesUpdateInput,
   SlideFrame
 } from '@core/types';
 import { NdiService } from './ndi/ndi-service';
@@ -38,25 +40,6 @@ export const registerIpcHandlers = (
     getMainWindow()?.webContents.send(NDI_EVENTS.outputStateChanged, state);
   });
 
-  ipcMain.on(IPC.connectNdiFramePort, (event) => {
-    const port = event.ports[0];
-    if (!port) return;
-
-    function handlePortMessage(messageEvent: { data: SlideFrame }) {
-      const frame = messageEvent.data as SlideFrame;
-      ndiService.sendFrame(frame);
-    }
-
-    function handlePortClose() {
-      port.off('message', handlePortMessage);
-      port.off('close', handlePortClose);
-    }
-
-    port.on('message', handlePortMessage);
-    port.on('close', handlePortClose);
-    port.start();
-  });
-
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
   safeHandle(IPC.createLibrary, (_event, name: string) => repo.createLibrary(name));
   safeHandle(IPC.createPlaylist, (_event, libraryId: Id, name: string) => repo.createPlaylist(libraryId, name));
@@ -81,13 +64,17 @@ export const registerIpcHandlers = (
   safeHandle(IPC.movePresentation, (_event, id: Id, direction: 'up' | 'down') =>
     repo.movePresentation(id, direction)
   );
-  safeHandle(IPC.createPresentation, (_event, libraryId: Id, title: string, kind?: PresentationKind) =>
-    repo.createPresentation(libraryId, title, kind)
+  safeHandle(IPC.createPresentation, (_event, title: string, kind?: PresentationKind) =>
+    repo.createPresentation(title, kind)
+  );
+  safeHandle(IPC.createLyric, (_event, title: string) =>
+    repo.createLyric(title)
   );
   safeHandle(IPC.setPresentationKind, (_event, id: Id, kind: PresentationKind) =>
     repo.setPresentationKind(id, kind)
   );
   safeHandle(IPC.createSlide, (_event, input: SlideCreateInput) => repo.createSlide(input));
+  safeHandle(IPC.updateSlideNotes, (_event, input: SlideNotesUpdateInput) => repo.updateSlideNotes(input));
   safeHandle(IPC.createElement, (_event, input: ElementCreateInput) => repo.createElement(input));
   safeHandle(IPC.createElementsBatch, (_event, inputs: ElementCreateInput[]) => repo.createElementsBatch(inputs));
   safeHandle(IPC.updateElement, (_event, input: ElementUpdateInput) => repo.updateElement(input));
@@ -100,7 +87,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deleteMediaAsset, (_event, id: Id) => repo.deleteMediaAsset(id));
   safeHandle(IPC.updateMediaAssetSrc, (_event, id: Id, src: string) => repo.updateMediaAssetSrc(id, src));
   safeHandle(IPC.createOverlay, (_event, overlay: OverlayCreateInput) => repo.createOverlay(overlay));
+  safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));
+  safeHandle(IPC.deleteOverlay, (_event, overlayId: Id) => repo.deleteOverlay(overlayId));
   safeHandle(IPC.renameLibrary, (_event, id: Id, name: string) => repo.renameLibrary(id, name));
   safeHandle(IPC.renamePlaylist, (_event, id: Id, name: string) => repo.renamePlaylist(id, name));
   safeHandle(IPC.renamePresentation, (_event, id: Id, title: string) => repo.renamePresentation(id, title));

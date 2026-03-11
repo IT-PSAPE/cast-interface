@@ -1,59 +1,60 @@
-import { ActionButton } from '../../../components/action-button';
+import { useEffect, useState } from 'react';
+import { Button } from '../../../components/button';
+import { FieldInput } from '../../../components/labeled-field';
 import { useCast } from '../../../contexts/cast-context';
-import { useSlides } from '../../../contexts/slide-context';
+import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
+import { useWorkbench } from '../../../contexts/workbench-context';
 import { useElements } from '../../../contexts/element-context';
 
 export function SlideInspector() {
   const { setStatusText } = useCast();
-  const { currentSlide } = useSlides();
-  const { effectiveElements, createText, createShape } = useElements();
+  const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
+  const { workbenchMode } = useWorkbench();
+  const { effectiveElements } = useElements();
+  const isOverlayEdit = workbenchMode === 'overlay-editor';
+  const [overlayNameDraft, setOverlayNameDraft] = useState('');
 
-  function handleAddText() {
-    void createText();
+  const canRenameOverlay = Boolean(
+    isOverlayEdit &&
+    currentOverlay &&
+    overlayNameDraft.trim() &&
+    overlayNameDraft.trim() !== currentOverlay.name,
+  );
+
+  useEffect(() => {
+    if (!currentOverlay) {
+      setOverlayNameDraft('');
+      return;
+    }
+    setOverlayNameDraft(currentOverlay.name);
+  }, [currentOverlay]);
+
+  function handleOverlayNameChange(value: string) {
+    setOverlayNameDraft(value);
   }
 
-  function handleAddShape() {
-    void createShape();
+  function handleRenameOverlay() {
+    if (!currentOverlay) return;
+    const trimmed = overlayNameDraft.trim();
+    if (!trimmed || trimmed === currentOverlay.name) return;
+    updateOverlayDraft({ id: currentOverlay.id, name: trimmed });
+    setStatusText('Overlay renamed');
   }
 
-  function handleMediaDropHint() {
-    setStatusText('Drag media from the drawer onto the slide canvas.');
-  }
-
-  if (!currentSlide) {
-    return <div className="text-[12px] text-text-muted">No slide selected.</div>;
+  if (isOverlayEdit && !currentOverlay && effectiveElements.length === 0) {
+    return <div className="text-[12px] text-text-tertiary">No overlay selected.</div>;
   }
 
   return (
     <div className="grid gap-3">
-      <div className="flex gap-4">
-        <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">Width</span>
-          <p className="text-[14px] text-text-primary m-0 mt-0.5">{currentSlide.width}</p>
+      {isOverlayEdit && currentOverlay ? (
+        <div className="grid gap-1.5">
+          <FieldInput type="text" value={overlayNameDraft} onChange={handleOverlayNameChange} />
+          <Button onClick={handleRenameOverlay} disabled={!canRenameOverlay} className="w-fit">
+            Rename
+          </Button>
         </div>
-        <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">Height</span>
-          <p className="text-[14px] text-text-primary m-0 mt-0.5">{currentSlide.height}</p>
-        </div>
-        <div>
-          <span className="text-[11px] text-text-muted uppercase tracking-wider">Elements</span>
-          <p className="text-[14px] text-text-primary m-0 mt-0.5">{effectiveElements.length}</p>
-        </div>
-      </div>
-
-      <div>
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Output</span>
-        <p className="text-[12px] text-text-secondary m-0 mt-0.5">1920 × 1080 RGBA</p>
-      </div>
-
-      <div>
-        <span className="text-[11px] text-text-muted uppercase tracking-wider">Slide Actions</span>
-        <div className="mt-1.5 flex flex-wrap gap-2">
-          <ActionButton onClick={handleAddText}>Add Text</ActionButton>
-          <ActionButton onClick={handleAddShape}>Add Shape</ActionButton>
-          <ActionButton onClick={handleMediaDropHint}>Media Drop</ActionButton>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

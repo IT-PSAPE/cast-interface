@@ -20,6 +20,7 @@ interface SenderEntry {
   height: number;
   withAlpha: boolean;
   lastFrameSentAt: number;
+  lastFrameRgba: Uint8Array | null;
 }
 
 interface NdiDebugCounters {
@@ -42,11 +43,11 @@ export interface NdiServiceOptions {
 type OutputStateListener = (state: NdiOutputState) => void;
 
 function createInitialOutputState(): NdiOutputState {
-  return { audience: false, stage: false };
+  return { audience: false };
 }
 
 function outputStatesEqual(left: NdiOutputState, right: NdiOutputState): boolean {
-  return left.audience === right.audience && left.stage === right.stage;
+  return left.audience === right.audience;
 }
 
 function frameHasValidSize(frame: SlideFrame): boolean {
@@ -63,8 +64,7 @@ function createDebugCounters(): NdiDebugCounters {
     senderErrors: 0,
     heartbeatBlackFrames: 0,
     sendsByOutput: {
-      audience: 0,
-      stage: 0
+      audience: 0
     }
   };
 }
@@ -74,8 +74,7 @@ function debugCountersHaveActivity(counters: NdiDebugCounters): boolean {
     || counters.rejectedFrames > 0
     || counters.senderErrors > 0
     || counters.heartbeatBlackFrames > 0
-    || counters.sendsByOutput.audience > 0
-    || counters.sendsByOutput.stage > 0;
+    || counters.sendsByOutput.audience > 0;
 }
 
 export class NdiService {
@@ -240,6 +239,7 @@ export class NdiService {
       try {
         module.sendRgbaFrame(sender.senderName, buffer, frame.width, frame.height, stride);
         sender.lastFrameSentAt = now;
+        sender.lastFrameRgba = new Uint8Array(buffer);
         this.debugCounters.sendsByOutput[output] += 1;
       } catch (error) {
         this.handleSenderFailure(output, error);
@@ -271,13 +271,15 @@ export class NdiService {
       }
 
       const stride = sender.width * 4;
-      const buffer = this.getBlackFrameBuffer(sender.width, sender.height);
+      const buffer = sender.lastFrameRgba ?? this.getBlackFrameBuffer(sender.width, sender.height);
 
       try {
         module.sendRgbaFrame(sender.senderName, buffer, sender.width, sender.height, stride);
         sender.lastFrameSentAt = now;
         this.debugCounters.sendsByOutput[output] += 1;
-        this.debugCounters.heartbeatBlackFrames += 1;
+        if (!sender.lastFrameRgba) {
+          this.debugCounters.heartbeatBlackFrames += 1;
+        }
       } catch (error) {
         this.handleSenderFailure(output, error);
       }
@@ -314,7 +316,8 @@ export class NdiService {
       width,
       height,
       withAlpha: definition.withAlpha,
-      lastFrameSentAt: 0
+      lastFrameSentAt: 0,
+      lastFrameRgba: existing?.lastFrameRgba ?? null
     };
 
     this.senderEntries.set(output, sender);
@@ -385,9 +388,9 @@ export class NdiService {
     const state = this.getOutputState();
     console.info(
       `[NDI] stats ingress=${this.debugCounters.ingressFrames} rejected=${this.debugCounters.rejectedFrames}`
-      + ` sends(audience=${this.debugCounters.sendsByOutput.audience},stage=${this.debugCounters.sendsByOutput.stage})`
+      + ` sends(audience=${this.debugCounters.sendsByOutput.audience})`
       + ` heartbeatBlack=${this.debugCounters.heartbeatBlackFrames} senderErrors=${this.debugCounters.senderErrors}`
-      + ` enabled(audience=${state.audience},stage=${state.stage})`
+      + ` enabled(audience=${state.audience})`
     );
     this.resetDebugCounters();
   }
@@ -464,7 +467,7 @@ export class NdiService {
   }
 
   private hasEnabledOutput(): boolean {
-    return this.outputState.audience || this.outputState.stage;
+    return this.outputState.audience;
   }
 
   private emitOutputStateChanged(previousState: NdiOutputState): void {

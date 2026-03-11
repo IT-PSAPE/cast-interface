@@ -1,110 +1,142 @@
-# Cast Interface UI Specification (Prototype v1)
+# Cast Interface UI Specification
+
+Updated on 2026-03-08.
 
 ## 1. Layout Structure
 
-Root layout uses four persistent zones with an added right utility rail:
+The renderer is organized around a `workbench` shell with three primary modes:
 
-1. `TopCommandBar`
-2. `MainWorkArea`
-   - `LeftHierarchyPanel`
-   - `CenterWorkspace`
-   - `RightOutputInspectorRail`
-3. `BottomResourceDrawer`
+1. `show`
+2. `slide-editor`
+3. `overlay-editor`
 
-### Component Tree
+Persistent shell surfaces:
 
-- `AppShell`
-  - `TopCommandBar`
-    - `ModeSegmentedControl` (`library`, `playlist`, `presentation`, `slide-editor`)
-    - `PrimaryActions`
-    - `PlaybackActions` (`prev`, `take`, `next`)
-    - `ContextChips` (`library`, `playlist`, `presentation`, `slide`)
-  - `MainWorkArea`
-    - `LeftHierarchyPanel`
-      - `LibraryTreeView`
-        - `LibraryNode`
-          - `PlaylistNode`
-            - `SegmentNode`
-              - `PresentationRefNode`
-    - `CenterWorkspace`
-      - `WorkspaceToolbar`
-      - `ViewModeTabs` (`single`, `grid`, `strip`)
-      - `CanvasStage` or `SlideGrid` or `SlideStrip`
-    - `RightOutputInspectorRail`
-      - `LivePreviewPanel`
-      - `InspectorTabs` (`presentation`, `slide`, `element`)
-      - `InspectorProperties`
-  - `BottomResourceDrawer`
-    - `ResourceTabs` (`media`, `overlays`, `shortcuts`)
-    - `MediaCollection`
-    - `OverlayCollection`
-    - `ShortcutReference`
+1. `AppToolbar`
+2. active workbench layout
+3. `StatusBar`
 
-## 2. Interaction States
+Toolbar labels map to internal modes like this:
 
-### Slide States
+- `Show` -> `show`
+- `Slides` -> `slide-editor`
+- `Overlay` -> `overlay-editor`
 
-- `live`: currently active output slide.
-- `queued`: available slide not active.
-- `selected`: focused card/item in editor context.
-- `warning`: slide contains no renderable elements.
-- `disabled`: unavailable interaction.
+Show mode layout:
 
-### Tree States
+- `LibraryPanel`
+- `SlideBrowser`
+- `ResourceDrawer`
+- `PreviewPanel`
 
-- `expanded`
-- `collapsed`
-- `selected`
-- `focused`
+Slide editor layout:
 
-## 3. State-Color System
+- `SlideListPanel`
+- `StagePanel`
+- `SlideNotesPanel`
+- `InspectorPanel`
 
-Use semantic tokens only. UI components may not hardcode arbitrary colors.
+Overlay editor layout:
 
-- `--state-live`: #2ec27e
-- `--state-queued`: #3d8bfd
-- `--state-selected`: #ff9f43
-- `--state-warning`: #f4c84a
-- `--state-disabled`: #6f7785
-- `--state-error`: #eb5757
+- `OverlayListPanel`
+- `StagePanel`
+- `InspectorPanel`
 
-Additional surface tokens:
+## 2. Canonical Modes
 
-- `--surface-0`: #1a1b1f
-- `--surface-1`: #202329
-- `--surface-2`: #2a2d34
-- `--surface-3`: #323640
-- `--stroke-subtle`: #3d414b
-- `--text-primary`: #f5f7fa
-- `--text-secondary`: #b5becd
+Workbench mode:
 
-## 4. Keyboard Map
+- `show`
+- `slide-editor`
+- `overlay-editor`
 
-Global shortcuts (disabled while typing in inputs/textareas/contenteditable):
+Slide browser mode:
+
+- `focus`
+- `grid`
+- `list`
+
+Playlist browser mode:
+
+- `current`
+- `tabs`
+- `continuous`
+
+Library panel view:
+
+- `libraries`
+- `playlist`
+
+Resource drawer tab:
+
+- `media`
+- `overlays`
+- `presentations`
+
+## 3. User-Facing Vocabulary
+
+Use these product-surface labels in the renderer:
+
+- `Library`
+- `Playlist`
+- `Segments`
+- `Presentations`
+- `Continuous Playlist`
+- `Slide Browser`
+- `Preview`
+- `Slide Editor`
+- `Overlay Editor`
+- `Media`
+- `Overlays`
+- `Inspector`
+
+Use these structural/container labels for layout and implementation:
+
+- `Workbench`
+- `Panel`
+- `Drawer`
+- `Sidebar`
+- `Stage`
+
+## 4. Interaction Rules
+
+- Show mode is optimized for browsing and output preview.
+- Slide editor and overlay editor keep changes local until the user pushes them.
+- `StageViewport` is shared across show, slide editing, overlay editing, preview, and NDI output flows through the shared stage/rendering feature.
+- `LibraryPanelView` is UI state owned by the library browser, not navigation/domain state.
+- The `Presentations` drawer tab shows the global presentation inventory; the component implementing it is `PresentationBinPanel`.
+
+## 5. Keyboard Map
+
+Global shortcuts, disabled while typing in editable fields:
 
 - `ArrowRight`: next slide
 - `ArrowLeft`: previous slide
 - `1-9`: jump to slide index
-- `Enter` / `Space`: take current slide (manual trigger)
-- `Delete` / `Backspace`: delete selected element
-- `Cmd/Ctrl + 1`: library mode
-- `Cmd/Ctrl + 2`: playlist mode
-- `Cmd/Ctrl + 3`: presentation mode
-- `Cmd/Ctrl + 4`: slide editor mode
-- `Alt + 1`: single slide view
-- `Alt + 2`: slide grid view
-- `Alt + 3`: slide strip view
+- `Enter` or `Space`: take current slide
+- `Delete` or `Backspace`: delete selected element
+- `Alt + 1`: `focus` slide browser mode
+- `Alt + 2`: `grid` slide browser mode
+- `Alt + 3`: `list` slide browser mode
+- `Alt + Shift + 1`: `current` playlist browser mode
+- `Alt + Shift + 2`: `tabs` playlist browser mode
+- `Alt + Shift + 3`: `continuous` playlist browser mode
 
-## 5. Accessibility and Focus Rules
+## 6. Visual Reference
 
-- Tree uses `role="tree"`, nested items use `role="treeitem"`.
-- Slide grid uses `role="grid"` and slide cards use `role="gridcell"`.
-- All interactive controls have visible focus states.
-- Color is never the only state indicator; all states include text/icon labels.
+Detailed component-level captures live in [ui-code-design-spec.md](/Users/Craig/Developer/Projects/cast-interface/docs/ui-code-design-spec.md) and [ui-spec-assets/manifest.md](/Users/Craig/Developer/Projects/cast-interface/docs/ui-spec-assets/manifest.md).
 
-## 6. Minimum Implementation Guarantees
+Current workbench layout references:
 
-- Hierarchy references remain reusable (presentation references in playlists).
-- Media drag/drop to canvas remains intact.
-- Overlay toggles remain global to library context.
-- NDI output frame updates remain tied to active slide/render updates.
+![Show mode layout](./ui-spec-assets/app/show-mode-layout.png)
+![Slide editor layout](./ui-spec-assets/app/slide-editor-layout.png)
+![Overlay editor layout](./ui-spec-assets/app/overlay-editor-layout.png)
+
+## 7. Implementation Guarantees
+
+- Library references and playlist references remain reusable.
+- Media drag/drop to the stage remains intact.
+- Overlay assignment remains available from the Overlays drawer tab.
+- Presentation browsing remains available from the Presentations drawer tab.
+- NDI output remains driven by the shared render scene provider.
+- Persisted presentation kinds remain `canvas` or `lyrics`.

@@ -1,5 +1,5 @@
-import type { Id, MediaAsset, Slide, SlideElement } from '@core/types';
-import type { CanvasViewMode, ShortcutItem, SlideVisualState } from '../types/ui';
+import type { MediaAsset, Slide, SlideElement } from '@core/types';
+import type { SlideBrowserMode, PlaylistBrowserMode, ShortcutItem, SlideVisualState } from '../types/ui';
 import { LAYER_ORDER } from '../types/ui';
 
 export const SHORTCUTS: ShortcutItem[] = [
@@ -8,13 +8,20 @@ export const SHORTCUTS: ShortcutItem[] = [
   { keys: '1-9', action: 'Take slide by index' },
   { keys: 'Enter / Space', action: 'Take selected slide' },
   { keys: 'Delete / Backspace', action: 'Delete selected element' },
-  { keys: 'Alt + 1..3', action: 'Switch canvas view' },
+  { keys: 'Alt + 1..3', action: 'Switch slide view (focus/grid/list)' },
+  { keys: 'Shift + Alt + 1..3', action: 'Switch playlist view (current/tabs/continuous)' },
 ];
 
-export const CANVAS_VIEW_LABELS: Record<CanvasViewMode, string> = {
-  single: 'Single',
+export const CANVAS_VIEW_LABELS: Record<SlideBrowserMode, string> = {
+  focus: 'Focus',
   grid: 'Grid',
-  outline: 'Outline',
+  list: 'List',
+};
+
+export const PLAYLIST_DISPLAY_MODE_LABELS: Record<PlaylistBrowserMode, string> = {
+  current: 'Current',
+  tabs: 'Tabs',
+  continuous: 'Continuous',
 };
 
 export function sortSlides(slides: Slide[]): Slide[] {
@@ -91,9 +98,12 @@ export function typeFromFile(file: File): MediaAsset['type'] {
 
 export function fileSrc(file: File): string {
   const fileWithPath = file as File & { path?: string };
-  if (fileWithPath.path) return `cast-media://${encodeURIComponent(fileWithPath.path)}`;
-  console.warn('[fileSrc] File.path unavailable, blob URL will not persist');
-  return URL.createObjectURL(file);
+  if (!fileWithPath.path) return '';
+  return castMediaSrc(fileWithPath.path);
+}
+
+export function castMediaSrc(filePath: string): string {
+  return `cast-media://${encodeURIComponent(filePath)}`;
 }
 
 export function parseNumber(value: string, fallback: number): number {
@@ -105,25 +115,10 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function getOverlayDefaults(libraryId: Id) {
+export function getOverlayDefaults() {
   return {
-    libraryId,
-    name: 'Lower Third',
-    type: 'text' as const,
-    x: 180,
-    y: 930,
-    width: 1560,
-    height: 120,
-    opacity: 1,
-    zIndex: 1000,
-    payload: {
-      text: 'LIVE \u2022 CAST INTERFACE',
-      fontFamily: 'Avenir Next',
-      fontSize: 52,
-      color: '#FFFFFF',
-      alignment: 'left' as const,
-      weight: '700',
-    },
+    name: 'New Overlay',
+    elements: [],
     animation: { kind: 'fade' as const, durationMs: 2500 },
   };
 }
