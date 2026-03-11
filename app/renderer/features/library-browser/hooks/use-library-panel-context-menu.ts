@@ -28,9 +28,10 @@ interface LibraryPanelContextMenuOptions {
   addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<void>;
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<void>;
   createPresentationInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
+  createLyricInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
 }
 
-export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment }: LibraryPanelContextMenuOptions) {
+export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, createLyricInSegment }: LibraryPanelContextMenuOptions) {
   const [menuState, setMenuState] = useState<{ x: number; y: number; target: LibraryPanelMenuTarget } | null>(null);
   const [editingLibraryId, setEditingLibraryId] = useState<string | null>(null);
   const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
@@ -73,12 +74,13 @@ export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId
       addPresentationToSegment,
       movePresentationToSegment,
       createPresentationInSegment,
+      createLyricInSegment,
       beginRenameLibrary: setEditingLibraryId,
       beginRenamePlaylist: setEditingPlaylistId,
       beginRenameSegment: setEditingSegmentId,
       beginRenamePresentation: setEditingPresentationId
     });
-  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment]);
+  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, createLyricInSegment]);
 
   return {
     menuState,

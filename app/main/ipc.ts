@@ -67,6 +67,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.createPresentation, (_event, title: string, kind?: PresentationKind) =>
     repo.createPresentation(title, kind)
   );
+  safeHandle(IPC.createLyric, (_event, title: string) =>
+    repo.createLyric(title)
+  );
   safeHandle(IPC.setPresentationKind, (_event, id: Id, kind: PresentationKind) =>
     repo.setPresentationKind(id, kind)
   );

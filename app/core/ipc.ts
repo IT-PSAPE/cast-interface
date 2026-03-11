@@ -27,6 +27,7 @@ export interface MainApi {
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
   movePresentation: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   createPresentation: (title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
+  createLyric: (title: string) => Promise<AppSnapshot>;
   setPresentationKind: (id: Id, kind: PresentationKind) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
@@ -67,6 +68,7 @@ export const IPC = {
   movePresentationToSegment: 'cast:movePresentationToSegment',
   movePresentation: 'cast:movePresentation',
   createPresentation: 'cast:createPresentation',
+  createLyric: 'cast:createLyric',
   setPresentationKind: 'cast:setPresentationKind',
   createSlide: 'cast:createSlide',
   updateSlideNotes: 'cast:updateSlideNotes',

@@ -54,6 +54,7 @@ function createPresentation(id: string, title: string): Presentation {
   return {
     id,
     title,
+    entityType: 'presentation',
     kind: 'canvas',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

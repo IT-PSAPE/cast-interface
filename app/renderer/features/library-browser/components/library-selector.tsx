@@ -1,4 +1,5 @@
 import { Button } from '../../../components/button';
+import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useCast } from '../../../contexts/cast-context';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -24,7 +25,9 @@ export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClea
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5">
         <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
-        <IconButton label="New library" onClick={handleCreate} className="h-6 w-6 border-transparent bg-transparent text-[16px] leading-none">+</IconButton>
+        <IconButton label="New library" onClick={handleCreate} size="sm" variant="ghost">
+          <Icon.plus size={12} strokeWidth={1.5} />
+        </IconButton>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1" role="list" aria-label="Libraries">
@@ -46,25 +49,22 @@ export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClea
           return (
             <Button
               variant="ghost"
+              active={isSelected}
               key={bundle.library.id}
               role="listitem"
               onClick={handleSelect}
               onContextMenu={handleContextMenu}
-              className={`block w-full rounded-sm border-0 px-2 py-1.5 text-left transition-colors ${
-                isSelected
-                  ? 'bg-brand-400/15 text-text-primary'
-                  : 'bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'
-              }`}
+              className="block w-full rounded-sm border-0 px-2 py-1.5 text-left hover:bg-background-quaternary/50 hover:text-text-primary"
             >
-              <EditableText
-                value={bundle.library.name}
-                onCommit={handleRename}
-                editing={isEditing}
-                className="text-[13px] font-medium"
-              />
-              <div className="text-[11px] text-text-tertiary mt-0.5">
-                {bundle.playlists.length} playlists
-              </div>
+              <span className="flex items-center gap-2">
+                <Icon.folder className="shrink-0 text-text-tertiary" size={14} strokeWidth={1.75} />
+                <EditableText
+                  value={bundle.library.name}
+                  onCommit={handleRename}
+                  editing={isEditing}
+                  className="text-[13px] font-medium"
+                />
+              </span>
             </Button>
           );
         })}

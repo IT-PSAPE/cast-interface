@@ -13,7 +13,7 @@ export function SlideGrid() {
   const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
 
   return (
-    <section className="min-h-0 overflow-y-auto p-2">
+    <section className="h-full min-h-0 overflow-y-auto p-2">
       <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] auto-rows-max content-start" role="grid" aria-label="Slides">
         {slides.map((slide, idx) => {
           const elements = slideElementsById.get(slide.id) ?? [];

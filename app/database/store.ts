@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
 import Database from 'better-sqlite3';
+import { buildPresentationEntity } from '@core/presentation-entities';
 import { createId, nowIso } from '@core/utils';
 import type {
   AppSnapshot,
@@ -959,6 +960,10 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  createLyric(title: string): AppSnapshot {
+    return this.createPresentation(title, 'lyrics');
+  }
+
   setPresentationKind(id: Id, kind: PresentationKind): AppSnapshot {
     this.db
       .prepare('UPDATE presentations SET kind = ?, updated_at = ? WHERE id = ?')
@@ -1507,7 +1512,8 @@ export class CastRepository {
       weight: '700',
       visible: true,
       locked: false,
-      fillEnabled: true,
+      fillEnabled: false,
+      fillColor: '#00000000',
       strokeEnabled: false,
       shadowEnabled: false,
     };
@@ -1555,7 +1561,7 @@ export class CastRepository {
       updated_at: string;
     }>;
 
-    return rows.map((row) => ({
+    return rows.map((row) => buildPresentationEntity({
       id: row.id,
       title: row.title,
       kind: this.normalizePresentationKind(row.kind),

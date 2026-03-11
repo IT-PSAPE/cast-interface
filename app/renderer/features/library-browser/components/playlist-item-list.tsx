@@ -33,8 +33,8 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between border-b border-border-primary bg-primary px-3 py-1.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
-        <IconButton label="New segment" onClick={handleNewSegment} className="h-5 w-5">
-          <Icon.folder_plus size={12} strokeWidth={1.5} />
+        <IconButton label="New segment" onClick={handleNewSegment}>
+          <Icon.folder_plus size={14} strokeWidth={1.75} />
         </IconButton>
       </div>
 

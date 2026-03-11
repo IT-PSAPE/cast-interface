@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
-import type { ElementUpdateInput, Id } from '@core/types';
+import type { ElementUpdateInput, Id, TextElementPayload } from '@core/types';
 import { useElements } from '../../../contexts/element-context';
 import { resolveSnap } from './snap-guides';
 import type { GuideLine, RenderScene } from './scene-types';
@@ -35,6 +35,7 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
   const dragSessionRef = useRef<DragSession | null>(null);
 
   const [guideLines, setGuideLines] = useState<GuideLine[]>([]);
+  const [editingTextId, setEditingTextId] = useState<Id | null>(null);
   const shiftPressed = useSceneStageShift(editable);
   const selectedIdsSet = useMemo(() => new Set(selectedElementIds), [selectedElementIds]);
   const { applyDraftPatch, flushDraftBuffer } = useSceneStageDraftBuffer({ setDraftElements });
@@ -96,6 +97,32 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     if (toggle) toggleElementSelection(id);
     else selectElement(id);
   }, [editable, selectElement, toggleElementSelection]);
+
+  const handleNodeDoubleClick = useCallback((id: Id) => {
+    if (!editable) return;
+    const element = effectiveElements.find((el) => el.id === id);
+    if (!element || element.type !== 'text') return;
+    selectElement(id);
+    setEditingTextId(id);
+  }, [editable, effectiveElements, selectElement]);
+
+  const commitTextEdit = useCallback(async (nextText: string) => {
+    if (!editingTextId) return;
+    const element = effectiveElements.find((el) => el.id === editingTextId);
+    if (!element || element.type !== 'text') {
+      setEditingTextId(null);
+      return;
+    }
+    const payload = element.payload as TextElementPayload;
+    if (nextText !== payload.text) {
+      await commitElementUpdates([{ id: editingTextId, payload: { ...payload, text: nextText } }]);
+    }
+    setEditingTextId(null);
+  }, [editingTextId, effectiveElements, commitElementUpdates]);
+
+  const cancelTextEdit = useCallback(() => {
+    setEditingTextId(null);
+  }, []);
 
   const handleNodeDragStart = useCallback((id: Id) => {
     if (!editable) return;
@@ -197,8 +224,13 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     guideLines,
     shiftPressed,
     selectedIdsSet,
+    editingTextId,
+    effectiveElements,
     setNodeRef,
     handleNodeSelect,
+    handleNodeDoubleClick,
+    commitTextEdit,
+    cancelTextEdit,
     handleNodeDragStart,
     handleNodeDragMove,
     handleNodeDragEnd,

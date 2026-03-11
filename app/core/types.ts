@@ -35,14 +35,26 @@ export interface PlaylistEntry {
 }
 
 export type PresentationKind = 'canvas' | 'lyrics';
+export type PresentationEntityType = 'presentation' | 'lyric';
 
-export interface Presentation {
+interface PresentationBase {
   id: Id;
   title: string;
-  kind: PresentationKind;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CanvasPresentation extends PresentationBase {
+  entityType: 'presentation';
+  kind: 'canvas';
+}
+
+export interface Lyric extends PresentationBase {
+  entityType: 'lyric';
+  kind: 'lyrics';
+}
+
+export type Presentation = CanvasPresentation | Lyric;
 
 export interface Slide {
   id: Id;
@@ -83,6 +95,7 @@ export interface ElementVisualPayload {
   flipX?: boolean;
   flipY?: boolean;
   fillEnabled?: boolean;
+  fillColor?: string;
   strokeEnabled?: boolean;
   strokeColor?: string;
   strokeWidth?: number;
@@ -106,6 +119,14 @@ export interface TextElementPayload extends ElementVisualPayload {
   strikethrough?: boolean;
   lineHeight?: number;
   weight?: string;
+  textStrokeEnabled?: boolean;
+  textStrokeColor?: string;
+  textStrokeWidth?: number;
+  textShadowEnabled?: boolean;
+  textShadowColor?: string;
+  textShadowBlur?: number;
+  textShadowOffsetX?: number;
+  textShadowOffsetY?: number;
 }
 
 export interface ImageElementPayload extends ElementVisualPayload {

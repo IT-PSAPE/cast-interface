@@ -3,6 +3,7 @@ import { Icon } from '../../../components/icon';
 import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
+import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
 import { getSegmentHeaderColors } from '../utils/segment-header-color';
 
 interface PlaylistSegmentGroupProps {
@@ -46,7 +47,9 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
         <IconButton
           label={`Open ${segment.segment.name} menu`}
           onClick={handleSegmentMenuButtonClick}
-          className="h-5 w-5 border-transparent bg-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
+          size="sm"
+          variant="ghost"
+          className="border-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
         >
           <Icon.dots_vertical size={14} strokeWidth={2} />
         </IconButton>
@@ -72,21 +75,21 @@ export function PlaylistSegmentGroup({ segment, selectedPresentationId, editingS
           <div key={entry.entry.id} className="group relative">
             <Button
               variant="ghost"
+              active={isSelected}
               onClick={handleSelect}
               onContextMenu={handleContextMenu}
-              className={`flex w-full items-center gap-2 rounded-sm border-0 py-1 pl-4 pr-8 text-left text-[13px] transition-colors ${
-                isSelected
-                  ? 'cursor-pointer bg-brand-400/15 text-text-primary'
-                  : 'cursor-pointer bg-transparent text-text-secondary hover:bg-background-quaternary/50 hover:text-text-primary'
-              }`}
+              className="flex w-full items-center gap-2 rounded-sm border-0 py-1 pl-4 pr-8 text-left text-[13px] cursor-pointer hover:bg-background-quaternary/50 hover:text-text-primary"
             >
+              <PresentationEntityIcon entity={entry.presentation} className="shrink-0 text-text-tertiary" />
               <EditableText value={entry.presentation.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-[13px]" />
             </Button>
 
             <IconButton
               label={`Open ${entry.presentation.title} menu`}
               onClick={handleMenuButtonClick}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
+              size="sm"
+              variant="ghost"
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
             >
               <Icon.dots_vertical size={14} strokeWidth={2} />
             </IconButton>

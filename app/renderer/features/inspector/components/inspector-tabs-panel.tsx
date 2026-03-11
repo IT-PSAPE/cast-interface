@@ -28,7 +28,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
       return;
     }
     if (hasSelection && (inspectorTab === 'presentation' || inspectorTab === 'slide')) setInspectorTab('shape');
-    if (!hasSelection && (inspectorTab === 'shape' || inspectorTab === 'text')) setInspectorTab('presentation');
+    if (!hasSelection && (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'slide')) setInspectorTab('presentation');
   }, [hasSelection, inspectorTab, isOverlayEdit, selectedInspectorTab, setInspectorTab]);
 
   function showPresentationTab() { setInspectorTab('presentation'); }
@@ -41,7 +41,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
       <div className="border-b border-border-primary">
         <TabBar label="Inspector">
           {!isOverlayEdit && !hasSelection && <Tab active={inspectorTab === 'presentation'} onClick={showPresentationTab}>Presentation</Tab>}
-          {(!hasSelection || isOverlayEdit) && <Tab active={inspectorTab === 'slide'} onClick={showSlideTab}>{isOverlayEdit ? 'Overlay' : 'Slide'}</Tab>}
+          {isOverlayEdit && <Tab active={inspectorTab === 'slide'} onClick={showSlideTab}>Overlay</Tab>}
           {hasSelection && <Tab active={inspectorTab === 'shape'} onClick={showShapeTab}>Shape</Tab>}
           {hasSelection && selectedElement?.type === 'text' && <Tab active={inspectorTab === 'text'} onClick={showTextTab}>Text</Tab>}
         </TabBar>
@@ -49,7 +49,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
 
       <div className={`min-h-0 overflow-auto p-3 ${bodyClassName}`}>
         {!isOverlayEdit && inspectorTab === 'presentation' && <PresentationInspector />}
-        {inspectorTab === 'slide' && <SlideInspector />}
+        {isOverlayEdit && inspectorTab === 'slide' && <SlideInspector />}
         {inspectorTab === 'shape' && <ShapeElementInspector />}
         {inspectorTab === 'text' && <TextElementInspector />}
       </div>

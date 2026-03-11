@@ -134,7 +134,6 @@ Current shared component set:
 - `FieldSelect`
 - `FieldTextarea`
 - `IconButton`
-- `LabeledField`
 - `MediaPickerDialog`
 - `Panel`
 - `PanelSection`
@@ -203,7 +202,7 @@ States covered:
 - `SearchField`: populated filter state
 - `CheckboxField`: checked and unchecked
 - `CheckboxSection`: enabled with child content, disabled collapsed
-- `LabeledField`: text, number, select, textarea
+- `FieldInput`, `FieldSelect`, `FieldTextarea`: self-labeling field controls with optional icons
 
 ![Shared fields](./ui-spec-assets/shared/shared-fields.png)
 

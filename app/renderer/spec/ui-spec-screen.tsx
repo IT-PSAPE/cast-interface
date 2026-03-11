@@ -6,7 +6,7 @@ import { CheckboxField } from '../components/checkbox-field';
 import { CheckboxSection } from '../components/checkbox-section';
 import { EditableText } from '../components/editable-text';
 import { EmptyStatePanel } from '../components/empty-state-panel';
-import { FieldInput, FieldSelect, FieldTextarea, LabeledField } from '../components/labeled-field';
+import { FieldColor, FieldInput, FieldSelect } from '../components/labeled-field';
 import { Icon } from '../components/icon';
 import { IconButton } from '../components/icon-button';
 import { MediaPickerDialog } from '../components/media-picker-dialog';
@@ -95,9 +95,7 @@ export function UiSpecScreen() {
           <SpecCard title="Search and Checkbox">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-3">
-                <LabeledField label="Drawer Filter" wide>
-                  <SearchField value="welcome" onChange={EMPTY_STRING_CALLBACK} placeholder="Filter" />
-                </LabeledField>
+                <SearchField value="welcome" onChange={EMPTY_STRING_CALLBACK} placeholder="Filter" />
                 <CheckboxField checked label="Audience output enabled" onChange={EMPTY_BOOLEAN_CALLBACK} />
                 <CheckboxField checked={false} label="Overlay visible" onChange={EMPTY_BOOLEAN_CALLBACK} />
               </div>
@@ -113,24 +111,13 @@ export function UiSpecScreen() {
             </div>
           </SpecCard>
 
-          <SpecCard title="Labeled Field Inputs">
+          <SpecCard title="Field Inputs">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <LabeledField label="Slide Title">
-                <FieldInput value="Welcome to Cast Interface" onChange={EMPTY_STRING_CALLBACK} />
-              </LabeledField>
-              <LabeledField label="Width">
-                <FieldInput type="number" value={1920} onChange={EMPTY_STRING_CALLBACK} min={0} />
-              </LabeledField>
-              <LabeledField label="Presentation Kind">
-                <FieldSelect value="canvas" onChange={EMPTY_STRING_CALLBACK} options={FIELD_SELECT_OPTIONS} />
-              </LabeledField>
-              <LabeledField label="Notes" wide>
-                <FieldTextarea
-                  value="Opening welcome, then prayer."
-                  onChange={EMPTY_STRING_CALLBACK}
-                  placeholder="Slide notes"
-                />
-              </LabeledField>
+              <FieldInput value="Welcome to Cast Interface" onChange={EMPTY_STRING_CALLBACK} />
+              <FieldInput type="number" value={1920} onChange={EMPTY_STRING_CALLBACK} min={0} />
+              <FieldSelect value="canvas" onChange={EMPTY_STRING_CALLBACK} options={FIELD_SELECT_OPTIONS} />
+              <FieldColor value="#FF1493" onChange={EMPTY_STRING_CALLBACK} />
+              <FieldColor value="#00000099" onChange={EMPTY_STRING_CALLBACK} />
             </div>
           </SpecCard>
         </SpecSection>
@@ -147,7 +134,7 @@ export function UiSpecScreen() {
                   <SegmentedControlItemLabel>Show</SegmentedControlItemLabel>
                 </SegmentedControlItem>
                 <SegmentedControlItem value="slide-editor" title="Slide editor" variant="label">
-                  <SegmentedControlItemLabel>Slides</SegmentedControlItemLabel>
+                  <SegmentedControlItemLabel>Edit</SegmentedControlItemLabel>
                 </SegmentedControlItem>
                 <SegmentedControlItem value="overlay-editor" title="Overlay editor" variant="label">
                   <SegmentedControlItemLabel>Overlay</SegmentedControlItemLabel>

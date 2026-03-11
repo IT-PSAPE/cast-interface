@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { isLyricPresentation } from '@core/presentation-entities';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useCast } from '../../../contexts/cast-context';
@@ -19,7 +20,9 @@ function ToolbarButton({ label, onClick, disabled = false, children }: ToolbarBu
       label={label}
       onClick={onClick}
       disabled={disabled}
-      className="h-8 w-8 text-text-primary hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+      size="lg"
+      variant="ghost"
+      className="text-text-primary hover:bg-white/10"
     >
       {children}
     </IconButton>
@@ -36,7 +39,7 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   const { setStatusText } = useCast();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isLyricsPresentation = !isOverlayEdit && currentPresentation?.kind === 'lyrics';
+  const isLyricsPresentation = !isOverlayEdit && isLyricPresentation(currentPresentation);
 
   function handleAddText() {
     void createText();

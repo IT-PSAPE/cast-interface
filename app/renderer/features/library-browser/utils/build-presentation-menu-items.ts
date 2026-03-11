@@ -44,7 +44,7 @@ export function buildPresentationMenuItems({
     label: 'Delete',
     danger: true,
     onSelect: () => {
-      if (!window.confirm('Delete this presentation?')) return;
+      if (!window.confirm('Delete this item?')) return;
       void deletePresentation(presentationId);
     }
   };

@@ -20,7 +20,7 @@ describe('findCreatedSlideIndex', () => {
     const snapshot: AppSnapshot = {
       libraries: [],
       libraryBundles: [],
-      presentations: [{ id: 'presentation-1', title: 'Presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
+      presentations: [{ id: 'presentation-1', title: 'Presentation', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
       slides: [createSlide('slide-1', 0), createSlide('slide-2', 1)],
       slideElements: [],
       mediaAssets: [],
@@ -34,7 +34,7 @@ describe('findCreatedSlideIndex', () => {
     const snapshot: AppSnapshot = {
       libraries: [],
       libraryBundles: [],
-      presentations: [{ id: 'presentation-1', title: 'Presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
+      presentations: [{ id: 'presentation-1', title: 'Presentation', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
       slides: [createSlide('slide-1', 0)],
       slideElements: [],
       mediaAssets: [],

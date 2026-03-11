@@ -13,7 +13,7 @@ export function LibraryHeader() {
 
   return (
     <div className="flex items-center gap-2 border-b border-border-primary px-3 py-2">
-      <IconButton label="Back to libraries" onClick={handleBack} className="h-6 w-6 border-transparent bg-transparent">
+      <IconButton label="Back to libraries" onClick={handleBack} size="sm" variant="ghost">
         <Icon.chevron_left size={14} strokeWidth={2} />
       </IconButton>
       <span className="text-[12px] font-semibold uppercase tracking-wider text-text-secondary">{currentLibraryBundle.library.name}</span>

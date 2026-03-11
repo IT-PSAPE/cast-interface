@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './icon';
 import { createPortal } from 'react-dom';
@@ -5,6 +6,7 @@ import { createPortal } from 'react-dom';
 export interface ContextMenuItem {
   id: string;
   label: string;
+  icon?: ReactNode;
   danger?: boolean;
   disabled?: boolean;
   selected?: boolean;
@@ -72,7 +74,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         disabled={child.disabled}
         className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
       >
-        {child.label}
+        <span className="flex items-center gap-2">
+          {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
+          <span className="truncate">{child.label}</span>
+        </span>
       </button>
     ));
   }
@@ -110,7 +115,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 disabled={child.disabled}
                 className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
               >
-                {child.label}
+                <span className="flex items-center gap-2">
+                  {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
+                  <span className="truncate">{child.label}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -139,7 +147,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
             }`}
           >
             <span className="flex items-center justify-between">
-              <span className="truncate">{item.label}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                {item.icon ? <span className="shrink-0">{item.icon}</span> : null}
+                <span className="truncate">{item.label}</span>
+              </span>
               {item.children?.length ? <Icon.chevron_right size={10} strokeWidth={2.5} /> : null}
             </span>
           </button>

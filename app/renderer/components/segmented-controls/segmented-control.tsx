@@ -29,21 +29,25 @@ export function SegmentedControl({ children, value, defaultValue, onValueChange,
   const isControlled = value !== undefined;
   const selectedValue = isControlled ? value ?? null : internalValue;
 
-  const handleItemSelect = useCallback((nextValue: string) => {
+  const handleValueChange = useCallback((nextSelectedValue: string) => {
     if (!isControlled) {
-      setInternalValue(nextValue);
+      setInternalValue(nextSelectedValue);
     }
-    onValueChange?.(nextValue);
+    onValueChange?.(nextSelectedValue);
   }, [isControlled, onValueChange]);
 
   const contextValue = useMemo(
-    () => ({ fill, onItemSelect: handleItemSelect, value: selectedValue }),
-    [fill, handleItemSelect, selectedValue],
+    () => ({ fill, selectedValue, onSelect: handleValueChange }),
+    [fill, handleValueChange, selectedValue],
   );
 
   return (
     <SegmentContext.Provider value={contextValue}>
-      <div role="group" {...divProps} className={cn(segmentedControlRootStyles({ fill: fill ? 'true' : 'false' }), className)} >
+      <div
+        {...divProps}
+        role="group"
+        className={cn(segmentedControlRootStyles({ fill: fill ? 'true' : 'false' }), className)}
+      >
         {children}
       </div>
     </SegmentContext.Provider>

@@ -31,6 +31,7 @@ const api = {
   movePresentation: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.movePresentation, id, direction),
   createPresentation: (title: string, kind?: PresentationKind) =>
     ipcRenderer.invoke(IPC.createPresentation, title, kind),
+  createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
   setPresentationKind: (id: Id, kind: PresentationKind) => ipcRenderer.invoke(IPC.setPresentationKind, id, kind),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),

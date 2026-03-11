@@ -10,7 +10,7 @@ interface SelectableRowProps {
 
 export function SelectableRow({ selected, leading, title, onClick, trailing }: SelectableRowProps) {
   const rowClasses = selected
-    ? 'bg-brand-400/25 text-text-primary'
+    ? 'bg-background-active text-text-primary'
     : 'text-text-secondary hover:bg-background-tertiary/55';
 
   return (

@@ -7,11 +7,14 @@ import { useElements } from '../../../contexts/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { TabBar, Tab } from '../../../components/tab-bar';
+import { ContextMenu } from '../../../components/context-menu';
 import { MediaBinPanel } from './media-bin-panel';
 import { OverlayBinPanel } from './overlay-bin-panel';
 import { PresentationBinPanel } from './presentation-bin-panel';
 import type { DrawerTab } from '../../../types/ui';
-import { Button } from '@renderer/components/button';
+import { Icon } from '../../../components/icon';
+import { IconButton } from '../../../components/icon-button';
+import { useCreatePresentationMenu } from '../../../hooks/use-create-presentation-menu';
 
 const TABS: Array<{ key: DrawerTab; label: string }> = [
   { key: 'media', label: 'Media' },
@@ -32,9 +35,13 @@ export function ResourceDrawer() {
   const { setWorkbenchMode } = useWorkbench();
   const { importMedia } = useElements();
   const { createOverlay } = useOverlayEditor();
-  const { createPresentation } = useNavigation();
+  const { createPresentation, createLyric } = useNavigation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [filterText, setFilterText] = useState('');
+  const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreatePresentationMenu({
+    createPresentation,
+    createLyric
+  });
 
   function handleImport(e: ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -67,8 +74,8 @@ export function ResourceDrawer() {
     });
   }
 
-  function handleCreatePresentation() {
-    void createPresentation();
+  function handleCreatePresentationMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    openMenuFromButton(event.currentTarget);
   }
 
   const footerClass = [
@@ -98,25 +105,20 @@ export function ResourceDrawer() {
 
         <div className="ml-auto flex items-center gap-2 px-2">
           {drawerTab === 'media' && (
-            <label className="text-text-tertiary hover:text-text-primary cursor-pointer text-[16px] leading-none transition-colors" aria-label="Import media" title="Import media">
-              +
-              <input type="file" multiple accept="image/*,video/*,audio/*" onChange={handleImport} className="hidden" />
-            </label>
+            <IconButton label="Import media" size="sm" variant="ghost" className="relative">
+              <Icon.plus size={14} strokeWidth={1.5} />
+              <input type="file" multiple accept="image/*,video/*,audio/*" onChange={handleImport} className="absolute inset-0 cursor-pointer opacity-0" />
+            </IconButton>
           )}
           {drawerTab === 'overlays' && (
-            <Button type="button" onClick={handleCreateOverlay} aria-label="Create overlay" title="Create overlay">
-              +
-            </Button>
+            <IconButton label="Create overlay" size="sm" variant="ghost" onClick={handleCreateOverlay}>
+              <Icon.plus size={14} strokeWidth={1.5} />
+            </IconButton>
           )}
           {drawerTab === 'presentations' && (
-            <Button
-              type="button"
-              onClick={handleCreatePresentation}
-              aria-label="Create presentation"
-              title="Create presentation"
-            >
-              +
-            </Button>
+            <IconButton label="Create presentation or lyric" size="sm" variant="ghost" onClick={handleCreatePresentationMenu}>
+              <Icon.plus size={14} strokeWidth={1.5} />
+            </IconButton>
           )}
           <SearchField className="w-[140px]" placeholder="Filter" value={filterText} onChange={setFilterText} />
         </div>
@@ -127,6 +129,10 @@ export function ResourceDrawer() {
         {drawerTab === 'overlays' && <OverlayBinPanel filterText={filterText} />}
         {drawerTab === 'presentations' && <PresentationBinPanel filterText={filterText} />}
       </div>
+
+      {menuState && drawerTab === 'presentations' ? (
+        <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} />
+      ) : null}
     </footer>
   );
 }

@@ -2,8 +2,8 @@ import { createContext, useContext } from 'react';
 
 interface SegmentContextValue {
   fill: boolean;
-  onItemSelect: (nextValue: string) => void;
-  value: string | null;
+  selectedValue: string | null;
+  onSelect: (value: string) => void;
 }
 
 const SegmentContext = createContext<SegmentContextValue | null>(null);

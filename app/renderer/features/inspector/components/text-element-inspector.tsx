@@ -1,14 +1,13 @@
 import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVerticalAlign } from '@core/types';
-import { applyVisualPayload, readTextFormatting, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
+import { applyTextVisualPayload, readTextFormatting, readTextVisualPayload, type TextVisualState } from '@core/element-payload';
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element-context';
-import { Button } from '../../../components/button';
-import { FieldInput, FieldSelect, FieldTextarea, LabeledField } from '../../../components/labeled-field';
-import { SegmentedControl, SegmentedControlItem } from '../../../components/segmented-control';
-import { CheckboxSection } from '../../../components/checkbox-section';
+import { FieldColor, FieldInput, FieldSelect } from '../../../components/labeled-field';
 import { useSystemFonts } from '../hooks/use-system-fonts';
 
 import { SegmentedControl as Control } from '../../../components/segmented-controls';
+import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon } from '../../../components/segmented-control';
+import { CheckboxSection } from '../../../components/checkbox-section';
 import { AlignTop01 } from '@renderer/components/icon/align-top-01';
 import { AlignBottom01 } from '@renderer/components/icon/align-bottom-01';
 import { AlignVerticalCenter01 } from '@renderer/components/icon/align-vertical-center-01';
@@ -20,6 +19,8 @@ import { Bold02 } from '@renderer/components/icon/bold-02';
 import { Italic01 } from '@renderer/components/icon/italic-01';
 import { Underline01 } from '@renderer/components/icon/underline-01';
 import { Strikethrough01 } from '@renderer/components/icon/strikethrough-01';
+import { Type01 } from '@renderer/components/icon/type-01';
+import { LineHeight } from '@renderer/components/icon/line-height';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
@@ -28,7 +29,7 @@ const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
 ];
 
 export function TextElementInspector() {
-  const { selectedElement, elementPayloadDraft, setElementPayloadDraft, deleteSelected } = useElements();
+  const { selectedElement, elementPayloadDraft, setElementPayloadDraft } = useElements();
   const activeFont = selectedElement?.type === 'text' && elementPayloadDraft ? (elementPayloadDraft as TextElementPayload).fontFamily : '';
   const fontOptions = useSystemFonts(activeFont);
 
@@ -42,13 +43,13 @@ export function TextElementInspector() {
 
   const textPayload = elementPayloadDraft as TextElementPayload;
   const formatting = readTextFormatting(textPayload);
-  const visual = readVisualPayload('text', textPayload);
+  const textVisual = readTextVisualPayload(textPayload);
   const isBold = Number.parseInt(formatting.weight, 10) >= 600;
 
   function updateText(patch: Partial<TextElementPayload>) { setElementPayloadDraft({ ...textPayload, ...patch }); }
-  function updateVisual(patch: Partial<VisualPayloadState>) {
-    const nextVisual = { ...readVisualPayload('text', textPayload), ...patch };
-    setElementPayloadDraft(applyVisualPayload('text', textPayload, nextVisual));
+  function updateTextVisual(patch: Partial<TextVisualState>) {
+    const nextVisual = { ...readTextVisualPayload(textPayload), ...patch };
+    setElementPayloadDraft(applyTextVisualPayload(textPayload, nextVisual));
   }
 
   function handleTextChange(value: string) { updateText({ text: value }); }
@@ -56,22 +57,20 @@ export function TextElementInspector() {
   function handleWeightChange(value: string) { updateText({ weight: value }); }
   function handleFontSizeChange(value: string) { updateText({ fontSize: Math.max(1, parseNumber(value, formatting.fontSize)) }); }
   function handleLineHeightChange(value: string) { updateText({ lineHeight: Math.max(0.6, parseNumber(value, formatting.lineHeight)) }); }
-  function handleTextColorChange(value: string) { updateVisual({ fillColor: value }); }
+  function handleTextColorChange(value: string) { updateTextVisual({ color: value }); }
   function handleCaseChange(value: string) { updateText({ caseTransform: value as TextCaseTransform }); }
   function handleBoldToggle() { updateText({ weight: isBold ? '400' : '700' }); }
   function handleItalicToggle() { updateText({ italic: !formatting.italic }); }
   function handleUnderlineToggle() { updateText({ underline: !formatting.underline }); }
   function handleStrikeToggle() { updateText({ strikethrough: !formatting.strikethrough }); }
-  function handleStrokeToggle(enabled: boolean) { updateVisual({ strokeEnabled: enabled }); }
-  function handleStrokeColorChange(value: string) { updateVisual({ strokeColor: value }); }
-  function handleStrokeWidthChange(value: string) { updateVisual({ strokeWidth: Math.max(0, parseNumber(value, visual.strokeWidth)) }); }
-  function handleShadowToggle(enabled: boolean) { updateVisual({ shadowEnabled: enabled }); }
-  function handleShadowColorChange(value: string) { updateVisual({ shadowColor: value }); }
-  function handleShadowBlurChange(value: string) { updateVisual({ shadowBlur: Math.max(0, parseNumber(value, visual.shadowBlur)) }); }
-  function handleShadowOffsetXChange(value: string) { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetX) }); }
-  function handleShadowOffsetYChange(value: string) { updateVisual({ shadowOffsetY: parseNumber(value, visual.shadowOffsetY) }); }
-  function handleDelete() { void deleteSelected(); }
-
+  function handleStrokeToggle(enabled: boolean) { updateTextVisual({ strokeEnabled: enabled }); }
+  function handleStrokeColorChange(value: string) { updateTextVisual({ strokeColor: value }); }
+  function handleStrokeWidthChange(value: string) { updateTextVisual({ strokeWidth: Math.max(0, parseNumber(value, textVisual.strokeWidth)) }); }
+  function handleShadowToggle(enabled: boolean) { updateTextVisual({ shadowEnabled: enabled }); }
+  function handleShadowColorChange(value: string) { updateTextVisual({ shadowColor: value }); }
+  function handleShadowBlurChange(value: string) { updateTextVisual({ shadowBlur: Math.max(0, parseNumber(value, textVisual.shadowBlur)) }); }
+  function handleShadowOffsetXChange(value: string) { updateTextVisual({ shadowOffsetX: parseNumber(value, textVisual.shadowOffsetX) }); }
+  function handleShadowOffsetYChange(value: string) { updateTextVisual({ shadowOffsetY: parseNumber(value, textVisual.shadowOffsetY) }); }
   function handleVerticalAlighmentChange(value: string) {
     updateText({ verticalAlign: value as TextVerticalAlign });
   }
@@ -80,62 +79,64 @@ export function TextElementInspector() {
     updateText({ alignment: value as TextHorizontalAlign });
   }
 
-  function handleTextStyleChange(value: string) {
-    switch (value) {
-      case 'bold':
-        handleBoldToggle();
-        break;
-      case 'italic':
-        handleItalicToggle();
-        break;
-      case 'underline':
-        handleUnderlineToggle();
-        break;
-      case 'strikethrough':
-        handleStrikeToggle();
-        break;
-    }
+  const activeFormattingStyles: string[] = [];
+  if (isBold) activeFormattingStyles.push('bold');
+  if (formatting.italic) activeFormattingStyles.push('italic');
+  if (formatting.underline) activeFormattingStyles.push('underline');
+  if (formatting.strikethrough) activeFormattingStyles.push('strikethrough');
+
+  function handleTextStyleToggle(value: string | string[]) {
+    const next = Array.isArray(value) ? value : [value];
+    const wasBold = isBold;
+    const nowBold = next.includes('bold');
+    if (wasBold !== nowBold) handleBoldToggle();
+
+    const wasItalic = formatting.italic;
+    const nowItalic = next.includes('italic');
+    if (wasItalic !== nowItalic) handleItalicToggle();
+
+    const wasUnderline = formatting.underline;
+    const nowUnderline = next.includes('underline');
+    if (wasUnderline !== nowUnderline) handleUnderlineToggle();
+
+    const wasStrike = formatting.strikethrough;
+    const nowStrike = next.includes('strikethrough');
+    if (wasStrike !== nowStrike) handleStrikeToggle();
   }
 
   return (
     <div className="grid gap-2">
-      <fieldset className={`m-0 min-w-0 border-0 p-0 grid gap-2 ${visual.locked ? 'opacity-50' : ''}`} disabled={visual.locked}>
-        <LabeledField label="Text" wide><FieldTextarea value={textPayload.text} onChange={handleTextChange} /></LabeledField>
+      <fieldset className={`m-0 min-w-0 border-0 p-0 grid gap-2 ${textPayload.locked ? 'opacity-50' : ''}`} disabled={textPayload.locked}>
+        <FieldInput value={textPayload.text} onChange={handleTextChange} />
 
         <div className="grid grid-cols-2 gap-2">
-          <LabeledField label="Font Family"><FieldSelect value={formatting.fontFamily} onChange={handleFontFamilyChange} options={fontOptions} /></LabeledField>
-          <LabeledField label="Weight"><FieldInput type="text" value={formatting.weight} onChange={handleWeightChange} /></LabeledField>
-          <LabeledField label="Size"><FieldInput type="number" value={formatting.fontSize} onChange={handleFontSizeChange} /></LabeledField>
-          <LabeledField label="Line Height"><FieldInput type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} /></LabeledField>
+          <FieldSelect value={formatting.fontFamily} onChange={handleFontFamilyChange} options={fontOptions} />
+          <FieldInput type="text" value={formatting.weight} onChange={handleWeightChange} />
+          <FieldInput icon={<Type01 />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
+          <FieldInput icon={<LineHeight />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
         </div>
 
         <div className="grid gap-1 border-t border-border-secondary pt-1.5">
           <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Formatting</span>
-          {/* <SegmentedControl label="Text formatting">
-            <SegmentedControlItem active={isBold} onClick={handleBoldToggle} title="Bold"><BoldIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={formatting.italic} onClick={handleItalicToggle} title="Italic"><ItalicIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={formatting.underline} onClick={handleUnderlineToggle} title="Underline"><UnderlineIcon /></SegmentedControlItem>
-            <SegmentedControlItem active={formatting.strikethrough} onClick={handleStrikeToggle} title="Strikethrough"><StrikeIcon /></SegmentedControlItem>
-          </SegmentedControl> */}
-          <Control.Root fill className="w-full" value={formatting.alignment} onValueChange={handleTextStyleChange} aria-label="Horizontal text alignment">
-            <Control.Icon fill value="bold" title="Bold" aria-label="Bolc Text">
-              <Bold02 />
-            </Control.Icon>
-            <Control.Icon fill value="italic" title="Italic" aria-label="Italic Text">
-              <Italic01 />
-            </Control.Icon>
-            <Control.Icon fill value="underline" title="Underline" aria-label="Underline Text">
-              <Underline01 />
-            </Control.Icon>
-            <Control.Icon fill value="strikethrough" title="Strikethrough" aria-label="Strikethrough Text">
-              <Strikethrough01 />
-            </Control.Icon>
-          </Control.Root>
+          <SegmentedControl label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
+            <SegmentedControlItem value="bold" title="Bold" variant="icon">
+              <SegmentedControlItemIcon><Bold02 /></SegmentedControlItemIcon>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="italic" title="Italic" variant="icon">
+              <SegmentedControlItemIcon><Italic01 /></SegmentedControlItemIcon>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="underline" title="Underline" variant="icon">
+              <SegmentedControlItemIcon><Underline01 /></SegmentedControlItemIcon>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="strikethrough" title="Strikethrough" variant="icon">
+              <SegmentedControlItemIcon><Strikethrough01 /></SegmentedControlItemIcon>
+            </SegmentedControlItem>
+          </SegmentedControl>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <LabeledField label="Capitalization"><FieldSelect value={formatting.caseTransform} onChange={handleCaseChange} options={CASE_OPTIONS} /></LabeledField>
-          <LabeledField label="Text Color"><FieldInput type="text" value={visual.fillColor} onChange={handleTextColorChange} /></LabeledField>
+          <FieldSelect value={formatting.caseTransform} onChange={handleCaseChange} options={CASE_OPTIONS} />
+          <FieldColor value={textVisual.color} onChange={handleTextColorChange} />
         </div>
 
         <div className="flex gap-2 pt-1.5">
@@ -167,30 +168,22 @@ export function TextElementInspector() {
           </Control.Root>
         </div>
 
-        <CheckboxSection label="Stroke" enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
+        <CheckboxSection label="Text Stroke" enabled={textVisual.strokeEnabled} onToggle={handleStrokeToggle}>
           <div className="grid grid-cols-2 gap-2">
-            <LabeledField label="Color"><FieldInput type="text" value={visual.strokeColor} onChange={handleStrokeColorChange} /></LabeledField>
-            <LabeledField label="Width"><FieldInput type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} /></LabeledField>
+            <FieldColor value={textVisual.strokeColor} onChange={handleStrokeColorChange} />
+            <FieldInput type="number" value={textVisual.strokeWidth} onChange={handleStrokeWidthChange} />
           </div>
         </CheckboxSection>
 
-        <CheckboxSection label="Shadow" enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
+        <CheckboxSection label="Text Shadow" enabled={textVisual.shadowEnabled} onToggle={handleShadowToggle}>
           <div className="grid grid-cols-2 gap-2">
-            <LabeledField label="Color"><FieldInput type="text" value={visual.shadowColor} onChange={handleShadowColorChange} /></LabeledField>
-            <LabeledField label="Blur"><FieldInput type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} /></LabeledField>
-            <LabeledField label="Offset X"><FieldInput type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} /></LabeledField>
-            <LabeledField label="Offset Y"><FieldInput type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} /></LabeledField>
+            <FieldColor value={textVisual.shadowColor} onChange={handleShadowColorChange} />
+            <FieldInput type="number" value={textVisual.shadowBlur} onChange={handleShadowBlurChange} />
+            <FieldInput type="number" value={textVisual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
+            <FieldInput type="number" value={textVisual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
           </div>
         </CheckboxSection>
       </fieldset>
-
-      <div className="mt-2 border-t border-border-secondary pt-2">
-        <Button variant="danger" onClick={handleDelete} disabled={visual.locked}>Delete</Button>
-      </div>
     </div>
   );
 }
-function BoldIcon() { return <span className="text-[12px] font-black">B</span>; }
-function ItalicIcon() { return <span className="text-[12px] italic">I</span>; }
-function UnderlineIcon() { return <span className="text-[12px] underline">U</span>; }
-function StrikeIcon() { return <span className="text-[12px] line-through">S</span>; }

@@ -36,15 +36,15 @@ interface SegmentedControlItemBaseProps extends Omit<ButtonHTMLAttributes<HTMLBu
 
 export function SegmentedControlItemBase({ children, value, variant, fill, onClick, className, disabled = false, type = 'button', ...buttonProps }: SegmentedControlItemBaseProps) {
   const segmentedControl = useSegment();
-  const isActive = segmentedControl.value === value;
   const shouldFill = fill ?? segmentedControl.fill;
+  const isActive = segmentedControl.selectedValue === value;
 
   const handleClick = useCallback(() => {
     if (disabled) {
       return;
     }
 
-    segmentedControl.onItemSelect(value);
+    segmentedControl.onSelect(value);
     onClick?.();
   }, [disabled, onClick, segmentedControl, value]);
 
@@ -55,7 +55,6 @@ export function SegmentedControlItemBase({ children, value, variant, fill, onCli
       onClick={handleClick}
       disabled={disabled}
       aria-pressed={isActive}
-      data-active={isActive}
       className={cn(
         segmentedControlItemStyles({
           active: isActive ? 'true' : 'false',

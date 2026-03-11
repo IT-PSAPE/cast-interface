@@ -4,6 +4,7 @@ import { ContextMenu, type ContextMenuItem } from '../../../components/context-m
 import { Icon } from '../../../components/icon';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
+import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
 import { SceneFrame } from '../../../components/scene-frame';
 import { ThumbnailTile } from '../../../components/thumbnail-tile';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -12,7 +13,6 @@ import { buildPresentationMenuItems } from '../../library-browser/utils/build-pr
 import { useLibraryPanelManagement } from '../../library-browser/hooks/use-library-panel-management';
 import { buildThumbnailScene } from '../../stage/rendering/build-render-scene';
 import { SceneStage } from '../../stage/rendering/scene-stage';
-import { slideTextPreview } from '../../../utils/slides';
 
 interface PresentationBinPanelProps {
   filterText: string;
@@ -25,7 +25,6 @@ interface MenuState {
 }
 
 interface PresentationCardProps {
-  index: number;
   presentation: Presentation;
   slides: Slide[];
   isSelected: boolean;
@@ -37,7 +36,6 @@ interface PresentationCardProps {
 }
 
 function PresentationCard({
-  index,
   presentation,
   slides,
   isSelected,
@@ -51,7 +49,6 @@ function PresentationCard({
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
   const scene = firstSlide ? buildThumbnailScene(firstSlide, firstSlideElements) : null;
-  const previewText = firstSlide ? slideTextPreview(firstSlideElements) : 'No slides yet';
 
   function handleOpen() {
     onOpen(presentation.id);
@@ -92,7 +89,8 @@ function PresentationCard({
               <IconButton
                 label="Presentation options"
                 onClick={handleMenuClick}
-                className="h-5 w-5 border-border-primary bg-background-tertiary/80 text-[11px] leading-none"
+                size="sm"
+                className="border-border-primary bg-background-tertiary/80"
               >
                 <Icon.dots_horizontal size={14} strokeWidth={2} />
               </IconButton>
@@ -100,19 +98,14 @@ function PresentationCard({
           </>
         )}
         caption={(
-          <div className="flex items-start gap-2">
-            <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{index + 1}</span>
-            <div className="min-w-0 flex-1">
-              <EditableText
-                value={presentation.title}
-                onCommit={handleRename}
-                editing={isEditing}
-                className="truncate text-[12px] text-text-secondary"
-              />
-              <div className="truncate text-[11px] text-text-tertiary">
-                {slides.length > 0 ? `${slides.length} slide${slides.length === 1 ? '' : 's'} · ${previewText}` : 'No slides yet'}
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <PresentationEntityIcon entity={presentation} className="shrink-0 text-text-tertiary" size={14} strokeWidth={1.75} />
+            <EditableText
+              value={presentation.title}
+              onCommit={handleRename}
+              editing={isEditing}
+              className="min-w-0 truncate text-[12px] text-text-secondary"
+            />
           </div>
         )}
       />
@@ -143,7 +136,7 @@ export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) 
     return presentations.filter((presentation) => {
       if (!normalizedFilter) return true;
       if (presentation.title.toLowerCase().includes(normalizedFilter)) return true;
-      if (presentation.kind.toLowerCase().includes(normalizedFilter)) return true;
+      if (presentation.entityType.toLowerCase().includes(normalizedFilter)) return true;
       const slides = slidesByPresentationId.get(presentation.id) ?? [];
       return slides.some((slide) => {
         const slideLabel = `slide ${slide.order + 1}`.toLowerCase();
@@ -194,10 +187,9 @@ export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) 
   return (
     <>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-        {filteredPresentations.map((presentation, index) => (
+        {filteredPresentations.map((presentation) => (
           <PresentationCard
             key={presentation.id}
-            index={index}
             presentation={presentation}
             slides={slidesByPresentationId.get(presentation.id) ?? []}
             isSelected={isDetachedPresentationBrowser && currentDrawerPresentationId === presentation.id}

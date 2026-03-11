@@ -44,7 +44,7 @@ export function useLibraryPanelManagement() {
 
   const renamePresentation = useCallback(async (id: Id, title: string) => {
     await mutate(() => window.castApi.renamePresentation(id, title));
-    setStatusText(`Renamed presentation: ${title}`);
+    setStatusText(`Renamed item: ${title}`);
   }, [mutate, setStatusText]);
 
   const deleteLibrary = useCallback(async (id: Id) => {
@@ -64,12 +64,12 @@ export function useLibraryPanelManagement() {
 
   const deletePresentation = useCallback(async (id: Id) => {
     await mutate(() => window.castApi.deletePresentation(id));
-    setStatusText('Deleted presentation');
+    setStatusText('Deleted item');
   }, [mutate, setStatusText]);
 
   const movePresentationToSegment = useCallback(async (playlistId: Id, presentationId: Id, segmentId: Id | null) => {
     await mutate(() => window.castApi.movePresentationToSegment(playlistId, presentationId, segmentId));
-    setStatusText(segmentId ? 'Moved presentation to segment' : 'Removed presentation from playlist');
+    setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
   }, [mutate, setStatusText]);
 
   const movePlaylist = useCallback(async (id: Id, direction: 'up' | 'down') => {
@@ -79,18 +79,17 @@ export function useLibraryPanelManagement() {
 
   const movePresentation = useCallback(async (id: Id, direction: 'up' | 'down') => {
     await mutate(() => window.castApi.movePresentation(id, direction));
-    setStatusText(direction === 'up' ? 'Moved presentation up' : 'Moved presentation down');
+    setStatusText(direction === 'up' ? 'Moved item up' : 'Moved item down');
   }, [mutate, setStatusText]);
 
   const addPresentationToSegment = useCallback(async (segmentId: Id, presentationId: Id) => {
     await mutate(() => window.castApi.addPresentationToSegment(segmentId, presentationId));
-    setStatusText('Added presentation to segment');
+    setStatusText('Added item to segment');
   }, [mutate, setStatusText]);
 
-  const createPresentationInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
+  const createPresentationEntryInSegment = useCallback(async (segmentId: Id, createEntry: () => Promise<AppSnapshot>, statusText: string) => {
     const previousPresentationIds = new Set(snapshot?.presentations.map((presentation) => presentation.id) ?? []);
-
-    const next = await mutate(() => window.castApi.createPresentation('New Presentation'));
+    const next = await mutate(createEntry);
     const createdPresentationId = findCreatedId(
       previousPresentationIds,
       next.presentations.map((presentation) => presentation.id)
@@ -99,9 +98,25 @@ export function useLibraryPanelManagement() {
 
     await mutate(() => window.castApi.createSlide({ presentationId: createdPresentationId }));
     await mutate(() => window.castApi.addPresentationToSegment(segmentId, createdPresentationId));
-    setStatusText('Created presentation and added to segment');
+    setStatusText(statusText);
     return createdPresentationId;
   }, [snapshot, mutate, setStatusText]);
+
+  const createPresentationInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
+    return createPresentationEntryInSegment(
+      segmentId,
+      () => window.castApi.createPresentation('New Presentation'),
+      'Created presentation and added to segment'
+    );
+  }, [createPresentationEntryInSegment]);
+
+  const createLyricInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
+    return createPresentationEntryInSegment(
+      segmentId,
+      () => window.castApi.createLyric('New Lyric'),
+      'Created lyric and added to segment'
+    );
+  }, [createPresentationEntryInSegment]);
 
   return {
     renameLibrary,
@@ -117,6 +132,7 @@ export function useLibraryPanelManagement() {
     movePlaylist,
     movePresentation,
     addPresentationToSegment,
-    createPresentationInSegment
+    createPresentationInSegment,
+    createLyricInSegment
   };
 }

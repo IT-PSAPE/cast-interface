@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { isLyricPresentation } from '@core/presentation-entities';
 import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../utils/slides';
 import { createId } from '../utils/create-id';
@@ -15,7 +16,7 @@ interface CommandsParams {
 }
 
 export function useElementCommands({ currentSlide, currentPresentation, mutate, setStatusText }: CommandsParams) {
-  const isLyricsPresentation = currentPresentation?.kind === 'lyrics';
+  const isLyricsPresentation = isLyricPresentation(currentPresentation);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
   const { slideElementsBySlideId } = useProjectContent();
@@ -260,7 +261,8 @@ function newTextPayload(text: string, fontSize: number, alignment: CanvasTextAli
     weight,
     visible: true,
     locked: false,
-    fillEnabled: true,
+    fillEnabled: false,
+    fillColor: '#00000000',
     strokeEnabled: false,
     shadowEnabled: false,
   };

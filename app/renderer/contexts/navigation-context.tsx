@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Id, LibraryPlaylistBundle, PlaylistTree, Presentation, PresentationKind } from '@core/types';
+import type { Id, LibraryPlaylistBundle, PlaylistTree, Presentation } from '@core/types';
 import { useCast } from './cast-context';
 import { useProjectContent } from './use-project-content';
 
@@ -29,13 +29,13 @@ interface NavigationContextValue {
   createLibrary: () => Promise<void>;
   createPlaylist: () => Promise<void>;
   createPresentation: () => Promise<void>;
+  createLyric: () => Promise<void>;
   createSegment: () => Promise<void>;
   addPresentationToSegment: (segmentId: Id) => Promise<void>;
   moveCurrentPresentationToSegment: (segmentId: Id | null) => Promise<void>;
   renameLibrary: (id: Id, name: string) => Promise<void>;
   renamePlaylist: (id: Id, name: string) => Promise<void>;
   renamePresentation: (id: Id, title: string) => Promise<void>;
-  setPresentationKind: (id: Id, kind: PresentationKind) => Promise<void>;
 }
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
@@ -185,13 +185,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const selectPlaylistPresentation = useCallback((presentationId: Id) => {
     setCurrentPlaylistPresentationId(presentationId);
     setPresentationBrowseSource('playlist');
-    setStatusText('Opened presentation');
+    setStatusText('Opened item');
   }, [setStatusText]);
 
   const browsePresentation = useCallback((presentationId: Id) => {
     setCurrentDrawerPresentationId(presentationId);
     setPresentationBrowseSource('project');
-    setStatusText('Browsing presentation');
+    setStatusText('Browsing item');
   }, [setStatusText]);
 
   const armOutputPresentation = useCallback((presentationId: Id) => {
@@ -236,6 +236,18 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText('Created presentation');
   }, [mutate, presentations, setStatusText]);
 
+  const createLyric = useCallback(async () => {
+    const previousIds = new Set(presentations.map((presentation) => presentation.id));
+    const next = await mutate(() => window.castApi.createLyric('New Lyric'));
+    const createdId = findNewId(previousIds, next.presentations.map((presentation) => presentation.id));
+    if (!createdId) return;
+    await mutate(() => window.castApi.createSlide({ presentationId: createdId }));
+    setCurrentDrawerPresentationId(createdId);
+    setPresentationBrowseSource('project');
+    setRecentlyCreatedId(createdId);
+    setStatusText('Created lyric');
+  }, [mutate, presentations, setStatusText]);
+
   const createSegment = useCallback(async () => {
     if (!currentPlaylistId) return;
     const currentTree = currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId);
@@ -251,13 +263,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const addPresentationToSegment = useCallback(async (segmentId: Id) => {
     if (!currentPresentationId || !currentPlaylistId) return;
     await mutate(() => window.castApi.addPresentationToSegment(segmentId, currentPresentationId));
-    setStatusText('Moved presentation to segment');
+    setStatusText('Moved item to segment');
   }, [currentPlaylistId, currentPresentationId, mutate, setStatusText]);
 
   const moveCurrentPresentationToSegment = useCallback(async (segmentId: Id | null) => {
     if (!currentPresentationId || !currentPlaylistId) return;
     await mutate(() => window.castApi.movePresentationToSegment(currentPlaylistId, currentPresentationId, segmentId));
-    setStatusText(segmentId ? 'Moved presentation to segment' : 'Removed presentation from playlist');
+    setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
   }, [currentPlaylistId, currentPresentationId, mutate, setStatusText]);
 
   const renameLibrary = useCallback(async (id: Id, name: string) => {
@@ -272,12 +284,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const renamePresentation = useCallback(async (id: Id, title: string) => {
     await mutate(() => window.castApi.renamePresentation(id, title));
-    setStatusText(`Renamed presentation: ${title}`);
-  }, [mutate, setStatusText]);
-
-  const setPresentationKind = useCallback(async (id: Id, kind: PresentationKind) => {
-    await mutate(() => window.castApi.setPresentationKind(id, kind));
-    setStatusText(kind === 'lyrics' ? 'Presentation type set to Lyrics' : 'Presentation type set to Canvas');
+    setStatusText(`Renamed item: ${title}`);
   }, [mutate, setStatusText]);
 
   const value = useMemo<NavigationContextValue>(() => ({
@@ -304,13 +311,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     createLibrary,
     createPlaylist,
     createPresentation,
+    createLyric,
     createSegment,
     addPresentationToSegment,
     moveCurrentPresentationToSegment,
     renameLibrary,
     renamePlaylist,
     renamePresentation,
-    setPresentationKind,
   }), [
     addPresentationToSegment,
     armOutputPresentation,
@@ -318,6 +325,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     clearOutputPresentation,
     clearRecentlyCreated,
     createLibrary,
+    createLyric,
     createPlaylist,
     createPresentation,
     createSegment,
@@ -339,7 +347,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renamePresentation,
     selectLibrary,
     selectPlaylistPresentation,
-    setPresentationKind,
     slideCountByPresentation,
   ]);
 

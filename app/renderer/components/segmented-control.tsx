@@ -29,9 +29,10 @@ interface SegmentedControlItemSlotProps {
 }
 
 interface SegmentedControlContextValue {
+  grouped: boolean;
   selectionMode: SegmentedControlSelectionMode;
   selectedValues: string[];
-  updateValue: (value: string) => void;
+  toggleValue: (value: string) => void;
 }
 
 const SegmentedControlContext = createContext<SegmentedControlContextValue | null>(null);
@@ -49,7 +50,7 @@ export function SegmentedControl({ label, children, className = '', selectionMod
     [currentValue, selectionMode],
   );
 
-  function handleValueChange(nextValues: string[]) {
+  function emitValue(nextValues: string[]) {
     const nextValue = selectionMode === 'multiple' ? nextValues : (nextValues[0] ?? '');
     if (!controlled) {
       setInternalValue(nextValue);
@@ -57,22 +58,32 @@ export function SegmentedControl({ label, children, className = '', selectionMod
     onValueChange?.(nextValue);
   }
 
-  function updateValue(nextItemValue: string) {
-    const nextValues = computeNextSelection(selectedValues, nextItemValue, selectionMode);
-    if (selectionMode === 'single' && nextValues[0] === selectedValues[0]) return;
-    if (selectionMode === 'multiple' && selectionsMatch(nextValues, selectedValues)) return;
-    handleValueChange(nextValues);
+  function handleItemToggle(nextValue: string) {
+    if (selectionMode === 'multiple') {
+      const nextValues = selectedValues.includes(nextValue)
+        ? selectedValues.filter((valueEntry) => valueEntry !== nextValue)
+        : [...selectedValues, nextValue];
+      emitValue(nextValues);
+      return;
+    }
+
+    emitValue(selectedValues.includes(nextValue) ? [] : [nextValue]);
   }
 
   const contextValue = useMemo<SegmentedControlContextValue>(() => ({
+    grouped: true,
     selectionMode,
     selectedValues,
-    updateValue,
-  }), [selectedValues, selectionMode, updateValue]);
+    toggleValue: handleItemToggle,
+  }), [selectedValues, selectionMode]);
 
   return (
     <SegmentedControlContext.Provider value={contextValue}>
-      <div role="group" aria-label={label} className={`inline-flex items-center rounded-lg bg-background-tertiary/40 p-0.5 ${className}`}>
+      <div
+        role="group"
+        aria-label={label}
+        className={`inline-flex items-center rounded-lg bg-background-tertiary/40 p-0.5 ${className}`}
+      >
         {children}
       </div>
     </SegmentedControlContext.Provider>
@@ -81,28 +92,30 @@ export function SegmentedControl({ label, children, className = '', selectionMod
 
 export function SegmentedControlItem({ value, title, children, variant = 'label', disabled = false, active, onClick }: SegmentedControlItemProps) {
   const context = useContext(SegmentedControlContext);
-  const itemValue = value ?? null;
-  const contextValue = context && itemValue ? context : null;
-  const resolvedActive = contextValue && itemValue ? contextValue.selectedValues.includes(itemValue) : Boolean(active);
+  const grouped = Boolean(context?.grouped && value);
+  const groupedContext = grouped ? context : null;
+  const isPressed = groupedContext && value ? groupedContext.selectedValues.includes(value) : Boolean(active);
 
   function handleClick() {
     if (disabled) return;
-    if (contextValue && itemValue) contextValue.updateValue(itemValue);
+    if (groupedContext && value) {
+      groupedContext.toggleValue(value);
+    }
     onClick?.();
   }
 
   const paddingClass = variant === 'icon'
     ? 'min-w-7 px-1.5'
     : 'px-3';
-  const stateClass = resolvedActive
-    ? 'bg-background-brand_primary text-text-primary'
-    : 'bg-transparent text-text-tertiary hover:text-text-secondary';
+  const stateClass = isPressed
+    ? 'border border-border-primary bg-background-primary text-text-primary'
+    : 'border border-transparent bg-transparent text-text-tertiary hover:text-text-secondary';
 
   return (
     <button
       type="button"
       title={title}
-      aria-pressed={resolvedActive}
+      aria-pressed={isPressed}
       onClick={handleClick}
       disabled={disabled}
       className={`grid h-7 place-items-center rounded-md text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${paddingClass} ${stateClass}`}
@@ -135,17 +148,4 @@ function normalizeSelection(value: SegmentedControlValue | undefined, selectionM
   if (Array.isArray(value)) return value.filter(Boolean);
   if (selectionMode === 'multiple') return value ? [value] : [];
   return value ? [value] : [];
-}
-
-function computeNextSelection(currentValues: string[], nextItemValue: string, selectionMode: SegmentedControlSelectionMode): string[] {
-  if (selectionMode === 'single') return [nextItemValue];
-  if (currentValues.includes(nextItemValue)) {
-    return currentValues.filter((value) => value !== nextItemValue);
-  }
-  return [...currentValues, nextItemValue];
-}
-
-function selectionsMatch(left: string[], right: string[]): boolean {
-  if (left.length !== right.length) return false;
-  return left.every((value, index) => value === right[index]);
 }

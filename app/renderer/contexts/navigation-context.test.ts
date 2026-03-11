@@ -25,11 +25,11 @@ describe('resolveCurrentPlaylistPresentationId', () => {
         entries: [
           {
             entry: { id: 'entry-1', segmentId: 'segment-1', presentationId: 'p-1', order: 0, createdAt: '', updatedAt: '' },
-            presentation: { id: 'p-1', title: 'Presentation 1', kind: 'canvas', createdAt: '', updatedAt: '' },
+            presentation: { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' },
           },
           {
             entry: { id: 'entry-2', segmentId: 'segment-1', presentationId: 'p-2', order: 1, createdAt: '', updatedAt: '' },
-            presentation: { id: 'p-2', title: 'Presentation 2', kind: 'canvas', createdAt: '', updatedAt: '' },
+            presentation: { id: 'p-2', title: 'Presentation 2', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' },
           },
         ],
       },

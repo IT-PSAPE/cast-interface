@@ -1,6 +1,7 @@
 import { Button } from '../../../components/button';
 import { Icon } from '../../../components/icon';
 import { PanelSection } from '../../../components/panel-section';
+import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
 import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useElements } from '../../../contexts/element-context';
@@ -17,6 +18,7 @@ export function SlideListPanel() {
   const { getSlideElements } = useSlideEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
+  const itemLabel = currentPresentation?.entityType === 'lyric' ? 'Lyrics' : 'Slides';
 
   function handleAddSlide() {
     void createSlide();
@@ -64,20 +66,23 @@ export function SlideListPanel() {
         topPane={(
           <PanelSection
             title={(
-              <span className="truncate text-[12px] font-medium text-text-primary" title={currentPresentation?.title ?? 'No presentation selected'}>
-                {currentPresentation?.title ?? 'No presentation selected'}
+              <span className="flex items-center gap-2">
+                {currentPresentation ? <PresentationEntityIcon entity={currentPresentation} className="shrink-0 text-text-tertiary" /> : null}
+                <span className="truncate text-[12px] font-medium text-text-primary" title={currentPresentation?.title ?? 'No presentation selected'}>
+                  {currentPresentation?.title ?? 'No presentation selected'}
+                </span>
               </span>
             )}
             action={(
               <Button onClick={handleAddSlide} className="grid h-6 w-6 place-items-center p-0 text-[14px] leading-none">
                 <Icon.plus size={14} strokeWidth={2} />
-                <span className="sr-only">Add slide</span>
+                <span className="sr-only">{`Add ${currentPresentation?.entityType === 'lyric' ? 'lyric' : 'slide'}`}</span>
               </Button>
             )}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
-            <div className="grid content-start gap-2" role="grid" aria-label="Presentation slides">
+            <div className="grid content-start gap-2" role="grid" aria-label={`Current ${itemLabel.toLowerCase()}`}>
               {slides.map(renderSlide)}
             </div>
           </PanelSection>

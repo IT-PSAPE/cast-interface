@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { isLyricPresentation } from '@core/presentation-entities';
 import type { Id, Slide, SlideElement } from '@core/types';
 import type { SlideVisualState } from '../../../types/ui';
 import { clamp, getSlideVisualState, replacePrimaryLine, slideTextDetails } from '../../../utils/slides';
@@ -29,9 +30,9 @@ interface OutlineViewModel {
 export function useOutlineView(): OutlineViewModel {
   const { mutate, setStatusText } = useCast();
   const { currentPresentation, currentPresentationId, currentOutputPresentationId, isDetachedPresentationBrowser } = useNavigation();
-  const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, setCurrentSlideIndex } = useSlides();
+  const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
-  const textEditable = currentPresentation?.kind === 'lyrics';
+  const textEditable = isLyricPresentation(currentPresentation);
   const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
 
   const rows = useMemo(() => {
@@ -61,14 +62,14 @@ export function useOutlineView(): OutlineViewModel {
 
   const selectSlide = useCallback((index: number) => {
     if (slides.length === 0) return;
-    setCurrentSlideIndex(clamp(index, 0, slides.length - 1));
-  }, [slides.length, setCurrentSlideIndex]);
+    activateSlide(clamp(index, 0, slides.length - 1));
+  }, [slides.length, activateSlide]);
 
   const openSlide = useCallback((index: number) => {
     if (slides.length === 0) return;
-    setCurrentSlideIndex(clamp(index, 0, slides.length - 1));
+    activateSlide(clamp(index, 0, slides.length - 1));
     setSlideBrowserMode('focus');
-  }, [slides.length, setCurrentSlideIndex, setSlideBrowserMode]);
+  }, [slides.length, activateSlide, setSlideBrowserMode]);
 
   const updatePrimaryText = useCallback((slideId: Id, nextPrimary: string) => {
     const row = rowBySlideId.get(slideId);

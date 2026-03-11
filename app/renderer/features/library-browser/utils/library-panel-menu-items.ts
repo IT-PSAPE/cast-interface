@@ -1,6 +1,9 @@
+import { createElement } from 'react';
 import type { Id, PlaylistTree, Presentation } from '@core/types';
 import type { ContextMenuItem } from '../../../components/context-menu';
+import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
 import type { LibraryPanelView } from '../../../types/ui';
+import { buildCreatePresentationMenuItems } from '../../../utils/build-create-presentation-menu-items';
 import { buildPresentationMenuItems } from './build-presentation-menu-items';
 import { SEGMENT_COLOR_OPTIONS } from './segment-header-color';
 
@@ -30,6 +33,7 @@ interface BuildMenuItemsOptions {
   addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<void>;
   movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<void>;
   createPresentationInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
+  createLyricInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
   beginRenameLibrary: (id: Id) => void;
   beginRenamePlaylist: (id: Id) => void;
   beginRenameSegment: (id: Id) => void;
@@ -37,7 +41,7 @@ interface BuildMenuItemsOptions {
 }
 
 export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): ContextMenuItem[] {
-  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
+  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
 
   if (target.type === 'library') {
     return [
@@ -47,7 +51,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
         label: 'Delete',
         danger: true,
         onSelect: () => {
-          if (!window.confirm('Delete this library and its playlists? Project presentations, media, and overlays will remain.')) return;
+          if (!window.confirm('Delete this library and its playlists? Project presentations and lyrics, media, and overlays will remain.')) return;
           void deleteLibrary(target.id);
           setLibraryPanelView('libraries');
         }
@@ -78,6 +82,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
     const addPresentationChildren = libraryPresentations.map((presentation) => ({
       id: `add-presentation-${presentation.id}`,
       label: presentation.title,
+      icon: createElement(PresentationEntityIcon, { entity: presentation, size: 14, strokeWidth: 1.75 }),
       onSelect: () => {
         void addPresentationToSegment(target.id, presentation.id);
         selectPlaylistPresentation(presentation.id);
@@ -106,21 +111,26 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
       },
       {
         id: 'segment-add-presentation',
-        label: 'Add Presentation',
+        label: 'Add Existing',
         disabled: addPresentationChildren.length === 0,
         children: addPresentationChildren
       },
       {
         id: 'segment-add-new-presentation',
-        label: 'Add New Presentation',
+        label: 'Add New',
         disabled: !currentLibraryId,
-        onSelect: () => {
-          if (!currentLibraryId) return;
-          void createPresentationInSegment(currentLibraryId, target.id).then((createdPresentationId) => {
+        children: currentLibraryId ? buildCreatePresentationMenuItems({
+          createPresentation: async () => {
+            const createdPresentationId = await createPresentationInSegment(currentLibraryId, target.id);
             if (!createdPresentationId) return;
             selectPlaylistPresentation(createdPresentationId);
-          });
-        }
+          },
+          createLyric: async () => {
+            const createdPresentationId = await createLyricInSegment(currentLibraryId, target.id);
+            if (!createdPresentationId) return;
+            selectPlaylistPresentation(createdPresentationId);
+          }
+        }) : []
       },
       {
         id: 'delete-segment',

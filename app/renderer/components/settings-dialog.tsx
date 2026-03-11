@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Icon } from './icon';
 import { useTheme } from '../contexts/theme-context';
 import type { ThemeMode } from '../types/ui';
+import { DialogFrame } from './dialog-frame';
+import { SegmentedControl as Control } from './segmented-controls';
 
 interface SettingsDialogProps {
   onClose: () => void;
@@ -15,89 +15,49 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; description: string }[] 
 
 export function SettingsDialog({ onClose }: SettingsDialogProps) {
   const { themeMode, setThemeMode } = useTheme();
-  const backdropRef = useRef<HTMLDivElement>(null);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  function handleBackdropClick(e: React.MouseEvent) {
-    if (e.target === backdropRef.current) onClose();
-  }
-
-  function handleThemeChange(mode: ThemeMode) {
-    setThemeMode(mode);
+  function handleThemeChange(mode: string) {
+    if (mode === 'light' || mode === 'dark' || mode === 'system') {
+      setThemeMode(mode);
+    }
   }
 
   return (
-    <div
-      ref={backdropRef}
+    <DialogFrame
+      title="Settings"
+      onClose={onClose}
       data-ui-region="settings-dialog"
-      className="pointer-events-auto absolute inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
+      popupClassName="max-w-[360px]"
     >
-      <div className="w-[360px] rounded-lg border border-border-primary bg-primary shadow-2xl">
-        <header className="flex items-center justify-between border-b border-border-primary px-4 py-3">
-          <h2 className="m-0 text-[14px] font-semibold text-text-primary">Settings</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
-            aria-label="Close"
-          >
-            <Icon.x_close size={14} strokeWidth={2} />
-          </button>
-        </header>
-
-        <div className="p-4">
-          <fieldset className="m-0 border-0 p-0">
-            <legend className="mb-2 text-[12px] font-medium uppercase tracking-wider text-text-tertiary">
-              Appearance
-            </legend>
-            <div className="flex gap-2">
-              {THEME_OPTIONS.map((option) => renderThemeOption(option, themeMode, handleThemeChange))}
-            </div>
-          </fieldset>
-        </div>
+      <div className="p-4">
+        <fieldset className="m-0 border-0 p-0">
+          <legend className="mb-2 text-[12px] font-medium uppercase tracking-wider text-text-tertiary">
+            Appearance
+          </legend>
+          <Control.Root value={themeMode} onValueChange={handleThemeChange} className="grid grid-cols-3 gap-2 bg-transparent p-0" fill aria-label="Appearance">
+            {THEME_OPTIONS.map(renderThemeOption)}
+          </Control.Root>
+        </fieldset>
       </div>
-    </div>
+    </DialogFrame>
   );
 }
 
-function renderThemeOption(
-  option: { value: ThemeMode; label: string; description: string },
-  currentMode: ThemeMode,
-  onChange: (mode: ThemeMode) => void,
-) {
-  const isActive = currentMode === option.value;
-  const borderClass = isActive
-    ? 'border-brand ring-1 ring-brand-400'
-    : 'border-border-primary hover:border-text-tertiary';
-
-  function handleClick() {
-    onChange(option.value);
-  }
-
+function renderThemeOption(option: { value: ThemeMode; label: string; description: string }) {
   return (
-    <button
+    <Control.Label
       key={option.value}
-      type="button"
-      onClick={handleClick}
-      className={`flex flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${borderClass} bg-background-tertiary`}
+      value={option.value}
+      className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border border-border-primary bg-background-tertiary p-3 text-center transition-colors hover:border-text-tertiary"
     >
-      <ThemePreviewIcon mode={option.value} active={isActive} />
+      <ThemePreviewIcon mode={option.value} />
       <span className="text-[12px] font-medium text-text-primary">{option.label}</span>
-    </button>
+    </Control.Label>
   );
 }
 
-function ThemePreviewIcon({ mode, active }: { mode: ThemeMode; active: boolean }) {
-  const strokeColor = active ? 'var(--color-border-brand)' : 'var(--color-border-primary)';
+function ThemePreviewIcon({ mode }: { mode: ThemeMode }) {
+  const strokeColor = 'var(--color-border-primary)';
 
   if (mode === 'light') {
     return (

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ContextMenu } from '../../../components/context-menu';
 import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -12,7 +13,7 @@ import { PlaylistItemList } from './playlist-item-list';
 import { PlaylistList } from './playlist-list';
 
 export function LibraryPanel() {
-  const { currentLibraryBundle, currentLibraryId, currentPlaylistId } = useNavigation();
+  const { currentLibraryBundle, currentLibraryId, currentPlaylistId, clearRecentlyCreated } = useNavigation();
   const { presentations } = useProjectContent();
   const { selectPlaylistPresentation } = useSlides();
   const { libraryPanelView, setLibraryPanelView } = useLibraryPanelState();
@@ -28,7 +29,8 @@ export function LibraryPanel() {
     setSegmentColor,
     movePresentationToSegment,
     addPresentationToSegment,
-    createPresentationInSegment
+    createPresentationInSegment,
+    createLyricInSegment
   } = useLibraryPanelManagement();
 
   const selectedTree = currentLibraryBundle?.playlists.find((playlist) => playlist.playlist.id === currentPlaylistId) ?? null;
@@ -75,8 +77,15 @@ export function LibraryPanel() {
     setSegmentColor,
     addPresentationToSegment,
     movePresentationToSegment,
-    createPresentationInSegment
+    createPresentationInSegment,
+    createLyricInSegment
   });
+
+  useEffect(() => {
+    if (libraryPanelView === 'libraries') return;
+    clearEditingLibrary();
+    clearRecentlyCreated();
+  }, [clearEditingLibrary, clearRecentlyCreated, libraryPanelView]);
 
   return (
     <aside

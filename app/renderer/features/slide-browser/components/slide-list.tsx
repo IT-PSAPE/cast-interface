@@ -31,7 +31,7 @@ export function SlideList() {
   }
 
   return (
-    <section className="min-h-0 overflow-y-auto p-2">
+    <section className="h-full min-h-0 overflow-y-auto p-2">
       <div className="grid content-start gap-2" role="list" aria-label="Slide outline">
         {rows.map(renderRow)}
       </div>

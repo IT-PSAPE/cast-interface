@@ -35,6 +35,14 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
     strikethrough?: boolean;
     lineHeight?: number;
     weight?: string;
+    textStrokeEnabled?: boolean;
+    textStrokeColor?: string;
+    textStrokeWidth?: number;
+    textShadowEnabled?: boolean;
+    textShadowColor?: string;
+    textShadowBlur?: number;
+    textShadowOffsetX?: number;
+    textShadowOffsetY?: number;
   };
 
   const fontStyle = resolveKonvaTextStyle(payload.weight, payload.italic);
@@ -44,7 +52,21 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
 
   return (
     <>
-      <Rect x={0} y={0} width={element.width} height={element.height} fill="#000000" opacity={0} listening={false} />
+      <Rect
+        x={0}
+        y={0}
+        width={element.width}
+        height={element.height}
+        fill={node.visual.fillEnabled ? node.visual.fillColor : 'transparent'}
+        stroke={node.visual.strokeEnabled ? node.visual.strokeColor : undefined}
+        strokeWidth={node.visual.strokeEnabled ? node.visual.strokeWidth : 0}
+        shadowEnabled={node.visual.shadowEnabled}
+        shadowColor={node.visual.shadowColor}
+        shadowBlur={node.visual.shadowBlur}
+        shadowOffsetX={node.visual.shadowOffsetX}
+        shadowOffsetY={node.visual.shadowOffsetY}
+        listening={false}
+      />
       <Text
         x={0}
         y={0}
@@ -57,15 +79,15 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
         fontStyle={fontStyle}
         align={textAlign(payload.alignment ?? 'left')}
         lineHeight={lineHeight}
-        fill={node.visual.fillEnabled ? payload.color : 'transparent'}
+        fill={payload.color}
         textDecoration={`${payload.underline ? 'underline' : ''} ${payload.strikethrough ? 'line-through' : ''}`.trim()}
-        stroke={node.visual.strokeEnabled ? node.visual.strokeColor : undefined}
-        strokeWidth={node.visual.strokeEnabled ? node.visual.strokeWidth : 0}
-        shadowEnabled={node.visual.shadowEnabled}
-        shadowColor={node.visual.shadowColor}
-        shadowBlur={node.visual.shadowBlur}
-        shadowOffsetX={node.visual.shadowOffsetX}
-        shadowOffsetY={node.visual.shadowOffsetY}
+        stroke={payload.textStrokeEnabled ? payload.textStrokeColor : undefined}
+        strokeWidth={payload.textStrokeEnabled ? payload.textStrokeWidth ?? 0 : 0}
+        shadowEnabled={payload.textShadowEnabled}
+        shadowColor={payload.textShadowColor}
+        shadowBlur={payload.textShadowBlur}
+        shadowOffsetX={payload.textShadowOffsetX}
+        shadowOffsetY={payload.textShadowOffsetY}
       />
     </>
   );

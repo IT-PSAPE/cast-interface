@@ -421,6 +421,7 @@ body,
   font-size: 14px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  isolation: isolate;
 }
 
 button,
@@ -428,6 +429,42 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/* SCROLLBAR */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+[data-theme="dark"] * {
+  scrollbar-color: var(--color-gray-700) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--color-gray-700);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-600);
 }
 
 button:focus-visible,

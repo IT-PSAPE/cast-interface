@@ -59,7 +59,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
         <div className="flex items-center">
           <Control.Root value={workbenchMode} onValueChange={handleWorkbenchModeChange} aria-label="Application views">
             <Control.Label value="show">Show</Control.Label>
-            <Control.Label value="slide-editor">Slides</Control.Label>
+            <Control.Label value="slide-editor">Edit</Control.Label>
             <Control.Label value="overlay-editor">Overlay</Control.Label>
           </Control.Root>
         </div>

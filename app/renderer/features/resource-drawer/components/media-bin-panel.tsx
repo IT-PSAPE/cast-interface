@@ -4,6 +4,7 @@ import { Icon } from '../../../components/icon';
 import { ContextMenu } from '../../../components/context-menu';
 import type { ContextMenuItem } from '../../../components/context-menu';
 import { IconButton } from '../../../components/icon-button';
+import { MediaAssetIcon } from '../../../components/media-asset-icon';
 import { ThumbnailTile } from '../../../components/thumbnail-tile';
 import { useElements } from '../../../contexts/element-context';
 import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
@@ -66,7 +67,7 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
   return (
     <>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
-        {mediaAssets.map((asset, index) => {
+        {mediaAssets.map((asset) => {
           function handleDragStart(e: React.DragEvent) { e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset)); }
           function handleAssignLayer() { setMediaLayerAsset(asset.id); }
           function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
@@ -88,13 +89,18 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
                   <>
                     <MediaThumbnail asset={asset} />
                     <div className="absolute right-1 top-1 hidden group-hover:block">
-                      <IconButton label="Media options" onClick={handleMenuClick} className="h-5 w-5 border-border-primary bg-background-tertiary/80 text-[11px] leading-none">
+                      <IconButton label="Media options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
                         <Icon.dots_horizontal size={14} strokeWidth={2} />
                       </IconButton>
                     </div>
                   </>
                 }
-                caption={<><span className="text-text-tertiary">{index + 1}</span> {asset.name}</>}
+                caption={(
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                      <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="text-text-tertiary" />
+                      <span className="truncate">{asset.name}</span>
+                  </span>
+                )}
               />
             </div>
           );
