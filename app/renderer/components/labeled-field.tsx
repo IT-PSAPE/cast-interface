@@ -21,7 +21,7 @@ export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, s
   }
 
   const input = (
-    <div className="flex min-w-0 items-center min-h-8 rounded bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -86,19 +86,20 @@ export function FieldTextarea({ value, onChange, placeholder, className = '', la
 interface FieldSelectProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   options: Array<{ value: string; label: string; style?: CSSProperties }>;
   icon?: ReactNode;
   label?: string;
   wide?: boolean;
 }
 
-export function FieldSelect({ value, onChange, options, icon, label, wide }: FieldSelectProps) {
+export function FieldSelect({ value, onChange, onBlur, options, icon, label, wide }: FieldSelectProps) {
   function handleValueChange(event: React.ChangeEvent<HTMLSelectElement>) {
     onChange(event.target.value);
   }
 
   const select = (
-    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -107,6 +108,7 @@ export function FieldSelect({ value, onChange, options, icon, label, wide }: Fie
       <select
         value={value}
         onChange={handleValueChange}
+        onBlur={onBlur}
         className={`min-w-0 w-full min-h-8 bg-transparent py-1 pr-2 outline-none ${icon ? 'pl-1' : 'pl-1.5'}`}
       >
         {options.map((opt) => (
@@ -171,7 +173,7 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
   }
 
   const colorField = (
-    <div className="flex min-w-0 items-center gap-1.5 min-h-8 rounded bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
       <button
         type="button"
         onClick={handleSwatchClick}

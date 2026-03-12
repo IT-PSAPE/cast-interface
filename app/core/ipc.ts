@@ -52,6 +52,7 @@ export interface MainApi {
   deletePlaylistSegment: (id: Id) => Promise<AppSnapshot>;
   deletePresentation: (id: Id) => Promise<AppSnapshot>;
   sendNdiFrame: (frame: SlideFrame) => Promise<void>;
+  sendNdiFrameZeroCopy: (frame: SlideFrame) => void;
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => Promise<NdiOutputState>;
   getNdiOutputState: () => Promise<NdiOutputState>;
 }
@@ -98,5 +99,6 @@ export const IPC = {
 } as const;
 
 export const NDI_EVENTS = {
-  outputStateChanged: 'ndi:outputStateChanged'
+  outputStateChanged: 'ndi:outputStateChanged',
+  framePort: 'ndi:framePort'
 } as const;

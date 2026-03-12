@@ -53,6 +53,24 @@ function emptyOverlayPayload(): SlideElementPayload {
   };
 }
 
+function normalizeOverlayAnimation(animation: unknown): Required<Overlay['animation']> {
+  const parsed = animation as Partial<Overlay['animation']> | null | undefined;
+  const rawKind = parsed?.kind;
+  const kind = rawKind === 'dissolve' || rawKind === 'fade' || rawKind === 'pulse'
+    ? 'dissolve'
+    : 'none';
+  const durationMs = Math.max(0, Number.isFinite(parsed?.durationMs) ? parsed?.durationMs ?? 0 : 0);
+  const autoClearDurationMs = parsed?.autoClearDurationMs == null
+    ? null
+    : Math.max(0, Number.isFinite(parsed.autoClearDurationMs) ? parsed.autoClearDurationMs : 0);
+
+  return {
+    kind,
+    durationMs,
+    autoClearDurationMs,
+  };
+}
+
 function summarizeOverlayElements(elements: SlideElement[]): Pick<Overlay, 'type' | 'x' | 'y' | 'width' | 'height' | 'opacity' | 'zIndex' | 'payload'> {
   const primary = elements
     .slice()
@@ -1311,7 +1329,7 @@ export class CastRepository {
         1,
         JSON.stringify(summary.payload),
         JSON.stringify(elements),
-        JSON.stringify(input.animation ?? { kind: 'none', durationMs: 0 }),
+        JSON.stringify(normalizeOverlayAnimation(input.animation ?? { kind: 'none', durationMs: 0, autoClearDurationMs: null })),
         now,
         now
       );
@@ -1361,7 +1379,7 @@ export class CastRepository {
         summary.zIndex,
         JSON.stringify(summary.payload),
         JSON.stringify(nextElements),
-        JSON.stringify(input.animation ?? parseJson(existing.animation_json)),
+        JSON.stringify(normalizeOverlayAnimation(input.animation ?? parseJson(existing.animation_json))),
         nowIso(),
         input.id,
       );
@@ -1792,7 +1810,7 @@ export class CastRepository {
       enabled: row.enabled === 1,
       payload: parseJson(row.payload_json),
       elements: parseJson<SlideElement[]>(row.elements_json),
-      animation: parseJson(row.animation_json),
+      animation: normalizeOverlayAnimation(parseJson(row.animation_json)),
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));

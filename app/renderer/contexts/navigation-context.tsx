@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { isLyricPresentation } from '@core/presentation-entities';
 import type { Id, LibraryPlaylistBundle, PlaylistTree, Presentation } from '@core/types';
 import { useCast } from './cast-context';
 import { useProjectContent } from './use-project-content';
@@ -55,6 +56,18 @@ export function resolveCurrentPlaylistPresentationId(currentPresentationId: Id |
   return presentationIds[0] ?? null;
 }
 
+export function resolvePinnedLyricPresentationId(
+  currentPresentationId: Id | null,
+  selectedTree: PlaylistTree | null,
+  presentationsById: ReadonlyMap<Id, Presentation>,
+): Id | null {
+  if (currentPresentationId && isLyricPresentation(presentationsById.get(currentPresentationId) ?? null)) {
+    return resolveCurrentPresentationId(currentPresentationId, presentationsById.keys());
+  }
+
+  return resolveCurrentPlaylistPresentationId(currentPresentationId, selectedTree);
+}
+
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const { snapshot, mutate, setStatusText } = useCast();
   const { presentations, slides, presentationsById } = useProjectContent();
@@ -98,9 +111,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setCurrentDrawerPresentationId(nextDrawerPresentationId);
     }
 
-    const nextPlaylistPresentationId = resolveCurrentPlaylistPresentationId(
+    const nextPlaylistPresentationId = resolvePinnedLyricPresentationId(
       currentPlaylistPresentationId,
       selectedTree,
+      presentationsById,
     );
     if (nextPlaylistPresentationId !== currentPlaylistPresentationId) {
       setCurrentPlaylistPresentationId(nextPlaylistPresentationId);
@@ -110,9 +124,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setCurrentOutputPresentationId(nextPlaylistPresentationId);
       setHasInitializedOutput(true);
     } else if (currentOutputPresentationId !== null) {
-      const nextOutputPresentationId = resolveCurrentPlaylistPresentationId(
+      const nextOutputPresentationId = resolvePinnedLyricPresentationId(
         currentOutputPresentationId,
         selectedTree,
+        presentationsById,
       );
       if (nextOutputPresentationId !== currentOutputPresentationId) {
         setCurrentOutputPresentationId(nextOutputPresentationId);
@@ -131,6 +146,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     hasInitializedOutput,
     presentationBrowseSource,
     presentations,
+    presentationsById,
     snapshot,
   ]);
 

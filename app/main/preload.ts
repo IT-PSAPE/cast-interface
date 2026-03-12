@@ -15,6 +15,15 @@ import type {
   SlideFrame
 } from '@core/types';
 
+let ndiFramePort: MessagePort | null = null;
+
+ipcRenderer.on(NDI_EVENTS.framePort, (event) => {
+  const [port] = event.ports;
+  if (port) {
+    ndiFramePort = port;
+  }
+});
+
 const api = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
@@ -56,6 +65,20 @@ const api = {
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
   deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
   sendNdiFrame: (frame: SlideFrame) => ipcRenderer.invoke(IPC.sendNdiFrame, frame),
+  sendNdiFrameZeroCopy: (frame: SlideFrame) => {
+    if (!ndiFramePort) {
+      ipcRenderer.invoke(IPC.sendNdiFrame, frame);
+      return;
+    }
+    const rgba = frame.rgba.buffer.slice(
+      frame.rgba.byteOffset,
+      frame.rgba.byteOffset + frame.rgba.byteLength
+    );
+    ndiFramePort.postMessage(
+      { width: frame.width, height: frame.height, rgba, timestamp: frame.timestamp },
+      [rgba]
+    );
+  },
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),
   getNdiOutputState: () => ipcRenderer.invoke(IPC.getNdiOutputState),

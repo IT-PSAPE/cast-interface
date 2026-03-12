@@ -176,8 +176,9 @@ export interface MediaAsset {
 export type OverlayType = 'image' | 'shape' | 'text' | 'video';
 
 export interface OverlayAnimation {
-  kind: 'none' | 'pulse' | 'fade';
+  kind: 'none' | 'dissolve' | 'fade' | 'pulse';
   durationMs: number;
+  autoClearDurationMs?: number | null;
 }
 
 export interface Overlay {

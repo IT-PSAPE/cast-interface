@@ -125,12 +125,8 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   }, [armOutputPresentation, selectPlaylistPresentationInNavigation, updateLiveSlideIndex]);
 
   const selectPlaylistPresentation = useCallback((presentationId: Id) => {
-    const presentationSlides = slidesByPresentationId.get(presentationId) ?? [];
-    const nextIndex = presentationSlides.length > 0
-      ? resolveSlideIndex(presentationId, playlistSelectedSlideIndices, presentationSlides.length)
-      : null;
-    activatePlaylistPresentation(presentationId, nextIndex);
-  }, [activatePlaylistPresentation, playlistSelectedSlideIndices, slidesByPresentationId]);
+    selectPlaylistPresentationInNavigation(presentationId);
+  }, [selectPlaylistPresentationInNavigation]);
 
   const setCurrentSlideIndex = useCallback((index: number) => {
     if (!currentPresentationId || slides.length === 0) return;
@@ -208,8 +204,8 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     if (presentationSlides.length === 0) return;
     const nextIndex = clamp(index, 0, presentationSlides.length - 1);
     updatePlaylistSelectedSlideIndex(presentationId, nextIndex);
-    activatePlaylistPresentation(presentationId, nextIndex);
-  }, [activatePlaylistPresentation, slidesByPresentationId, updatePlaylistSelectedSlideIndex]);
+    selectPlaylistPresentationInNavigation(presentationId);
+  }, [selectPlaylistPresentationInNavigation, slidesByPresentationId, updatePlaylistSelectedSlideIndex]);
 
   const activatePresentationSlide = useCallback((presentationId: Id, index: number) => {
     const presentationSlides = slidesByPresentationId.get(presentationId) ?? [];

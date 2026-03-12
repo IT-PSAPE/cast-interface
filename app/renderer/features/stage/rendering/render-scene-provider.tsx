@@ -36,7 +36,7 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   const { effectiveElements } = useElements();
   const { currentOverlay } = useOverlayEditor();
   const { getSlideElements } = useSlideEditor();
-  const { mediaLayerAsset, overlayLayer, contentLayerVisible } = usePresentationLayers();
+  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
 
@@ -54,10 +54,14 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       slide: liveSlide,
       contentElements: liveElements,
       mediaAsset: mediaLayerAsset,
-      overlay: overlayLayer,
+      overlays: activeOverlays.map((overlay) => ({
+        overlay: overlay.overlay,
+        opacityMultiplier: overlay.opacityMultiplier,
+        stackOrder: overlay.stackOrder,
+      })),
       includeContent: contentLayerVisible,
     });
-  }, [contentLayerVisible, liveElements, liveSlide, mediaLayerAsset, overlayLayer]);
+  }, [activeOverlays, contentLayerVisible, liveElements, liveSlide, mediaLayerAsset]);
 
   // Freeze the output scene when editing so NDI output stays stable
   const isEditing = workbenchMode !== 'show';

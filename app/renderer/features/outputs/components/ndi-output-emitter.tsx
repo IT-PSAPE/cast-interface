@@ -9,21 +9,16 @@ const OUTPUT_FPS = 30;
 export function NdiOutputEmitter() {
   const { outputScene } = useRenderScenes();
   const { outputState } = useNdi();
-  const frameBusyRef = useRef(false);
   const hasEnabledOutput = outputState.audience;
+  if (!hasEnabledOutput) return null;
+
   const hasEnabledOutputRef = useRef(hasEnabledOutput);
   hasEnabledOutputRef.current = hasEnabledOutput;
   const fixedViewport = useMemo(() => ({ width: outputScene.width, height: outputScene.height }), [outputScene.width, outputScene.height]);
 
   const handleFrame = useCallback((frame: SlideFrame) => {
     if (!hasEnabledOutputRef.current) return;
-    if (frameBusyRef.current) return;
-    frameBusyRef.current = true;
-    const sendPromise = window.castApi.sendNdiFrame(frame);
-    void sendPromise.then(
-      () => { frameBusyRef.current = false; },
-      () => { frameBusyRef.current = false; },
-    );
+    window.castApi.sendNdiFrameZeroCopy(frame);
   }, []);
 
   return (
@@ -32,7 +27,7 @@ export function NdiOutputEmitter() {
         scene={outputScene}
         className="h-full w-full"
         fixedViewport={fixedViewport}
-        emitFramesFps={hasEnabledOutput ? OUTPUT_FPS : null}
+        emitFramesFps={OUTPUT_FPS}
         onFrame={handleFrame}
       />
     </div>

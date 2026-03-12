@@ -62,6 +62,7 @@ using FnNdiDestroy = void (*)();
 using FnNdiSendCreate = NDIlib_send_instance_t (*)(const NDIlib_send_create_t*);
 using FnNdiSendDestroy = void (*)(NDIlib_send_instance_t);
 using FnNdiSendVideoV2 = void (*)(NDIlib_send_instance_t, const NDIlib_video_frame_v2_t*);
+using FnNdiSendVideoAsyncV2 = void (*)(NDIlib_send_instance_t, const NDIlib_video_frame_v2_t*);
 using FnNdiSendGetNoConnections = int32_t (*)(NDIlib_send_instance_t, uint32_t);
 
 struct NdiSymbols {
@@ -70,6 +71,7 @@ struct NdiSymbols {
   FnNdiSendCreate sendCreate = nullptr;
   FnNdiSendDestroy sendDestroy = nullptr;
   FnNdiSendVideoV2 sendVideoV2 = nullptr;
+  FnNdiSendVideoAsyncV2 sendVideoAsyncV2 = nullptr;
   FnNdiSendGetNoConnections sendGetNoConnections = nullptr;
 };
 
@@ -156,12 +158,15 @@ class DynamicLibrary {
   void* handle_ = nullptr;
 };
 
+constexpr int kDoubleBufferCount = 2;
+
 struct SenderInstance {
   NDIlib_send_instance_t sender = nullptr;
   int32_t width = 0;
   int32_t height = 0;
   bool withAlpha = true;
-  std::vector<uint8_t> bgraScratch;
+  std::vector<uint8_t> bgraScratch[kDoubleBufferCount];
+  int currentBuffer = 0;
 };
 
 struct SenderState {
@@ -318,6 +323,8 @@ void LoadRuntimeIfNeeded(SenderState& state) {
   state.symbols.sendCreate = ResolveRequired<FnNdiSendCreate>(state.runtime, "NDIlib_send_create");
   state.symbols.sendDestroy = ResolveRequired<FnNdiSendDestroy>(state.runtime, "NDIlib_send_destroy");
   state.symbols.sendVideoV2 = ResolveRequired<FnNdiSendVideoV2>(state.runtime, "NDIlib_send_send_video_v2");
+  state.symbols.sendVideoAsyncV2 =
+      ResolveOptional<FnNdiSendVideoAsyncV2>(state.runtime, "NDIlib_send_send_video_async_v2");
   state.symbols.sendGetNoConnections =
       ResolveOptional<FnNdiSendGetNoConnections>(state.runtime, "NDIlib_send_get_no_connections");
 
@@ -341,15 +348,23 @@ void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance* sender) {
     return;
   }
 
-  if (sender->sender != nullptr && state.symbols.sendDestroy != nullptr) {
-    state.symbols.sendDestroy(sender->sender);
+  if (sender->sender != nullptr) {
+    if (state.symbols.sendVideoAsyncV2 != nullptr) {
+      state.symbols.sendVideoAsyncV2(sender->sender, nullptr);
+    }
+    if (state.symbols.sendDestroy != nullptr) {
+      state.symbols.sendDestroy(sender->sender);
+    }
   }
 
   sender->sender = nullptr;
   sender->width = 0;
   sender->height = 0;
   sender->withAlpha = true;
-  std::vector<uint8_t>().swap(sender->bgraScratch);
+  sender->currentBuffer = 0;
+  for (int i = 0; i < kDoubleBufferCount; ++i) {
+    std::vector<uint8_t>().swap(sender->bgraScratch[i]);
+  }
 }
 
 void DestroyAllSendersUnlocked(SenderState& state) {
@@ -416,7 +431,9 @@ void EnsureSender(SenderState& state,
     throw std::runtime_error("invalid sender dimensions");
   }
 
-  instance.bgraScratch.resize(size);
+  for (int i = 0; i < kDoubleBufferCount; ++i) {
+    instance.bgraScratch[i].resize(size);
+  }
   state.senders[senderName] = std::move(instance);
 }
 
@@ -540,12 +557,15 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  if (sender.bgraScratch.size() < targetSize) {
-    sender.bgraScratch.resize(targetSize);
+  const int bufIdx = sender.currentBuffer;
+  std::vector<uint8_t>& scratch = sender.bgraScratch[bufIdx];
+
+  if (scratch.size() < targetSize) {
+    scratch.resize(targetSize);
   }
 
   ConvertRgbaToBgra(rgba.Data(),
-                    sender.bgraScratch.data(),
+                    scratch.data(),
                     width,
                     height,
                     stride,
@@ -561,12 +581,18 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
   frame.frame_format_type = kFrameFormatProgressive;
   frame.timecode = kTimecodeSynthesize;
-  frame.p_data = sender.bgraScratch.data();
+  frame.p_data = scratch.data();
   frame.line_stride_in_bytes = targetStride;
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  state.symbols.sendVideoV2(sender.sender, &frame);
+  if (state.symbols.sendVideoAsyncV2 != nullptr) {
+    state.symbols.sendVideoAsyncV2(sender.sender, &frame);
+    sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
+  } else {
+    state.symbols.sendVideoV2(sender.sender, &frame);
+  }
+
   return env.Undefined();
 }
 

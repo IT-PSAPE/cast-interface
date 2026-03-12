@@ -36,7 +36,7 @@ export function InspectorPanel() {
 
   return (
     <aside data-ui-region="inspector-panel" className="flex flex-col h-full min-h-0 overflow-hidden border-l border-border-primary bg-primary" >
-      <InspectorTabsPanel className="flex-1" bodyClassName="p-3" />
+      <InspectorTabsPanel className="flex-1" />
       {(isOverlayEdit || isSlideEdit) && hasPendingChanges ? (
         <div className="mt-auto border-t border-border-primary p-3">
           <Button onClick={handlePushChanges} disabled={isPushingChanges} className='w-full'>

@@ -1,59 +1,142 @@
 import { useEffect, useState } from 'react';
-import { Button } from '../../../components/button';
-import { FieldInput } from '../../../components/labeled-field';
+import { FieldInput, FieldSelect } from '../../../components/labeled-field';
 import { useCast } from '../../../contexts/cast-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
-import { useElements } from '../../../contexts/element-context';
+
+const TRANSITION_OPTIONS = [
+  { value: 'none', label: 'Cut' },
+  { value: 'dissolve', label: 'Dissolve' },
+];
 
 export function SlideInspector() {
   const { setStatusText } = useCast();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { workbenchMode } = useWorkbench();
-  const { effectiveElements } = useElements();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const [overlayNameDraft, setOverlayNameDraft] = useState('');
-
-  const canRenameOverlay = Boolean(
-    isOverlayEdit &&
-    currentOverlay &&
-    overlayNameDraft.trim() &&
-    overlayNameDraft.trim() !== currentOverlay.name,
-  );
+  const [transitionKindDraft, setTransitionKindDraft] = useState('none');
+  const [transitionDurationDraft, setTransitionDurationDraft] = useState('0');
+  const [autoClearDurationDraft, setAutoClearDurationDraft] = useState('');
 
   useEffect(() => {
     if (!currentOverlay) {
       setOverlayNameDraft('');
+      setTransitionKindDraft('none');
+      setTransitionDurationDraft('0');
+      setAutoClearDurationDraft('');
       return;
     }
+
     setOverlayNameDraft(currentOverlay.name);
+    setTransitionKindDraft(currentOverlay.animation.kind === 'dissolve' ? 'dissolve' : 'none');
+    setTransitionDurationDraft(String(currentOverlay.animation.durationMs));
+    setAutoClearDurationDraft(
+      currentOverlay.animation.autoClearDurationMs == null
+        ? ''
+        : String(currentOverlay.animation.autoClearDurationMs),
+    );
   }, [currentOverlay]);
 
   function handleOverlayNameChange(value: string) {
     setOverlayNameDraft(value);
   }
 
-  function handleRenameOverlay() {
-    if (!currentOverlay) return;
-    const trimmed = overlayNameDraft.trim();
-    if (!trimmed || trimmed === currentOverlay.name) return;
-    updateOverlayDraft({ id: currentOverlay.id, name: trimmed });
-    setStatusText('Overlay renamed');
+  function handleTransitionKindChange(value: string) {
+    setTransitionKindDraft(value);
   }
 
-  if (isOverlayEdit && !currentOverlay && effectiveElements.length === 0) {
+  function handleTransitionDurationChange(value: string) {
+    setTransitionDurationDraft(value);
+  }
+
+  function handleAutoClearDurationChange(value: string) {
+    setAutoClearDurationDraft(value);
+  }
+
+  function handleOverlaySettingsBlur() {
+    if (!currentOverlay) return;
+
+    const nextName = overlayNameDraft.trim() || currentOverlay.name;
+    const nextTransitionKind = transitionKindDraft === 'dissolve' ? 'dissolve' : 'none';
+    const nextDurationMs = Math.max(0, Number.parseInt(transitionDurationDraft || '0', 10) || 0);
+    const nextAutoClearDurationMs = autoClearDurationDraft.trim() === ''
+      ? null
+      : Math.max(0, Number.parseInt(autoClearDurationDraft, 10) || 0);
+
+    const hasNameChanged = nextName !== currentOverlay.name;
+    const hasTransitionChanged = nextTransitionKind !== currentOverlay.animation.kind
+      || nextDurationMs !== currentOverlay.animation.durationMs
+      || nextAutoClearDurationMs !== (currentOverlay.animation.autoClearDurationMs ?? null);
+
+    if (!hasNameChanged && !hasTransitionChanged) return;
+
+    updateOverlayDraft({
+      id: currentOverlay.id,
+      name: nextName,
+      animation: {
+        kind: nextTransitionKind,
+        durationMs: nextDurationMs,
+        autoClearDurationMs: nextAutoClearDurationMs,
+      },
+    });
+    setStatusText('Overlay settings updated');
+  }
+
+  if (isOverlayEdit && !currentOverlay) {
     return <div className="text-[12px] text-text-tertiary">No overlay selected.</div>;
   }
 
   return (
     <div className="grid gap-3">
       {isOverlayEdit && currentOverlay ? (
-        <div className="grid gap-1.5">
-          <FieldInput type="text" value={overlayNameDraft} onChange={handleOverlayNameChange} />
-          <Button onClick={handleRenameOverlay} disabled={!canRenameOverlay} className="w-fit">
-            Rename
-          </Button>
-        </div>
+        <>
+          <div className="grid gap-1.5">
+            <FieldInput
+              type="text"
+              value={overlayNameDraft}
+              onChange={handleOverlayNameChange}
+              onBlur={handleOverlaySettingsBlur}
+              label="Overlay Name"
+              wide
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <FieldSelect
+              value={transitionKindDraft}
+              onChange={handleTransitionKindChange}
+              onBlur={handleOverlaySettingsBlur}
+              options={TRANSITION_OPTIONS}
+              label="Transition"
+            />
+            <FieldInput
+              type="number"
+              value={transitionDurationDraft}
+              onChange={handleTransitionDurationChange}
+              onBlur={handleOverlaySettingsBlur}
+              min={0}
+              step={50}
+              label="Duration (ms)"
+            />
+          </div>
+
+          <div className="grid gap-1.5">
+            <FieldInput
+              type="number"
+              value={autoClearDurationDraft}
+              onChange={handleAutoClearDurationChange}
+              onBlur={handleOverlaySettingsBlur}
+              min={0}
+              step={50}
+              label="Auto Clear (ms)"
+              wide
+            />
+            <p className="m-0 text-[11px] text-text-tertiary">
+              Leave empty to keep the overlay on output until you clear it manually.
+            </p>
+          </div>
+        </>
       ) : null}
     </div>
   );

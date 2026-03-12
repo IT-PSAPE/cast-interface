@@ -119,6 +119,6 @@ export function getOverlayDefaults() {
   return {
     name: 'New Overlay',
     elements: [],
-    animation: { kind: 'fade' as const, durationMs: 2500 },
+    animation: { kind: 'dissolve' as const, durationMs: 400, autoClearDurationMs: null },
   };
 }

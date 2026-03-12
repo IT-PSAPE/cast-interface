@@ -184,11 +184,11 @@ describe('NdiService', () => {
 
     service.setOutputEnabled('audience', true);
 
-    now = 150;
+    now = 130;
     intervals.runByDelay(HEARTBEAT_INTERVAL_MS);
     expect(native.sendRgbaFrame).toHaveBeenCalledTimes(0);
 
-    now = 220;
+    now = 180;
     intervals.runByDelay(HEARTBEAT_INTERVAL_MS);
     expect(native.sendRgbaFrame).toHaveBeenCalledTimes(1);
     expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', expect.any(Uint8Array), 1920, 1080, 7680);

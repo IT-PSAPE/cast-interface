@@ -7,6 +7,7 @@ import { SceneNodeImage } from './scene-node-image';
 import { SceneNodeShape } from './scene-node-shape';
 import { SceneNodeText } from './scene-node-text';
 import { SceneNodeVideo } from './scene-node-video';
+import { shouldSkipFrameCapture } from './scene-stage-frame-capture';
 import { useSceneStageEditor } from './use-scene-stage-editor';
 import type { SceneViewportTransform } from './use-scene-stage-viewport';
 import { useSceneStageViewport } from './use-scene-stage-viewport';
@@ -27,10 +28,10 @@ function rotationSnaps(): number[] {
   return Array.from({ length: 24 }, (_value, index) => index * 15);
 }
 
-function renderNodeContent(node: RenderNode) {
+function renderNodeContent(node: RenderNode, onAssetReady: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image') return <SceneNodeImage node={node} />;
+  if (node.element.type === 'image') return <SceneNodeImage node={node} onReady={onAssetReady} />;
   if (node.element.type === 'video') return <SceneNodeVideo node={node} />;
   return null;
 }
@@ -56,6 +57,16 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
   const onFrameRef = useRef(onFrame);
   onFrameRef.current = onFrame;
 
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+  const lastCapturedSceneRef = useRef<RenderScene | null>(null);
+  const lastCapturedAssetReadyVersionRef = useRef<number | null>(null);
+  const [assetReadyVersion, setAssetReadyVersion] = useState(0);
+  const hasVideo = useMemo(() => scene.nodes.some((node) => node.isVideo), [scene.nodes]);
+  const handleAssetReady = useCallback(() => {
+    setAssetReadyVersion((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     if (!emitFramesFps || !onFrameRef.current) return;
     const intervalMs = Math.max(16, Math.round(1000 / emitFramesFps));
@@ -64,6 +75,16 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
       if (!stage) return;
       const frameCallback = onFrameRef.current;
       if (!frameCallback) return;
+      const currentScene = sceneRef.current;
+      if (shouldSkipFrameCapture({
+        hasVideo,
+        currentScene,
+        lastScene: lastCapturedSceneRef.current,
+        assetReadyVersion,
+        lastAssetReadyVersion: lastCapturedAssetReadyVersionRef.current,
+      })) return;
+      lastCapturedSceneRef.current = currentScene;
+      lastCapturedAssetReadyVersionRef.current = assetReadyVersion;
       const scenePixelRatio = scene.width / Math.max(1, scene.width * viewport.sceneScale);
       const canvas = stage.toCanvas({
         x: viewport.sceneOffsetX,
@@ -78,12 +99,12 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
       frameCallback({
         width: scene.width,
         height: scene.height,
-        rgba: new Uint8ClampedArray(imageData.data),
-        timestamp: Date.now(),
+        rgba: imageData.data,
+        timestamp: performance.now(),
       });
     }, intervalMs);
     return () => clearInterval(intervalId);
-  }, [editor.stageRef, emitFramesFps, fixedViewport, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
+  }, [assetReadyVersion, editor.stageRef, emitFramesFps, fixedViewport, hasVideo, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
 
   function handleNodeClick(id: string, event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     editor.handleNodeSelect(id, event.evt.shiftKey);
@@ -140,7 +161,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
           onTransform={editor.handleNodeTransform}
           onTransformEnd={editor.handleNodeTransformEnd}
         >
-          {renderNodeContent(node)}
+          {renderNodeContent(node, handleAssetReady)}
         </Group>
       </Fragment>
     );

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
-import type { ElementUpdateInput, Id, TextElementPayload } from '@core/types';
+import type { ElementUpdateInput, Id, SlideElement, TextElementPayload } from '@core/types';
 import { useElements } from '../../../contexts/element-context';
-import { resolveSnap } from './snap-guides';
+import { resolveSnap, resolveTransformSnap } from './snap-guides';
 import type { GuideLine, RenderScene } from './scene-types';
 import { createDragSession, type DragSession } from './scene-stage-drag-session';
 import { mapSnapBoxes } from './scene-stage-editor-utils';
@@ -55,6 +55,10 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     }
     nodeRefs.current.set(id, node);
   }, []);
+
+  const resolveElementById = useCallback((id: Id): SlideElement | null => {
+    return effectiveElements.find((element) => element.id === id) ?? null;
+  }, [effectiveElements]);
 
   useEffect(() => {
     if (!editable) return;
@@ -181,16 +185,41 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
 
   const handleNodeTransform = useCallback(() => {
     setCanvasInteracting(true);
+    let nextGuides: GuideLine[] = [];
+    const activeAnchor = transformerRef.current?.getActiveAnchor() ?? null;
+    const canSnapTransform = selectedElementIds.length === 1 && activeAnchor !== null && activeAnchor !== 'rotater';
+
     for (const id of selectedElementIds) {
       const node = nodeRefs.current.get(id);
       if (!node) continue;
+      const element = resolveElementById(id);
+      const shouldSnapTransform = canSnapTransform && (element?.type === 'text' || element?.type === 'shape');
 
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
-      const width = Math.max(1, node.width() * Math.abs(scaleX));
-      const height = Math.max(1, node.height() * Math.abs(scaleY));
+      let width = Math.max(1, node.width() * Math.abs(scaleX));
+      let height = Math.max(1, node.height() * Math.abs(scaleY));
+      let x = node.x();
+      let y = node.y();
+
+      if (shouldSnapTransform) {
+        const snap = resolveTransformSnap(
+          { id, x, y, width, height },
+          mapSnapBoxes(effectiveElements, new Set(selectedElementIds)),
+          scene.width,
+          scene.height,
+          activeAnchor,
+        );
+        x = snap.x;
+        y = snap.y;
+        width = snap.width;
+        height = snap.height;
+        nextGuides = snap.guides;
+      }
 
       node.setAttrs({
+        x,
+        y,
         scaleX: scaleX < 0 ? -1 : 1,
         scaleY: scaleY < 0 ? -1 : 1,
         width,
@@ -211,9 +240,11 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
         rotation: node.rotation(),
       });
     }
-  }, [applyDraftPatch, selectedElementIds, setCanvasInteracting]);
+    setGuideLines(nextGuides);
+  }, [applyDraftPatch, effectiveElements, resolveElementById, scene.height, scene.width, selectedElementIds, setCanvasInteracting]);
 
   const handleNodeTransformEnd = useCallback(async () => {
+    setGuideLines([]);
     await commitSelectionFromNodes();
   }, [commitSelectionFromNodes]);
 

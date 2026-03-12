@@ -9,7 +9,7 @@ import {
 const BLACK_FRAME_CACHE_LIMIT = 8;
 const HEARTBEAT_FPS = 30;
 const HEARTBEAT_INTERVAL_MS = Math.round(1000 / HEARTBEAT_FPS);
-const NO_INPUT_HEARTBEAT_THRESHOLD_MS = 100;
+const NO_INPUT_HEARTBEAT_THRESHOLD_MS = 50;
 const DEBUG_LOG_INTERVAL_MS = 5000;
 const DEBUG_ENABLED_BY_DEFAULT = process.env.CAST_NDI_DEBUG === '1';
 
@@ -21,6 +21,7 @@ interface SenderEntry {
   withAlpha: boolean;
   lastFrameSentAt: number;
   lastFrameRgba: Uint8Array | null;
+  heartbeatBuffer: Uint8Array;
 }
 
 interface NdiDebugCounters {
@@ -99,8 +100,8 @@ export class NdiService {
 
   constructor({
     loadNativeModule = defaultNdiModuleLoader,
-    scheduleTask = setImmediate,
-    now = Date.now,
+    scheduleTask = queueMicrotask,
+    now = performance.now.bind(performance),
     setIntervalFn = setInterval,
     clearIntervalFn = clearInterval,
     debugEnabled = DEBUG_ENABLED_BY_DEFAULT
@@ -239,7 +240,8 @@ export class NdiService {
       try {
         module.sendRgbaFrame(sender.senderName, buffer, frame.width, frame.height, stride);
         sender.lastFrameSentAt = now;
-        sender.lastFrameRgba = new Uint8Array(buffer);
+        sender.heartbeatBuffer.set(buffer);
+        sender.lastFrameRgba = sender.heartbeatBuffer;
         this.debugCounters.sendsByOutput[output] += 1;
       } catch (error) {
         this.handleSenderFailure(output, error);
@@ -310,6 +312,11 @@ export class NdiService {
       return null;
     }
 
+    const frameByteLength = width * height * 4;
+    const heartbeatBuffer = existing?.heartbeatBuffer?.byteLength === frameByteLength
+      ? existing.heartbeatBuffer
+      : new Uint8Array(frameByteLength);
+
     const sender: SenderEntry = {
       output,
       senderName: definition.senderName,
@@ -317,7 +324,8 @@ export class NdiService {
       height,
       withAlpha: definition.withAlpha,
       lastFrameSentAt: 0,
-      lastFrameRgba: existing?.lastFrameRgba ?? null
+      lastFrameRgba: existing?.lastFrameRgba ?? null,
+      heartbeatBuffer
     };
 
     this.senderEntries.set(output, sender);

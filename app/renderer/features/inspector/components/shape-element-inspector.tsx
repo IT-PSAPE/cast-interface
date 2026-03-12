@@ -11,6 +11,22 @@ import { SpacingWidth01 } from '@renderer/components/icon/spacing-width-01';
 import { SpacingHeight01 } from '@renderer/components/icon/spacing-height-01';
 import { RefreshCcw04 } from '@renderer/components/icon/refresh-ccw-04';
 import { Eye } from '@renderer/components/icon/eye';
+import { IconGroup } from '@renderer/components/icon-group';
+import { Placeholder } from '@renderer/components/icon/placeholder';
+import { AlignLeft02 } from '@renderer/components/icon/align-left-02';
+import { AlignHorizontalCentre02 } from '@renderer/components/icon/align-horizontal-centre-02';
+import { AlignRight02 } from '@renderer/components/icon/align-right-02';
+import { AlignTop01 } from '@renderer/components/icon/align-top-01';
+import { AlignTop02 } from '@renderer/components/icon/align-top-02';
+import { AlignVerticalCenter02 } from '@renderer/components/icon/align-vertical-center-02';
+import { AlignBottom02 } from '@renderer/components/icon/align-bottom-02';
+import { Reflect01 } from '@renderer/components/icon/reflect-01';
+import { CornerUpRight } from '@renderer/components/icon/corner-up-right';
+import { cn } from '@renderer/utils/cn';
+import { Square } from '@renderer/components/icon/square';
+import { Check } from '@renderer/components/icon/check';
+import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
+import { alignElementDraft } from '../utils/align-element-draft';
 
 export function ShapeElementInspector() {
   const {
@@ -22,6 +38,7 @@ export function ShapeElementInspector() {
     setElementPayloadDraft,
     setLockAspectRatio,
   } = useElements();
+  const { editScene } = useRenderScenes();
 
   if (!selectedElement || !elementDraft || !elementPayloadDraft) {
     return <div className="text-[12px] text-text-tertiary">Select an object to edit shape properties.</div>;
@@ -64,6 +81,12 @@ export function ShapeElementInspector() {
   function handleOpacityChange(value: string) {
     updateDraft((current) => ({ ...current, opacity: Math.max(0, Math.min(1, parseNumber(value, current.opacity * 100) / 100)) }));
   }
+  function handleAlignLeft() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'left')); }
+  function handleAlignCenter() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'center')); }
+  function handleAlignRight() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'right')); }
+  function handleAlignTop() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'top')); }
+  function handleAlignMiddle() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'middle')); }
+  function handleAlignBottom() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'bottom')); }
   function handleFlipX() { updateVisual({ flipX: !visual.flipX }); }
   function handleFlipY() { updateVisual({ flipY: !visual.flipY }); }
   function handleFillToggle(enabled: boolean) { updateVisual({ fillEnabled: enabled }); }
@@ -76,56 +99,179 @@ export function ShapeElementInspector() {
   function handleShadowBlurChange(value: string) { updateVisual({ shadowBlur: Math.max(0, parseNumber(value, visual.shadowBlur)) }); }
   function handleShadowOffsetXChange(value: string) { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetX) }); }
   function handleShadowOffsetYChange(value: string) { updateVisual({ shadowOffsetY: parseNumber(value, visual.shadowOffsetY) }); }
+
   return (
-    <div className="grid gap-2">
-      <fieldset className={`m-0 min-w-0 border-0 p-0 grid gap-2 ${visual.locked ? 'opacity-50' : ''}`} disabled={visual.locked}>
-        <div className="grid grid-cols-2 gap-2">
-          <FieldInput icon={<Move />} type="number" value={Math.round(elementDraft.x)} onChange={handleXChange} />
-          <FieldInput icon={<Move />} type="number" value={Math.round(elementDraft.y)} onChange={handleYChange} />
-          <FieldInput icon={<SpacingWidth01 />} type="number" value={Math.round(elementDraft.width)} onChange={handleWChange} />
-          <FieldInput icon={<SpacingHeight01 />} type="number" value={Math.round(elementDraft.height)} onChange={handleHChange} />
-          <FieldInput icon={<RefreshCcw04 />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
-          <FieldInput icon={<Eye />} type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1} />
-        </div>
+    <fieldset className={`m-0 min-w-0 border-0 p-0 ${visual.locked ? 'opacity-50' : ''}`} disabled={visual.locked}>
+      <InspectorSection>
+        <InspectorSectionHeader>
+          <span>Position</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody>
+          <InspectorSectionRow>
+            <IconGroup.Root fill>
+              <IconGroup.Item onClick={handleAlignLeft} title="Align left" aria-label="Align left">
+                <AlignLeft02 />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleAlignCenter} title="Align center" aria-label="Align center">
+                <AlignHorizontalCentre02 />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleAlignRight} title="Align right" aria-label="Align right">
+                <AlignRight02 />
+              </IconGroup.Item>
+            </IconGroup.Root>
+            <IconGroup.Root fill>
+              <IconGroup.Item onClick={handleAlignTop} title="Align top" aria-label="Align top">
+                <AlignTop02 />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleAlignMiddle} title="Align middle" aria-label="Align middle">
+                <AlignVerticalCenter02 />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleAlignBottom} title="Align bottom" aria-label="Align bottom">
+                <AlignBottom02 />
+              </IconGroup.Item>
+            </IconGroup.Root>
+          </InspectorSectionRow>
+          <InspectorSectionRow>
+            <FieldInput icon={<Move size={14} />} type="number" value={Math.round(elementDraft.x)} onChange={handleXChange} />
+            <FieldInput icon={<Move size={14} />} type="number" value={Math.round(elementDraft.y)} onChange={handleYChange} />
+          </InspectorSectionRow>
+          <InspectorSectionRow>
+            <FieldInput icon={<RefreshCcw04 size={14} />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
+            <IconGroup.Root fill>
+              <IconGroup.Item>
+                <CornerUpRight />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleFlipX}>
+                <Reflect01 />
+              </IconGroup.Item>
+              <IconGroup.Item onClick={handleFlipY}>
+                <Reflect01 className='rotate-90' />
+              </IconGroup.Item>
+            </IconGroup.Root>
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
 
-        <div className="flex items-center gap-2 border-t border-border-secondary pt-1.5">
-          <CheckboxField checked={lockAspectRatio} onChange={setLockAspectRatio} label="Lock ratio" />
-          <Button onClick={handleFlipX} className={visual.flipX ? 'border-brand text-text-primary' : ''}>Flip H</Button>
-          <Button onClick={handleFlipY} className={visual.flipY ? 'border-brand text-text-primary' : ''}>Flip V</Button>
-        </div>
+      <InspectorSection >
+        <InspectorSectionHeader >
+          <span>Layout</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody >
+          <InspectorSectionRow >
+            <FieldInput icon={<SpacingWidth01 size={14} />} type="number" value={Math.round(elementDraft.width)} onChange={handleWChange} />
+            <FieldInput icon={<SpacingHeight01 size={14} />} type="number" value={Math.round(elementDraft.height)} onChange={handleHChange} />
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
 
-        {canStyle ? (
-          <>
-            <CheckboxSection label={`${styleLabelPrefix}Fill`} enabled={visual.fillEnabled} onToggle={handleFillToggle}>
-              <FieldColor value={visual.fillColor} onChange={handleFillColorChange} />
-            </CheckboxSection>
+      <InspectorSection>
+        <InspectorSectionHeader>
+          <span>Appearance</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody>
+          <InspectorSectionRow>
+            <FieldInput icon={<Eye size={14} />} type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1} />
+            <FieldInput icon={<Square size={14} />} type="number" value={0} onChange={() => { }} min={0} max={100} step={1} />
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
 
-            <CheckboxSection label={`${styleLabelPrefix}Stroke`} enabled={visual.strokeEnabled} onToggle={handleStrokeToggle}>
-              <div className="grid grid-cols-2 gap-2">
-                <FieldColor value={visual.strokeColor} onChange={handleStrokeColorChange} />
-                <FieldInput type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} />
-              </div>
-            </CheckboxSection>
+      <InspectorSection>
+        <InspectorSectionHeader>
+          <Checkbox checked={visual.fillEnabled} onChange={handleFillToggle} />
+          <span className='font-medium ml-2'>{`${styleLabelPrefix}Fill`}</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody show={visual.fillEnabled}>
+          <InspectorSectionRow lead>
+            <FieldColor value={visual.fillColor} onChange={handleFillColorChange} />
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
 
-            <CheckboxSection label={`${styleLabelPrefix}Shadow`} enabled={visual.shadowEnabled} onToggle={handleShadowToggle}>
-              <div className="grid grid-cols-2 gap-2">
-                <FieldColor value={visual.shadowColor} onChange={handleShadowColorChange} />
-                <FieldInput type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} />
-                <FieldInput type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
-                <FieldInput type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
-              </div>
-            </CheckboxSection>
-          </>
-        ) : (
-          <div className="border-t border-border-secondary pt-1.5 text-[12px] text-text-tertiary">Fill, stroke, and shadow are available for shape and text objects.</div>
-        )}
+      <InspectorSection>
+        <InspectorSectionHeader>
+          <Checkbox checked={visual.strokeEnabled} onChange={handleStrokeToggle} />
+          <span className='font-medium ml-2'>{`${styleLabelPrefix}Stroke`}</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody show={visual.strokeEnabled}>
+          <InspectorSectionRow>
+            <FieldColor value={visual.strokeColor} onChange={handleStrokeColorChange} />
+            <FieldInput type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} />
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
 
-        {activeElement.type === 'text' ? (
-          <div className="border-t border-border-secondary pt-1.5 text-[12px] text-text-tertiary">
-            Shape controls style the text box. Use the Text tab for glyph color, stroke, and shadow.
-          </div>
-        ) : null}
-      </fieldset>
-    </div>
+      <InspectorSection>
+        <InspectorSectionHeader>
+          <Checkbox checked={visual.shadowEnabled} onChange={handleShadowToggle} />
+          <span className='font-medium ml-2'>{`${styleLabelPrefix}Shadow`}</span>
+        </InspectorSectionHeader>
+        <InspectorSectionBody show={visual.shadowEnabled}>
+          <InspectorSectionRow lead>
+            <FieldColor value={visual.shadowColor} onChange={handleShadowColorChange} />
+          </InspectorSectionRow>
+          <InspectorSectionRow lead>
+            <FieldInput type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} />
+          </InspectorSectionRow>
+          <InspectorSectionRow lead>
+            <FieldInput type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
+          </InspectorSectionRow>
+          <InspectorSectionRow lead>
+            <FieldInput type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
+          </InspectorSectionRow>
+        </InspectorSectionBody>
+      </InspectorSection>
+
+    </fieldset>
   );
+}
+
+function InspectorSection({ children }: { children: React.ReactNode }) {
+  return (
+    <div className='border-b border-border-secondary'>
+      {children}
+    </div>
+  )
+}
+
+function InspectorSectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className='h-10 px-2 flex items-center text-lg font-medium'>
+      {children}
+    </div>
+  )
+}
+
+function InspectorSectionBody({ children, show = true }: { children: React.ReactNode, show?: boolean }) {
+  if (!show) return null;
+
+  return (
+    <div className={'px-2 flex flex-col gap-2 pb-3'}>
+      {children}
+    </div>
+  )
+}
+
+function InspectorSectionRow({ children, lead }: { children: React.ReactNode; lead?: boolean }) {
+  return (
+    <div className={cn('grid gap-2', lead ? 'grid-cols-[1fr_repeat(2,24px)]' : 'grid-cols-[repeat(2,1fr)_24px]')}>
+      {children}
+    </div>
+  )
+}
+
+
+interface CheckboxProps {
+  checked?: boolean;
+  className?: string;
+  onChange: (checked: boolean) => void;
+}
+
+function Checkbox({ checked, className, onChange }: CheckboxProps) {
+  return (
+    <label className={cn('flex items-center justify-center size-4 rounded border transition-colors cursor-pointer', checked ? 'bg-brand_primary border-brand' : 'bg-secondary border-primary', className)}>
+      {checked ? <Check size={14} strokeWidth={3} /> : null}
+      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    </label>
+  )
 }

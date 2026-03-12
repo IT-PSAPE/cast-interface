@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { overlayToLayerElements } from '@core/presentation-layers';
+import { isLyricPresentation } from '@core/presentation-entities';
 import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, SlideElement } from '@core/types';
 import { applyVisualPayload, readVisualPayload } from '@core/element-payload';
 import { sortElements } from '../utils/slides';
@@ -121,10 +122,16 @@ export function ElementProvider({ children }: { children: ReactNode }) {
   });
 
   const deleteSelected = useCallback(async () => {
-    const targetIds = effectiveElements
-      .filter((element) => selection.selectedElementIds.includes(element.id))
-      .filter((element) => !element.payload.locked)
-      .map((element) => element.id);
+    const protectedLyricTextIds = getProtectedLyricTextSelectionIds(
+      effectiveElements,
+      selection.selectedElementIds,
+      isLyricPresentation(currentPresentation),
+    );
+    if (protectedLyricTextIds.length > 0) {
+      setStatusText('Lyrics always keep one text layer. Hide it instead of deleting it.');
+      return;
+    }
+    const targetIds = getUnlockedSelectedElementIds(effectiveElements, selection.selectedElementIds);
     if (targetIds.length === 0) return;
     if (isOverlayEdit) {
       if (!currentOverlay) return;
@@ -144,7 +151,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     setStatusText('Deleted selected object(s)');
     selection.clearSelection();
     setDraftElements({});
-  }, [currentOverlay, currentSlide, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, selection, setStatusText, updateOverlayDraft]);
+  }, [currentOverlay, currentPresentation, currentSlide, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, selection, setStatusText, updateOverlayDraft]);
 
   const toggleElementVisibility = useCallback(async (id: Id, visible: boolean) => {
     const target = effectiveElements.find((element) => element.id === id);
@@ -272,6 +279,21 @@ export function isOverlaySelectionValid(overlay: Overlay, selectedElementId: Id 
   if (!selectedElementId) return false;
   if (overlay.elements.length === 0) return overlay.id === selectedElementId;
   return overlay.elements.some((element) => element.id === selectedElementId);
+}
+
+export function getProtectedLyricTextSelectionIds(effectiveElements: SlideElement[], selectedElementIds: Id[], isLyricsPresentation: boolean): Id[] {
+  if (!isLyricsPresentation) return [];
+  return effectiveElements
+    .filter((element) => selectedElementIds.includes(element.id))
+    .filter((element) => element.type === 'text')
+    .map((element) => element.id);
+}
+
+function getUnlockedSelectedElementIds(effectiveElements: SlideElement[], selectedElementIds: Id[]): Id[] {
+  return effectiveElements
+    .filter((element) => selectedElementIds.includes(element.id))
+    .filter((element) => !element.payload.locked)
+    .map((element) => element.id);
 }
 
 function applyOverlayDraftUpdates(overlay: Overlay, updates: ElementUpdateInput[]): OverlayUpdateInput {

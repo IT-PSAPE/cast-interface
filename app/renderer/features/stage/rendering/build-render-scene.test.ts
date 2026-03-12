@@ -87,7 +87,7 @@ describe('buildRenderScene', () => {
           updatedAt: '',
         },
       ],
-      animation: { kind: 'none', durationMs: 0 },
+      animation: { kind: 'none', durationMs: 0, autoClearDurationMs: null },
       createdAt: '',
       updatedAt: '',
     };
@@ -99,7 +99,7 @@ describe('buildRenderScene', () => {
         element({ id: 'text-1', type: 'text', layer: 'content', zIndex: 2 }),
       ],
       mediaAsset,
-      overlay,
+      overlays: [{ overlay, opacityMultiplier: 1, stackOrder: 0 }],
       includeContent: true,
     });
 

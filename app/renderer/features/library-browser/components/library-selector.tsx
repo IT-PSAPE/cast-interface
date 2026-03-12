@@ -23,14 +23,14 @@ export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClea
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5">
+      <div className="flex items-center justify-between px-2.5 py-2">
         <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
-        <IconButton label="New library" onClick={handleCreate} size="sm" variant="ghost">
-          <Icon.plus size={12} strokeWidth={1.5} />
+        <IconButton label="New library" onClick={handleCreate} variant="ghost">
+          <Icon.plus size={14} strokeWidth={1.75} />
         </IconButton>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1" role="list" aria-label="Libraries">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5" role="list" aria-label="Libraries">
         {snapshot.libraryBundles.map((bundle) => {
           const isSelected = bundle.library.id === currentLibraryId;
           const isEditing = bundle.library.id === recentlyCreatedId || bundle.library.id === editingLibraryId;

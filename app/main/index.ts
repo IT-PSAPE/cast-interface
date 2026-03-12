@@ -1,6 +1,8 @@
-import { app, BrowserWindow, protocol, net } from 'electron';
+import { app, BrowserWindow, MessageChannelMain, protocol, net } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { NDI_EVENTS } from '@core/ipc';
+import type { SlideFrame } from '@core/types';
 import { CastRepository } from '@database/store';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
@@ -91,6 +93,7 @@ app.whenReady().then(() => {
 
   registerIpcHandlers(repository, ndiService, () => mainWindow);
   createWindow();
+  setupNdiFramePort();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -111,6 +114,28 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   teardownNdi('will-quit');
 });
+
+function setupNdiFramePort(): void {
+  if (!mainWindow) return;
+
+  function createAndSendPort(): void {
+    if (!mainWindow) return;
+    const { port1, port2 } = new MessageChannelMain();
+    port1.on('message', (event) => {
+      const { width, height, rgba, timestamp } = event.data as {
+        width: number;
+        height: number;
+        rgba: ArrayBuffer;
+        timestamp: number;
+      };
+      ndiService.sendFrame({ width, height, rgba: new Uint8ClampedArray(rgba), timestamp });
+    });
+    port1.start();
+    mainWindow.webContents.postMessage(NDI_EVENTS.framePort, null, [port2]);
+  }
+
+  mainWindow.webContents.on('did-finish-load', createAndSendPort);
+}
 
 function resolveCliOptions(argv: string[]): CliOptions {
   let rendererView: CliOptions['rendererView'] = 'app';
