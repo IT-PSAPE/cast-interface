@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
-import type { ElementUpdateInput, Id, SlideElement, TextElementPayload } from '@core/types';
+import type { ElementUpdateInput, Id, TextElementPayload } from '@core/types';
 import { useElements } from '../../../contexts/element-context';
 import { resolveSnap, resolveTransformSnap } from './snap-guides';
 import type { GuideLine, RenderScene } from './scene-types';
@@ -55,10 +55,6 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     }
     nodeRefs.current.set(id, node);
   }, []);
-
-  const resolveElementById = useCallback((id: Id): SlideElement | null => {
-    return effectiveElements.find((element) => element.id === id) ?? null;
-  }, [effectiveElements]);
 
   useEffect(() => {
     if (!editable) return;
@@ -187,13 +183,12 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     setCanvasInteracting(true);
     let nextGuides: GuideLine[] = [];
     const activeAnchor = transformerRef.current?.getActiveAnchor() ?? null;
-    const canSnapTransform = selectedElementIds.length === 1 && activeAnchor !== null && activeAnchor !== 'rotater';
+    const canSnapTransform = activeAnchor !== null && activeAnchor !== 'rotater';
 
     for (const id of selectedElementIds) {
       const node = nodeRefs.current.get(id);
       if (!node) continue;
-      const element = resolveElementById(id);
-      const shouldSnapTransform = canSnapTransform && (element?.type === 'text' || element?.type === 'shape');
+      const shouldSnapTransform = canSnapTransform;
 
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
@@ -241,7 +236,7 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
       });
     }
     setGuideLines(nextGuides);
-  }, [applyDraftPatch, effectiveElements, resolveElementById, scene.height, scene.width, selectedElementIds, setCanvasInteracting]);
+  }, [applyDraftPatch, effectiveElements, scene.height, scene.width, selectedElementIds, setCanvasInteracting]);
 
   const handleNodeTransformEnd = useCallback(async () => {
     setGuideLines([]);

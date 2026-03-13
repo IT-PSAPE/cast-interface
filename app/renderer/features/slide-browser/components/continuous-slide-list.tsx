@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -84,7 +84,7 @@ function OutlineSection({
   return (
     <section className="grid gap-2">
       <header className="px-1">
-        <h3 className="m-0 text-[12px] font-semibold text-text-primary">{item.presentation.title}</h3>
+        <h3 className="m-0 text-sm font-semibold text-text-primary">{item.presentation.title}</h3>
       </header>
       <div className="grid content-start gap-2" role="list" aria-label={`${item.presentation.title} outline`}>
         {item.slides.map(renderRow)}
@@ -126,7 +126,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
 
   if (items.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-tertiary">
+      <section className="grid h-full min-h-0 place-items-center text-sm text-text-tertiary">
         No playlist presentations available.
       </section>
     );

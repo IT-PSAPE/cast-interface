@@ -357,7 +357,7 @@ function requirePaneDefinition(definition: SplitDefinition, paneId: PaneId) {
   return pane;
 }
 
-function requirePaneState(layout: SplitLayoutState, paneId: PaneId): PaneLayoutState {
+export function requirePaneState(layout: SplitLayoutState, paneId: PaneId): PaneLayoutState {
   const pane = layout.panes[paneId];
   if (!pane) {
     throw new Error(`Missing split state for pane: ${paneId}`);

@@ -39,10 +39,11 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
+  const isTemplateEdit = workbenchMode === 'template-editor';
 
   const editScene = useMemo(() => {
-    return buildRenderScene(isOverlayEdit ? null : currentSlide, effectiveElements);
-  }, [currentSlide, effectiveElements, isOverlayEdit, currentOverlay?.id]);
+    return buildRenderScene(isOverlayEdit || isTemplateEdit ? null : currentSlide, effectiveElements);
+  }, [currentSlide, effectiveElements, isOverlayEdit, isTemplateEdit, currentOverlay?.id]);
 
   const showScene = useMemo(() => {
     const currentElements = currentSlide ? (slideElementsById.get(currentSlide.id) ?? []) : [];

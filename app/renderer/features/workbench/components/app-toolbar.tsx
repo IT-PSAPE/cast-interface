@@ -61,6 +61,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
             <Control.Label value="show">Show</Control.Label>
             <Control.Label value="slide-editor">Edit</Control.Label>
             <Control.Label value="overlay-editor">Overlay</Control.Label>
+            <Control.Label value="template-editor">Templates</Control.Label>
           </Control.Root>
         </div>
 
@@ -101,7 +102,7 @@ function renderPanelToggleItem(toggle: PanelToggleButton) {
 }
 
 function isWorkbenchMode(value: string): value is WorkbenchMode {
-  return value === 'show' || value === 'slide-editor' || value === 'overlay-editor';
+  return value === 'show' || value === 'slide-editor' || value === 'overlay-editor' || value === 'template-editor';
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {

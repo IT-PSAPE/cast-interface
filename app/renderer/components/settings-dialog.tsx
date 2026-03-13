@@ -31,7 +31,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
     >
       <div className="p-4">
         <fieldset className="m-0 border-0 p-0">
-          <legend className="mb-2 text-[12px] font-medium uppercase tracking-wider text-text-tertiary">
+          <legend className="mb-2 text-sm font-medium uppercase tracking-wider text-text-tertiary">
             Appearance
           </legend>
           <Control.Root value={themeMode} onValueChange={handleThemeChange} className="grid grid-cols-3 gap-2 bg-transparent p-0" fill aria-label="Appearance">
@@ -51,7 +51,7 @@ function renderThemeOption(option: { value: ThemeMode; label: string; descriptio
       className="flex flex-1 flex-col items-center gap-1.5 rounded-lg border border-border-primary bg-background-tertiary p-3 text-center transition-colors hover:border-text-tertiary"
     >
       <ThemePreviewIcon mode={option.value} />
-      <span className="text-[12px] font-medium text-text-primary">{option.label}</span>
+      <span className="text-sm font-medium text-text-primary">{option.label}</span>
     </Control.Label>
   );
 }

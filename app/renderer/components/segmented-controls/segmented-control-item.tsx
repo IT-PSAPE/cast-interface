@@ -4,7 +4,7 @@ import { cv } from '@renderer/utils/cv';
 import { useSegment } from './segment-context';
 
 const segmentedControlItemStyles = cv({
-  base: 'inline-flex items-center justify-center rounded-md border text-[12px] transition-colors disabled:pointer-events-none disabled:opacity-50',
+  base: 'inline-flex items-center justify-center rounded-md border text-sm transition-colors disabled:pointer-events-none disabled:opacity-50',
   variants: {
     active: {
       true: ['border-border-primary bg-background-primary text-text-primary'],

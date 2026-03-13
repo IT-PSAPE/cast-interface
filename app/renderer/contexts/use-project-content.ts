@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Id, MediaAsset, Overlay, Presentation, Slide, SlideElement } from '@core/types';
+import type { Id, MediaAsset, Overlay, Presentation, Slide, SlideElement, Template } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
 import { useCast } from './cast-context';
 
@@ -9,11 +9,13 @@ interface ProjectContent {
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
+  templates: Template[];
   presentationsById: ReadonlyMap<Id, Presentation>;
   slidesByPresentationId: ReadonlyMap<Id, Slide[]>;
   slideElementsBySlideId: ReadonlyMap<Id, SlideElement[]>;
   mediaAssetsById: ReadonlyMap<Id, MediaAsset>;
   overlaysById: ReadonlyMap<Id, Overlay>;
+  templatesById: ReadonlyMap<Id, Template>;
 }
 
 export function useProjectContent(): ProjectContent {
@@ -25,12 +27,14 @@ export function useProjectContent(): ProjectContent {
     const slideElements = snapshot?.slideElements ?? [];
     const mediaAssets = snapshot?.mediaAssets ?? [];
     const overlays = snapshot?.overlays ?? [];
+    const templates = snapshot?.templates ?? [];
 
     const presentationsById = new Map<Id, Presentation>();
     const slidesByPresentationId = new Map<Id, Slide[]>();
     const slideElementsBySlideId = new Map<Id, SlideElement[]>();
     const mediaAssetsById = new Map<Id, MediaAsset>();
     const overlaysById = new Map<Id, Overlay>();
+    const templatesById = new Map<Id, Template>();
 
     for (const presentation of presentations) {
       presentationsById.set(presentation.id, presentation);
@@ -58,6 +62,10 @@ export function useProjectContent(): ProjectContent {
       overlaysById.set(overlay.id, overlay);
     }
 
+    for (const template of templates) {
+      templatesById.set(template.id, template);
+    }
+
     slidesByPresentationId.forEach((presentationSlides, presentationId) => {
       slidesByPresentationId.set(presentationId, sortSlides(presentationSlides));
     });
@@ -72,11 +80,13 @@ export function useProjectContent(): ProjectContent {
       slideElements,
       mediaAssets,
       overlays,
+      templates,
       presentationsById,
       slidesByPresentationId,
       slideElementsBySlideId,
       mediaAssetsById,
       overlaysById,
+      templatesById,
     };
   }, [snapshot]);
 }

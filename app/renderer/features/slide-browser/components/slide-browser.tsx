@@ -1,87 +1,189 @@
+import { createContext, useContext, type ReactNode } from 'react';
 import { EmptyStatePanel } from '../../../components/empty-state-panel';
-import { useNavigation } from '../../../contexts/navigation-context';
-import { useSlides } from '../../../contexts/slide-context';
-import { useSlideBrowser } from '../../../contexts/slide-browser-context';
-import { useWorkbench } from '../../../contexts/workbench-context';
-import { usePlaylistPresentationSequence, type PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { StageViewport } from '../../stage/components/stage-viewport';
+import { useSlideBrowserView } from '../hooks/use-slide-browser-view';
 import { PlaylistBrowserModeControl } from './playlist-browser-mode-control';
-import { SlideBrowserToolbar } from './slide-browser-toolbar';
-import { SlideGrid } from './slide-grid';
-import { SlideList } from './slide-list';
-import { ContinuousSlideGrid } from './continuous-slide-grid';
-import { ContinuousSlideList } from './continuous-slide-list';
 import { SlideBrowserPlaylistTabStrip } from './slide-browser-playlist-tab-strip';
 import { SlideBrowserPresentationStrip } from './slide-browser-presentation-strip';
+import { SlideBrowserToolbar } from './slide-browser-toolbar';
+import { ContinuousSlideGrid } from './continuous-slide-grid';
+import { ContinuousSlideList } from './continuous-slide-list';
+import { SlideGrid } from './slide-grid';
+import { SlideList } from './slide-list';
 
-export function SlideBrowser() {
-  const { currentPresentation, isDetachedPresentationBrowser } = useNavigation();
-  const { slides } = useSlides();
-  const { slideBrowserMode, playlistBrowserMode } = useSlideBrowser();
-  const { workbenchMode } = useWorkbench();
-  const { items } = usePlaylistPresentationSequence();
-  const showStageViewport = slideBrowserMode === 'focus';
-  const showPlaylistBrowserModes = workbenchMode === 'show'
-    && !isDetachedPresentationBrowser
-    && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
-  const showTabsStrip = playlistBrowserMode === 'tabs' && showPlaylistBrowserModes && items.length > 0;
-  const showContinuousHeader = playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && items.length > 0;
-  const showContinuousGrid = playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && slideBrowserMode === 'grid' && items.length > 0;
-  const showContinuousList = playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && slideBrowserMode === 'list' && items.length > 0;
-  const hasPresentation = Boolean(currentPresentation);
-  const headerTitle = showContinuousHeader ? 'Playlist presentations' : (currentPresentation?.title ?? 'No presentation selected');
-  const headerMeta = showContinuousHeader ? formatPlaylistMeta(items) : formatSlideMeta(slides.length);
-  const headerAction = showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null;
+interface SlideBrowserContextValue {
+  actions: Record<string, never>;
+  meta: Record<string, never>;
+  state: ReturnType<typeof useSlideBrowserView>;
+}
+
+const SlideBrowserContext = createContext<SlideBrowserContextValue | null>(null);
+
+function useSlideBrowserLayout() {
+  const context = useContext(SlideBrowserContext);
+  if (!context) throw new Error('SlideBrowser sub-components must be used within SlideBrowserLayout.Root');
+  return context;
+}
+
+function Root({ children }: { children: ReactNode }) {
+  const state = useSlideBrowserView();
 
   return (
-    <main
-      data-ui-region="slide-browser"
-      className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-gradient-to-b from-background-primary/90 to-background-primary"
-    >
-      {hasPresentation ? (
-        <div className="row-start-1 min-h-0">
-          {showTabsStrip ? (
-            <SlideBrowserPlaylistTabStrip items={items} action={headerAction} />
-          ) : (
-            <SlideBrowserPresentationStrip title={headerTitle} meta={headerMeta} action={headerAction} />
-          )}
-        </div>
-      ) : null}
-      {hasPresentation ? (
-        <section className="row-start-2 min-h-0 overflow-hidden">
-          <section className={showStageViewport ? 'h-full min-h-0 overflow-hidden p-2' : 'h-full min-h-0'}>
-            {showStageViewport ? <StageViewport /> : null}
-            {slideBrowserMode === 'grid' && !showContinuousGrid ? <SlideGrid /> : null}
-            {slideBrowserMode === 'list' && !showContinuousList ? <SlideList /> : null}
-            {showContinuousGrid ? <ContinuousSlideGrid items={items} /> : null}
-            {showContinuousList ? <ContinuousSlideList items={items} /> : null}
-          </section>
-        </section>
-      ) : (
-        <div className="row-start-2 min-h-0">
-          <EmptyStatePanel
-            glyph={<EmptyStateGlyph />}
-            title="No presentation selected"
-            description="Select a presentation from a playlist or from the presentations drawer to load slides in the browser."
-          />
-        </div>
-      )}
-      <div className="row-start-3 min-h-0">
-        <SlideBrowserToolbar />
-      </div>
-    </main>
+    <SlideBrowserContext.Provider value={{ actions: {}, meta: {}, state }}>
+      <main
+        data-ui-region="slide-browser"
+        className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-gradient-to-b from-background-primary/90 to-background-primary"
+      >
+        {children}
+      </main>
+    </SlideBrowserContext.Provider>
   );
 }
 
-function formatSlideMeta(slideCount: number): string {
-  return `${slideCount} slide${slideCount === 1 ? '' : 's'}`;
+function TabsHeader() {
+  const { state } = useSlideBrowserLayout();
+  if (state.headerVariant !== 'tabs') return null;
+
+  return (
+    <div className="row-start-1 min-h-0">
+      <SlideBrowserPlaylistTabStrip
+        items={state.items}
+        action={state.showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null}
+      />
+    </div>
+  );
 }
 
-function formatPlaylistMeta(items: PlaylistPresentationSequenceItem[]): string {
-  const slideCount = items.reduce((total, item) => total + item.slides.length, 0);
-  const presentationLabel = `${items.length} presentation${items.length === 1 ? '' : 's'}`;
-  const slideLabel = `${slideCount} slide${slideCount === 1 ? '' : 's'}`;
-  return `${presentationLabel} · ${slideLabel}`;
+function PresentationHeader() {
+  const { state } = useSlideBrowserLayout();
+  if (state.headerVariant !== 'presentation') return null;
+
+  return (
+    <div className="row-start-1 min-h-0">
+      <SlideBrowserPresentationStrip
+        title={state.headerTitle}
+        meta={state.headerMeta}
+        action={state.showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null}
+      />
+    </div>
+  );
+}
+
+function EmptyState() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'empty') return null;
+
+  return (
+    <div className="row-start-2 min-h-0">
+      <EmptyStatePanel
+        glyph={<EmptyStateGlyph />}
+        title="No presentation selected"
+        description="Select a presentation from a playlist or from the presentations drawer to load slides in the browser."
+      />
+    </div>
+  );
+}
+
+function FocusContent() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'focus') return null;
+
+  return (
+    <section className="row-start-2 min-h-0 overflow-hidden">
+      <section className="h-full min-h-0 overflow-hidden p-2">
+        <StageViewport />
+      </section>
+    </section>
+  );
+}
+
+function SingleGridContent() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'single-grid') return null;
+
+  return (
+    <section className="row-start-2 min-h-0 overflow-hidden">
+      <section className="h-full min-h-0">
+        <SlideGrid />
+      </section>
+    </section>
+  );
+}
+
+function SingleListContent() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'single-list') return null;
+
+  return (
+    <section className="row-start-2 min-h-0 overflow-hidden">
+      <section className="h-full min-h-0">
+        <SlideList />
+      </section>
+    </section>
+  );
+}
+
+function ContinuousGridContent() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'continuous-grid') return null;
+
+  return (
+    <section className="row-start-2 min-h-0 overflow-hidden">
+      <section className="h-full min-h-0">
+        <ContinuousSlideGrid items={state.items} />
+      </section>
+    </section>
+  );
+}
+
+function ContinuousListContent() {
+  const { state } = useSlideBrowserLayout();
+  if (state.contentVariant !== 'continuous-list') return null;
+
+  return (
+    <section className="row-start-2 min-h-0 overflow-hidden">
+      <section className="h-full min-h-0">
+        <ContinuousSlideList items={state.items} />
+      </section>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <div className="row-start-3 min-h-0">
+      <SlideBrowserToolbar />
+    </div>
+  );
+}
+
+const SlideBrowserLayout = {
+  ContinuousGridContent,
+  ContinuousListContent,
+  EmptyState,
+  FocusContent,
+  Footer,
+  PresentationHeader,
+  Root,
+  SingleGridContent,
+  SingleListContent,
+  TabsHeader
+};
+
+export function SlideBrowser() {
+  return (
+    <SlideBrowserLayout.Root>
+      <SlideBrowserLayout.TabsHeader />
+      <SlideBrowserLayout.PresentationHeader />
+      <SlideBrowserLayout.EmptyState />
+      <SlideBrowserLayout.FocusContent />
+      <SlideBrowserLayout.SingleGridContent />
+      <SlideBrowserLayout.SingleListContent />
+      <SlideBrowserLayout.ContinuousGridContent />
+      <SlideBrowserLayout.ContinuousListContent />
+      <SlideBrowserLayout.Footer />
+    </SlideBrowserLayout.Root>
+  );
 }
 
 function EmptyStateGlyph() {

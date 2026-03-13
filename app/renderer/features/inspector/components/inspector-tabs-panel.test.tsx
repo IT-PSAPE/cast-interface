@@ -2,19 +2,18 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InspectorTabsPanel } from './inspector-tabs-panel';
 import { useInspector } from '../../../contexts/inspector-context';
-import { useWorkbench } from '../../../contexts/workbench-context';
-import { useElements } from '../../../contexts/element-context';
+import { useAvailableInspectorTabs } from '../hooks/use-available-inspector-tabs';
 
 vi.mock('../../../contexts/inspector-context', () => ({
   useInspector: vi.fn(),
 }));
 
-vi.mock('../../../contexts/workbench-context', () => ({
-  useWorkbench: vi.fn(),
+vi.mock('../hooks/use-inspector-auto-tab', () => ({
+  useInspectorAutoTab: vi.fn(),
 }));
 
-vi.mock('../../../contexts/element-context', () => ({
-  useElements: vi.fn(),
+vi.mock('../hooks/use-available-inspector-tabs', () => ({
+  useAvailableInspectorTabs: vi.fn(),
 }));
 
 vi.mock('./presentation-inspector', () => ({
@@ -49,12 +48,9 @@ describe('InspectorTabsPanel', () => {
       inspectorTab: 'slide',
       setInspectorTab,
     });
-    vi.mocked(useWorkbench).mockReturnValue({
-      workbenchMode: 'overlay-editor',
-    } as ReturnType<typeof useWorkbench>);
-    vi.mocked(useElements).mockReturnValue({
-      selectedElement: null,
-    } as ReturnType<typeof useElements>);
+    vi.mocked(useAvailableInspectorTabs).mockReturnValue([
+      { name: 'slide', label: 'Overlay' },
+    ]);
 
     render(<InspectorTabsPanel />);
 
@@ -65,16 +61,14 @@ describe('InspectorTabsPanel', () => {
   });
 
   it('shows shape and text tabs when a text overlay element is selected', () => {
-    vi.mocked(useWorkbench).mockReturnValue({
-      workbenchMode: 'overlay-editor',
-    } as ReturnType<typeof useWorkbench>);
-    vi.mocked(useElements).mockReturnValue({
-      selectedElement: { id: 'element-1', type: 'text' },
-    } as ReturnType<typeof useElements>);
     vi.mocked(useInspector).mockReturnValue({
       inspectorTab: 'text',
       setInspectorTab,
     });
+    vi.mocked(useAvailableInspectorTabs).mockReturnValue([
+      { name: 'shape', label: 'Shape' },
+      { name: 'text', label: 'Text' },
+    ]);
 
     render(<InspectorTabsPanel />);
 
@@ -89,12 +83,9 @@ describe('InspectorTabsPanel', () => {
       inspectorTab: 'shape',
       setInspectorTab,
     });
-    vi.mocked(useWorkbench).mockReturnValue({
-      workbenchMode: 'overlay-editor',
-    } as ReturnType<typeof useWorkbench>);
-    vi.mocked(useElements).mockReturnValue({
-      selectedElement: { id: 'element-1', type: 'shape' },
-    } as ReturnType<typeof useElements>);
+    vi.mocked(useAvailableInspectorTabs).mockReturnValue([
+      { name: 'shape', label: 'Shape' },
+    ]);
 
     render(<InspectorTabsPanel />);
 

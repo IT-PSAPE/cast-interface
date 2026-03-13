@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
 import Database from 'better-sqlite3';
 import { buildPresentationEntity } from '@core/presentation-entities';
+import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithPresentation } from '@core/templates';
 import { createId, nowIso } from '@core/utils';
 import type {
   AppSnapshot,
@@ -25,12 +26,17 @@ import type {
   SlideElement,
   SlideElementPayload,
   SlideCreateInput,
-  SlideNotesUpdateInput
+  SlideNotesUpdateInput,
+  Template,
+  TemplateCreateInput,
+  TemplateKind,
+  TemplateUpdateInput,
 } from '@core/types';
 
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
-const LATEST_SCHEMA_VERSION = 3;
+const LATEST_SCHEMA_VERSION = 4;
+const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
 
 const parseJson = <T>(value: string): T => {
@@ -160,8 +166,13 @@ export class CastRepository {
       this.setUserVersion(LEGACY_SCHEMA_VERSION);
     }
 
-    if (this.getUserVersion() < LATEST_SCHEMA_VERSION) {
+    if (this.getUserVersion() < GLOBAL_SCHEMA_VERSION) {
       this.migrateLegacyProjectContentToGlobalScope();
+    }
+
+    if (this.getUserVersion() < LATEST_SCHEMA_VERSION) {
+      this.ensureTemplatesSchema();
+      this.setUserVersion(LATEST_SCHEMA_VERSION);
     }
   }
 
@@ -294,6 +305,18 @@ export class CastRepository {
         FOREIGN KEY(library_id) REFERENCES libraries(id)
       );
 
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_presentations_library_id ON presentations(library_id);
       CREATE INDEX IF NOT EXISTS idx_slides_presentation_id ON slides(presentation_id);
       CREATE INDEX IF NOT EXISTS idx_slide_elements_slide_id ON slide_elements(slide_id);
@@ -302,6 +325,7 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_playlist_entries_segment_id ON playlist_entries(segment_id);
       CREATE INDEX IF NOT EXISTS idx_media_assets_library_id ON media_assets(library_id);
       CREATE INDEX IF NOT EXISTS idx_overlays_library_id ON overlays(library_id);
+      CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
     `);
   }
 
@@ -411,6 +435,18 @@ export class CastRepository {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
     `);
 
     this.createCommonIndexes();
@@ -433,7 +469,25 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_presentations_order_index ON presentations(order_index);
       CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at);
       CREATE INDEX IF NOT EXISTS idx_overlays_created_at ON overlays(created_at);
+      CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
     `);
+  }
+
+  private ensureTemplatesSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index)');
   }
 
   private prepareLegacySchema(): void {
@@ -539,7 +593,7 @@ export class CastRepository {
 
         this.createCommonIndexes();
         this.createGlobalContentIndexes();
-        this.setUserVersion(LATEST_SCHEMA_VERSION);
+        this.setUserVersion(GLOBAL_SCHEMA_VERSION);
       });
 
       tx();
@@ -871,7 +925,8 @@ export class CastRepository {
       slides: this.getSlides(),
       slideElements: this.getSlideElements(),
       mediaAssets: this.getMediaAssets(),
-      overlays: this.getOverlays()
+      overlays: this.getOverlays(),
+      templates: this.getTemplates(),
     };
   }
 
@@ -980,6 +1035,193 @@ export class CastRepository {
 
   createLyric(title: string): AppSnapshot {
     return this.createPresentation(title, 'lyrics');
+  }
+
+  createTemplate(input: TemplateCreateInput): AppSnapshot {
+    const now = nowIso();
+    const templateId = createId();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM templates').get() as { maxOrder: number | null }).maxOrder ?? -1;
+    const elements = input.elements ? JSON.parse(JSON.stringify(input.elements)) as SlideElement[] : createDefaultTemplateElements(input.kind, templateId, now);
+
+    this.db
+      .prepare(
+        `INSERT INTO templates
+          (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        templateId,
+        input.name,
+        this.normalizeTemplateKind(input.kind),
+        input.width ?? DEFAULT_W,
+        input.height ?? DEFAULT_H,
+        currentOrder + 1,
+        JSON.stringify(elements),
+        now,
+        now,
+      );
+    return this.getSnapshot();
+  }
+
+  updateTemplate(input: TemplateUpdateInput): AppSnapshot {
+    const existing = this.db
+      .prepare('SELECT id, name, kind, width, height, elements_json FROM templates WHERE id = ?')
+      .get(input.id) as {
+      id: string;
+      name: string;
+      kind: string;
+      width: number;
+      height: number;
+      elements_json: string;
+    } | undefined;
+
+    if (!existing) return this.getSnapshot();
+
+    this.db
+      .prepare(
+        `UPDATE templates
+         SET name = ?, kind = ?, width = ?, height = ?, elements_json = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        input.name ?? existing.name,
+        this.normalizeTemplateKind(input.kind ?? existing.kind),
+        input.width ?? existing.width,
+        input.height ?? existing.height,
+        JSON.stringify(input.elements ?? parseJson<SlideElement[]>(existing.elements_json)),
+        nowIso(),
+        input.id,
+      );
+    return this.getSnapshot();
+  }
+
+  deleteTemplate(templateId: Id): AppSnapshot {
+    this.db.prepare('DELETE FROM templates WHERE id = ?').run(templateId);
+    this.normalizeTemplateOrder();
+    return this.getSnapshot();
+  }
+
+  applyTemplateToPresentation(templateId: Id, presentationId: Id): AppSnapshot {
+    const template = this.getTemplateById(templateId);
+    if (!template) return this.getSnapshot();
+    const presentation = this.db
+      .prepare('SELECT kind FROM presentations WHERE id = ?')
+      .get(presentationId) as { kind: string } | undefined;
+
+    if (!presentation || !isTemplateCompatibleWithPresentation(template, this.normalizePresentationKind(presentation.kind))) {
+      return this.getSnapshot();
+    }
+
+    const slides = this.db
+      .prepare('SELECT id FROM slides WHERE presentation_id = ? ORDER BY order_index ASC')
+      .all(presentationId) as Array<{ id: string }>;
+    const selectElements = this.db
+      .prepare(
+        `SELECT id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at
+         FROM slide_elements
+         WHERE slide_id = ?
+         ORDER BY layer ASC, z_index ASC, created_at ASC`
+      );
+    const deleteElements = this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?');
+    const insertElement = this.db.prepare(
+      `INSERT INTO slide_elements
+        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const tx = this.db.transaction(() => {
+      for (const slide of slides) {
+        const currentElements = (selectElements.all(slide.id) as Array<{
+          id: string;
+          slide_id: string;
+          type: SlideElement['type'];
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          rotation: number;
+          opacity: number;
+          z_index: number;
+          layer: SlideElement['layer'];
+          payload_json: string;
+          created_at: string;
+          updated_at: string;
+        }>).map((row) => ({
+          id: row.id,
+          slideId: row.slide_id,
+          type: row.type,
+          x: row.x,
+          y: row.y,
+          width: row.width,
+          height: row.height,
+          rotation: row.rotation,
+          opacity: row.opacity,
+          zIndex: row.z_index,
+          layer: row.layer,
+          payload: parseJson<SlideElementPayload>(row.payload_json),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        }));
+        const appliedElements = applyTemplateToElements(template, currentElements, slide.id);
+        deleteElements.run(slide.id);
+        for (const element of appliedElements) {
+          insertElement.run(
+            element.id,
+            slide.id,
+            element.type,
+            element.x,
+            element.y,
+            element.width,
+            element.height,
+            element.rotation,
+            element.opacity,
+            element.zIndex,
+            element.layer,
+            JSON.stringify(element.payload),
+            element.createdAt,
+            nowIso(),
+          );
+        }
+      }
+    });
+
+    tx();
+    return this.getSnapshot();
+  }
+
+  applyTemplateToOverlay(templateId: Id, overlayId: Id): AppSnapshot {
+    const template = this.getTemplateById(templateId);
+    if (!template || template.kind !== 'overlays') return this.getSnapshot();
+    const existing = this.db
+      .prepare('SELECT elements_json FROM overlays WHERE id = ?')
+      .get(overlayId) as { elements_json: string } | undefined;
+
+    if (!existing) return this.getSnapshot();
+
+    const currentElements = parseJson<SlideElement[]>(existing.elements_json);
+    const appliedElements = applyTemplateToElements(template, currentElements, overlayId);
+    const summary = summarizeOverlayElements(appliedElements);
+    this.db
+      .prepare(
+        `UPDATE overlays
+         SET type = ?, x = ?, y = ?, width = ?, height = ?, opacity = ?, z_index = ?, payload_json = ?, elements_json = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        summary.type,
+        summary.x,
+        summary.y,
+        summary.width,
+        summary.height,
+        summary.opacity,
+        summary.zIndex,
+        JSON.stringify(summary.payload),
+        JSON.stringify(appliedElements),
+        nowIso(),
+        overlayId,
+      );
+    return this.getSnapshot();
   }
 
   setPresentationKind(id: Id, kind: PresentationKind): AppSnapshot {
@@ -1547,6 +1789,11 @@ export class CastRepository {
     return kind === 'lyrics' ? 'lyrics' : 'canvas';
   }
 
+  private normalizeTemplateKind(kind: string | null | undefined): TemplateKind {
+    if (kind === 'lyrics' || kind === 'overlays') return kind;
+    return 'slides';
+  }
+
   private inferLayer(type: string): 'background' | 'media' | 'content' {
     if (type === 'shape') return 'background';
     if (type === 'image' || type === 'video') return 'media';
@@ -1816,6 +2063,42 @@ export class CastRepository {
     }));
   }
 
+  private getTemplates(): Template[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+         FROM templates
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all() as Array<{
+      id: string;
+      name: string;
+      kind: string;
+      width: number;
+      height: number;
+      order_index: number;
+      elements_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      kind: this.normalizeTemplateKind(row.kind),
+      width: row.width,
+      height: row.height,
+      order: row.order_index,
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getTemplateById(templateId: Id): Template | null {
+    return this.getTemplates().find((template) => template.id === templateId) ?? null;
+  }
+
   private normalizePlaylistOrder(libraryId: Id): void {
     this.db
       .prepare(
@@ -1843,5 +2126,21 @@ export class CastRepository {
          WHERE id IN (SELECT id FROM ranked)`
       )
       .run();
+  }
+
+  private normalizeTemplateOrder(): void {
+    const templates = this.db
+      .prepare('SELECT id FROM templates ORDER BY order_index ASC, created_at ASC')
+      .all() as Array<{ id: string }>;
+    const update = this.db.prepare('UPDATE templates SET order_index = ?, updated_at = ? WHERE id = ?');
+    const now = nowIso();
+
+    const tx = this.db.transaction(() => {
+      templates.forEach((template, index) => {
+        update.run(index, now, template.id);
+      });
+    });
+
+    tx();
   }
 }

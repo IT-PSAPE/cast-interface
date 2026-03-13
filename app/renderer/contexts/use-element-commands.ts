@@ -1,28 +1,34 @@
 import { useCallback } from 'react';
 import { isLyricPresentation } from '@core/presentation-entities';
-import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide } from '@core/types';
+import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../utils/slides';
 import { createId } from '../utils/create-id';
 import { useOverlayEditor } from './overlay-editor-context';
 import { useProjectContent } from './use-project-content';
 import { useSlideEditor } from './slide-editor-context';
+import { useTemplateEditor } from './template-editor-context';
 import { useWorkbench } from './workbench-context';
 
 interface CommandsParams {
   currentSlide: Slide | null;
   currentPresentation: Presentation | null;
+  currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentPresentation, mutate, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentPresentation, currentTemplate, mutate, setStatusText }: CommandsParams) {
   const isLyricsPresentation = isLyricPresentation(currentPresentation);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { replaceTemplateElements } = useTemplateEditor();
   const { slideElementsBySlideId } = useProjectContent();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const isSlideEdit = workbenchMode === 'slide-editor';
+  const isTemplateEdit = workbenchMode === 'template-editor';
+  const isLyricsTemplate = currentTemplate?.kind === 'lyrics';
+  const existingTemplateTextElement = currentTemplate?.elements.find((element) => element.type === 'text') ?? null;
 
   function resolvePersistentMediaSource(file: File): string | null {
     const filePath = window.castApi.getPathForFile(file);
@@ -56,6 +62,19 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
       setStatusText('Added overlay text');
       return;
     }
+    if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      if (isLyricsTemplate && existingTemplateTextElement) {
+        setStatusText('Lyric templates only support the existing lyric text element.');
+        return;
+      }
+      replaceTemplateElements([
+        ...currentTemplate.elements,
+        newSlideTextElement(currentTemplate.id),
+      ]);
+      setStatusText('Added template text');
+      return;
+    }
     if (!currentSlide) return;
     if (isLyricsPresentation) {
       const existingLyricsText = (slideElementsBySlideId.get(currentSlide.id) ?? []).find((element) => {
@@ -81,7 +100,7 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
       zIndex: 20, layer: 'content', payload: newTextPayload('New Text Element', 72, 'center', '700'),
     }));
     setStatusText('Added text element');
-  }, [currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText, slideElementsBySlideId]);
+  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricsPresentation, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId]);
 
   const createShape = useCallback(async () => {
     if (isOverlayEdit) {
@@ -109,11 +128,16 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
       setStatusText('Added overlay shape');
       return;
     }
-    if (!currentSlide) return;
-    if (isLyricsPresentation) {
-      setStatusText('Lyrics presentations only support one controllable text element.');
+    if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      replaceTemplateElements([
+        ...currentTemplate.elements,
+        newSlideShapeElement(currentTemplate.id),
+      ]);
+      setStatusText('Added template shape');
       return;
     }
+    if (!currentSlide) return;
     if (isSlideEdit) {
       const nextElements = [
         ...getSlideElements(currentSlide.id),
@@ -128,7 +152,7 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
       zIndex: 2, layer: 'background', payload: newShapePayload(),
     }));
     setStatusText('Added shape element');
-  }, [currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText]);
 
   const createFromMedia = useCallback(async (asset: MediaAsset, x: number, y: number) => {
     if (isOverlayEdit) {
@@ -158,11 +182,16 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
       setStatusText(`Added ${asset.type} overlay`);
       return;
     }
-    if (!currentSlide) return;
-    if (isLyricsPresentation) {
-      setStatusText('Lyrics presentations only support one controllable text element.');
+    if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      replaceTemplateElements([
+        ...currentTemplate.elements,
+        newSlideMediaElement(currentTemplate.id, asset, x, y),
+      ]);
+      setStatusText(`Added ${asset.type} template element`);
       return;
     }
+    if (!currentSlide) return;
     if (isSlideEdit) {
       const nextElements = [
         ...getSlideElements(currentSlide.id),
@@ -192,7 +221,7 @@ export function useElementCommands({ currentSlide, currentPresentation, mutate, 
     }
     await mutate(() => window.castApi.createElement(input));
     setStatusText(`Added ${asset.type} element`);
-  }, [currentOverlay, currentSlide, getSlideElements, isLyricsPresentation, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, setStatusText]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText]);
 
   const createOverlay = useCallback(async () => {
     await mutate(() => window.castApi.createOverlay(getOverlayDefaults()));

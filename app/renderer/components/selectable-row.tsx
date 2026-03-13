@@ -16,7 +16,7 @@ export function SelectableRow({ selected, leading, title, onClick, trailing }: S
   return (
     <button onClick={onClick} className={`flex h-7 w-full items-center gap-2 rounded px-1.5 text-left transition-colors ${rowClasses}`}>
       {leading}
-      <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{title}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
       {trailing}
     </button>
   );

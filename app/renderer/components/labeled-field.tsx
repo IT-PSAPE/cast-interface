@@ -1,6 +1,6 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
 
-const LABEL_CLASS = 'grid min-w-0 gap-0.5 text-[11px] text-text-secondary';
+const LABEL_CLASS = 'grid min-w-0 gap-0.5 text-sm text-text-secondary';
 
 interface FieldInputProps {
   type?: 'number' | 'text';
@@ -21,7 +21,7 @@ export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, s
   }
 
   const input = (
-    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -69,7 +69,7 @@ export function FieldTextarea({ value, onChange, placeholder, className = '', la
       value={value}
       onChange={handleValueChange}
       placeholder={placeholder}
-      className={`min-w-0 w-full rounded border border-border-primary bg-primary px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
+      className={`min-w-0 w-full rounded border border-border-primary bg-primary px-1.5 py-1 text-sm text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
     />
   );
 
@@ -99,7 +99,7 @@ export function FieldSelect({ value, onChange, onBlur, options, icon, label, wid
   }
 
   const select = (
-    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -173,7 +173,7 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
   }
 
   const colorField = (
-    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       <button
         type="button"
         onClick={handleSwatchClick}
@@ -188,13 +188,13 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
         className="sr-only"
         tabIndex={-1}
       />
-      <span className="text-text-tertiary text-[11px] select-none">#</span>
+      <span className="text-text-tertiary text-sm select-none">#</span>
       <input
         type="text"
         value={displayHex(safeValue)}
         onChange={handleHexInput}
         maxLength={8}
-        className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-[11px]"
+        className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-sm"
       />
       {onModeChange ? (
         <select

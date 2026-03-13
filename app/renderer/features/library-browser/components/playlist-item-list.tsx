@@ -52,13 +52,13 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
   }
 
   if (!tree) {
-    return <div className="grid h-full min-h-0 place-items-center p-4 text-[12px] text-text-tertiary">Select a playlist</div>;
+    return <div className="grid h-full min-h-0 place-items-center p-4 text-sm text-text-tertiary">Select a playlist</div>;
   }
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between border-b border-border-primary bg-primary px-2.5 py-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
         <IconButton label="New segment" onClick={handleNewSegment}>
           <Icon.folder_plus size={14} strokeWidth={1.75} />
         </IconButton>

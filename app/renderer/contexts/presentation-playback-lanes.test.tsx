@@ -9,6 +9,7 @@ import { RenderSceneProvider, useRenderScenes } from '../features/stage/renderin
 import { useElements } from './element-context';
 import { useOverlayEditor } from './overlay-editor-context';
 import { useSlideEditor } from './slide-editor-context';
+import { TemplateEditorProvider } from './template-editor-context';
 import { useWorkbench } from './workbench-context';
 
 vi.mock('./cast-context', () => ({
@@ -214,6 +215,7 @@ function createSnapshot(): AppSnapshot {
     ],
     mediaAssets: [],
     overlays: [],
+    templates: [],
   };
 }
 
@@ -222,9 +224,11 @@ function TestProviders() {
     <NavigationProvider>
       <PresentationLayerProvider>
         <SlideProvider>
-          <RenderSceneProvider>
-            <Probe />
-          </RenderSceneProvider>
+          <TemplateEditorProvider>
+            <RenderSceneProvider>
+              <Probe />
+            </RenderSceneProvider>
+          </TemplateEditorProvider>
         </SlideProvider>
       </PresentationLayerProvider>
     </NavigationProvider>

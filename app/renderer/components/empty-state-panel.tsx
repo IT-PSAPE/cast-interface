@@ -14,7 +14,7 @@ export function EmptyStatePanel({ glyph, title, description }: EmptyStatePanelPr
           {glyph}
         </div>
         <h2 className="m-0 text-[15px] font-semibold text-text-primary">{title}</h2>
-        <p className="m-0 text-[12px] text-text-tertiary">{description}</p>
+        <p className="m-0 text-sm text-text-tertiary">{description}</p>
       </div>
     </section>
   );

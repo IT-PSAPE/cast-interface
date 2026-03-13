@@ -22,11 +22,6 @@ function getSystemPreference(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
-  if (mode === 'system') return getSystemPreference();
-  return mode;
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getStoredThemeMode);
   const [systemPref, setSystemPref] = useState<'light' | 'dark'>(getSystemPreference);

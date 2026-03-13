@@ -1,14 +1,10 @@
-import { Button } from '../../../components/button';
 import { Icon } from '../../../components/icon';
+import { IconButton } from '../../../components/icon-button';
 import { PanelSection } from '../../../components/panel-section';
 import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
-import { SceneFrame } from '../../../components/scene-frame';
-import { ThumbnailTile } from '../../../components/thumbnail-tile';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
-import { buildRenderScene } from '../../stage/rendering/build-render-scene';
-import { SceneStage } from '../../stage/rendering/scene-stage';
-import { overlayToLayerElements } from '@core/presentation-layers';
 import { ObjectListPanel } from '../../slide-editor/components/object-list-panel';
+import { OverlayCard } from './overlay-card';
 
 export function OverlayListPanel() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay } = useOverlayEditor();
@@ -18,31 +14,19 @@ export function OverlayListPanel() {
   }
 
   function renderOverlayCard(overlay: (typeof overlays)[number], index: number) {
-    const scene = buildRenderScene(null, overlayToLayerElements(overlay));
     const isFocused = currentOverlayId === overlay.id;
-    const outlineClass = isFocused ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : '';
 
     function handleSelectOverlay() {
       setCurrentOverlayId(overlay.id);
     }
 
     return (
-      <ThumbnailTile
+      <OverlayCard
         key={overlay.id}
-        onClick={handleSelectOverlay}
+        overlay={overlay}
+        index={index}
         selected={isFocused}
-        className={outlineClass}
-        body={(
-          <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
-            <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
-          </SceneFrame>
-        )}
-        caption={(
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{index + 1}</span>
-            <span className="truncate text-[11px] text-text-tertiary">{overlay.name}</span>
-          </div>
-        )}
+        onClick={handleSelectOverlay}
       />
     );
   }
@@ -62,12 +46,11 @@ export function OverlayListPanel() {
         minBottomSize={160}
         topPane={(
           <PanelSection
-            title={<span className="truncate text-[12px] font-medium text-text-primary">Overlays</span>}
+            title={<span className="truncate text-sm font-medium text-text-primary">Overlays</span>}
             action={(
-              <Button onClick={handleAddOverlay} className="grid h-6 w-6 place-items-center p-0 text-[14px] leading-none">
+              <IconButton label="Add overlay" size="sm" onClick={handleAddOverlay}>
                 <Icon.plus size={14} strokeWidth={2} />
-                <span className="sr-only">Add overlay</span>
-              </Button>
+              </IconButton>
             )}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"
@@ -79,7 +62,7 @@ export function OverlayListPanel() {
         )}
         bottomPane={(
           <PanelSection
-            title={<span className="text-[12px] font-medium text-text-primary">Objects</span>}
+            title={<span className="text-sm font-medium text-text-primary">Objects</span>}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"
           >

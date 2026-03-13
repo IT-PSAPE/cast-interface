@@ -16,7 +16,7 @@ export function OutputToggle({ label, active, onClick }: OutputToggleProps) {
       variant="ghost"
       onClick={onClick}
       type="button"
-      className={`flex items-center gap-1.5 rounded border ${borderColor} bg-background-tertiary px-2 py-1 text-[12px] cursor-pointer transition-colors hover:border-text-muted`}
+      className={`flex items-center gap-1.5 rounded border ${borderColor} bg-background-tertiary px-2 py-1 text-sm cursor-pointer transition-colors hover:border-text-muted`}
       aria-pressed={active}
     >
       <span className={`inline-block h-2 w-2 rounded-full ${dotColor} transition-colors`} aria-hidden="true" />

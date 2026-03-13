@@ -11,6 +11,7 @@ export function ObjectListPanel() {
   const { setInspectorTab } = useInspector();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
+  const isTemplateEdit = workbenchMode === 'template-editor';
 
   const orderedElements = useMemo(() => {
     return effectiveElements
@@ -53,9 +54,9 @@ export function ObjectListPanel() {
     return (
       <div
         data-ui-region="object-list-panel"
-        className="grid h-full place-items-center rounded border border-border-secondary bg-background-tertiary/20 text-[12px] text-text-tertiary"
+        className="grid h-full place-items-center rounded border border-border-secondary bg-background-tertiary/20 text-sm text-text-tertiary"
       >
-        {isOverlayEdit ? 'No objects in this overlay.' : 'No objects on this slide.'}
+        {isOverlayEdit ? 'No objects in this overlay.' : isTemplateEdit ? 'No objects in this template.' : 'No objects on this slide.'}
       </div>
     );
   }

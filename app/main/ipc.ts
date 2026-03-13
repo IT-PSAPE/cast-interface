@@ -10,6 +10,8 @@ import type {
   NdiOutputName,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideFrame
@@ -90,6 +92,15 @@ export const registerIpcHandlers = (
   safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));
   safeHandle(IPC.deleteOverlay, (_event, overlayId: Id) => repo.deleteOverlay(overlayId));
+  safeHandle(IPC.createTemplate, (_event, input: TemplateCreateInput) => repo.createTemplate(input));
+  safeHandle(IPC.updateTemplate, (_event, input: TemplateUpdateInput) => repo.updateTemplate(input));
+  safeHandle(IPC.deleteTemplate, (_event, templateId: Id) => repo.deleteTemplate(templateId));
+  safeHandle(IPC.applyTemplateToPresentation, (_event, templateId: Id, presentationId: Id) =>
+    repo.applyTemplateToPresentation(templateId, presentationId)
+  );
+  safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
+    repo.applyTemplateToOverlay(templateId, overlayId)
+  );
   safeHandle(IPC.renameLibrary, (_event, id: Id, name: string) => repo.renameLibrary(id, name));
   safeHandle(IPC.renamePlaylist, (_event, id: Id, name: string) => repo.renamePlaylist(id, name));
   safeHandle(IPC.renamePresentation, (_event, id: Id, title: string) => repo.renamePresentation(id, title));

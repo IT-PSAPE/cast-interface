@@ -34,7 +34,7 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       body={(
         <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
           {isEmpty ? (
-            <div className="absolute inset-0 z-10 grid place-items-center text-[11px] uppercase tracking-wider text-text-tertiary">
+            <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-text-tertiary">
               Empty
             </div>
           ) : null}
@@ -43,8 +43,8 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       )}
       caption={(
         <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{index + 1}</span>
-          <span className="truncate text-[11px] text-text-tertiary">{slideTextPreview(elements)}</span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-text-secondary">{index + 1}</span>
+          <span className="truncate text-sm text-text-tertiary">{slideTextPreview(elements)}</span>
         </div>
       )}
     />

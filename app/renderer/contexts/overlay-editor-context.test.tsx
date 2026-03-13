@@ -77,6 +77,7 @@ function createSnapshot(overlays: Overlay[]): AppSnapshot {
     slideElements: [],
     mediaAssets: [],
     overlays,
+    templates: [],
   };
 }
 
@@ -115,11 +116,13 @@ describe('OverlayEditorProvider', () => {
       slideElements: [],
       mediaAssets: [],
       overlays: [createOverlay()],
+      templates: [],
       presentationsById: new Map(),
       slidesByPresentationId: new Map(),
       slideElementsBySlideId: new Map(),
       mediaAssetsById: new Map(),
       overlaysById: new Map([['overlay-1', createOverlay()]]),
+      templatesById: new Map(),
     });
     vi.mocked(useWorkbench).mockImplementation(() => ({
       workbenchMode,

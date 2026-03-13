@@ -134,5 +134,5 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   if (asset.type === 'video') {
     return <video src={asset.src} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />;
   }
-  return <span className="text-text-tertiary text-[11px] font-bold tracking-wider uppercase">{asset.type}</span>;
+  return <span className="text-text-tertiary text-sm font-bold tracking-wider uppercase">{asset.type}</span>;
 }

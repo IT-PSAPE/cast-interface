@@ -222,6 +222,36 @@ describe('NdiService', () => {
     expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', lastLiveBuffer, 4, 4, 16);
   });
 
+  it('uses the latest live frame for heartbeat after a size change', () => {
+    const native = createNativeModuleMock();
+    const intervals = createIntervalController();
+    const scheduled: Array<() => void> = [];
+    let now = 100;
+    const service = new NdiService({
+      loadNativeModule: () => native.module,
+      scheduleTask: (task) => {
+        scheduled.push(task);
+      },
+      now: () => now,
+      setIntervalFn: intervals.setIntervalFn,
+      clearIntervalFn: intervals.clearIntervalFn
+    });
+
+    service.setOutputEnabled('audience', true);
+    service.sendFrame(createFrame(4, 4));
+    flushAllScheduled(scheduled);
+    service.sendFrame(createFrame(3, 3));
+    flushAllScheduled(scheduled);
+
+    const latestLiveBuffer = native.sendRgbaFrame.mock.calls[1]?.[1];
+
+    now = 240;
+    intervals.runByDelay(HEARTBEAT_INTERVAL_MS);
+
+    expect(native.sendRgbaFrame).toHaveBeenCalledTimes(3);
+    expect(native.sendRgbaFrame).toHaveBeenLastCalledWith('Cast Interface - Audience', latestLiveBuffer, 3, 3, 12);
+  });
+
   it('continues to send when connection probe is unavailable', () => {
     const native = createNativeModuleMock({ includeConnectionProbe: false });
     const intervals = createIntervalController();

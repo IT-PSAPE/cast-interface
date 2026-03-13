@@ -9,6 +9,8 @@ import type {
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideFrame
@@ -44,6 +46,11 @@ export interface MainApi {
   updateOverlay: (input: OverlayUpdateInput) => Promise<AppSnapshot>;
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => Promise<AppSnapshot>;
   deleteOverlay: (overlayId: Id) => Promise<AppSnapshot>;
+  createTemplate: (input: TemplateCreateInput) => Promise<AppSnapshot>;
+  updateTemplate: (input: TemplateUpdateInput) => Promise<AppSnapshot>;
+  deleteTemplate: (templateId: Id) => Promise<AppSnapshot>;
+  applyTemplateToPresentation: (templateId: Id, presentationId: Id) => Promise<AppSnapshot>;
+  applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<AppSnapshot>;
   renameLibrary: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylist: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePresentation: (id: Id, title: string) => Promise<AppSnapshot>;
@@ -86,6 +93,11 @@ export const IPC = {
   updateOverlay: 'cast:updateOverlay',
   setOverlayEnabled: 'cast:setOverlayEnabled',
   deleteOverlay: 'cast:deleteOverlay',
+  createTemplate: 'cast:createTemplate',
+  updateTemplate: 'cast:updateTemplate',
+  deleteTemplate: 'cast:deleteTemplate',
+  applyTemplateToPresentation: 'cast:applyTemplateToPresentation',
+  applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
   renamePresentation: 'cast:renamePresentation',

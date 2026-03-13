@@ -9,6 +9,7 @@ import { useNavigation } from './navigation-context';
 import { useOverlayEditor } from './overlay-editor-context';
 import { useSlideEditor } from './slide-editor-context';
 import { useSlides } from './slide-context';
+import { useTemplateEditor } from './template-editor-context';
 import { useWorkbench } from './workbench-context';
 import { useElementCommands } from './use-element-commands';
 import { useElementHistory } from './use-element-history';
@@ -24,9 +25,11 @@ export function ElementProvider({ children }: { children: ReactNode }) {
   const { currentSlide } = useSlides();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { currentTemplate, replaceTemplateElements } = useTemplateEditor();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const isSlideEdit = workbenchMode === 'slide-editor';
+  const isTemplateEdit = workbenchMode === 'template-editor';
 
   const [draftElements, setDraftElements] = useState<Record<Id, Partial<SlideElement>>>({});
   const [isCanvasInteracting, setCanvasInteracting] = useState(false);
@@ -36,9 +39,13 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       if (!currentOverlay) return [];
       return sortElements(overlayToLayerElements(currentOverlay));
     }
+    if (isTemplateEdit) {
+      if (!currentTemplate) return [];
+      return sortElements(currentTemplate.elements);
+    }
     if (!currentSlide) return [];
     return sortElements(getSlideElements(currentSlide.id));
-  }, [currentOverlay, currentSlide, getSlideElements, isOverlayEdit]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isTemplateEdit]);
 
   const effectiveElements = useMemo(
     () => sortElements(baseElements.map((element) => ({ ...element, ...(draftElements[element.id] ?? {}) }))),
@@ -67,18 +74,28 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       stageOverlayElementUpdates([input]);
       return;
     }
+    if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      replaceTemplateElements(applyElementUpdates(currentTemplate.elements, [input]));
+      return;
+    }
     if (isSlideEdit) {
       if (!currentSlide) return;
       replaceSlideElements(currentSlide.id, applyElementUpdates(getSlideElements(currentSlide.id), [input]));
       return;
     }
     await mutate(() => window.castApi.updateElement(input));
-  }, [currentSlide, getSlideElements, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, stageOverlayElementUpdates]);
+  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
 
   const saveElementUpdates = useCallback(async (updates: ElementUpdateInput[]) => {
     if (updates.length === 0) return;
     if (isOverlayEdit) {
       stageOverlayElementUpdates(updates);
+      return;
+    }
+    if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      replaceTemplateElements(applyElementUpdates(currentTemplate.elements, updates));
       return;
     }
     if (isSlideEdit) {
@@ -90,11 +107,10 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       if (updates.length === 1) return window.castApi.updateElement(updates[0]);
       return window.castApi.updateElementsBatch(updates);
     });
-  }, [currentSlide, getSlideElements, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, stageOverlayElementUpdates]);
+  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
 
   const inspector = useElementInspectorSync({
     selectedElementId: selection.primarySelectedElementId,
-    selectedElement: selection.selectedElement,
     baseElements,
     isCanvasInteracting,
     draftElements,
@@ -106,7 +122,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     baseElements,
     effectiveElements,
     currentSlide,
-    historyKey: isOverlayEdit ? currentOverlay?.id ?? null : currentSlide?.id ?? null,
+    historyKey: isOverlayEdit ? currentOverlay?.id ?? null : isTemplateEdit ? currentTemplate?.id ?? null : currentSlide?.id ?? null,
     selectedElementIds: selection.selectedElementIds,
     mutate,
     setStatusText,
@@ -118,25 +134,33 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       ? async (elements) => {
         replaceSlideElements(currentSlide.id, elements);
       }
+      : isTemplateEdit && currentTemplate
+        ? async (elements) => {
+          replaceTemplateElements(elements);
+        }
       : undefined,
   });
 
   const deleteSelected = useCallback(async () => {
-    const protectedLyricTextIds = getProtectedLyricTextSelectionIds(
+    const protectedLyricTextIds = new Set(getProtectedLyricTextSelectionIds(
       effectiveElements,
       selection.selectedElementIds,
-      isLyricPresentation(currentPresentation),
-    );
-    if (protectedLyricTextIds.length > 0) {
+      isTemplateEdit ? currentTemplate?.kind === 'lyrics' : isLyricPresentation(currentPresentation),
+    ));
+    const targetIds = getUnlockedSelectedElementIds(effectiveElements, selection.selectedElementIds)
+      .filter((id) => !protectedLyricTextIds.has(id));
+    if (targetIds.length === 0 && protectedLyricTextIds.size > 0) {
       setStatusText('Lyrics always keep one text layer. Hide it instead of deleting it.');
       return;
     }
-    const targetIds = getUnlockedSelectedElementIds(effectiveElements, selection.selectedElementIds);
     if (targetIds.length === 0) return;
     if (isOverlayEdit) {
       if (!currentOverlay) return;
       const nextElements = currentOverlay.elements.filter((element) => !targetIds.includes(element.id));
       updateOverlayDraft({ id: currentOverlay.id, elements: nextElements });
+    } else if (isTemplateEdit) {
+      if (!currentTemplate) return;
+      replaceTemplateElements(currentTemplate.elements.filter((element) => !targetIds.includes(element.id)));
     } else if (isSlideEdit) {
       if (!currentSlide) return;
       const nextElements = getSlideElements(currentSlide.id).filter((element) => !targetIds.includes(element.id));
@@ -149,9 +173,9 @@ export function ElementProvider({ children }: { children: ReactNode }) {
       });
     }
     setStatusText('Deleted selected object(s)');
-    selection.clearSelection();
+    selection.selectElements(selection.selectedElementIds.filter((id) => protectedLyricTextIds.has(id)));
     setDraftElements({});
-  }, [currentOverlay, currentPresentation, currentSlide, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, mutate, replaceSlideElements, selection, setStatusText, updateOverlayDraft]);
+  }, [currentOverlay, currentPresentation, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
 
   const toggleElementVisibility = useCallback(async (id: Id, visible: boolean) => {
     const target = effectiveElements.find((element) => element.id === id);
@@ -175,6 +199,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
     currentSlide,
     currentPresentation,
+    currentTemplate,
     mutate,
     setStatusText,
   });
@@ -205,8 +230,8 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     toggleElementVisibility,
     toggleElementLock,
     nudgeSelection: history.nudgeSelection,
-    copySelection: isOverlayEdit ? noopCopySelection : history.copySelection,
-    pasteSelection: isOverlayEdit ? noopAsyncAction : history.pasteSelection,
+    copySelection: isOverlayEdit || isTemplateEdit ? noopCopySelection : history.copySelection,
+    pasteSelection: isOverlayEdit || isTemplateEdit ? noopAsyncAction : history.pasteSelection,
     undo: isOverlayEdit ? noopAsyncAction : history.undo,
     redo: isOverlayEdit ? noopAsyncAction : history.redo,
     createText,
@@ -232,6 +257,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     inspector,
     isOverlayEdit,
     isSlideEdit,
+    isTemplateEdit,
     isCanvasInteracting,
     selection,
     setDraftElements,

@@ -1,19 +1,12 @@
-import { ResizableSplitRoot, type ResizableSplitResizeEndEvent, type ResizableSplitResizeMoveEvent, type ResizableSplitResizeStartEvent } from '../../../components/resizable-split';
+import { ResizableSplitRoot } from '../../../components/resizable-split';
 import { InspectorPanel } from '../../inspector/components/inspector-panel';
-import {
-  WORKBENCH_SPLIT_DEFINITIONS,
-  type PaneId,
-  type SplitLayoutState,
-  type WorkbenchPanelLayouts,
-} from '../types/workbench-panel-layout';
-import type {
-  ResizeEndInput,
-  ResizeMoveInput,
-  ResizeStartInput,
-} from '../hooks/use-workbench-panel-layout';
+import { WORKBENCH_SPLIT_DEFINITIONS, type WorkbenchPanelLayouts } from '../types/workbench-panel-layout';
+import type { ResizeEndInput, ResizeMoveInput, ResizeStartInput } from '../hooks/use-workbench-panel-layout';
 import { StagePanel } from '../../stage/components/stage-panel';
 import { SlideNotesPanel } from '../../slide-editor/components/slide-notes-panel';
 import { SlideListPanel } from '../../slide-editor/components/slide-list-panel';
+import { useSplitResizeHandlers } from '../hooks/use-split-resize-handlers';
+import { requirePaneState } from '../utils/split-resize';
 
 interface SlideEditorLayoutProps {
   liveLayouts: WorkbenchPanelLayouts;
@@ -27,46 +20,8 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
   const editCenter = liveLayouts.editCenter;
   const definition = WORKBENCH_SPLIT_DEFINITIONS['edit-main'];
   const centerDefinition = WORKBENCH_SPLIT_DEFINITIONS['edit-center'];
-
-  function handleEditResizeStart(event: ResizableSplitResizeStartEvent) {
-    startDrag({
-      splitId: 'edit-main',
-      handleIndex: event.handleIndex,
-      pointerPosition: event.pointerPosition,
-      paneSizes: event.paneSizes,
-    });
-  }
-
-  function handleEditResize(event: ResizableSplitResizeMoveEvent) {
-    updateDrag({
-      splitId: 'edit-main',
-      pointerPosition: event.pointerPosition,
-    });
-  }
-
-  function handleEditResizeEnd(_event: ResizableSplitResizeEndEvent) {
-    endDrag({ splitId: 'edit-main' });
-  }
-
-  function handleEditCenterResizeStart(event: ResizableSplitResizeStartEvent) {
-    startDrag({
-      splitId: 'edit-center',
-      handleIndex: event.handleIndex,
-      pointerPosition: event.pointerPosition,
-      paneSizes: event.paneSizes,
-    });
-  }
-
-  function handleEditCenterResize(event: ResizableSplitResizeMoveEvent) {
-    updateDrag({
-      splitId: 'edit-center',
-      pointerPosition: event.pointerPosition,
-    });
-  }
-
-  function handleEditCenterResizeEnd(_event: ResizableSplitResizeEndEvent) {
-    endDrag({ splitId: 'edit-center' });
-  }
+  const mainHandlers = useSplitResizeHandlers('edit-main', startDrag, updateDrag, endDrag);
+  const centerHandlers = useSplitResizeHandlers('edit-center', startDrag, updateDrag, endDrag);
 
   return (
     <section data-ui-region="slide-editor-layout" className="h-full min-h-0 overflow-hidden">
@@ -76,8 +31,8 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
         panes={[
           {
             id: 'edit-left',
-            visible: requirePane(editMain, 'edit-left').visible,
-            size: requirePane(editMain, 'edit-left').size,
+            visible: requirePaneState(editMain, 'edit-left').visible,
+            size: requirePaneState(editMain, 'edit-left').size,
             minSize: definition.panes['edit-left']!.minSize,
             maxSize: definition.panes['edit-left']!.maxSize,
             flexible: false,
@@ -85,8 +40,8 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
           },
           {
             id: 'edit-center',
-            visible: requirePane(editMain, 'edit-center').visible,
-            size: requirePane(editMain, 'edit-center').size,
+            visible: requirePaneState(editMain, 'edit-center').visible,
+            size: requirePaneState(editMain, 'edit-center').size,
             minSize: definition.panes['edit-center']!.minSize,
             maxSize: definition.panes['edit-center']!.maxSize,
             flexible: true,
@@ -97,8 +52,8 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
                 panes={[
                   {
                     id: 'edit-middle',
-                    visible: requirePane(editCenter, 'edit-middle').visible,
-                    size: requirePane(editCenter, 'edit-middle').size,
+                    visible: requirePaneState(editCenter, 'edit-middle').visible,
+                    size: requirePaneState(editCenter, 'edit-middle').size,
                     minSize: centerDefinition.panes['edit-middle']!.minSize,
                     maxSize: centerDefinition.panes['edit-middle']!.maxSize,
                     flexible: true,
@@ -106,42 +61,34 @@ export function SlideEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag 
                   },
                   {
                     id: 'edit-bottom',
-                    visible: requirePane(editCenter, 'edit-bottom').visible,
-                    size: requirePane(editCenter, 'edit-bottom').size,
+                    visible: requirePaneState(editCenter, 'edit-bottom').visible,
+                    size: requirePaneState(editCenter, 'edit-bottom').size,
                     minSize: centerDefinition.panes['edit-bottom']!.minSize,
                     maxSize: centerDefinition.panes['edit-bottom']!.maxSize,
                     flexible: false,
                     content: <SlideNotesPanel />,
                   },
                 ]}
-                onResizeStart={handleEditCenterResizeStart}
-                onResize={handleEditCenterResize}
-                onResizeEnd={handleEditCenterResizeEnd}
+                onResizeStart={centerHandlers.onResizeStart}
+                onResize={centerHandlers.onResize}
+                onResizeEnd={centerHandlers.onResizeEnd}
               />
             ),
           },
           {
             id: 'edit-right',
-            visible: requirePane(editMain, 'edit-right').visible,
-            size: requirePane(editMain, 'edit-right').size,
+            visible: requirePaneState(editMain, 'edit-right').visible,
+            size: requirePaneState(editMain, 'edit-right').size,
             minSize: definition.panes['edit-right']!.minSize,
             maxSize: definition.panes['edit-right']!.maxSize,
             flexible: false,
             content: <InspectorPanel />,
           },
         ]}
-        onResizeStart={handleEditResizeStart}
-        onResize={handleEditResize}
-        onResizeEnd={handleEditResizeEnd}
+        onResizeStart={mainHandlers.onResizeStart}
+        onResize={mainHandlers.onResize}
+        onResizeEnd={mainHandlers.onResizeEnd}
       />
     </section>
   );
-}
-
-function requirePane(layout: SplitLayoutState, paneId: PaneId) {
-  const pane = layout.panes[paneId];
-  if (!pane) {
-    throw new Error(`Missing pane layout for ${paneId}`);
-  }
-  return pane;
 }

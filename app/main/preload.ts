@@ -10,6 +10,8 @@ import type {
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideFrame
@@ -57,6 +59,13 @@ const api = {
   updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => ipcRenderer.invoke(IPC.setOverlayEnabled, overlayId, enabled),
   deleteOverlay: (overlayId: Id) => ipcRenderer.invoke(IPC.deleteOverlay, overlayId),
+  createTemplate: (input: TemplateCreateInput) => ipcRenderer.invoke(IPC.createTemplate, input),
+  updateTemplate: (input: TemplateUpdateInput) => ipcRenderer.invoke(IPC.updateTemplate, input),
+  deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
+  applyTemplateToPresentation: (templateId: Id, presentationId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToPresentation, templateId, presentationId),
+  applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
   renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
@@ -70,10 +79,12 @@ const api = {
       ipcRenderer.invoke(IPC.sendNdiFrame, frame);
       return;
     }
-    const rgba = frame.rgba.buffer.slice(
-      frame.rgba.byteOffset,
-      frame.rgba.byteOffset + frame.rgba.byteLength
-    );
+    const rgba = frame.rgba.byteOffset === 0 && frame.rgba.byteLength === frame.rgba.buffer.byteLength
+      ? frame.rgba.buffer
+      : frame.rgba.buffer.slice(
+        frame.rgba.byteOffset,
+        frame.rgba.byteOffset + frame.rgba.byteLength
+      );
     ndiFramePort.postMessage(
       { width: frame.width, height: frame.height, rgba, timestamp: frame.timestamp },
       [rgba]

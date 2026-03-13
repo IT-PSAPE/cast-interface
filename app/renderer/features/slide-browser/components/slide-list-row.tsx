@@ -39,7 +39,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
   function renderPrimaryText() {
     if (!row.textEditable) {
       return (
-        <span className="w-full truncate text-[13px] font-medium text-text-secondary">
+        <span className="w-full truncate text-md font-medium text-text-secondary">
           {row.primaryText}
         </span>
       );
@@ -50,7 +50,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
         value={row.primaryText}
         onCommit={handlePrimaryTextCommit}
         placeholder="Slide text"
-        className="w-full text-[13px] font-medium"
+        className="w-full text-md font-medium"
       />
     );
   }
@@ -64,7 +64,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
     >
       <SceneFrame width={scene.width} height={scene.height} className="border-r border-border-primary bg-background-tertiary" stageClassName="absolute inset-0">
         {row.elements.length === 0 && (
-          <div className="absolute inset-0 grid place-items-center text-[11px] uppercase tracking-wider text-text-tertiary">
+          <div className="absolute inset-0 grid place-items-center text-sm uppercase tracking-wider text-text-tertiary">
             Empty
           </div>
         )}
@@ -73,13 +73,13 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
 
       <div className="grid min-h-[92px] content-center gap-1.5 p-2.5">
         <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-text-secondary">{row.index + 1}.</span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-text-secondary">{row.index + 1}.</span>
           {renderPrimaryText()}
           {row.state === 'live' && <Badge state="live" label="Live" />}
         </div>
 
         {row.secondaryText && (
-          <p className="m-0 truncate text-[12px] text-text-tertiary" title={row.secondaryText}>
+          <p className="m-0 truncate text-sm text-text-tertiary" title={row.secondaryText}>
             {row.secondaryText}
           </p>
         )}

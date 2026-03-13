@@ -6,7 +6,6 @@ import { hasGeometryChange, payloadSignature } from './element-context-utils';
 
 interface UseElementInspectorSyncInput {
   selectedElementId: Id | null;
-  selectedElement: SlideElement | null;
   baseElements: SlideElement[];
   isCanvasInteracting: boolean;
   draftElements: Record<Id, Partial<SlideElement>>;
@@ -49,7 +48,6 @@ function hasMatchingInspectorDraft(current: ElementInspectorDraft | null, select
 
 export function useElementInspectorSync({
   selectedElementId,
-  selectedElement,
   baseElements,
   isCanvasInteracting,
   draftElements,
@@ -67,6 +65,10 @@ export function useElementInspectorSync({
   const lastSelectedSyncKeyRef = useRef('');
   const wasCanvasInteractingRef = useRef(false);
   const lastCanvasInteractionEndRef = useRef(0);
+  const selectedBaseElement = selectedElementId
+    ? baseElements.find((element) => element.id === selectedElementId) ?? null
+    : null;
+
   useEffect(() => {
     const wasCanvasInteracting = wasCanvasInteractingRef.current;
     wasCanvasInteractingRef.current = isCanvasInteracting;
@@ -76,7 +78,7 @@ export function useElementInspectorSync({
   }, [isCanvasInteracting]);
 
   useEffect(() => {
-    if (!selectedElement) {
+    if (!selectedBaseElement) {
       setElementDraft((current) => (current === null ? current : null));
       setElementPayloadDraft((current) => (current === null ? current : null));
       setDraftOwnerElementId((current) => (current === null ? current : null));
@@ -84,30 +86,30 @@ export function useElementInspectorSync({
       lastSelectedSyncKeyRef.current = '';
       return;
     }
-    const selectionChanged = previousSelectedIdRef.current !== selectedElement.id;
-    const nextSyncKey = `${selectedElement.id}|${selectedElement.x}|${selectedElement.y}|${selectedElement.width}|${selectedElement.height}|${selectedElement.rotation}|${selectedElement.opacity}|${selectedElement.zIndex}|${payloadSignature(selectedElement.payload)}`;
+    const selectionChanged = previousSelectedIdRef.current !== selectedBaseElement.id;
+    const nextSyncKey = `${selectedBaseElement.id}|${selectedBaseElement.x}|${selectedBaseElement.y}|${selectedBaseElement.width}|${selectedBaseElement.height}|${selectedBaseElement.rotation}|${selectedBaseElement.opacity}|${selectedBaseElement.zIndex}|${payloadSignature(selectedBaseElement.payload)}`;
     if (!selectionChanged && (isCanvasInteracting || nextSyncKey === lastSelectedSyncKeyRef.current)) return;
-    previousSelectedIdRef.current = selectedElement.id;
+    previousSelectedIdRef.current = selectedBaseElement.id;
     lastSelectedSyncKeyRef.current = nextSyncKey;
-    setDraftOwnerElementId((current) => (current === selectedElement.id ? current : selectedElement.id));
+    setDraftOwnerElementId((current) => (current === selectedBaseElement.id ? current : selectedBaseElement.id));
     setElementDraft((current) => {
-      if (hasMatchingInspectorDraft(current, selectedElement)) return current;
+      if (hasMatchingInspectorDraft(current, selectedBaseElement)) return current;
       return {
-        x: selectedElement.x,
-        y: selectedElement.y,
-        width: selectedElement.width,
-        height: selectedElement.height,
-        rotation: selectedElement.rotation,
-        opacity: selectedElement.opacity,
-        zIndex: selectedElement.zIndex,
+        x: selectedBaseElement.x,
+        y: selectedBaseElement.y,
+        width: selectedBaseElement.width,
+        height: selectedBaseElement.height,
+        rotation: selectedBaseElement.rotation,
+        opacity: selectedBaseElement.opacity,
+        zIndex: selectedBaseElement.zIndex,
       };
     });
     setElementPayloadDraft((current) => {
-      if (payloadSignature(current) === payloadSignature(selectedElement.payload)) return current;
-      return JSON.parse(JSON.stringify(selectedElement.payload)) as SlideElement['payload'];
+      if (payloadSignature(current) === payloadSignature(selectedBaseElement.payload)) return current;
+      return JSON.parse(JSON.stringify(selectedBaseElement.payload)) as SlideElement['payload'];
     });
     if (selectionChanged) setLockAspectRatio(false);
-  }, [isCanvasInteracting, selectedElement]);
+  }, [isCanvasInteracting, selectedBaseElement]);
 
   useEffect(() => {
     if (!selectedElementId || !elementDraft) return;

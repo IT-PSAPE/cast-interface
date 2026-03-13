@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from 'rea
 import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
 import type { SlideElement, SlideFrame, TextElementPayload } from '@core/types';
+import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
 import type { RenderNode, RenderScene } from './scene-types';
 import { SceneNodeImage } from './scene-node-image';
 import { SceneNodeShape } from './scene-node-shape';
@@ -69,8 +70,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
 
   useEffect(() => {
     if (!emitFramesFps || !onFrameRef.current) return;
-    const intervalMs = Math.max(16, Math.round(1000 / emitFramesFps));
-    const intervalId = setInterval(() => {
+    function captureFrame() {
       const stage = editor.stageRef.current;
       if (!stage) return;
       const frameCallback = onFrameRef.current;
@@ -102,9 +102,14 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
         rgba: imageData.data,
         timestamp: performance.now(),
       });
-    }, intervalMs);
+    }
+
+    captureFrame();
+    if (!hasVideo) return;
+    const intervalMs = Math.max(16, Math.round(1000 / emitFramesFps));
+    const intervalId = setInterval(captureFrame, intervalMs);
     return () => clearInterval(intervalId);
-  }, [assetReadyVersion, editor.stageRef, emitFramesFps, fixedViewport, hasVideo, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
+  }, [assetReadyVersion, editor.stageRef, emitFramesFps, fixedViewport, hasVideo, scene, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
 
   function handleNodeClick(id: string, event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     editor.handleNodeSelect(id, event.evt.shiftKey);
@@ -178,7 +183,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
         onMouseMove={editor.handleStageMouseMove}
         onMouseUp={editor.handleStageMouseUp}
       >
-        <Layer>
+        <Layer listening={editable}>
           <Group name="scene-root" x={viewport.sceneOffsetX} y={viewport.sceneOffsetY} scaleX={viewport.sceneScale} scaleY={viewport.sceneScale}>
             {scene.nodes.map(renderNode)}
             {editable ? (
@@ -242,56 +247,6 @@ interface InlineTextEditorProps {
   sceneScale: number;
   onCommit: (text: string) => void;
   onCancel: () => void;
-}
-
-function resolveInlineTextAlign(alignment: TextElementPayload['alignment']): 'left' | 'center' | 'right' | 'justify' {
-  if (alignment === 'center') return 'center';
-  if (alignment === 'right' || alignment === 'end') return 'right';
-  if (alignment === 'justify') return 'justify';
-  return 'left';
-}
-
-function measureInlineTextHeight({
-  text,
-  width,
-  fontSize,
-  lineHeight,
-  fontWeight,
-  fontStyle,
-  fontFamily,
-}: {
-  text: string;
-  width: number;
-  fontSize: number;
-  lineHeight: number;
-  fontWeight: string;
-  fontStyle: string;
-  fontFamily: string;
-}): number {
-  if (typeof document === 'undefined') {
-    return fontSize * lineHeight;
-  }
-
-  const measureNode = document.createElement('div');
-  measureNode.style.position = 'absolute';
-  measureNode.style.visibility = 'hidden';
-  measureNode.style.pointerEvents = 'none';
-  measureNode.style.left = '-99999px';
-  measureNode.style.top = '0';
-  measureNode.style.width = `${Math.max(width, fontSize)}px`;
-  measureNode.style.whiteSpace = 'pre-wrap';
-  measureNode.style.wordBreak = 'break-word';
-  measureNode.style.overflowWrap = 'anywhere';
-  measureNode.style.fontSize = `${fontSize}px`;
-  measureNode.style.lineHeight = String(lineHeight);
-  measureNode.style.fontWeight = fontWeight;
-  measureNode.style.fontStyle = fontStyle;
-  measureNode.style.fontFamily = fontFamily;
-  measureNode.textContent = text.length > 0 ? text : ' ';
-  document.body.appendChild(measureNode);
-  const height = measureNode.getBoundingClientRect().height;
-  document.body.removeChild(measureNode);
-  return Math.max(height, fontSize * lineHeight);
 }
 
 function InlineTextEditor({ editingTextId, effectiveElements, sceneOffsetX, sceneOffsetY, sceneScale, onCommit, onCancel }: InlineTextEditorProps) {

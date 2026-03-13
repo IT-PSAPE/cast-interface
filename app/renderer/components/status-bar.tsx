@@ -8,7 +8,7 @@ export function StatusBar() {
   return (
     <div
       data-ui-region="status-bar"
-      className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-[11px]"
+      className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-sm"
     >
       <span className="text-text-secondary">{statusText}</span>
 

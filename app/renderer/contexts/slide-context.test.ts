@@ -25,6 +25,7 @@ describe('findCreatedSlideIndex', () => {
       slideElements: [],
       mediaAssets: [],
       overlays: [],
+      templates: [],
     };
 
     expect(findCreatedSlideIndex(snapshot, 'presentation-1', new Set(['slide-1']))).toBe(1);
@@ -39,6 +40,7 @@ describe('findCreatedSlideIndex', () => {
       slideElements: [],
       mediaAssets: [],
       overlays: [],
+      templates: [],
     };
 
     expect(findCreatedSlideIndex(snapshot, 'presentation-1', new Set(['slide-1']))).toBeNull();

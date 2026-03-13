@@ -99,6 +99,7 @@ function createSnapshot(slideElements: SlideElement[]): AppSnapshot {
     slideElements,
     mediaAssets: [],
     overlays: [],
+    templates: [],
   };
 }
 
@@ -140,11 +141,13 @@ describe('SlideEditorProvider', () => {
       slideElements: [createElement()],
       mediaAssets: [],
       overlays: [],
+      templates: [],
       presentationsById: new Map(),
       slidesByPresentationId: new Map([['presentation-1', [createSlide()]]]),
       slideElementsBySlideId: new Map([['slide-1', [createElement()]]]),
       mediaAssetsById: new Map(),
       overlaysById: new Map(),
+      templatesById: new Map(),
     });
     vi.mocked(useSlides).mockImplementation(() => ({
       currentSlide: createSlide(),

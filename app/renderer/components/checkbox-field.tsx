@@ -13,7 +13,7 @@ export function CheckboxField({ checked, className = '', label, onChange }: Chec
   }
 
   return (
-    <label className={`flex items-center gap-2 text-[12px] text-text-secondary ${className}`}>
+    <label className={`flex items-center gap-2 text-sm text-text-secondary ${className}`}>
       <span className="relative grid h-4 w-4 shrink-0 place-items-center">
         <input
           type="checkbox"

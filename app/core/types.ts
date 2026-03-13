@@ -36,6 +36,7 @@ export interface PlaylistEntry {
 
 export type PresentationKind = 'canvas' | 'lyrics';
 export type PresentationEntityType = 'presentation' | 'lyric';
+export type TemplateKind = 'slides' | 'lyrics' | 'overlays';
 
 interface PresentationBase {
   id: Id;
@@ -88,6 +89,7 @@ export interface SlideElementBase {
 export type TextHorizontalAlign = CanvasTextAlign | 'justify';
 export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 export type TextCaseTransform = 'none' | 'uppercase' | 'sentence';
+export type StrokePosition = 'inside' | 'center' | 'outside';
 
 export interface ElementVisualPayload {
   visible?: boolean;
@@ -99,6 +101,7 @@ export interface ElementVisualPayload {
   strokeEnabled?: boolean;
   strokeColor?: string;
   strokeWidth?: number;
+  strokePosition?: StrokePosition;
   shadowEnabled?: boolean;
   shadowColor?: string;
   shadowBlur?: number;
@@ -122,6 +125,7 @@ export interface TextElementPayload extends ElementVisualPayload {
   textStrokeEnabled?: boolean;
   textStrokeColor?: string;
   textStrokeWidth?: number;
+  textStrokePosition?: StrokePosition;
   textShadowEnabled?: boolean;
   textShadowColor?: string;
   textShadowBlur?: number;
@@ -199,6 +203,18 @@ export interface Overlay {
   updatedAt: string;
 }
 
+export interface Template {
+  id: Id;
+  name: string;
+  kind: TemplateKind;
+  width: number;
+  height: number;
+  elements: SlideElement[];
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PlaylistTree {
   playlist: Playlist;
   segments: Array<{
@@ -223,6 +239,7 @@ export interface AppSnapshot {
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
+  templates: Template[];
 }
 
 export interface SlideFrame {
@@ -296,4 +313,21 @@ export interface OverlayUpdateInput {
   name?: string;
   elements?: SlideElement[];
   animation?: OverlayAnimation;
+}
+
+export interface TemplateCreateInput {
+  name: string;
+  kind: TemplateKind;
+  width?: number;
+  height?: number;
+  elements?: SlideElement[];
+}
+
+export interface TemplateUpdateInput {
+  id: Id;
+  name?: string;
+  kind?: TemplateKind;
+  width?: number;
+  height?: number;
+  elements?: SlideElement[];
 }

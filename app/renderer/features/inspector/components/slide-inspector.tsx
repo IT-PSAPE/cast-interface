@@ -3,6 +3,7 @@ import { FieldInput, FieldSelect } from '../../../components/labeled-field';
 import { useCast } from '../../../contexts/cast-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
+import { Section } from './inspector-section';
 
 const TRANSITION_OPTIONS = [
   { value: 'none', label: 'Cut' },
@@ -84,14 +85,17 @@ export function SlideInspector() {
   }
 
   if (isOverlayEdit && !currentOverlay) {
-    return <div className="text-[12px] text-text-tertiary">No overlay selected.</div>;
+    return <div className="text-sm text-text-tertiary">No overlay selected.</div>;
   }
 
   return (
-    <div className="grid gap-3">
-      {isOverlayEdit && currentOverlay ? (
-        <>
-          <div className="grid gap-1.5">
+    isOverlayEdit && currentOverlay ? (
+      <>
+        <Section.Root>
+          <Section.Header>
+            <span>Overlay</span>
+          </Section.Header>
+          <Section.Body>
             <FieldInput
               type="text"
               value={overlayNameDraft}
@@ -100,28 +104,32 @@ export function SlideInspector() {
               label="Overlay Name"
               wide
             />
-          </div>
+          </Section.Body>
+        </Section.Root>
 
-          <div className="grid grid-cols-2 gap-2">
-            <FieldSelect
-              value={transitionKindDraft}
-              onChange={handleTransitionKindChange}
-              onBlur={handleOverlaySettingsBlur}
-              options={TRANSITION_OPTIONS}
-              label="Transition"
-            />
-            <FieldInput
-              type="number"
-              value={transitionDurationDraft}
-              onChange={handleTransitionDurationChange}
-              onBlur={handleOverlaySettingsBlur}
-              min={0}
-              step={50}
-              label="Duration (ms)"
-            />
-          </div>
-
-          <div className="grid gap-1.5">
+        <Section.Root>
+          <Section.Header>
+            <span>Transition</span>
+          </Section.Header>
+          <Section.Body>
+            <Section.Row>
+              <FieldSelect
+                value={transitionKindDraft}
+                onChange={handleTransitionKindChange}
+                onBlur={handleOverlaySettingsBlur}
+                options={TRANSITION_OPTIONS}
+                label="Transition"
+              />
+              <FieldInput
+                type="number"
+                value={transitionDurationDraft}
+                onChange={handleTransitionDurationChange}
+                onBlur={handleOverlaySettingsBlur}
+                min={0}
+                step={50}
+                label="Duration (ms)"
+              />
+            </Section.Row>
             <FieldInput
               type="number"
               value={autoClearDurationDraft}
@@ -132,12 +140,12 @@ export function SlideInspector() {
               label="Auto Clear (ms)"
               wide
             />
-            <p className="m-0 text-[11px] text-text-tertiary">
+            <p className="m-0 text-sm text-text-tertiary">
               Leave empty to keep the overlay on output until you clear it manually.
             </p>
-          </div>
-        </>
-      ) : null}
-    </div>
+          </Section.Body>
+        </Section.Root>
+      </>
+    ) : null
   );
 }

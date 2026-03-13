@@ -24,7 +24,7 @@ export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClea
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between px-2.5 py-2">
-        <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
+        <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
         <IconButton label="New library" onClick={handleCreate} variant="ghost">
           <Icon.plus size={14} strokeWidth={1.75} />
         </IconButton>
@@ -62,7 +62,7 @@ export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClea
                   value={bundle.library.name}
                   onCommit={handleRename}
                   editing={isEditing}
-                  className="text-[13px] font-medium"
+                  className="text-md font-medium"
                 />
               </span>
             </Button>

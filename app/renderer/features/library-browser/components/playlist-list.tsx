@@ -21,7 +21,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden border-b border-border-primary">
       <div className="flex items-center justify-between px-2.5 py-2">
-        <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
+        <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
         <IconButton label="New playlist" onClick={handleCreate}>
           <Icon.plus size={14} strokeWidth={1.75} />
         </IconButton>
@@ -51,7 +51,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                 active={isSelected}
                 onClick={handleSelect}
                 onContextMenu={handleContextMenu}
-                className="block w-full rounded-sm border-0 px-2 py-1.5 pr-7 text-left text-[13px] hover:bg-background-quaternary/50 hover:text-text-primary"
+                className="block w-full rounded-sm border-0 px-2 py-1.5 pr-7 text-left text-md hover:bg-background-quaternary/50 hover:text-text-primary"
               >
                 <span className="flex items-center gap-2">
                   <Icon.list className="shrink-0 text-text-tertiary" size={14} strokeWidth={1.75} />
@@ -59,7 +59,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                     value={tree.playlist.name}
                     onCommit={handleRename}
                     editing={isEditing}
-                    className="text-[13px]"
+                    className="text-md"
                   />
                 </span>
               </Button>

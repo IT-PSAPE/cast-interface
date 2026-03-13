@@ -2,7 +2,6 @@ import { app, BrowserWindow, MessageChannelMain, protocol, net } from 'electron'
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { NDI_EVENTS } from '@core/ipc';
-import type { SlideFrame } from '@core/types';
 import { CastRepository } from '@database/store';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
@@ -64,6 +63,7 @@ const createWindow = (): void => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       sandbox: false,
+      backgroundThrottling: false,
       contextIsolation: true,
       nodeIntegration: false
     }

@@ -1,8 +1,8 @@
-import { ThumbnailTile } from '../../../components/thumbnail-tile';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
+import { OverlayCard } from '../../overlay-editor/components/overlay-card';
 
 interface OverlayBinPanelProps {
   filterText: string;
@@ -32,13 +32,13 @@ export function OverlayBinPanel({ filterText }: OverlayBinPanelProps) {
           setWorkbenchMode('overlay-editor');
         }
         return (
-          <ThumbnailTile
+          <OverlayCard
             key={overlay.id}
+            overlay={overlay}
+            index={index}
             onClick={handleActivateOverlay}
             onDoubleClick={handleEditOverlay}
             selected={activeOverlayIds.includes(overlay.id)}
-            body={<div className="grid h-full place-items-center"><span className="text-text-tertiary text-[11px] font-bold tracking-wider uppercase">{overlay.type}</span></div>}
-            caption={<><span className="text-text-tertiary">{index + 1}</span> {overlay.name}</>}
           />
         );
       })}

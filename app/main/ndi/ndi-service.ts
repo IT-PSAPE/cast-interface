@@ -21,7 +21,6 @@ interface SenderEntry {
   withAlpha: boolean;
   lastFrameSentAt: number;
   lastFrameRgba: Uint8Array | null;
-  heartbeatBuffer: Uint8Array;
 }
 
 interface NdiDebugCounters {
@@ -240,8 +239,7 @@ export class NdiService {
       try {
         module.sendRgbaFrame(sender.senderName, buffer, frame.width, frame.height, stride);
         sender.lastFrameSentAt = now;
-        sender.heartbeatBuffer.set(buffer);
-        sender.lastFrameRgba = sender.heartbeatBuffer;
+        sender.lastFrameRgba = buffer;
         this.debugCounters.sendsByOutput[output] += 1;
       } catch (error) {
         this.handleSenderFailure(output, error);
@@ -313,10 +311,6 @@ export class NdiService {
     }
 
     const frameByteLength = width * height * 4;
-    const heartbeatBuffer = existing?.heartbeatBuffer?.byteLength === frameByteLength
-      ? existing.heartbeatBuffer
-      : new Uint8Array(frameByteLength);
-
     const sender: SenderEntry = {
       output,
       senderName: definition.senderName,
@@ -324,8 +318,7 @@ export class NdiService {
       height,
       withAlpha: definition.withAlpha,
       lastFrameSentAt: 0,
-      lastFrameRgba: existing?.lastFrameRgba ?? null,
-      heartbeatBuffer
+      lastFrameRgba: existing?.lastFrameRgba?.byteLength === frameByteLength ? existing.lastFrameRgba : null
     };
 
     this.senderEntries.set(output, sender);

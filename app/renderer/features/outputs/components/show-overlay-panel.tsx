@@ -1,11 +1,8 @@
-import { Button } from '../../../components/button';
 import { Icon } from '../../../components/icon';
+import { IconButton } from '../../../components/icon-button';
 import { PanelSection } from '../../../components/panel-section';
-import {
-  SegmentedControl,
-  SegmentedControlItem,
-  SegmentedControlItemLabel,
-} from '../../../components/segmented-control';
+import { LayerSingle } from '../../../components/icon/layer-single';
+import { LayersTwo01 } from '../../../components/icon/layers-two-01';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
@@ -16,10 +13,8 @@ export function ShowOverlayPanel() {
   const { createOverlay } = useOverlayEditor();
   const { setWorkbenchMode } = useWorkbench();
 
-  function handleModeChange(value: string | string[]) {
-    if (Array.isArray(value)) return;
-    if (value !== 'single' && value !== 'multiple') return;
-    setOverlayMode(value);
+  function handleModeToggle() {
+    setOverlayMode(overlayMode === 'single' ? 'multiple' : 'single');
   }
 
   function handleCreateOverlay() {
@@ -28,27 +23,22 @@ export function ShowOverlayPanel() {
     });
   }
 
+  const modeLabel = overlayMode === 'single' ? 'Single overlay mode — click to allow multiple' : 'Multiple overlay mode — click for single';
+
   return (
     <PanelSection
-      title={<span className="truncate text-[12px] font-medium text-text-primary">Overlays</span>}
+      title={<span className="truncate text-sm font-medium text-text-primary">Overlays</span>}
       action={(
-        <div className="flex items-center gap-2">
-          <SegmentedControl label="Overlay mode" value={overlayMode} onValueChange={handleModeChange}>
-            <SegmentedControlItem value="single" title="Show one overlay at a time">
-              <SegmentedControlItemLabel>Single</SegmentedControlItemLabel>
-            </SegmentedControlItem>
-            <SegmentedControlItem value="multiple" title="Allow multiple overlays at once">
-              <SegmentedControlItemLabel>Multiple</SegmentedControlItemLabel>
-            </SegmentedControlItem>
-          </SegmentedControl>
+        <div className="flex items-center gap-1">
+          <IconButton label={modeLabel} size="sm" variant="ghost" onClick={handleModeToggle}>
+            {overlayMode === 'single' ? <LayerSingle size={14} /> : <LayersTwo01 size={14} />}
+          </IconButton>
 
-          <Button onClick={handleCreateOverlay} className="grid h-6 w-6 place-items-center p-0 text-[14px] leading-none">
+          <IconButton label="Add overlay" size="sm" onClick={handleCreateOverlay}>
             <Icon.plus size={14} strokeWidth={2} />
-            <span className="sr-only">Add overlay</span>
-          </Button>
+          </IconButton>
         </div>
       )}
-      className="border-t border-border-primary"
       headerClassName="border-b border-border-primary"
       bodyClassName="min-h-0 overflow-auto p-2"
     >

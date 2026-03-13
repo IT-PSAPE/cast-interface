@@ -48,7 +48,10 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
     <div className="group/segment grid gap-1">
       <div
         className="group/segment-header flex items-center justify-between gap-2 rounded-sm px-1.5 py-1"
-        style={{ backgroundColor: segmentHeaderColors.backgroundColor, color: segmentHeaderColors.textColor }}
+        style={{
+          backgroundColor: segmentHeaderColors.backgroundColor,
+          color: segmentHeaderColors.textColor
+        }}
         onContextMenu={handleSegmentContextMenu}
       >
         <div className="flex min-w-0 items-center gap-1.5">
@@ -62,7 +65,7 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
           >
             {collapsed ? <Icon.chevron_right size={14} strokeWidth={2} /> : <Icon.chevron_down size={14} strokeWidth={2} />}
           </IconButton>
-          <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-[11px] font-semibold uppercase tracking-wider text-current" />
+          <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
         </div>
 
         <IconButton
@@ -99,10 +102,10 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
               active={isSelected}
               onClick={handleSelect}
               onContextMenu={handleContextMenu}
-              className="flex w-full items-center gap-2 rounded-sm border-0 px-2 py-1 pl-7 pr-8 text-left text-[13px] cursor-pointer hover:bg-background-quaternary/50 hover:text-text-primary"
+              className="flex w-full items-center gap-2 rounded-sm border-0 px-2 py-1 pl-7 pr-8 text-left text-md cursor-pointer hover:bg-background-quaternary/50 hover:text-text-primary"
             >
               <PresentationEntityIcon entity={entry.presentation} className="shrink-0 text-text-tertiary" />
-              <EditableText value={entry.presentation.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-[13px]" />
+              <EditableText value={entry.presentation.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
             </Button>
 
             <IconButton

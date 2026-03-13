@@ -212,7 +212,7 @@ export function UiSpecScreen() {
                 <div className="rounded-md border border-border-primary bg-primary">
                   <PanelSection
                     title={<span className="text-[12px] font-medium text-text-primary">Presentation slides</span>}
-                    action={<Button className="grid h-6 w-6 place-items-center p-0"><Icon.plus size={14} strokeWidth={2} /></Button>}
+                    action={<IconButton label="Add" size="sm"><Icon.plus size={14} strokeWidth={2} /></IconButton>}
                     headerClassName="border-b border-border-primary"
                     bodyClassName="p-2"
                   >
