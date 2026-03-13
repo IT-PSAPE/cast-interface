@@ -55,7 +55,7 @@ export function DialogFrame({ title, onClose, children, dataUiRegion, bodyClassN
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
+              className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-lg text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
             >
               <Icon.x_close size={14} strokeWidth={2} />
             </button>

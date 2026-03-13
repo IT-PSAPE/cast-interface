@@ -16,10 +16,10 @@ interface BadgeProps {
 export function Badge({ state, marker, label }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded-sm border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${STATE_CLASSES[state]}`}
+      className={`inline-flex items-center gap-0.5 rounded-sm border px-1.5 py-px text-sm font-semibold uppercase tracking-wide ${STATE_CLASSES[state]}`}
     >
       {marker && (
-        <span className="inline-grid place-items-center w-3 h-3 rounded-sm bg-black/25 text-[9px]">
+        <span className="inline-grid place-items-center w-3 h-3 rounded-sm bg-black/25 text-sm">
           {marker}
         </span>
       )}

@@ -200,7 +200,7 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
         <select
           value={mode}
           onChange={handleModeChange}
-          className="shrink-0 bg-transparent text-[10px] text-text-tertiary outline-none pr-1 cursor-pointer"
+          className="shrink-0 bg-transparent text-sm text-text-tertiary outline-none pr-1 cursor-pointer"
         >
           <option value="solid">Solid</option>
           <option value="gradient">Gradient</option>

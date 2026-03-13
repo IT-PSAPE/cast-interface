@@ -384,7 +384,7 @@ function ColorModeInputs({ hsb, alpha, mode, showAlpha, onHsbChange, onAlphaChan
             max={100}
             className="w-8 min-w-0 bg-transparent py-1 text-center text-sm text-text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="pr-1 text-[10px] text-text-tertiary">%</span>
+          <span className="pr-1 text-sm text-text-tertiary">%</span>
         </div>
       ) : null}
     </div>

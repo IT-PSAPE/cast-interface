@@ -41,9 +41,9 @@ export function UiSpecScreen() {
     <main className="min-h-screen bg-background-secondary px-6 py-6 text-text-primary">
       <div className="mx-auto flex max-w-[1600px] flex-col gap-6">
         <header className="flex flex-col gap-2">
-          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.24em] text-text-tertiary">Cast Interface</p>
-          <h1 className="m-0 text-[28px] font-semibold">Shared UI Spec Capture Surface</h1>
-          <p className="m-0 max-w-[920px] text-[13px] leading-6 text-text-secondary">
+          <p className="m-0 text-sm font-semibold uppercase tracking-[0.24em] text-text-tertiary">Cast Interface</p>
+          <h1 className="m-0 text-lg font-semibold">Shared UI Spec Capture Surface</h1>
+          <p className="m-0 max-w-[920px] text-md leading-6 text-text-secondary">
             This surface renders shared primitives in labeled states for the UI code design spec screenshot pass.
           </p>
         </header>
@@ -181,16 +181,16 @@ export function UiSpecScreen() {
                 <SelectableRow
                   selected={false}
                   onClick={EMPTY_CALLBACK}
-                  leading={<span className="text-[11px] font-bold text-text-tertiary">T</span>}
+                  leading={<span className="text-sm font-bold text-text-tertiary">T</span>}
                   title="Welcome to Cast Interface"
-                  trailing={<span className="text-[11px] text-text-tertiary">Visible</span>}
+                  trailing={<span className="text-sm text-text-tertiary">Visible</span>}
                 />
                 <SelectableRow
                   selected
                   onClick={EMPTY_CALLBACK}
-                  leading={<span className="text-[11px] font-bold text-text-tertiary">#</span>}
+                  leading={<span className="text-sm font-bold text-text-tertiary">#</span>}
                   title="Background Shape"
-                  trailing={<span className="text-[11px] text-text-tertiary">Locked</span>}
+                  trailing={<span className="text-sm text-text-tertiary">Locked</span>}
                 />
               </div>
             </div>
@@ -206,19 +206,19 @@ export function UiSpecScreen() {
             <SpecCard title="Panel and Panel Section">
               <div className="grid gap-4 lg:grid-cols-2">
                 <Panel title="Preview Panel" action={<Button variant="ghost">Action</Button>}>
-                  <p className="m-0 text-[12px] text-text-secondary">Media is rendered below content, with overlay on top.</p>
+                  <p className="m-0 text-sm text-text-secondary">Media is rendered below content, with overlay on top.</p>
                 </Panel>
 
                 <div className="rounded-md border border-border-primary bg-primary">
                   <PanelSection
-                    title={<span className="text-[12px] font-medium text-text-primary">Presentation slides</span>}
+                    title={<span className="text-sm font-medium text-text-primary">Presentation slides</span>}
                     action={<IconButton label="Add" size="sm"><Icon.plus size={14} strokeWidth={2} /></IconButton>}
                     headerClassName="border-b border-border-primary"
                     bodyClassName="p-2"
                   >
                     <div className="grid gap-2">
-                      <span className="text-[12px] text-text-secondary">Section body content</span>
-                      <span className="text-[11px] text-text-tertiary">Reusable shell for feature panels.</span>
+                      <span className="text-sm text-text-secondary">Section body content</span>
+                      <span className="text-sm text-text-tertiary">Reusable shell for feature panels.</span>
                     </div>
                   </PanelSection>
                 </div>
@@ -228,10 +228,10 @@ export function UiSpecScreen() {
             <SpecCard title="Editable Text States">
               <div className="grid gap-3">
                 <div className="rounded-md border border-border-primary bg-background-primary px-3 py-2">
-                  <EditableText value="Sunday Service" onCommit={EMPTY_STRING_CALLBACK} className="text-[13px] font-medium text-text-primary" />
+                  <EditableText value="Sunday Service" onCommit={EMPTY_STRING_CALLBACK} className="text-md font-medium text-text-primary" />
                 </div>
                 <div className="rounded-md border border-border-primary bg-background-primary px-3 py-2">
-                  <EditableText value="Welcome Slides" onCommit={EMPTY_STRING_CALLBACK} editing className="text-[13px] font-medium text-text-primary" />
+                  <EditableText value="Welcome Slides" onCommit={EMPTY_STRING_CALLBACK} editing className="text-md font-medium text-text-primary" />
                 </div>
               </div>
             </SpecCard>
@@ -257,7 +257,7 @@ export function UiSpecScreen() {
             <SpecCard title="Empty State">
               <div className="min-h-[280px] rounded-md border border-border-primary bg-primary">
                 <EmptyStatePanel
-                  glyph={<span className="text-[26px] text-text-tertiary">∅</span>}
+                  glyph={<span className="text-lg text-text-tertiary">∅</span>}
                   title="No presentation selected"
                   description="Select a presentation from a playlist or from the presentations drawer."
                 />
@@ -301,8 +301,8 @@ function SpecSection({ id, title, description, children }: SpecSectionProps) {
   return (
     <section data-ui-spec={id} className="rounded-2xl border border-border-primary bg-primary/70 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
       <div className="mb-4 flex flex-col gap-1">
-        <h2 className="m-0 text-[18px] font-semibold">{title}</h2>
-        <p className="m-0 text-[12px] leading-5 text-text-tertiary">{description}</p>
+        <h2 className="m-0 text-lg font-semibold">{title}</h2>
+        <p className="m-0 text-sm leading-5 text-text-tertiary">{description}</p>
       </div>
       <div className="grid gap-4">{children}</div>
     </section>
@@ -317,7 +317,7 @@ interface SpecCardProps {
 function SpecCard({ title, children }: SpecCardProps) {
   return (
     <div className="grid gap-3 rounded-xl border border-border-primary bg-background-primary/65 p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">{title}</div>
+      <div className="text-sm font-semibold uppercase tracking-[0.18em] text-text-tertiary">{title}</div>
       {children}
     </div>
   );
