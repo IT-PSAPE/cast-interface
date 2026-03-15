@@ -121,7 +121,7 @@ export function SlideListPanel() {
         bottomPane={(
           <PanelSection
             title={<span className="text-sm font-medium text-text-primary">Objects</span>}
-            headerClassName="border-b border-border-primary"
+            headerClassName="border-b border-t border-border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
             <ObjectListPanel />

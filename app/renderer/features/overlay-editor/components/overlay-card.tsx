@@ -24,7 +24,7 @@ export function OverlayCard({ overlay, index, selected, onClick, onDoubleClick }
       selected={selected}
       className={outlineClass}
       body={(
-        <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
+        <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
           <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
         </SceneFrame>
       )}

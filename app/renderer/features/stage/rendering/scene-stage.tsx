@@ -1,14 +1,13 @@
-import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
-import type { SlideElement, SlideFrame, TextElementPayload } from '@core/types';
+import type { SlideElement, TextElementPayload } from '@core/types';
 import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
 import type { RenderNode, RenderScene } from './scene-types';
 import { SceneNodeImage } from './scene-node-image';
 import { SceneNodeShape } from './scene-node-shape';
 import { SceneNodeText } from './scene-node-text';
 import { SceneNodeVideo } from './scene-node-video';
-import { shouldSkipFrameCapture } from './scene-stage-frame-capture';
 import { useSceneStageEditor } from './use-scene-stage-editor';
 import type { SceneViewportTransform } from './use-scene-stage-viewport';
 import { useSceneStageViewport } from './use-scene-stage-viewport';
@@ -19,8 +18,6 @@ interface SceneStageProps {
   className?: string;
   onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
-  emitFramesFps?: number | null;
-  onFrame?: (frame: SlideFrame) => void;
   fixedViewport?: { width: number; height: number } | null;
   onViewportChange?: (viewport: SceneViewportTransform) => void;
 }
@@ -29,15 +26,15 @@ function rotationSnaps(): number[] {
   return Array.from({ length: 24 }, (_value, index) => index * 15);
 }
 
-function renderNodeContent(node: RenderNode, onAssetReady: () => void) {
+function renderNodeContent(node: RenderNode) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image') return <SceneNodeImage node={node} onReady={onAssetReady} />;
+  if (node.element.type === 'image') return <SceneNodeImage node={node} />;
   if (node.element.type === 'video') return <SceneNodeVideo node={node} />;
   return null;
 }
 
-export function SceneStage({ scene, editable = false, className = '', onDrop, onDragOver, emitFramesFps = null, onFrame, fixedViewport = null, onViewportChange }: SceneStageProps) {
+export function SceneStage({ scene, editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
   const snaps = useMemo(rotationSnaps, []);
@@ -54,62 +51,6 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
       sceneHeight: scene.height,
     });
   }, [onViewportChange, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale, viewport.viewportHeight, viewport.viewportWidth]);
-
-  const onFrameRef = useRef(onFrame);
-  onFrameRef.current = onFrame;
-
-  const sceneRef = useRef(scene);
-  sceneRef.current = scene;
-  const lastCapturedSceneRef = useRef<RenderScene | null>(null);
-  const lastCapturedAssetReadyVersionRef = useRef<number | null>(null);
-  const [assetReadyVersion, setAssetReadyVersion] = useState(0);
-  const hasVideo = useMemo(() => scene.nodes.some((node) => node.isVideo), [scene.nodes]);
-  const handleAssetReady = useCallback(() => {
-    setAssetReadyVersion((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    if (!emitFramesFps || !onFrameRef.current) return;
-    function captureFrame() {
-      const stage = editor.stageRef.current;
-      if (!stage) return;
-      const frameCallback = onFrameRef.current;
-      if (!frameCallback) return;
-      const currentScene = sceneRef.current;
-      if (shouldSkipFrameCapture({
-        hasVideo,
-        currentScene,
-        lastScene: lastCapturedSceneRef.current,
-        assetReadyVersion,
-        lastAssetReadyVersion: lastCapturedAssetReadyVersionRef.current,
-      })) return;
-      lastCapturedSceneRef.current = currentScene;
-      lastCapturedAssetReadyVersionRef.current = assetReadyVersion;
-      const scenePixelRatio = scene.width / Math.max(1, scene.width * viewport.sceneScale);
-      const canvas = stage.toCanvas({
-        x: viewport.sceneOffsetX,
-        y: viewport.sceneOffsetY,
-        width: scene.width * viewport.sceneScale,
-        height: scene.height * viewport.sceneScale,
-        pixelRatio: fixedViewport ? 1 : scenePixelRatio,
-      });
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) return;
-      const imageData = context.getImageData(0, 0, scene.width, scene.height);
-      frameCallback({
-        width: scene.width,
-        height: scene.height,
-        rgba: imageData.data,
-        timestamp: performance.now(),
-      });
-    }
-
-    captureFrame();
-    if (!hasVideo) return;
-    const intervalMs = Math.max(16, Math.round(1000 / emitFramesFps));
-    const intervalId = setInterval(captureFrame, intervalMs);
-    return () => clearInterval(intervalId);
-  }, [assetReadyVersion, editor.stageRef, emitFramesFps, fixedViewport, hasVideo, scene, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
 
   function handleNodeClick(id: string, event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     editor.handleNodeSelect(id, event.evt.shiftKey);
@@ -166,7 +107,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
           onTransform={editor.handleNodeTransform}
           onTransformEnd={editor.handleNodeTransformEnd}
         >
-          {renderNodeContent(node, handleAssetReady)}
+          {renderNodeContent(node)}
         </Group>
       </Fragment>
     );

@@ -11,11 +11,11 @@ import { TemplateEditorProvider } from './contexts/template-editor-context';
 import { InspectorProvider } from './contexts/inspector-context';
 import { ResourceDrawerProvider } from './contexts/resource-drawer-context';
 import { SlideBrowserProvider } from './contexts/slide-browser-context';
+import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
 import { WorkbenchProvider, useWorkbench } from './contexts/workbench-context';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { AppToolbar } from './features/workbench/components/app-toolbar';
 import { LibraryPanelProvider } from './features/library-browser/contexts/library-panel-context';
-import { NdiOutputEmitter } from './features/outputs/components/ndi-output-emitter';
 import { ShowModeLayout } from './features/workbench/components/show-mode-layout';
 import { SlideEditorLayout } from './features/workbench/components/slide-editor-layout';
 import { OverlayEditorLayout } from './features/workbench/components/overlay-editor-layout';
@@ -25,6 +25,8 @@ import { RenderSceneProvider } from './features/stage/rendering/render-scene-pro
 import { StatusBar } from './components/status-bar';
 import { useNdi } from './contexts/ndi-context';
 import { useWorkbenchPanelLayout } from './features/workbench/hooks/use-workbench-panel-layout';
+import { ProgramOutputProvider } from './features/outputs/contexts/program-output-context';
+import { NdiFrameCapture } from './features/outputs/components/ndi-frame-capture';
 
 export function App() {
   return (
@@ -40,17 +42,22 @@ export function App() {
                     <ResourceDrawerProvider>
                       <InspectorProvider>
                         <LibraryPanelProvider>
-                          <OverlayEditorProvider>
-                            <TemplateEditorProvider>
-                              <SlideEditorProvider>
-                                <ElementProvider>
+                          <OverlayDefaultsProvider>
+                            <OverlayEditorProvider>
+                              <TemplateEditorProvider>
+                                <SlideEditorProvider>
+                                  <ElementProvider>
                                   <RenderSceneProvider>
-                                    <AppLayout />
+                                      <ProgramOutputProvider>
+                                        <NdiFrameCapture />
+                                        <AppLayout />
+                                      </ProgramOutputProvider>
                                   </RenderSceneProvider>
-                                </ElementProvider>
-                              </SlideEditorProvider>
-                            </TemplateEditorProvider>
-                          </OverlayEditorProvider>
+                                  </ElementProvider>
+                                </SlideEditorProvider>
+                              </TemplateEditorProvider>
+                            </OverlayEditorProvider>
+                          </OverlayDefaultsProvider>
                         </LibraryPanelProvider>
                       </InspectorProvider>
                     </ResourceDrawerProvider>
@@ -140,7 +147,6 @@ function AppLayout() {
 
   return (
     <div className="relative grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
-      <NdiOutputEmitter />
       <AppToolbar
         audienceOutputActive={outputState.audience}
         onToggleAudienceOutput={toggleAudienceOutput}

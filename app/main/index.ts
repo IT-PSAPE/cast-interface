@@ -1,10 +1,10 @@
-import { app, BrowserWindow, MessageChannelMain, protocol, net } from 'electron';
+import { app, BrowserWindow, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { NDI_EVENTS } from '@core/ipc';
 import { CastRepository } from '@database/store';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
+import { NdiConfigStore } from './ndi/ndi-config-store';
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'cast-media',
@@ -16,6 +16,8 @@ interface CliOptions {
   userDataDir: string | null;
 }
 
+type RendererView = CliOptions['rendererView'];
+
 const cliOptions = resolveCliOptions(process.argv);
 if (cliOptions.userDataDir) {
   app.setPath('userData', path.resolve(cliOptions.userDataDir));
@@ -23,7 +25,13 @@ if (cliOptions.userDataDir) {
 
 let mainWindow: BrowserWindow | null = null;
 const repository = new CastRepository();
-const ndiService = new NdiService();
+const ndiConfigStore = new NdiConfigStore();
+const ndiService = new NdiService({
+  outputConfigs: ndiConfigStore.load(),
+  onOutputConfigsChanged: (configs) => {
+    ndiConfigStore.save(configs);
+  },
+});
 
 function teardownNdi(reason: string, error?: unknown) {
   if (error !== undefined) {
@@ -55,35 +63,53 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 
-const createWindow = (): void => {
-  mainWindow = new BrowserWindow({
-    width: 1680,
-    height: 980,
+function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
+  return {
+    width,
+    height,
+    show: false,
     backgroundColor: '#121212',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       sandbox: false,
       backgroundThrottling: false,
       contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
+      nodeIntegration: false,
+    },
+  };
+}
 
+function loadRendererView(window: BrowserWindow, view: RendererView): void {
   if (process.env.ELECTRON_RENDERER_URL) {
     const targetUrl = new URL(process.env.ELECTRON_RENDERER_URL);
-    if (cliOptions.rendererView === 'ui-spec') {
-      targetUrl.searchParams.set('view', 'ui-spec');
+    if (view !== 'app') {
+      targetUrl.searchParams.set('view', view);
     }
-    void mainWindow.loadURL(targetUrl.toString());
-  } else {
-    const rendererFile = path.join(__dirname, '../renderer/index.html');
-    if (cliOptions.rendererView === 'ui-spec') {
-      void mainWindow.loadFile(rendererFile, { query: { view: 'ui-spec' } });
-    } else {
-      void mainWindow.loadFile(rendererFile);
-    }
+    void window.loadURL(targetUrl.toString());
+    return;
   }
-};
+
+  const rendererFile = path.join(__dirname, '../renderer/index.html');
+  if (view !== 'app') {
+    void window.loadFile(rendererFile, { query: { view } });
+    return;
+  }
+  void window.loadFile(rendererFile);
+}
+
+function createMainWindow(): void {
+  const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
+  mainWindow = window;
+  window.once('ready-to-show', () => {
+    window.show();
+  });
+  loadRendererView(window, cliOptions.rendererView);
+  window.on('closed', () => {
+    if (mainWindow === window) {
+      mainWindow = null;
+    }
+  });
+}
 
 app.whenReady().then(() => {
   protocol.handle('cast-media', (request) => {
@@ -92,12 +118,11 @@ app.whenReady().then(() => {
   });
 
   registerIpcHandlers(repository, ndiService, () => mainWindow);
-  createWindow();
-  setupNdiFramePort();
+  createMainWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createMainWindow();
     }
   });
 });
@@ -114,28 +139,6 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   teardownNdi('will-quit');
 });
-
-function setupNdiFramePort(): void {
-  if (!mainWindow) return;
-
-  function createAndSendPort(): void {
-    if (!mainWindow) return;
-    const { port1, port2 } = new MessageChannelMain();
-    port1.on('message', (event) => {
-      const { width, height, rgba, timestamp } = event.data as {
-        width: number;
-        height: number;
-        rgba: ArrayBuffer;
-        timestamp: number;
-      };
-      ndiService.sendFrame({ width, height, rgba: new Uint8ClampedArray(rgba), timestamp });
-    });
-    port1.start();
-    mainWindow.webContents.postMessage(NDI_EVENTS.framePort, null, [port2]);
-  }
-
-  mainWindow.webContents.on('did-finish-load', createAndSendPort);
-}
 
 function resolveCliOptions(argv: string[]): CliOptions {
   let rendererView: CliOptions['rendererView'] = 'app';

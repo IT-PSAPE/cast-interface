@@ -3,7 +3,8 @@ import { useNdi } from '../contexts/ndi-context';
 
 export function StatusBar() {
   const { statusText } = useCast();
-  const { outputState } = useNdi();
+  const { diagnostics, outputState } = useNdi();
+  const audienceStateLabel = diagnostics?.sourceStatus === 'live' ? 'Audience live' : 'Audience idle';
 
   return (
     <div
@@ -15,7 +16,7 @@ export function StatusBar() {
       <div className="ml-auto flex items-center gap-2 text-text-tertiary">
         <span className="flex items-center gap-1">
           <span className={`inline-block size-1.5 rounded-full ${outputState.audience ? 'bg-green-500' : 'bg-red-500'}`} />
-          Audience
+          {audienceStateLabel}
         </span>
       </div>
     </div>

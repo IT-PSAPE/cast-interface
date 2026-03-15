@@ -242,13 +242,6 @@ export interface AppSnapshot {
   templates: Template[];
 }
 
-export interface SlideFrame {
-  width: number;
-  height: number;
-  rgba: Uint8ClampedArray;
-  timestamp: number;
-}
-
 export interface PlaybackState {
   playlistId: Id | null;
   presentationId: Id | null;
@@ -300,6 +293,32 @@ export type NdiOutputName = 'audience';
 
 export interface NdiOutputState {
   audience: boolean;
+}
+
+export type NdiSourceStatus = 'idle' | 'live';
+
+export interface NdiOutputConfig {
+  senderName: string;
+  withAlpha: boolean;
+}
+
+export type NdiOutputConfigMap = Record<NdiOutputName, NdiOutputConfig>;
+
+export interface NdiActiveSenderDiagnostics {
+  senderName: string;
+  width: number;
+  height: number;
+  withAlpha: boolean;
+}
+
+export interface NdiDiagnostics {
+  outputState: NdiOutputState;
+  outputConfig: NdiOutputConfig;
+  runtimeLoaded: boolean;
+  runtimePath: string | null;
+  activeSender: NdiActiveSenderDiagnostics | null;
+  sourceStatus: NdiSourceStatus;
+  lastError: string | null;
 }
 
 export interface OverlayCreateInput {

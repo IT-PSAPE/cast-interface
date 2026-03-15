@@ -4,6 +4,9 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
+  NdiOutputConfigMap,
   PresentationKind,
   NdiOutputName,
   NdiOutputState,
@@ -12,8 +15,7 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from './types';
 
 export interface MainApi {
@@ -58,10 +60,14 @@ export interface MainApi {
   deletePlaylist: (id: Id) => Promise<AppSnapshot>;
   deletePlaylistSegment: (id: Id) => Promise<AppSnapshot>;
   deletePresentation: (id: Id) => Promise<AppSnapshot>;
-  sendNdiFrame: (frame: SlideFrame) => Promise<void>;
-  sendNdiFrameZeroCopy: (frame: SlideFrame) => void;
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => Promise<NdiOutputState>;
   getNdiOutputState: () => Promise<NdiOutputState>;
+  getNdiOutputConfigs: () => Promise<NdiOutputConfigMap>;
+  updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => Promise<NdiOutputConfigMap>;
+  getNdiDiagnostics: () => Promise<NdiDiagnostics>;
+  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
+  onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
+  onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
 }
 
 export const IPC = {
@@ -105,12 +111,15 @@ export const IPC = {
   deletePlaylist: 'cast:deletePlaylist',
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
   deletePresentation: 'cast:deletePresentation',
-  sendNdiFrame: 'cast:sendNdiFrame',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
-  getNdiOutputState: 'ndi:getOutputState'
+  getNdiOutputState: 'ndi:getOutputState',
+  getNdiOutputConfigs: 'ndi:getOutputConfigs',
+  updateNdiOutputConfig: 'ndi:updateOutputConfig',
+  getNdiDiagnostics: 'ndi:getDiagnostics',
+  sendNdiFrame: 'ndi:sendFrame',
 } as const;
 
 export const NDI_EVENTS = {
   outputStateChanged: 'ndi:outputStateChanged',
-  framePort: 'ndi:framePort'
+  diagnosticsChanged: 'ndi:diagnosticsChanged',
 } as const;

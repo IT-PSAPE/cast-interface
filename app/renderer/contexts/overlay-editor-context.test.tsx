@@ -18,6 +18,17 @@ vi.mock('./workbench-context', () => ({
   useWorkbench: vi.fn(),
 }));
 
+vi.mock('./overlay-defaults-context', () => ({
+  useOverlayDefaults: vi.fn(() => ({
+    overlayDefaults: {
+      animationKind: 'fade' as const,
+      durationMs: 2500,
+      autoClearDurationMs: null,
+    },
+    updateOverlayDefaults: vi.fn(),
+  })),
+}));
+
 interface OverlayEditorProbeValue extends ReturnType<typeof useOverlayEditor> {}
 
 let probeValue: OverlayEditorProbeValue | null = null;

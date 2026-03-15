@@ -32,7 +32,7 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       onDoubleClick={onEdit}
       className={outlineClass}
       body={(
-        <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
+        <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
           {isEmpty ? (
             <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-text-tertiary">
               Empty

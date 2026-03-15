@@ -5,6 +5,9 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
+  NdiOutputConfigMap,
   PresentationKind,
   NdiOutputName,
   NdiOutputState,
@@ -13,18 +16,8 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from '@core/types';
-
-let ndiFramePort: MessagePort | null = null;
-
-ipcRenderer.on(NDI_EVENTS.framePort, (event) => {
-  const [port] = event.ports;
-  if (port) {
-    ndiFramePort = port;
-  }
-});
 
 const api = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
@@ -73,31 +66,26 @@ const api = {
   deletePlaylist: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylist, id),
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
   deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
-  sendNdiFrame: (frame: SlideFrame) => ipcRenderer.invoke(IPC.sendNdiFrame, frame),
-  sendNdiFrameZeroCopy: (frame: SlideFrame) => {
-    if (!ndiFramePort) {
-      ipcRenderer.invoke(IPC.sendNdiFrame, frame);
-      return;
-    }
-    const rgba = frame.rgba.byteOffset === 0 && frame.rgba.byteLength === frame.rgba.buffer.byteLength
-      ? frame.rgba.buffer
-      : frame.rgba.buffer.slice(
-        frame.rgba.byteOffset,
-        frame.rgba.byteOffset + frame.rgba.byteLength
-      );
-    ndiFramePort.postMessage(
-      { width: frame.width, height: frame.height, rgba, timestamp: frame.timestamp },
-      [rgba]
-    );
-  },
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),
   getNdiOutputState: () => ipcRenderer.invoke(IPC.getNdiOutputState),
+  getNdiOutputConfigs: () => ipcRenderer.invoke(IPC.getNdiOutputConfigs) as Promise<NdiOutputConfigMap>,
+  updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) =>
+    ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
+  getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
+  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => {
+    ipcRenderer.invoke(IPC.sendNdiFrame, buffer, width, height);
+  },
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => {
     const handler = (_event: IpcRendererEvent, state: NdiOutputState) => callback(state);
     ipcRenderer.on(NDI_EVENTS.outputStateChanged, handler);
     return () => { ipcRenderer.removeListener(NDI_EVENTS.outputStateChanged, handler); };
-  }
+  },
+  onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => {
+    const handler = (_event: IpcRendererEvent, diagnostics: NdiDiagnostics) => callback(diagnostics);
+    ipcRenderer.on(NDI_EVENTS.diagnosticsChanged, handler);
+    return () => { ipcRenderer.removeListener(NDI_EVENTS.diagnosticsChanged, handler); };
+  },
 };
 
 contextBridge.exposeInMainWorld('castApi', api);

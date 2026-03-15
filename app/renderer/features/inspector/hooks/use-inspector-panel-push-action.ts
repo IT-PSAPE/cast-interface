@@ -22,7 +22,7 @@ export function useInspectorPanelPushAction(): InspectorPanelPushAction {
   const overlayEditor = useOverlayEditor();
   const slideEditor = useSlideEditor();
   const templateEditor = useTemplateEditor();
-  const { commitOutputScene } = useRenderScenes();
+  const { commitProgramScene } = useRenderScenes();
 
   const state = useMemo<InspectorPanelPushActionState>(() => {
     if (workbenchMode === 'overlay-editor') {
@@ -73,8 +73,8 @@ export function useInspectorPanelPushAction(): InspectorPanelPushAction {
       return;
     }
 
-    commitOutputScene();
-  }, [commitOutputScene, overlayEditor, slideEditor, state.hasPendingChanges, templateEditor, workbenchMode]);
+    commitProgramScene();
+  }, [commitProgramScene, overlayEditor, slideEditor, state.hasPendingChanges, templateEditor, workbenchMode]);
 
   return {
     state,

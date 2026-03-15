@@ -3,6 +3,7 @@ import { isLyricPresentation } from '@core/presentation-entities';
 import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../utils/slides';
 import { createId } from '../utils/create-id';
+import { useOverlayDefaults } from './overlay-defaults-context';
 import { useOverlayEditor } from './overlay-editor-context';
 import { useProjectContent } from './use-project-content';
 import { useSlideEditor } from './slide-editor-context';
@@ -18,6 +19,7 @@ interface CommandsParams {
 }
 
 export function useElementCommands({ currentSlide, currentPresentation, currentTemplate, mutate, setStatusText }: CommandsParams) {
+  const { overlayDefaults } = useOverlayDefaults();
   const isLyricsPresentation = isLyricPresentation(currentPresentation);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
@@ -224,9 +226,13 @@ export function useElementCommands({ currentSlide, currentPresentation, currentT
   }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText]);
 
   const createOverlay = useCallback(async () => {
-    await mutate(() => window.castApi.createOverlay(getOverlayDefaults()));
+    await mutate(() => window.castApi.createOverlay(getOverlayDefaults({
+      animationKind: overlayDefaults.animationKind,
+      durationMs: overlayDefaults.durationMs,
+      autoClearDurationMs: overlayDefaults.autoClearDurationMs,
+    })));
     setStatusText('Created overlay');
-  }, [mutate, setStatusText]);
+  }, [mutate, overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, setStatusText]);
 
   const toggleOverlay = useCallback(async (overlayId: Id, enabled: boolean) => {
     await mutate(() => window.castApi.setOverlayEnabled(overlayId, enabled));

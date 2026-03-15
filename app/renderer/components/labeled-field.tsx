@@ -3,6 +3,7 @@ import { useRef, type CSSProperties, type ReactNode } from 'react';
 const LABEL_CLASS = 'grid min-w-0 gap-0.5 text-sm text-text-secondary';
 
 interface FieldInputProps {
+  disabled?: boolean;
   type?: 'number' | 'text';
   value: string | number;
   onChange: (value: string) => void;
@@ -15,7 +16,7 @@ interface FieldInputProps {
   wide?: boolean;
 }
 
-export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, step, icon, label, wide }: FieldInputProps) {
+export function FieldInput({ disabled = false, type = 'text', value, onChange, onBlur, min, max, step, icon, label, wide }: FieldInputProps) {
   function handleValueChange(event: React.ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value);
   }
@@ -30,12 +31,13 @@ export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, s
       <input
         type={type}
         value={value}
+        disabled={disabled}
         onChange={handleValueChange}
         onBlur={onBlur}
         min={min}
         max={max}
         step={step}
-        className={`min-w-0 w-full bg-transparent py-1 pr-2 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${icon ? 'pl-1' : 'pl-2'}`}
+        className={`min-w-0 w-full bg-transparent py-1 pr-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${icon ? 'pl-1' : 'pl-2'}`}
       />
     </div>
   );

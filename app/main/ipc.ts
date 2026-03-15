@@ -6,6 +6,8 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
   PresentationKind,
   NdiOutputName,
   OverlayCreateInput,
@@ -13,8 +15,7 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from '@core/types';
 import { NdiService } from './ndi/ndi-service';
 
@@ -40,6 +41,9 @@ export const registerIpcHandlers = (
 ): void => {
   ndiService.onOutputStateChanged((state) => {
     getMainWindow()?.webContents.send(NDI_EVENTS.outputStateChanged, state);
+  });
+  ndiService.onDiagnosticsChanged((diagnostics) => {
+    getMainWindow()?.webContents.send(NDI_EVENTS.diagnosticsChanged, diagnostics);
   });
 
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
@@ -108,11 +112,16 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deletePlaylist, (_event, id: Id) => repo.deletePlaylist(id));
   safeHandle(IPC.deletePlaylistSegment, (_event, id: Id) => repo.deletePlaylistSegment(id));
   safeHandle(IPC.deletePresentation, (_event, id: Id) => repo.deletePresentation(id));
-  safeHandle(IPC.sendNdiFrame, (_event, frame: SlideFrame) => {
-    ndiService.sendFrame(frame);
-  });
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
     return ndiService.setOutputEnabled(name, enabled);
   });
   safeHandle(IPC.getNdiOutputState, () => ndiService.getOutputState());
+  safeHandle(IPC.getNdiOutputConfigs, () => ndiService.getOutputConfigs());
+  safeHandle(IPC.updateNdiOutputConfig, (_event, name: NdiOutputName, config: Partial<NdiOutputConfig>) => {
+    return ndiService.updateOutputConfig(name, config);
+  });
+  safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
+  safeHandle(IPC.sendNdiFrame, (_event, buffer: ArrayBuffer, width: number, height: number): void => {
+    ndiService.receiveFrame(new Uint8Array(buffer), width, height);
+  });
 };

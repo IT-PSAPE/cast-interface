@@ -210,6 +210,8 @@ If those conditions are not met, keep the JSX inline in the parent component and
 - Avoid inline styles unless unavoidable.
 - Prefer composition over custom CSS.
 - Keep styles close to components.
+- Do not introduce card-style containers in dialogs or settings unless that pattern already exists in the surrounding surface.
+- Keep helper copy sparse. Avoid stacked title, description, status, and duplicated control labels when the control already makes the state clear.
 
 ## Responsive design
 

@@ -51,9 +51,9 @@ export function resolveCurrentPresentationId(currentPresentationId: Id | null, p
 
 export function resolveCurrentPlaylistPresentationId(currentPresentationId: Id | null, selectedTree: PlaylistTree | null): Id | null {
   const presentationIds = extractPlaylistPresentationIds(selectedTree);
-  if (presentationIds.length === 0) return null;
-  if (currentPresentationId && presentationIds.includes(currentPresentationId)) return currentPresentationId;
-  return presentationIds[0] ?? null;
+  if (!currentPresentationId) return null;
+  if (presentationIds.includes(currentPresentationId)) return currentPresentationId;
+  return null;
 }
 
 export function resolvePinnedLyricPresentationId(
@@ -73,13 +73,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const { presentations, slides, presentationsById } = useProjectContent();
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
-  const [currentPlaylistId, setCurrentPlaylistId] = useState<Id | null>(null);
+  const [currentPlaylistId, setCurrentPlaylistIdState] = useState<Id | null>(null);
   const [currentPlaylistPresentationId, setCurrentPlaylistPresentationId] = useState<Id | null>(null);
   const [currentDrawerPresentationId, setCurrentDrawerPresentationId] = useState<Id | null>(null);
   const [currentOutputPresentationId, setCurrentOutputPresentationId] = useState<Id | null>(null);
   const [presentationBrowseSource, setPresentationBrowseSource] = useState<PresentationBrowseSource>('playlist');
   const [outputArmVersion, setOutputArmVersion] = useState(0);
-  const [hasInitializedOutput, setHasInitializedOutput] = useState(false);
   const [recentlyCreatedId, setRecentlyCreatedId] = useState<Id | null>(null);
 
   useEffect(() => {
@@ -96,7 +95,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       ? bundle.playlists[0]?.playlist.id ?? null
       : currentPlaylistId;
     if (nextPlaylistId !== currentPlaylistId) {
-      setCurrentPlaylistId(nextPlaylistId);
+      setCurrentPlaylistIdState(nextPlaylistId);
     }
 
     const selectedTree = nextPlaylistId
@@ -120,10 +119,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setCurrentPlaylistPresentationId(nextPlaylistPresentationId);
     }
 
-    if (!hasInitializedOutput) {
-      setCurrentOutputPresentationId(nextPlaylistPresentationId);
-      setHasInitializedOutput(true);
-    } else if (currentOutputPresentationId !== null) {
+    if (currentOutputPresentationId !== null) {
       const nextOutputPresentationId = resolvePinnedLyricPresentationId(
         currentOutputPresentationId,
         selectedTree,
@@ -143,7 +139,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     currentOutputPresentationId,
     currentPlaylistId,
     currentPlaylistPresentationId,
-    hasInitializedOutput,
     presentationBrowseSource,
     presentations,
     presentationsById,
@@ -182,6 +177,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setRecentlyCreatedId(null);
   }, []);
 
+  const clearPresentationBrowser = useCallback(() => {
+    setCurrentPlaylistPresentationId(null);
+    setCurrentDrawerPresentationId(null);
+    setPresentationBrowseSource('playlist');
+  }, []);
+
   function findNewId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
     for (const id of currentIds) {
       if (!previousIds.has(id)) return id;
@@ -193,10 +194,20 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (!snapshot) return;
     const bundle = snapshot.libraryBundles.find((entry) => entry.library.id === libraryId);
     if (!bundle) return;
+    if (libraryId !== currentLibraryId) {
+      clearPresentationBrowser();
+    }
     setCurrentLibraryId(libraryId);
-    setCurrentPlaylistId(bundle.playlists[0]?.playlist.id ?? null);
+    setCurrentPlaylistIdState(bundle.playlists[0]?.playlist.id ?? null);
     setStatusText(`Switched to ${bundle.library.name}`);
-  }, [setStatusText, snapshot]);
+  }, [clearPresentationBrowser, currentLibraryId, setStatusText, snapshot]);
+
+  const setCurrentPlaylistId = useCallback((playlistId: Id | null) => {
+    if (playlistId !== currentPlaylistId) {
+      clearPresentationBrowser();
+    }
+    setCurrentPlaylistIdState(playlistId);
+  }, [clearPresentationBrowser, currentPlaylistId]);
 
   const selectPlaylistPresentation = useCallback((presentationId: Id) => {
     setCurrentPlaylistPresentationId(presentationId);
@@ -238,7 +249,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setCurrentPlaylistId(createdId);
       setRecentlyCreatedId(createdId);
     }
-  }, [currentLibraryBundle, currentLibraryId, mutate, setStatusText]);
+  }, [currentLibraryBundle, currentLibraryId, mutate, setCurrentPlaylistId, setStatusText]);
 
   const createPresentation = useCallback(async () => {
     const previousIds = new Set(presentations.map((presentation) => presentation.id));
@@ -362,6 +373,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renamePlaylist,
     renamePresentation,
     selectLibrary,
+    setCurrentPlaylistId,
     selectPlaylistPresentation,
     slideCountByPresentation,
   ]);

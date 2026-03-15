@@ -13,9 +13,9 @@ interface RenderSceneContextValue {
   editScene: RenderScene;
   showScene: RenderScene;
   liveScene: RenderScene;
-  outputScene: RenderScene;
+  programScene: RenderScene;
   getThumbnailScene: (slideId: Id, surface: SceneSurface) => RenderScene | null;
-  commitOutputScene: () => void;
+  commitProgramScene: () => void;
 }
 
 const RenderSceneContext = createContext<RenderSceneContextValue | null>(null);
@@ -64,35 +64,37 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
     });
   }, [activeOverlays, contentLayerVisible, liveElements, liveSlide, mediaLayerAsset]);
 
-  // Freeze the output scene when editing so NDI output stays stable
+  // Freeze the program scene while editing so the operator output stays stable.
   const isEditing = workbenchMode !== 'show';
-  const [frozenOutputScene, setFrozenOutputScene] = useState<RenderScene | null>(null);
+  const [frozenProgramScene, setFrozenProgramScene] = useState<RenderScene | null>(null);
   const pendingCommitRef = useRef(false);
 
-  // Snapshot liveScene on entering edit mode; clear on returning to show
   useEffect(() => {
     if (isEditing) {
-      setFrozenOutputScene(liveScene);
+      setFrozenProgramScene(liveScene);
     } else {
-      setFrozenOutputScene(null);
+      setFrozenProgramScene(null);
       pendingCommitRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
-  // After push: re-snapshot when liveScene updates with persisted data
   useEffect(() => {
     if (pendingCommitRef.current && isEditing) {
-      setFrozenOutputScene(liveScene);
+      setFrozenProgramScene(liveScene);
       pendingCommitRef.current = false;
     }
   }, [isEditing, liveScene]);
 
-  const commitOutputScene = useCallback(() => {
+  const commitProgramScene = useCallback(() => {
     pendingCommitRef.current = true;
   }, []);
 
-  const outputScene = isEditing && frozenOutputScene ? frozenOutputScene : liveScene;
+  const hasLiveProgram = liveSlide !== null;
+  const programScene = !hasLiveProgram
+    ? liveScene
+    : isEditing && frozenProgramScene
+      ? frozenProgramScene
+      : liveScene;
 
   const editThumbnailScenes = useMemo(() => {
     const sceneMap = new Map<Id, RenderScene>();
@@ -123,11 +125,11 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       editScene,
       showScene,
       liveScene,
-      outputScene,
+      programScene,
       getThumbnailScene,
-      commitOutputScene,
+      commitProgramScene,
     };
-  }, [commitOutputScene, currentSlide?.id, editScene, editThumbnailScenes, liveScene, outputScene, persistedThumbnailScenes, showScene]);
+  }, [commitProgramScene, currentSlide?.id, editScene, editThumbnailScenes, liveScene, persistedThumbnailScenes, programScene, showScene]);
 
   return <RenderSceneContext.Provider value={value}>{children}</RenderSceneContext.Provider>;
 }

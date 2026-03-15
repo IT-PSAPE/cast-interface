@@ -44,8 +44,8 @@ describe('resolveCurrentPlaylistPresentationId', () => {
     expect(resolveCurrentPlaylistPresentationId('p-2', selectedTree)).toBe('p-2');
   });
 
-  it('falls back to the first playlist presentation when the current one is missing', () => {
-    expect(resolveCurrentPlaylistPresentationId('p-9', selectedTree)).toBe('p-1');
+  it('clears the selection when the current playlist presentation is missing', () => {
+    expect(resolveCurrentPlaylistPresentationId('p-9', selectedTree)).toBeNull();
   });
 
   it('returns null when the playlist has no presentations', () => {
@@ -78,13 +78,13 @@ describe('resolvePinnedLyricPresentationId', () => {
     expect(resolvePinnedLyricPresentationId('p-2', selectedTree, presentationsById)).toBe('p-2');
   });
 
-  it('still falls back to the visible playlist for non-lyric presentations', () => {
-    expect(resolvePinnedLyricPresentationId('p-9', selectedTree, presentationsById)).toBe('p-1');
+  it('clears the selection for non-lyric presentations that are no longer visible', () => {
+    expect(resolvePinnedLyricPresentationId('p-9', selectedTree, presentationsById)).toBeNull();
   });
 
   it('clears a selected lyric when it no longer exists', () => {
     expect(resolvePinnedLyricPresentationId('p-2', selectedTree, new Map<string, Presentation>([
       ['p-1', { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
-    ]))).toBe('p-1');
+    ]))).toBeNull();
   });
 });

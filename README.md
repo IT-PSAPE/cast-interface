@@ -4,7 +4,7 @@ Minimal cross-platform Electron prototype for a ProPresenter-style presentation 
 
 - reusable content hierarchy
 - slide rendering engine
-- NDI output path with RGBA frame transport
+- NDI output path driven by an offscreen renderer window
 
 ## Stack
 
@@ -51,7 +51,7 @@ npm run build
 - Render layered output with z-index, rotation, opacity, text/media rendering.
 - Dedicated 1920x1080 output canvas.
 - Keyboard playback controls: right/left arrow and number keys.
-- Real-time RGBA frame handoff to main process NDI adapter.
+- Real-time offscreen-rendered NDI output with main-process sender control.
 
 ## NDI Integration
 
@@ -60,31 +60,33 @@ The app includes a concrete native Node-API bridge package:
 - `packages/ndi-native` (`@cast-interface/ndi-native`)
 
 The Electron main process integration lives in `app/main/ndi/ndi-service.ts`.
-Stability research notes live in `docs/ndi-stability-notes.md`.
+Runtime behavior reference lives in `docs/ndi-runtime-reference.md`.
 
 If the addon is missing or the NDI runtime library cannot be found, the app falls back to no-op mode and logs a warning.
 
 Native module API:
 
 - `initializeSender({ senderName, width, height, withAlpha })`
-- `sendRgbaFrame(senderName, buffer, width, height, stride)`
+- `sendBgraFrame(senderName, buffer, width, height, stride)`
 - `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
 The sender is initialized with:
 
-- sender names: `Cast Interface - Audience` and `Cast Interface - Stage` (both can be active simultaneously)
+- sender name: `Cast Interface - Audience`
 - resolution: `1920x1080`
 - alpha enabled: `true`
 
 Main process NDI behavior:
 
-- Frame dispatch is bounded with a latest-frame-wins queue to prevent unbounded memory growth.
-- Frame emission remains active outside Show view and always uses the Show output scene pipeline.
-- Output senders are recreated automatically when frame dimensions change.
-- When input frames stop for more than `100ms`, heartbeat black frames are sent at `30 FPS`.
+- The visible renderer publishes one authoritative `ProgramOutputScene` to the main process.
+- A dedicated hidden offscreen renderer window consumes that program scene and produces paint bitmaps for NDI.
+- Paint dispatch is bounded with a latest-frame-wins queue to prevent unbounded memory growth.
+- The visible program preview and the hidden offscreen output render the same scene contract.
+- If paint frames stop arriving, the main process re-sends the last paint or an empty frame that matches the current alpha mode at `30 FPS`.
+- The offscreen renderer window is recreated automatically after crash/load failure and replays the latest program scene.
+- Output raster is fixed at `1920x1080`; only sender name and alpha are operator-configurable.
 - Graceful shutdown (`before-quit`, `will-quit`, process exit/signals) tears down all NDI senders and runtime.
-- Optional diagnostics can be enabled with `CAST_NDI_DEBUG=1` (5-second aggregate stats logs).
 
 ### NDI runtime discovery
 
@@ -104,7 +106,10 @@ Default library names:
 Default macOS candidate paths also include common NDI Tools bundle locations:
 
 - `/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi.dylib`
+- `/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi_advanced.dylib`
+- `/Applications/NDI Discovery.app/Contents/Frameworks/libndi_advanced.dylib`
 - `/Applications/NDI Scan Converter.app/Contents/Frameworks/libndi.dylib`
+- `/Applications/NDI Virtual Input.app/Contents/Frameworks/libndi_advanced.dylib`
 - `/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/Current/Frameworks/libndi.dylib`
 
 ### Runtime install notes
