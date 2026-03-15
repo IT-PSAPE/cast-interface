@@ -5,6 +5,7 @@ import { IconButton } from '../../../components/icon-button';
 import { useCast } from '../../../contexts/cast-context';
 import { useElements } from '../../../contexts/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 
 interface ToolbarButtonProps {
@@ -34,12 +35,16 @@ interface StageToolbarProps {
 }
 
 export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
-  const { currentPresentation } = useNavigation();
   const { createText, createShape } = useElements();
   const { setStatusText } = useCast();
+  const { currentPresentation } = useNavigation();
+  const { currentTemplate } = useTemplateEditor();
   const { workbenchMode } = useWorkbench();
-  const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isLyricsPresentation = !isOverlayEdit && isLyricPresentation(currentPresentation);
+  const hideAddText = workbenchMode === 'slide-editor'
+    ? isLyricPresentation(currentPresentation)
+    : workbenchMode === 'template-editor'
+      ? currentTemplate?.kind === 'lyrics'
+      : false;
 
   function handleAddText() {
     void createText();
@@ -61,17 +66,19 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
 
   return (
     <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-border-primary bg-background-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
-      <ToolbarButton label="Add Text" onClick={handleAddText} disabled={isLyricsPresentation}>
-        <Icon.type_01 size={18} strokeWidth={1.5} />
-      </ToolbarButton>
-      <ToolbarButton label="Add Shape" onClick={handleAddShape} disabled={isLyricsPresentation}>
+      {!hideAddText ? (
+        <ToolbarButton label="Add Text" onClick={handleAddText}>
+          <Icon.type_01 size={18} strokeWidth={1.5} />
+        </ToolbarButton>
+      ) : null}
+      <ToolbarButton label="Add Shape" onClick={handleAddShape}>
         <Icon.square size={18} strokeWidth={1.5} />
+      </ToolbarButton>
+      <ToolbarButton label="Add Media" onClick={handleAddMedia}>
+        <Icon.image_03 size={18} strokeWidth={1.5} />
       </ToolbarButton>
       <ToolbarButton label="Draw Path" onClick={handleUnavailable} disabled>
         <Icon.pencil_line size={18} strokeWidth={1.5} />
-      </ToolbarButton>
-      <ToolbarButton label="Add Media" onClick={handleAddMedia} disabled={isLyricsPresentation}>
-        <Icon.image_03 size={18} strokeWidth={1.5} />
       </ToolbarButton>
       <ToolbarButton label="Add Web Source" onClick={handleUnavailable} disabled>
         <Icon.globe_01 size={18} strokeWidth={1.5} />

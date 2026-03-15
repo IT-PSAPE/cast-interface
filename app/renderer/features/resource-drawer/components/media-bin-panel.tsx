@@ -87,6 +87,7 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
                 selected={mediaLayerAssetId === asset.id}
                 body={
                   <>
+                    <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
                     <MediaThumbnail asset={asset} />
                     <div className="absolute right-1 top-1 hidden group-hover:block">
                       <IconButton label="Media options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
@@ -134,5 +135,5 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   if (asset.type === 'video') {
     return <video src={asset.src} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />;
   }
-  return <span className="text-text-tertiary text-[11px] font-bold tracking-wider uppercase">{asset.type}</span>;
+  return <span className="text-text-tertiary text-sm font-bold tracking-wider uppercase">{asset.type}</span>;
 }

@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
-import type { SlideElement, SlideFrame, TextElementPayload } from '@core/types';
+import type { SlideElement, TextElementPayload } from '@core/types';
+import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
 import type { RenderNode, RenderScene } from './scene-types';
 import { SceneNodeImage } from './scene-node-image';
 import { SceneNodeShape } from './scene-node-shape';
@@ -17,8 +18,6 @@ interface SceneStageProps {
   className?: string;
   onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
-  emitFramesFps?: number | null;
-  onFrame?: (frame: SlideFrame) => void;
   fixedViewport?: { width: number; height: number } | null;
   onViewportChange?: (viewport: SceneViewportTransform) => void;
 }
@@ -35,7 +34,7 @@ function renderNodeContent(node: RenderNode) {
   return null;
 }
 
-export function SceneStage({ scene, editable = false, className = '', onDrop, onDragOver, emitFramesFps = null, onFrame, fixedViewport = null, onViewportChange }: SceneStageProps) {
+export function SceneStage({ scene, editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
   const snaps = useMemo(rotationSnaps, []);
@@ -52,38 +51,6 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
       sceneHeight: scene.height,
     });
   }, [onViewportChange, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale, viewport.viewportHeight, viewport.viewportWidth]);
-
-  const onFrameRef = useRef(onFrame);
-  onFrameRef.current = onFrame;
-
-  useEffect(() => {
-    if (!emitFramesFps || !onFrameRef.current) return;
-    const intervalMs = Math.max(16, Math.round(1000 / emitFramesFps));
-    const intervalId = setInterval(() => {
-      const stage = editor.stageRef.current;
-      if (!stage) return;
-      const frameCallback = onFrameRef.current;
-      if (!frameCallback) return;
-      const scenePixelRatio = scene.width / Math.max(1, scene.width * viewport.sceneScale);
-      const canvas = stage.toCanvas({
-        x: viewport.sceneOffsetX,
-        y: viewport.sceneOffsetY,
-        width: scene.width * viewport.sceneScale,
-        height: scene.height * viewport.sceneScale,
-        pixelRatio: fixedViewport ? 1 : scenePixelRatio,
-      });
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) return;
-      const imageData = context.getImageData(0, 0, scene.width, scene.height);
-      frameCallback({
-        width: scene.width,
-        height: scene.height,
-        rgba: new Uint8ClampedArray(imageData.data),
-        timestamp: Date.now(),
-      });
-    }, intervalMs);
-    return () => clearInterval(intervalId);
-  }, [editor.stageRef, emitFramesFps, fixedViewport, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale]);
 
   function handleNodeClick(id: string, event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     editor.handleNodeSelect(id, event.evt.shiftKey);
@@ -157,7 +124,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
         onMouseMove={editor.handleStageMouseMove}
         onMouseUp={editor.handleStageMouseUp}
       >
-        <Layer>
+        <Layer listening={editable}>
           <Group name="scene-root" x={viewport.sceneOffsetX} y={viewport.sceneOffsetY} scaleX={viewport.sceneScale} scaleY={viewport.sceneScale}>
             {scene.nodes.map(renderNode)}
             {editable ? (
@@ -221,56 +188,6 @@ interface InlineTextEditorProps {
   sceneScale: number;
   onCommit: (text: string) => void;
   onCancel: () => void;
-}
-
-function resolveInlineTextAlign(alignment: TextElementPayload['alignment']): 'left' | 'center' | 'right' | 'justify' {
-  if (alignment === 'center') return 'center';
-  if (alignment === 'right' || alignment === 'end') return 'right';
-  if (alignment === 'justify') return 'justify';
-  return 'left';
-}
-
-function measureInlineTextHeight({
-  text,
-  width,
-  fontSize,
-  lineHeight,
-  fontWeight,
-  fontStyle,
-  fontFamily,
-}: {
-  text: string;
-  width: number;
-  fontSize: number;
-  lineHeight: number;
-  fontWeight: string;
-  fontStyle: string;
-  fontFamily: string;
-}): number {
-  if (typeof document === 'undefined') {
-    return fontSize * lineHeight;
-  }
-
-  const measureNode = document.createElement('div');
-  measureNode.style.position = 'absolute';
-  measureNode.style.visibility = 'hidden';
-  measureNode.style.pointerEvents = 'none';
-  measureNode.style.left = '-99999px';
-  measureNode.style.top = '0';
-  measureNode.style.width = `${Math.max(width, fontSize)}px`;
-  measureNode.style.whiteSpace = 'pre-wrap';
-  measureNode.style.wordBreak = 'break-word';
-  measureNode.style.overflowWrap = 'anywhere';
-  measureNode.style.fontSize = `${fontSize}px`;
-  measureNode.style.lineHeight = String(lineHeight);
-  measureNode.style.fontWeight = fontWeight;
-  measureNode.style.fontStyle = fontStyle;
-  measureNode.style.fontFamily = fontFamily;
-  measureNode.textContent = text.length > 0 ? text : ' ';
-  document.body.appendChild(measureNode);
-  const height = measureNode.getBoundingClientRect().height;
-  document.body.removeChild(measureNode);
-  return Math.max(height, fontSize * lineHeight);
 }
 
 function InlineTextEditor({ editingTextId, effectiveElements, sceneOffsetX, sceneOffsetY, sceneScale, onCommit, onCancel }: InlineTextEditorProps) {

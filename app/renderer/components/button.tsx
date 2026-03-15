@@ -40,7 +40,7 @@ export function Button({
       type={type}
       disabled={disabled}
       {...buttonProps}
-      className={`rounded px-1.5 py-0.5 text-center text-[12px] leading-tight cursor-pointer transition-colors ${stateClasses} ${disabledClasses} ${className}`}
+      className={`rounded px-1.5 py-0.5 text-center text-sm leading-tight cursor-pointer transition-colors ${stateClasses} ${disabledClasses} ${className}`}
     >
       {children}
     </button>

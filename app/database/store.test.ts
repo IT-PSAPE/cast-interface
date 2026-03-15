@@ -285,7 +285,7 @@ describe('CastRepository global project migration', () => {
     const presentationColumns = db.prepare('PRAGMA table_info(presentations)').all() as Array<{ name: string }>;
     db.close();
 
-    expect(userVersion).toBe(3);
+    expect(userVersion).toBe(4);
     expect(presentationColumns.some((column) => column.name === 'library_id')).toBe(false);
   });
 
@@ -346,7 +346,7 @@ describe('CastRepository global project migration', () => {
     const userVersion = verificationDb.pragma('user_version', { simple: true }) as number;
     verificationDb.close();
 
-    expect(userVersion).toBe(3);
+    expect(userVersion).toBe(4);
     expect(presentationOrder.order_index).toBe(77);
   });
 });

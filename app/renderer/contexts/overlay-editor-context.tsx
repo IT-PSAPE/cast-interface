@@ -3,6 +3,7 @@ import type { AppSnapshot, Id, Overlay, OverlayCreateInput, OverlayUpdateInput, 
 import { getOverlayDefaults } from '../utils/slides';
 import { createId } from '../utils/create-id';
 import { useCast } from './cast-context';
+import { useOverlayDefaults } from './overlay-defaults-context';
 import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
@@ -24,6 +25,7 @@ const OverlayEditorContext = createContext<OverlayEditorContextValue | null>(nul
 export function OverlayEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
   const { workbenchMode } = useWorkbench();
+  const { overlayDefaults } = useOverlayDefaults();
   const { overlays: persistedOverlays } = useProjectContent();
   const [currentOverlayId, setCurrentOverlayId] = useState<Id | null>(null);
   const [stagedOverlays, setStagedOverlays] = useState<Overlay[] | null>(null);
@@ -91,12 +93,16 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
       },
       createdAt: now,
       updatedAt: now,
-      ...getOverlayDefaults(),
+      ...getOverlayDefaults({
+        animationKind: overlayDefaults.animationKind,
+        durationMs: overlayDefaults.durationMs,
+        autoClearDurationMs: overlayDefaults.autoClearDurationMs,
+      }),
     };
     setStagedOverlays((current) => [...(current ?? persistedOverlays), draft]);
     setCurrentOverlayId(draft.id);
     setStatusText('Created overlay');
-  }, [persistedOverlays, setStatusText]);
+  }, [overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, persistedOverlays, setStatusText]);
 
   const deleteCurrentOverlay = useCallback(async () => {
     if (!currentOverlayId) return;

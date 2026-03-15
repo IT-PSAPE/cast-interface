@@ -13,8 +13,8 @@ export function EmptyStatePanel({ glyph, title, description }: EmptyStatePanelPr
         <div className="grid h-16 w-16 place-items-center rounded-xl border border-border-primary bg-background-tertiary text-text-tertiary">
           {glyph}
         </div>
-        <h2 className="m-0 text-[15px] font-semibold text-text-primary">{title}</h2>
-        <p className="m-0 text-[12px] text-text-tertiary">{description}</p>
+        <h2 className="m-0 text-lg font-semibold text-text-primary">{title}</h2>
+        <p className="m-0 text-sm text-text-tertiary">{description}</p>
       </div>
     </section>
   );

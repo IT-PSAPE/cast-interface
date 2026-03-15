@@ -6,6 +6,7 @@ import type {
   TextCaseTransform,
   TextHorizontalAlign,
   TextVerticalAlign,
+  StrokePosition,
 } from './types';
 
 export interface VisualPayloadState {
@@ -18,6 +19,7 @@ export interface VisualPayloadState {
   strokeEnabled: boolean;
   strokeColor: string;
   strokeWidth: number;
+  strokePosition: StrokePosition;
   shadowEnabled: boolean;
   shadowColor: string;
   shadowBlur: number;
@@ -43,6 +45,7 @@ export interface TextVisualState {
   strokeEnabled: boolean;
   strokeColor: string;
   strokeWidth: number;
+  strokePosition: StrokePosition;
   shadowEnabled: boolean;
   shadowColor: string;
   shadowBlur: number;
@@ -78,6 +81,7 @@ export function readVisualPayload(type: SlideElement['type'], payload: SlideElem
     strokeEnabled: type === 'shape' ? payload.strokeEnabled ?? strokeWidth > 0 : payload.strokeEnabled ?? false,
     strokeColor,
     strokeWidth,
+    strokePosition: payload.strokePosition ?? 'inside',
     shadowEnabled: payload.shadowEnabled ?? false,
     shadowColor: payload.shadowColor ?? DEFAULT_BOX_SHADOW_COLOR,
     shadowBlur: payload.shadowBlur ?? DEFAULT_BOX_SHADOW_BLUR,
@@ -100,6 +104,7 @@ export function applyVisualPayload(type: SlideElement['type'], payload: SlideEle
     strokeEnabled: next.strokeEnabled,
     strokeColor: next.strokeColor,
     strokeWidth: next.strokeWidth,
+    strokePosition: next.strokePosition,
     fillEnabled: next.fillEnabled,
   };
 
@@ -145,6 +150,7 @@ export function readTextVisualPayload(payload: TextElementPayload): TextVisualSt
     strokeEnabled: payload.textStrokeEnabled ?? false,
     strokeColor: payload.textStrokeColor ?? '#111111',
     strokeWidth: payload.textStrokeWidth ?? 1,
+    strokePosition: payload.textStrokePosition ?? 'outside',
     shadowEnabled: payload.textShadowEnabled ?? false,
     shadowColor: payload.textShadowColor ?? '#00000099',
     shadowBlur: payload.textShadowBlur ?? 12,
@@ -160,6 +166,7 @@ export function applyTextVisualPayload(payload: TextElementPayload, next: TextVi
     textStrokeEnabled: next.strokeEnabled,
     textStrokeColor: next.strokeColor,
     textStrokeWidth: next.strokeWidth,
+    textStrokePosition: next.strokePosition,
     textShadowEnabled: next.shadowEnabled,
     textShadowColor: next.shadowColor,
     textShadowBlur: next.shadowBlur,

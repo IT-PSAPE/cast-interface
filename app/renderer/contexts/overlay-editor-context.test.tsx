@@ -18,6 +18,17 @@ vi.mock('./workbench-context', () => ({
   useWorkbench: vi.fn(),
 }));
 
+vi.mock('./overlay-defaults-context', () => ({
+  useOverlayDefaults: vi.fn(() => ({
+    overlayDefaults: {
+      animationKind: 'fade' as const,
+      durationMs: 2500,
+      autoClearDurationMs: null,
+    },
+    updateOverlayDefaults: vi.fn(),
+  })),
+}));
+
 interface OverlayEditorProbeValue extends ReturnType<typeof useOverlayEditor> {}
 
 let probeValue: OverlayEditorProbeValue | null = null;
@@ -77,6 +88,7 @@ function createSnapshot(overlays: Overlay[]): AppSnapshot {
     slideElements: [],
     mediaAssets: [],
     overlays,
+    templates: [],
   };
 }
 
@@ -115,11 +127,13 @@ describe('OverlayEditorProvider', () => {
       slideElements: [],
       mediaAssets: [],
       overlays: [createOverlay()],
+      templates: [],
       presentationsById: new Map(),
       slidesByPresentationId: new Map(),
       slideElementsBySlideId: new Map(),
       mediaAssetsById: new Map(),
       overlaysById: new Map([['overlay-1', createOverlay()]]),
+      templatesById: new Map(),
     });
     vi.mocked(useWorkbench).mockImplementation(() => ({
       workbenchMode,

@@ -43,20 +43,28 @@ interface LayeredSceneInput {
   slide: Slide | null;
   contentElements: SlideElement[];
   mediaAsset: MediaAsset | null;
-  overlay: Overlay | null;
+  overlays: Array<{
+    overlay: Overlay;
+    opacityMultiplier: number;
+    stackOrder: number;
+  }>;
   includeContent: boolean;
 }
 
 const OVERLAY_LAYER_Z_INDEX_OFFSET = 10000;
+const OVERLAY_STACK_Z_INDEX_OFFSET = 1000;
 
-export function buildLayeredRenderScene({ slide, contentElements, mediaAsset, overlay, includeContent }: LayeredSceneInput): RenderScene {
+export function buildLayeredRenderScene({ slide, contentElements, mediaAsset, overlays, includeContent }: LayeredSceneInput): RenderScene {
   const merged: SlideElement[] = [];
   if (mediaAsset) merged.push(mediaAssetToLayerElement(mediaAsset));
   if (includeContent) merged.push(...contentElements.map(toPresentationLayerElement));
-  if (overlay) {
-    merged.push(...overlayToLayerElements(overlay).map((element) => ({
+
+  for (const overlayLayer of overlays) {
+    if (overlayLayer.opacityMultiplier <= 0) continue;
+    merged.push(...overlayToLayerElements(overlayLayer.overlay).map((element) => ({
       ...element,
-      zIndex: element.zIndex + OVERLAY_LAYER_Z_INDEX_OFFSET,
+      opacity: element.opacity * overlayLayer.opacityMultiplier,
+      zIndex: element.zIndex + OVERLAY_LAYER_Z_INDEX_OFFSET + (overlayLayer.stackOrder * OVERLAY_STACK_Z_INDEX_OFFSET),
     })));
   }
   return buildRenderScene(slide, merged);

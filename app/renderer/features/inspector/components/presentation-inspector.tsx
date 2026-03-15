@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FieldInput } from '../../../components/labeled-field';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { Section } from './inspector-section';
 
 export function PresentationInspector() {
   const {
@@ -29,23 +30,33 @@ export function PresentationInspector() {
   }
 
   if (!currentPresentation) {
-    return <div className="text-[12px] text-text-tertiary">No presentation selected.</div>;
+    return <div className="text-sm text-text-tertiary">No presentation selected.</div>;
   }
 
   return (
-    <div className="grid gap-3">
-      <div>
-        <div className="mt-0.5 grid gap-1.5">
+    <>
+      <Section.Root>
+        <Section.Header>
+          <span>Presentation</span>
+        </Section.Header>
+        <Section.Body>
           <FieldInput type="text" value={titleDraft} onChange={handleTitleChange} onBlur={handleTitleBlur} />
-        </div>
-      </div>
+        </Section.Body>
+      </Section.Root>
 
-      <div>
-        <span className="text-[11px] text-text-tertiary uppercase tracking-wider">Created</span>
-        <p className="text-[12px] text-text-secondary m-0 mt-0.5">
-          {new Date(currentPresentation.createdAt).toLocaleDateString()}
-        </p>
-      </div>
-    </div>
+      <Section.Root>
+        <Section.Header>
+          <span>Details</span>
+        </Section.Header>
+        <Section.Body>
+          <div className="grid gap-1">
+            <span className="text-sm text-text-tertiary uppercase tracking-wider">Created</span>
+            <p className="m-0 text-sm text-text-secondary">
+              {new Date(currentPresentation.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+        </Section.Body>
+      </Section.Root>
+    </>
   );
 }

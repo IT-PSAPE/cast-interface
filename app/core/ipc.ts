@@ -4,14 +4,18 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
+  NdiOutputConfigMap,
   PresentationKind,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from './types';
 
 export interface MainApi {
@@ -44,6 +48,11 @@ export interface MainApi {
   updateOverlay: (input: OverlayUpdateInput) => Promise<AppSnapshot>;
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => Promise<AppSnapshot>;
   deleteOverlay: (overlayId: Id) => Promise<AppSnapshot>;
+  createTemplate: (input: TemplateCreateInput) => Promise<AppSnapshot>;
+  updateTemplate: (input: TemplateUpdateInput) => Promise<AppSnapshot>;
+  deleteTemplate: (templateId: Id) => Promise<AppSnapshot>;
+  applyTemplateToPresentation: (templateId: Id, presentationId: Id) => Promise<AppSnapshot>;
+  applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<AppSnapshot>;
   renameLibrary: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylist: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePresentation: (id: Id, title: string) => Promise<AppSnapshot>;
@@ -51,9 +60,14 @@ export interface MainApi {
   deletePlaylist: (id: Id) => Promise<AppSnapshot>;
   deletePlaylistSegment: (id: Id) => Promise<AppSnapshot>;
   deletePresentation: (id: Id) => Promise<AppSnapshot>;
-  sendNdiFrame: (frame: SlideFrame) => Promise<void>;
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => Promise<NdiOutputState>;
   getNdiOutputState: () => Promise<NdiOutputState>;
+  getNdiOutputConfigs: () => Promise<NdiOutputConfigMap>;
+  updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => Promise<NdiOutputConfigMap>;
+  getNdiDiagnostics: () => Promise<NdiDiagnostics>;
+  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
+  onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
+  onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
 }
 
 export const IPC = {
@@ -85,6 +99,11 @@ export const IPC = {
   updateOverlay: 'cast:updateOverlay',
   setOverlayEnabled: 'cast:setOverlayEnabled',
   deleteOverlay: 'cast:deleteOverlay',
+  createTemplate: 'cast:createTemplate',
+  updateTemplate: 'cast:updateTemplate',
+  deleteTemplate: 'cast:deleteTemplate',
+  applyTemplateToPresentation: 'cast:applyTemplateToPresentation',
+  applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
   renamePresentation: 'cast:renamePresentation',
@@ -92,11 +111,15 @@ export const IPC = {
   deletePlaylist: 'cast:deletePlaylist',
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
   deletePresentation: 'cast:deletePresentation',
-  sendNdiFrame: 'cast:sendNdiFrame',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
-  getNdiOutputState: 'ndi:getOutputState'
+  getNdiOutputState: 'ndi:getOutputState',
+  getNdiOutputConfigs: 'ndi:getOutputConfigs',
+  updateNdiOutputConfig: 'ndi:updateOutputConfig',
+  getNdiDiagnostics: 'ndi:getDiagnostics',
+  sendNdiFrame: 'ndi:sendFrame',
 } as const;
 
 export const NDI_EVENTS = {
-  outputStateChanged: 'ndi:outputStateChanged'
+  outputStateChanged: 'ndi:outputStateChanged',
+  diagnosticsChanged: 'ndi:diagnosticsChanged',
 } as const;

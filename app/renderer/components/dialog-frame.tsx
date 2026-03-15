@@ -33,7 +33,7 @@ export function DialogFrame({ title, onClose, children, dataUiRegion, bodyClassN
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onMouseDown={handleBackdropMouseDown}>
+    <div className="pointer-events-auto fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onMouseDown={handleBackdropMouseDown}>
       <div className="fixed inset-0 z-50 grid place-items-center p-4">
         <div
           role="dialog"
@@ -48,14 +48,14 @@ export function DialogFrame({ title, onClose, children, dataUiRegion, bodyClassN
           )}
         >
           <header className="flex items-center justify-between border-b border-border-primary px-4 py-3">
-            <h2 className="m-0 text-[14px] font-semibold text-text-primary">
+            <h2 className="m-0 text-lg font-semibold text-text-primary">
               {title}
             </h2>
             <button
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-[16px] text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
+              className="grid h-6 w-6 cursor-pointer place-items-center rounded bg-transparent text-lg text-text-tertiary transition-colors hover:bg-background-tertiary hover:text-text-primary"
             >
               <Icon.x_close size={14} strokeWidth={2} />
             </button>
@@ -73,6 +73,6 @@ export function DialogFrame({ title, onClose, children, dataUiRegion, bodyClassN
         </div>
       </div>
     </div>,
-    document.body
+    document.getElementById('overlay-root') ?? document.body,
   );
 }

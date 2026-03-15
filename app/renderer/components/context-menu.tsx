@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './icon';
 import { createPortal } from 'react-dom';
+
+const VIEWPORT_PADDING = 8;
+
+function getOverlayRoot(): HTMLElement {
+  return document.getElementById('overlay-root') ?? document.body;
+}
 
 export interface ContextMenuItem {
   id: string;
@@ -26,6 +32,19 @@ interface ContextMenuProps {
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
+  const [clampedPos, setClampedPos] = useState({ left: x, top: y });
+
+  // Clamp menu position into viewport after first render so we can measure
+  useLayoutEffect(() => {
+    if (!rootRef.current) { setClampedPos({ left: x, top: y }); return; }
+    const rect = rootRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    setClampedPos({
+      left: x + rect.width > vw - VIEWPORT_PADDING ? Math.max(VIEWPORT_PADDING, vw - rect.width - VIEWPORT_PADDING) : x,
+      top: y + rect.height > vh - VIEWPORT_PADDING ? Math.max(VIEWPORT_PADDING, vh - rect.height - VIEWPORT_PADDING) : y,
+    });
+  }, [x, y]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -72,7 +91,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         key={child.id}
         onClick={() => handleSelect(child)}
         disabled={child.disabled}
-        className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
+        className={`w-full rounded px-2 py-1 text-left text-sm transition-colors ${getItemClass(child)}`}
       >
         <span className="flex items-center gap-2">
           {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
@@ -113,7 +132,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 key={child.id}
                 onClick={() => handleSelect(child)}
                 disabled={child.disabled}
-                className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${getItemClass(child)}`}
+                className={`w-full rounded px-2 py-1 text-left text-sm transition-colors ${getItemClass(child)}`}
               >
                 <span className="flex items-center gap-2">
                   {child.icon ? <span className="shrink-0">{child.icon}</span> : null}
@@ -130,15 +149,15 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return createPortal(
     <div
       ref={rootRef}
-      className="fixed z-[9999] min-w-[180px] rounded-md border border-border-primary bg-background-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
-      style={{ left: x, top: y }}
+      className="pointer-events-auto fixed min-w-[180px] rounded-md border border-border-primary bg-background-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+      style={{ left: clampedPos.left, top: clampedPos.top }}
     >
       {items.map((item) => (
         <div key={item.id} className="relative" onMouseEnter={() => handleMouseEnter(item)}>
           <button
             onClick={() => handleSelect(item)}
             disabled={item.disabled}
-            className={`w-full rounded px-2 py-1 text-left text-[12px] transition-colors ${
+            className={`w-full rounded px-2 py-1 text-left text-sm transition-colors ${
               item.disabled
                 ? 'cursor-not-allowed text-text-tertiary/50'
                 : item.danger
@@ -171,6 +190,6 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         </div>
       ))}
     </div>,
-    document.body
+    getOverlayRoot(),
   );
 }

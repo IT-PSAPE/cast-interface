@@ -62,19 +62,8 @@ export function useSceneStageViewport(sceneWidth: number, sceneHeight: number, f
   }, [fixedViewport]);
 
   return useMemo(() => {
-    if (fixedViewport) {
-      return {
-        containerRef,
-        viewportWidth: fixedViewport.width,
-        viewportHeight: fixedViewport.height,
-        sceneScale: 1,
-        sceneOffsetX: 0,
-        sceneOffsetY: 0,
-      };
-    }
-
-    const viewportWidth = Math.max(1, containerSize.width);
-    const viewportHeight = Math.max(1, containerSize.height);
+    const viewportWidth = fixedViewport ? fixedViewport.width : Math.max(1, containerSize.width);
+    const viewportHeight = fixedViewport ? fixedViewport.height : Math.max(1, containerSize.height);
     const sceneScale = Math.min(viewportWidth / sceneWidth, viewportHeight / sceneHeight);
     const drawWidth = sceneWidth * sceneScale;
     const drawHeight = sceneHeight * sceneScale;

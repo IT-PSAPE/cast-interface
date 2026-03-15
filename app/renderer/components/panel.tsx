@@ -12,7 +12,7 @@ export function Panel({ title, action, children, className = '' }: PanelProps) {
     <section className={`rounded-md border border-border-primary bg-primary p-2 ${className}`}>
       {(title || action) && (
         <div className="flex items-center justify-between mb-1.5">
-          {title && <h3 className="text-[12px] font-semibold text-text-primary">{title}</h3>}
+          {title && <h3 className="text-sm font-semibold text-text-primary">{title}</h3>}
           {action}
         </div>
       )}

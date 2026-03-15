@@ -9,6 +9,7 @@ import { RenderSceneProvider, useRenderScenes } from '../features/stage/renderin
 import { useElements } from './element-context';
 import { useOverlayEditor } from './overlay-editor-context';
 import { useSlideEditor } from './slide-editor-context';
+import { TemplateEditorProvider } from './template-editor-context';
 import { useWorkbench } from './workbench-context';
 
 vi.mock('./cast-context', () => ({
@@ -56,6 +57,17 @@ function createPresentation(id: string, title: string): Presentation {
     title,
     entityType: 'presentation',
     kind: 'canvas',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+function createLyric(id: string, title: string): Presentation {
+  return {
+    id,
+    title,
+    entityType: 'lyric',
+    kind: 'lyrics',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
@@ -123,12 +135,37 @@ function createSnapshot(): AppSnapshot {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
+  const lyricPlaylist: Playlist = {
+    id: 'playlist-2',
+    libraryId: library.id,
+    name: 'Lyrics',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+  const lyricSegment: PlaylistSegment = {
+    id: 'segment-2',
+    playlistId: lyricPlaylist.id,
+    name: 'Lyrics Segment',
+    order: 0,
+    colorKey: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
   const helloWorld = createPresentation('presentation-1', 'Hello World');
   const secondPresentation = createPresentation('presentation-2', 'Second Presentation');
+  const lyricPresentation = createLyric('presentation-3', 'Song Verse');
   const playlistEntry: PlaylistEntry = {
     id: 'entry-1',
     segmentId: segment.id,
     presentationId: helloWorld.id,
+    order: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+  const lyricEntry: PlaylistEntry = {
+    id: 'entry-2',
+    segmentId: lyricSegment.id,
+    presentationId: lyricPresentation.id,
     order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -143,29 +180,42 @@ function createSnapshot(): AppSnapshot {
       }],
     }],
   };
+  const lyricPlaylistTree: PlaylistTree = {
+    playlist: lyricPlaylist,
+    segments: [{
+      segment: lyricSegment,
+      entries: [{
+        entry: lyricEntry,
+        presentation: lyricPresentation,
+      }],
+    }],
+  };
   const libraryBundle: LibraryPlaylistBundle = {
     library,
-    playlists: [playlistTree],
+    playlists: [playlistTree, lyricPlaylistTree],
   };
 
   return {
     libraries: [library],
     libraryBundles: [libraryBundle],
-    presentations: [helloWorld, secondPresentation],
+    presentations: [helloWorld, secondPresentation, lyricPresentation],
     slides: [
       createSlide('slide-1', helloWorld.id, 0),
       createSlide('slide-2', helloWorld.id, 1),
       createSlide('slide-3', helloWorld.id, 2),
       createSlide('slide-4', secondPresentation.id, 0),
       createSlide('slide-5', secondPresentation.id, 1),
+      createSlide('slide-6', lyricPresentation.id, 0),
     ],
     slideElements: [
       createElement('element-1', 'slide-1', 'Hello Fat World'),
       createElement('element-2', 'slide-2', 'Hellow world'),
       createElement('element-3', 'slide-4', 'HELLO ITS ME'),
+      createElement('element-4', 'slide-6', 'Song Verse'),
     ],
     mediaAssets: [],
     overlays: [],
+    templates: [],
   };
 }
 
@@ -174,9 +224,11 @@ function TestProviders() {
     <NavigationProvider>
       <PresentationLayerProvider>
         <SlideProvider>
-          <RenderSceneProvider>
-            <Probe />
-          </RenderSceneProvider>
+          <TemplateEditorProvider>
+            <RenderSceneProvider>
+              <Probe />
+            </RenderSceneProvider>
+          </TemplateEditorProvider>
         </SlideProvider>
       </PresentationLayerProvider>
     </NavigationProvider>
@@ -215,7 +267,17 @@ describe('presentation playback lanes', () => {
     render(<TestProviders />);
 
     await waitFor(() => {
+      expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    });
+
+    act(() => {
+      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+    });
+
+    await waitFor(() => {
       expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentPresentationId).toBe('presentation-1');
     });
 
     act(() => {
@@ -240,6 +302,14 @@ describe('presentation playback lanes', () => {
 
   it('stores independent slide selection for the playlist lane and the drawer lane', async () => {
     render(<TestProviders />);
+
+    await waitFor(() => {
+      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    });
+
+    act(() => {
+      probeValue?.slides.selectPlaylistPresentation('presentation-1');
+    });
 
     await waitFor(() => {
       expect(probeValue?.navigation.currentPresentationId).toBe('presentation-1');
@@ -283,6 +353,14 @@ describe('presentation playback lanes', () => {
     render(<TestProviders />);
 
     await waitFor(() => {
+      expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+    });
+
+    act(() => {
+      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+    });
+
+    await waitFor(() => {
       expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
     });
 
@@ -294,10 +372,13 @@ describe('presentation playback lanes', () => {
 
     act(() => {
       probeValue?.layers.clearAllLayers();
+      probeValue?.slides.clearCurrentSlideSelection();
     });
 
     expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
     expect(probeValue?.slides.liveSlide).toBeNull();
+    expect(probeValue?.slides.currentSlide).toBeNull();
+    expect(probeValue?.slides.currentSlideIndex).toBe(-1);
     expect(probeValue?.layers.contentLayerVisible).toBe(false);
 
     act(() => {
@@ -311,9 +392,52 @@ describe('presentation playback lanes', () => {
       probeValue?.slides.selectPlaylistPresentation('presentation-1');
     });
 
+    expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+    expect(probeValue?.slides.liveSlide).toBeNull();
+
+    act(() => {
+      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+    });
+
     await waitFor(() => {
       expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
       expect(probeValue?.layers.contentLayerVisible).toBe(true);
     });
+  });
+
+  it('keeps a lyric presentation armed and selected when switching playlists', async () => {
+    render(<TestProviders />);
+
+    await waitFor(() => {
+      expect(probeValue?.navigation.currentPlaylistId).toBe('playlist-1');
+      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    });
+
+    act(() => {
+      probeValue?.navigation.setCurrentPlaylistId('playlist-2');
+    });
+
+    expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentPlaylistPresentationId).toBeNull();
+
+    act(() => {
+      probeValue?.slides.activatePresentationSlide('presentation-3', 0);
+    });
+
+    await waitFor(() => {
+      expect(probeValue?.navigation.currentPlaylistPresentationId).toBe('presentation-3');
+      expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-3');
+      expect(probeValue?.navigation.currentPresentationId).toBe('presentation-3');
+    });
+
+    act(() => {
+      probeValue?.navigation.setCurrentPlaylistId('playlist-1');
+    });
+
+    expect(probeValue?.navigation.currentPlaylistId).toBe('playlist-1');
+    expect(probeValue?.navigation.currentPlaylistPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-3');
+    expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    expect(probeValue?.slides.liveSlide?.id).toBe('slide-6');
   });
 });

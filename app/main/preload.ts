@@ -5,14 +5,18 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
+  NdiOutputConfigMap,
   PresentationKind,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from '@core/types';
 
 const api = {
@@ -48,6 +52,13 @@ const api = {
   updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => ipcRenderer.invoke(IPC.setOverlayEnabled, overlayId, enabled),
   deleteOverlay: (overlayId: Id) => ipcRenderer.invoke(IPC.deleteOverlay, overlayId),
+  createTemplate: (input: TemplateCreateInput) => ipcRenderer.invoke(IPC.createTemplate, input),
+  updateTemplate: (input: TemplateUpdateInput) => ipcRenderer.invoke(IPC.updateTemplate, input),
+  deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
+  applyTemplateToPresentation: (templateId: Id, presentationId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToPresentation, templateId, presentationId),
+  applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
   renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
@@ -55,15 +66,26 @@ const api = {
   deletePlaylist: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylist, id),
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
   deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
-  sendNdiFrame: (frame: SlideFrame) => ipcRenderer.invoke(IPC.sendNdiFrame, frame),
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),
   getNdiOutputState: () => ipcRenderer.invoke(IPC.getNdiOutputState),
+  getNdiOutputConfigs: () => ipcRenderer.invoke(IPC.getNdiOutputConfigs) as Promise<NdiOutputConfigMap>,
+  updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) =>
+    ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
+  getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
+  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => {
+    ipcRenderer.invoke(IPC.sendNdiFrame, buffer, width, height);
+  },
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => {
     const handler = (_event: IpcRendererEvent, state: NdiOutputState) => callback(state);
     ipcRenderer.on(NDI_EVENTS.outputStateChanged, handler);
     return () => { ipcRenderer.removeListener(NDI_EVENTS.outputStateChanged, handler); };
-  }
+  },
+  onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => {
+    const handler = (_event: IpcRendererEvent, diagnostics: NdiDiagnostics) => callback(diagnostics);
+    ipcRenderer.on(NDI_EVENTS.diagnosticsChanged, handler);
+    return () => { ipcRenderer.removeListener(NDI_EVENTS.diagnosticsChanged, handler); };
+  },
 };
 
 contextBridge.exposeInMainWorld('castApi', api);

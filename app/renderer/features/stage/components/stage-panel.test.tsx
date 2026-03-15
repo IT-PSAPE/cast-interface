@@ -8,6 +8,7 @@ const useProjectContentMock = vi.fn();
 const useSlidesMock = vi.fn();
 const useElementsMock = vi.fn();
 const useOverlayEditorMock = vi.fn();
+const useTemplateEditorMock = vi.fn();
 const useWorkbenchMock = vi.fn();
 
 vi.mock('../../../contexts/cast-context', () => ({
@@ -34,6 +35,10 @@ vi.mock('../../../contexts/overlay-editor-context', () => ({
   useOverlayEditor: () => useOverlayEditorMock(),
 }));
 
+vi.mock('../../../contexts/template-editor-context', () => ({
+  useTemplateEditor: () => useTemplateEditorMock(),
+}));
+
 vi.mock('../../../contexts/workbench-context', () => ({
   useWorkbench: () => useWorkbenchMock(),
 }));
@@ -51,6 +56,23 @@ describe('StagePanel', () => {
     useProjectContentMock.mockReturnValue({ mediaAssets: [] });
     useSlidesMock.mockReturnValue({ currentSlide: null });
     useOverlayEditorMock.mockReturnValue({ currentOverlay: { id: 'overlay-1' } });
+    useTemplateEditorMock.mockReturnValue({
+      templates: [],
+      currentTemplateId: null,
+      currentTemplate: null,
+      hasPendingChanges: false,
+      isPushingChanges: false,
+      setCurrentTemplateId: vi.fn(),
+      openTemplateEditor: vi.fn(),
+      updateTemplateDraft: vi.fn(),
+      replaceTemplateElements: vi.fn(),
+      createTemplate: vi.fn(),
+      applyTemplateToTarget: vi.fn(),
+      deleteTemplate: vi.fn(),
+      duplicateTemplate: vi.fn(),
+      renameTemplate: vi.fn(),
+      pushChanges: vi.fn(),
+    });
     useWorkbenchMock.mockReturnValue({ workbenchMode: 'overlay-editor' });
     useElementsMock.mockReturnValue({
       selectedElement: null,
@@ -72,6 +94,23 @@ describe('StagePanel', () => {
     useProjectContentMock.mockReturnValue({ mediaAssets: [] });
     useSlidesMock.mockReturnValue({ currentSlide: null });
     useOverlayEditorMock.mockReturnValue({ currentOverlay: null });
+    useTemplateEditorMock.mockReturnValue({
+      templates: [],
+      currentTemplateId: null,
+      currentTemplate: null,
+      hasPendingChanges: false,
+      isPushingChanges: false,
+      setCurrentTemplateId: vi.fn(),
+      openTemplateEditor: vi.fn(),
+      updateTemplateDraft: vi.fn(),
+      replaceTemplateElements: vi.fn(),
+      createTemplate: vi.fn(),
+      applyTemplateToTarget: vi.fn(),
+      deleteTemplate: vi.fn(),
+      duplicateTemplate: vi.fn(),
+      renameTemplate: vi.fn(),
+      pushChanges: vi.fn(),
+    });
     useWorkbenchMock.mockReturnValue({ workbenchMode: 'overlay-editor' });
     useElementsMock.mockReturnValue({
       selectedElement: null,

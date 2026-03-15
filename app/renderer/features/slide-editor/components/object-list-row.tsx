@@ -1,7 +1,6 @@
-import type { MouseEvent, ReactNode } from 'react';
 import type { Id, SlideElement, TextElementPayload } from '@core/types';
-import { Button } from '../../../components/button';
 import { Icon } from '../../../components/icon';
+import { IconButton } from '../../../components/icon-button';
 import { SelectableRow } from '../../../components/selectable-row';
 import { compactText } from '../../../utils/slides';
 
@@ -40,12 +39,12 @@ export function ObjectListRow({ element, selected, onSelect, onToggleLock, onTog
       title={title}
       trailing={
         <span className="ml-auto flex items-center gap-1">
-          <IconControlButton onClick={handleToggleLock} active={locked} label={locked ? 'Unlock object' : 'Lock object'}>
+          <IconButton size="sm" variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-text-primary' : 'text-text-tertiary'}>
             <LockIcon closed={locked} />
-          </IconControlButton>
-          <IconControlButton onClick={handleToggleVisibility} active={visible} label={visible ? 'Hide object' : 'Show object'}>
+          </IconButton>
+          <IconButton size="sm" variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-text-primary' : 'text-text-tertiary'}>
             <VisibilityIcon visible={visible} />
-          </IconControlButton>
+          </IconButton>
         </span>
       }
     />
@@ -74,28 +73,6 @@ function TypeIcon({ type }: { type: SlideElement['type'] }) {
   return <Icon.box size={12} strokeWidth={2} className={className} />;
 }
 
-interface IconControlButtonProps {
-  active: boolean;
-  label: string;
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
-  children: ReactNode;
-}
-
-function IconControlButton({ active, label, onClick, children }: IconControlButtonProps) {
-  const classes = active
-    ? 'text-text-primary hover:text-text-primary'
-    : 'text-text-tertiary hover:text-text-secondary';
-  return (
-    <Button
-      variant="ghost"
-      onClick={onClick}
-      className={`grid h-5 w-5 place-items-center border-transparent bg-transparent p-0 ${classes}`}
-    >
-      <span className="sr-only">{label}</span>
-      {children}
-    </Button>
-  );
-}
 
 function LockIcon({ closed }: { closed: boolean }) {
   return closed

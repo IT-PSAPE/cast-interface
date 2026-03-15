@@ -1,25 +1,26 @@
+import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { SceneFrame } from '../../../components/scene-frame';
 import { SceneStage } from '../../stage/rendering/scene-stage';
-import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
+import { useProgramOutput } from '../contexts/program-output-context';
 
 export function LivePreview() {
-  const { liveScene } = useRenderScenes();
-  const hasAnyLayer = liveScene.nodes.length > 0;
+  const { scene, background } = useProgramOutput();
+  const checkerboard = background === 'transparent';
+  const stageClassName = checkerboard ? 'bg-transparent' : 'bg-black';
 
   return (
-    <div className="border-b border-border-primary bg-background-secondary relative">
-        {!hasAnyLayer ? (
-          <div className="aspect-video w-full grid place-items-center">
-            <span className="text-[12px] text-text-tertiary uppercase tracking-wider">No output</span>
-          </div>
-        ) : (
-          <SceneFrame width={liveScene.width} height={liveScene.height}>
-            <SceneStage
-              scene={liveScene}
-              className="h-full w-full"
-            />
-          </SceneFrame>
-        )}
+    <div className="relative border-b border-border-primary bg-background-secondary">
+      <SceneFrame
+        width={NDI_OUTPUT_WIDTH}
+        height={NDI_OUTPUT_HEIGHT}
+        checkerboard={checkerboard}
+        stageClassName={stageClassName}
+      >
+        <SceneStage
+          scene={scene}
+          className="h-full w-full"
+        />
+      </SceneFrame>
     </div>
   );
 }

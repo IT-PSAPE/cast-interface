@@ -2,7 +2,7 @@
   "name": "cast-interface",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-platform presentation prototype with reusable content hierarchy, slide rendering, and NDI RGBA output",
+  "description": "Cross-platform presentation prototype with reusable content hierarchy, slide rendering, and offscreen-rendered NDI output",
   "main": "out/main/index.js",
   "scripts": {
     "postinstall": "node scripts/rebuild-better-sqlite3.mjs electron",

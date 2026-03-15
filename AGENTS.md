@@ -56,19 +56,68 @@ This ensures visual consistency, reduces duplication, and keeps the design syste
 - Generic compound components must expose domain-agnostic slots/subcomponents (`Root`, `Trigger`, `Content`, `Item`, etc.).
 - Feature-specific compounds are allowed only when domain coupling is real and unavoidable.
 
-### Required composition pattern for complex UI
+### Compound component pattern (required for multi-part UI)
 
-When UI has orchestration + multiple interactive parts, use:
+Use dot-notation compound components when UI has orchestration + multiple interactive parts. This follows the "Composition Is All You Need" philosophy — describe UI structure with JSX composition, not boolean flags or config objects.
 
-1) `Provider` (or root hook) for state, side effects, and actions.
-2) Small presentational subcomponents for layout/parts.
-3) Context interface that exposes only what subcomponents need.
+**Structure:**
+1. Create a namespace object that groups sub-components: `export const MyComponent = { Root, Header, Body, Item }`.
+2. `Root` owns shared state via context. Its context value must be structured as:
+   - `state` — reactive data the component displays.
+   - `actions` — functions that modify state.
+   - `meta` — refs, configuration, and non-reactive metadata.
+3. Sub-components consume context to self-manage (e.g., a `Trigger` binds its own click handler from context — no handler prop needed from the parent).
+4. Consumers compose only the sub-components they need. No boolean props to toggle sub-component visibility.
 
-Subcomponents must depend on the interface, not implementation details.
+**Example:**
+```tsx
+// Compound component definition
+export const Inspector = { Root, TabList, Trigger, Body, Panel };
+
+// Consumer composes what it needs — no booleans
+<Inspector.Root activeTab={tab} onTabChange={setTab}>
+  <Inspector.TabList>
+    {tabs.map(t => <Inspector.Trigger key={t.name} name={t.name}>{t.label}</Inspector.Trigger>)}
+  </Inspector.TabList>
+  <Inspector.Body>
+    <Inspector.Panel name="shape"><ShapeInspector /></Inspector.Panel>
+    <Inspector.Panel name="text"><TextInspector /></Inspector.Panel>
+  </Inspector.Body>
+</Inspector.Root>
+```
+
+### Explicit variants over conditional branches
+
+When the same component renders different trees based on mode/context, create named variant components instead of adding boolean props:
+
+```tsx
+// Good: explicit variants that compose what they need
+function ChannelComposer() { return <Composer.Root>...</Composer.Root>; }
+function ThreadComposer() { return <Composer.Root>...</Composer.Root>; }
+
+// Bad: boolean-driven conditional branches
+<Composer isThread={true} showAttachments={true} />
+```
+
+### Derived-state hooks for boolean logic
+
+When a component computes multiple boolean flags from context to control rendering, extract those into a dedicated hook:
+
+```tsx
+// Good: boolean logic lives in a hook, component is clean
+const availableTabs = useAvailableInspectorTabs();
+
+// Bad: boolean soup spread across the component
+const isOverlayEdit = workbenchMode === 'overlay-editor';
+const hasSelection = Boolean(selectedElement);
+const showShape = hasSelection;
+const showText = hasSelection && selectedElement?.type === 'text';
+```
 
 ### Anti-patterns (not allowed)
 
 - Boolean-heavy "mode" components that mix multiple modes in one render function.
+- Per-tab/per-mode handler functions (e.g., `showTabA()`, `showTabB()`) when a single generic handler with a parameter suffices.
 - Re-implementing the same interaction pattern in multiple places.
 - Duplicating the same popover + loading + error + success rendering flow across components.
 - Hiding business logic in utility files that return JSX for feature-specific rendering.
@@ -161,6 +210,8 @@ If those conditions are not met, keep the JSX inline in the parent component and
 - Avoid inline styles unless unavoidable.
 - Prefer composition over custom CSS.
 - Keep styles close to components.
+- Do not introduce card-style containers in dialogs or settings unless that pattern already exists in the surrounding surface.
+- Keep helper copy sparse. Avoid stacked title, description, status, and duplicated control labels when the control already makes the state clear.
 
 ## Responsive design
 
@@ -182,6 +233,14 @@ If those conditions are not met, keep the JSX inline in the parent component and
 - Hook files must not exceed 400 lines.
 - Utility files must not exceed 150 lines.
 - If you exceed these limits, you must split the file into smaller, single-purpose pieces before finishing the task.
+
+## Cleanup after edits (enforced)
+
+- After making changes, remove any code, files, branches, props, handlers, utilities, or types that were replaced and are no longer used.
+- If a new component, hook, utility, or flow makes an older implementation obsolete, the obsolete implementation must be deleted in the same task.
+- Remove stale imports, unused variables, dead exports, unreachable branches, and unused props before finishing.
+- Do not leave "temporary" compatibility code, duplicate paths, or old components in place unless they are still actively used and required.
+- Before finishing, do a targeted verification pass for dead code in the area you changed. At minimum, check for unused imports/symbols and confirm replaced files are no longer referenced.
 
 ## Do not
 

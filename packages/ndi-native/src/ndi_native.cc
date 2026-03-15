@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <cstring>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -156,12 +157,15 @@ class DynamicLibrary {
   void* handle_ = nullptr;
 };
 
+constexpr int kDoubleBufferCount = 2;
+
 struct SenderInstance {
   NDIlib_send_instance_t sender = nullptr;
   int32_t width = 0;
   int32_t height = 0;
   bool withAlpha = true;
-  std::vector<uint8_t> bgraScratch;
+  std::vector<uint8_t> bgraScratch[kDoubleBufferCount];
+  int currentBuffer = 0;
 };
 
 struct SenderState {
@@ -198,6 +202,7 @@ std::vector<std::string> BuildRuntimeCandidates() {
   constexpr const char* fileName = "Processing.NDI.Lib.x64.dll";
 #elif __APPLE__
   constexpr const char* fileName = "libndi.dylib";
+  constexpr const char* advancedFileName = "libndi_advanced.dylib";
 #else
   constexpr const char* fileName = "libndi.so";
 #endif
@@ -214,6 +219,9 @@ std::vector<std::string> BuildRuntimeCandidates() {
     AddCandidateIfMissing(&candidates, explicitDir + "\\" + fileName);
 #else
     AddCandidateIfMissing(&candidates, explicitDir + "/" + fileName);
+#ifdef __APPLE__
+    AddCandidateIfMissing(&candidates, explicitDir + "/" + advancedFileName);
+#endif
 #endif
   }
 
@@ -222,6 +230,9 @@ std::vector<std::string> BuildRuntimeCandidates() {
     AddCandidateIfMissing(&candidates, explicitLegacyDir + "\\" + fileName);
 #else
     AddCandidateIfMissing(&candidates, explicitLegacyDir + "/" + fileName);
+#ifdef __APPLE__
+    AddCandidateIfMissing(&candidates, explicitLegacyDir + "/" + advancedFileName);
+#endif
 #endif
   }
 
@@ -231,11 +242,18 @@ std::vector<std::string> BuildRuntimeCandidates() {
   AddCandidateIfMissing(&candidates, "C:\\Program Files\\NDI\\NDI 5 Runtime\\" + std::string(fileName));
 #elif __APPLE__
   AddCandidateIfMissing(&candidates, fileName);
+  AddCandidateIfMissing(&candidates, advancedFileName);
   AddCandidateIfMissing(&candidates, "/usr/local/lib/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/usr/local/lib/libndi_advanced.dylib");
   AddCandidateIfMissing(&candidates, "/opt/homebrew/lib/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/opt/homebrew/lib/libndi_advanced.dylib");
   AddCandidateIfMissing(&candidates, "/Library/NDI SDK for Apple/lib/macOS/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Library/NDI SDK for Apple/lib/macOS/libndi_advanced.dylib");
   AddCandidateIfMissing(&candidates, "/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi_advanced.dylib");
+  AddCandidateIfMissing(&candidates, "/Applications/NDI Discovery.app/Contents/Frameworks/libndi_advanced.dylib");
   AddCandidateIfMissing(&candidates, "/Applications/NDI Scan Converter.app/Contents/Frameworks/libndi.dylib");
+  AddCandidateIfMissing(&candidates, "/Applications/NDI Virtual Input.app/Contents/Frameworks/libndi_advanced.dylib");
   AddCandidateIfMissing(
       &candidates,
       "/Applications/NDI Router.app/Contents/Frameworks/NTFramework.framework/Versions/Current/Frameworks/libndi.dylib");
@@ -341,15 +359,20 @@ void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance* sender) {
     return;
   }
 
-  if (sender->sender != nullptr && state.symbols.sendDestroy != nullptr) {
-    state.symbols.sendDestroy(sender->sender);
+  if (sender->sender != nullptr) {
+    if (state.symbols.sendDestroy != nullptr) {
+      state.symbols.sendDestroy(sender->sender);
+    }
   }
 
   sender->sender = nullptr;
   sender->width = 0;
   sender->height = 0;
   sender->withAlpha = true;
-  std::vector<uint8_t>().swap(sender->bgraScratch);
+  sender->currentBuffer = 0;
+  for (int i = 0; i < kDoubleBufferCount; ++i) {
+    std::vector<uint8_t>().swap(sender->bgraScratch[i]);
+  }
 }
 
 void DestroyAllSendersUnlocked(SenderState& state) {
@@ -416,31 +439,57 @@ void EnsureSender(SenderState& state,
     throw std::runtime_error("invalid sender dimensions");
   }
 
-  instance.bgraScratch.resize(size);
+  for (int i = 0; i < kDoubleBufferCount; ++i) {
+    instance.bgraScratch[i].resize(size);
+  }
   state.senders[senderName] = std::move(instance);
 }
 
-void ConvertRgbaToBgra(const uint8_t* source,
-                       uint8_t* target,
-                       int32_t width,
-                       int32_t height,
-                       int32_t sourceStride,
-                       int32_t targetStride,
-                       bool withAlpha) {
+void CopyBgraFrame(const uint8_t* source,
+                   uint8_t* target,
+                   int32_t width,
+                   int32_t height,
+                   int32_t sourceStride,
+                   int32_t targetStride,
+                   bool withAlpha) {
+  if (withAlpha) {
+    for (int32_t y = 0; y < height; ++y) {
+      const uint8_t* srcLine = source + static_cast<size_t>(y) * static_cast<size_t>(sourceStride);
+      uint8_t* dstLine = target + static_cast<size_t>(y) * static_cast<size_t>(targetStride);
+      std::memcpy(dstLine, srcLine, static_cast<size_t>(targetStride));
+    }
+    return;
+  }
+
   for (int32_t y = 0; y < height; ++y) {
     const uint8_t* srcLine = source + static_cast<size_t>(y) * static_cast<size_t>(sourceStride);
     uint8_t* dstLine = target + static_cast<size_t>(y) * static_cast<size_t>(targetStride);
 
     for (int32_t x = 0; x < width; ++x) {
-      const uint8_t r = srcLine[x * 4 + 0];
-      const uint8_t g = srcLine[x * 4 + 1];
-      const uint8_t b = srcLine[x * 4 + 2];
-      const uint8_t a = srcLine[x * 4 + 3];
+      dstLine[x * 4 + 0] = srcLine[x * 4 + 0];
+      dstLine[x * 4 + 1] = srcLine[x * 4 + 1];
+      dstLine[x * 4 + 2] = srcLine[x * 4 + 2];
+      dstLine[x * 4 + 3] = 255;
+    }
+  }
+}
 
-      dstLine[x * 4 + 0] = b;
-      dstLine[x * 4 + 1] = g;
-      dstLine[x * 4 + 2] = r;
-      dstLine[x * 4 + 3] = withAlpha ? a : 255;
+void CopyRgbaFrameToBgra(const uint8_t* source,
+                         uint8_t* target,
+                         int32_t width,
+                         int32_t height,
+                         int32_t sourceStride,
+                         int32_t targetStride,
+                         bool withAlpha) {
+  for (int32_t y = 0; y < height; ++y) {
+    const uint8_t* srcLine = source + static_cast<size_t>(y) * static_cast<size_t>(sourceStride);
+    uint8_t* dstLine = target + static_cast<size_t>(y) * static_cast<size_t>(targetStride);
+
+    for (int32_t x = 0; x < width; ++x) {
+      dstLine[x * 4 + 0] = srcLine[x * 4 + 2]; // B <- R
+      dstLine[x * 4 + 1] = srcLine[x * 4 + 1]; // G <- G
+      dstLine[x * 4 + 2] = srcLine[x * 4 + 0]; // R <- B
+      dstLine[x * 4 + 3] = withAlpha ? srcLine[x * 4 + 3] : static_cast<uint8_t>(255);
     }
   }
 }
@@ -481,18 +530,18 @@ Napi::Value InitializeSender(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
+Napi::Value SendBgraFrame(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() != 5 || !info[0].IsString() || !info[1].IsTypedArray() || !info[2].IsNumber() ||
       !info[3].IsNumber() || !info[4].IsNumber()) {
-    Napi::TypeError::New(env, "sendRgbaFrame expects (senderName, Uint8Array, width, height, stride)")
+    Napi::TypeError::New(env, "sendBgraFrame expects (senderName, Uint8Array, width, height, stride)")
         .ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
   const std::string senderName = info[0].As<Napi::String>().Utf8Value();
-  Napi::Uint8Array rgba = info[1].As<Napi::Uint8Array>();
+  Napi::Uint8Array bgra = info[1].As<Napi::Uint8Array>();
   const int32_t width = info[2].As<Napi::Number>().Int32Value();
   const int32_t height = info[3].As<Napi::Number>().Int32Value();
   const int32_t stride = info[4].As<Napi::Number>().Int32Value();
@@ -504,6 +553,100 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
 
   if (!DimensionsAreValid(width, height) || stride < width * 4) {
     Napi::TypeError::New(env, "invalid frame dimensions or stride").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  size_t requiredSize = 0;
+  if (!TryComputeSize(stride, height, &requiredSize)) {
+    Napi::TypeError::New(env, "invalid frame size").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (bgra.ByteLength() < requiredSize) {
+    Napi::TypeError::New(env, "frame buffer is too small for provided dimensions").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto& state = State();
+  std::lock_guard<std::mutex> guard(state.mutex);
+
+  auto senderIt = state.senders.find(senderName);
+  if (senderIt == state.senders.end() || senderIt->second.sender == nullptr) {
+    Napi::Error::New(env, "NDI sender not initialized").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  SenderInstance& sender = senderIt->second;
+  if (width != sender.width || height != sender.height) {
+    Napi::Error::New(env, "frame dimensions do not match sender configuration").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  const int32_t targetStride = width * 4;
+  size_t targetSize = 0;
+  if (!TryComputeSize(targetStride, height, &targetSize)) {
+    Napi::Error::New(env, "invalid target frame size").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  const int bufIdx = sender.currentBuffer;
+  std::vector<uint8_t>& scratch = sender.bgraScratch[bufIdx];
+
+  if (scratch.size() < targetSize) {
+    scratch.resize(targetSize);
+  }
+
+  CopyBgraFrame(bgra.Data(),
+                scratch.data(),
+                width,
+                height,
+                stride,
+                targetStride,
+                sender.withAlpha);
+
+  NDIlib_video_frame_v2_t frame{};
+  frame.xres = width;
+  frame.yres = height;
+  frame.FourCC = sender.withAlpha ? kFourCCBgra : kFourCCBgrx;
+  frame.frame_rate_N = 60000;
+  frame.frame_rate_D = 1001;
+  frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+  frame.frame_format_type = kFrameFormatProgressive;
+  frame.timecode = kTimecodeSynthesize;
+  frame.p_data = scratch.data();
+  frame.line_stride_in_bytes = targetStride;
+  frame.p_metadata = nullptr;
+  frame.timestamp = 0;
+
+  state.symbols.sendVideoV2(sender.sender, &frame);
+  sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
+
+  return env.Undefined();
+}
+
+Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() != 4 || !info[0].IsString() || !info[1].IsTypedArray() || !info[2].IsNumber() ||
+      !info[3].IsNumber()) {
+    Napi::TypeError::New(env, "sendRgbaFrame expects (senderName, Uint8Array, width, height)")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  const std::string senderName = info[0].As<Napi::String>().Utf8Value();
+  Napi::Uint8Array rgba = info[1].As<Napi::Uint8Array>();
+  const int32_t width = info[2].As<Napi::Number>().Int32Value();
+  const int32_t height = info[3].As<Napi::Number>().Int32Value();
+  const int32_t stride = width * 4;
+
+  if (senderName.empty()) {
+    Napi::TypeError::New(env, "senderName must be non-empty").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!DimensionsAreValid(width, height)) {
+    Napi::TypeError::New(env, "invalid frame dimensions").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -540,17 +683,20 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  if (sender.bgraScratch.size() < targetSize) {
-    sender.bgraScratch.resize(targetSize);
+  const int bufIdx = sender.currentBuffer;
+  std::vector<uint8_t>& scratch = sender.bgraScratch[bufIdx];
+
+  if (scratch.size() < targetSize) {
+    scratch.resize(targetSize);
   }
 
-  ConvertRgbaToBgra(rgba.Data(),
-                    sender.bgraScratch.data(),
-                    width,
-                    height,
-                    stride,
-                    targetStride,
-                    sender.withAlpha);
+  CopyRgbaFrameToBgra(rgba.Data(),
+                       scratch.data(),
+                       width,
+                       height,
+                       stride,
+                       targetStride,
+                       sender.withAlpha);
 
   NDIlib_video_frame_v2_t frame{};
   frame.xres = width;
@@ -561,12 +707,14 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
   frame.frame_format_type = kFrameFormatProgressive;
   frame.timecode = kTimecodeSynthesize;
-  frame.p_data = sender.bgraScratch.data();
+  frame.p_data = scratch.data();
   frame.line_stride_in_bytes = targetStride;
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
   state.symbols.sendVideoV2(sender.sender, &frame);
+  sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
+
   return env.Undefined();
 }
 
@@ -634,6 +782,21 @@ Napi::Value DestroySender(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
+Napi::Value GetRuntimeInfo(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  auto& state = State();
+  std::lock_guard<std::mutex> guard(state.mutex);
+
+  Napi::Object runtimeInfo = Napi::Object::New(env);
+  runtimeInfo.Set("loaded", Napi::Boolean::New(env, state.runtimeLoaded));
+  if (state.loadedRuntimePath.empty()) {
+    runtimeInfo.Set("path", env.Null());
+  } else {
+    runtimeInfo.Set("path", Napi::String::New(env, state.loadedRuntimePath));
+  }
+  return runtimeInfo;
+}
+
 void CleanupHook() {
   auto& state = State();
   std::lock_guard<std::mutex> guard(state.mutex);
@@ -643,9 +806,11 @@ void CleanupHook() {
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   env.AddCleanupHook(CleanupHook);
   exports.Set("initializeSender", Napi::Function::New(env, InitializeSender));
+  exports.Set("sendBgraFrame", Napi::Function::New(env, SendBgraFrame));
   exports.Set("sendRgbaFrame", Napi::Function::New(env, SendRgbaFrame));
   exports.Set("getSenderConnections", Napi::Function::New(env, GetSenderConnections));
   exports.Set("destroySender", Napi::Function::New(env, DestroySender));
+  exports.Set("getRuntimeInfo", Napi::Function::New(env, GetRuntimeInfo));
   return exports;
 }
 

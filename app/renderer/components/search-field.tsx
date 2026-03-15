@@ -16,7 +16,7 @@ export function SearchField({ className = '', onChange, placeholder = 'Search', 
       value={value}
       onChange={handleChange}
       placeholder={placeholder}
-      className={`rounded border border-border-primary bg-background-tertiary px-2 py-0.5 text-[12px] text-text-secondary placeholder:text-text-tertiary outline-none transition-colors focus:border-brand ${className}`}
+      className={`rounded border border-border-primary bg-background-tertiary px-2 py-0.5 text-sm text-text-secondary placeholder:text-text-tertiary outline-none transition-colors focus:border-brand ${className}`}
     />
   );
 }

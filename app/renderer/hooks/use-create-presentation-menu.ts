@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ContextMenuItem } from '../components/context-menu';
 import { buildCreatePresentationMenuItems } from '../utils/build-create-presentation-menu-items';
+import { useButtonContextMenu } from './use-button-context-menu';
 
 interface UseCreatePresentationMenuOptions {
   createPresentation: () => void | Promise<void>;
@@ -9,18 +10,13 @@ interface UseCreatePresentationMenuOptions {
   lyricLabel?: string;
 }
 
-interface CreatePresentationMenuState {
-  x: number;
-  y: number;
-}
-
 export function useCreatePresentationMenu({
   createPresentation,
   createLyric,
   presentationLabel,
   lyricLabel
 }: UseCreatePresentationMenuOptions) {
-  const [menuState, setMenuState] = useState<CreatePresentationMenuState | null>(null);
+  const { menuState, openMenuFromButton, closeMenu } = useButtonContextMenu();
 
   const menuItems = useMemo<ContextMenuItem[]>(() => buildCreatePresentationMenuItems({
     createPresentation,
@@ -28,15 +24,6 @@ export function useCreatePresentationMenu({
     presentationLabel,
     lyricLabel
   }), [createLyric, createPresentation, lyricLabel, presentationLabel]);
-
-  function openMenuFromButton(button: HTMLElement) {
-    const rect = button.getBoundingClientRect();
-    setMenuState({ x: rect.right + 6, y: rect.top });
-  }
-
-  function closeMenu() {
-    setMenuState(null);
-  }
 
   return {
     menuItems,

@@ -56,12 +56,12 @@ export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrow
     <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
-          <TabBar label="Playlist presentations" bordered={false}>
+          <TabBar label="Playlist presentations">
             {items.map(renderTabItem)}
           </TabBar>
         </div>
       </div>
-      <span className="shrink-0 text-[11px] text-text-tertiary tabular-nums">
+      <span className="shrink-0 text-sm text-text-tertiary tabular-nums">
         {slides.length} slide{slides.length === 1 ? '' : 's'}
       </span>
       {action ? <div className="shrink-0">{action}</div> : null}

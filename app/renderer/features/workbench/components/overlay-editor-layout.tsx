@@ -1,18 +1,11 @@
-import { ResizableSplitRoot, type ResizableSplitResizeEndEvent, type ResizableSplitResizeMoveEvent, type ResizableSplitResizeStartEvent } from '../../../components/resizable-split';
+import { ResizableSplitRoot } from '../../../components/resizable-split';
 import { InspectorPanel } from '../../inspector/components/inspector-panel';
-import {
-  WORKBENCH_SPLIT_DEFINITIONS,
-  type PaneId,
-  type SplitLayoutState,
-  type WorkbenchPanelLayouts,
-} from '../types/workbench-panel-layout';
-import type {
-  ResizeEndInput,
-  ResizeMoveInput,
-  ResizeStartInput,
-} from '../hooks/use-workbench-panel-layout';
+import { WORKBENCH_SPLIT_DEFINITIONS, type WorkbenchPanelLayouts } from '../types/workbench-panel-layout';
+import type { ResizeEndInput, ResizeMoveInput, ResizeStartInput } from '../hooks/use-workbench-panel-layout';
 import { StagePanel } from '../../stage/components/stage-panel';
 import { OverlayListPanel } from '../../overlay-editor/components/overlay-list-panel';
+import { useSplitResizeHandlers } from '../hooks/use-split-resize-handlers';
+import { requirePaneState } from '../utils/split-resize';
 
 interface OverlayEditorLayoutProps {
   liveLayouts: WorkbenchPanelLayouts;
@@ -24,26 +17,7 @@ interface OverlayEditorLayoutProps {
 export function OverlayEditorLayout({ liveLayouts, startDrag, updateDrag, endDrag }: OverlayEditorLayoutProps) {
   const overlayMain = liveLayouts.overlayMain;
   const definition = WORKBENCH_SPLIT_DEFINITIONS['overlay-main'];
-
-  function handleOverlayResizeStart(event: ResizableSplitResizeStartEvent) {
-    startDrag({
-      splitId: 'overlay-main',
-      handleIndex: event.handleIndex,
-      pointerPosition: event.pointerPosition,
-      paneSizes: event.paneSizes,
-    });
-  }
-
-  function handleOverlayResize(event: ResizableSplitResizeMoveEvent) {
-    updateDrag({
-      splitId: 'overlay-main',
-      pointerPosition: event.pointerPosition,
-    });
-  }
-
-  function handleOverlayResizeEnd(_event: ResizableSplitResizeEndEvent) {
-    endDrag({ splitId: 'overlay-main' });
-  }
+  const mainHandlers = useSplitResizeHandlers('overlay-main', startDrag, updateDrag, endDrag);
 
   return (
     <section data-ui-region="overlay-editor-layout" className="h-full min-h-0 overflow-hidden">
@@ -53,8 +27,8 @@ export function OverlayEditorLayout({ liveLayouts, startDrag, updateDrag, endDra
         panes={[
           {
             id: 'overlay-left',
-            visible: requirePane(overlayMain, 'overlay-left').visible,
-            size: requirePane(overlayMain, 'overlay-left').size,
+            visible: requirePaneState(overlayMain, 'overlay-left').visible,
+            size: requirePaneState(overlayMain, 'overlay-left').size,
             minSize: definition.panes['overlay-left']!.minSize,
             maxSize: definition.panes['overlay-left']!.maxSize,
             flexible: false,
@@ -62,8 +36,8 @@ export function OverlayEditorLayout({ liveLayouts, startDrag, updateDrag, endDra
           },
           {
             id: 'overlay-center',
-            visible: requirePane(overlayMain, 'overlay-center').visible,
-            size: requirePane(overlayMain, 'overlay-center').size,
+            visible: requirePaneState(overlayMain, 'overlay-center').visible,
+            size: requirePaneState(overlayMain, 'overlay-center').size,
             minSize: definition.panes['overlay-center']!.minSize,
             maxSize: definition.panes['overlay-center']!.maxSize,
             flexible: true,
@@ -71,26 +45,18 @@ export function OverlayEditorLayout({ liveLayouts, startDrag, updateDrag, endDra
           },
           {
             id: 'overlay-right',
-            visible: requirePane(overlayMain, 'overlay-right').visible,
-            size: requirePane(overlayMain, 'overlay-right').size,
+            visible: requirePaneState(overlayMain, 'overlay-right').visible,
+            size: requirePaneState(overlayMain, 'overlay-right').size,
             minSize: definition.panes['overlay-right']!.minSize,
             maxSize: definition.panes['overlay-right']!.maxSize,
             flexible: false,
             content: <InspectorPanel />,
           },
         ]}
-        onResizeStart={handleOverlayResizeStart}
-        onResize={handleOverlayResize}
-        onResizeEnd={handleOverlayResizeEnd}
+        onResizeStart={mainHandlers.onResizeStart}
+        onResize={mainHandlers.onResize}
+        onResizeEnd={mainHandlers.onResizeEnd}
       />
     </section>
   );
-}
-
-function requirePane(layout: SplitLayoutState, paneId: PaneId) {
-  const pane = layout.panes[paneId];
-  if (!pane) {
-    throw new Error(`Missing pane layout for ${paneId}`);
-  }
-  return pane;
 }

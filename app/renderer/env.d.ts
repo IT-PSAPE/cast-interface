@@ -1,5 +1,4 @@
 import type { MainApi } from '@core/ipc';
-import type { NdiOutputState } from '@core/types';
 
 declare global {
   interface LocalFontData {
@@ -10,9 +9,7 @@ declare global {
   }
 
   interface Window {
-    castApi: MainApi & {
-      onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
-    };
+    castApi: MainApi;
     queryLocalFonts?: () => Promise<LocalFontData[]>;
   }
 }

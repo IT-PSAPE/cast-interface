@@ -3,21 +3,23 @@ import { Icon } from './icon';
 interface CheckboxFieldProps {
   checked: boolean;
   className?: string;
+  disabled?: boolean;
   label: string;
   onChange: (checked: boolean) => void;
 }
 
-export function CheckboxField({ checked, className = '', label, onChange }: CheckboxFieldProps) {
+export function CheckboxField({ checked, className = '', disabled = false, label, onChange }: CheckboxFieldProps) {
   function handleCheckedChange(event: React.ChangeEvent<HTMLInputElement>) {
     onChange(event.target.checked);
   }
 
   return (
-    <label className={`flex items-center gap-2 text-[12px] text-text-secondary ${className}`}>
+    <label className={`flex items-center gap-2 text-sm text-text-secondary ${disabled ? 'opacity-50' : ''} ${className}`}>
       <span className="relative grid h-4 w-4 shrink-0 place-items-center">
         <input
           type="checkbox"
           checked={checked}
+          disabled={disabled}
           onChange={handleCheckedChange}
           className="peer absolute inset-0 m-0 cursor-pointer opacity-0"
         />

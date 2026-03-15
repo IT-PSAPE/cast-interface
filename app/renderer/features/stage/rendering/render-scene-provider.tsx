@@ -13,9 +13,9 @@ interface RenderSceneContextValue {
   editScene: RenderScene;
   showScene: RenderScene;
   liveScene: RenderScene;
-  outputScene: RenderScene;
+  programScene: RenderScene;
   getThumbnailScene: (slideId: Id, surface: SceneSurface) => RenderScene | null;
-  commitOutputScene: () => void;
+  commitProgramScene: () => void;
 }
 
 const RenderSceneContext = createContext<RenderSceneContextValue | null>(null);
@@ -36,13 +36,14 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   const { effectiveElements } = useElements();
   const { currentOverlay } = useOverlayEditor();
   const { getSlideElements } = useSlideEditor();
-  const { mediaLayerAsset, overlayLayer, contentLayerVisible } = usePresentationLayers();
+  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
   const { workbenchMode } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
+  const isTemplateEdit = workbenchMode === 'template-editor';
 
   const editScene = useMemo(() => {
-    return buildRenderScene(isOverlayEdit ? null : currentSlide, effectiveElements);
-  }, [currentSlide, effectiveElements, isOverlayEdit, currentOverlay?.id]);
+    return buildRenderScene(isOverlayEdit || isTemplateEdit ? null : currentSlide, effectiveElements);
+  }, [currentSlide, effectiveElements, isOverlayEdit, isTemplateEdit, currentOverlay?.id]);
 
   const showScene = useMemo(() => {
     const currentElements = currentSlide ? (slideElementsById.get(currentSlide.id) ?? []) : [];
@@ -54,40 +55,46 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       slide: liveSlide,
       contentElements: liveElements,
       mediaAsset: mediaLayerAsset,
-      overlay: overlayLayer,
+      overlays: activeOverlays.map((overlay) => ({
+        overlay: overlay.overlay,
+        opacityMultiplier: overlay.opacityMultiplier,
+        stackOrder: overlay.stackOrder,
+      })),
       includeContent: contentLayerVisible,
     });
-  }, [contentLayerVisible, liveElements, liveSlide, mediaLayerAsset, overlayLayer]);
+  }, [activeOverlays, contentLayerVisible, liveElements, liveSlide, mediaLayerAsset]);
 
-  // Freeze the output scene when editing so NDI output stays stable
+  // Freeze the program scene while editing so the operator output stays stable.
   const isEditing = workbenchMode !== 'show';
-  const [frozenOutputScene, setFrozenOutputScene] = useState<RenderScene | null>(null);
+  const [frozenProgramScene, setFrozenProgramScene] = useState<RenderScene | null>(null);
   const pendingCommitRef = useRef(false);
 
-  // Snapshot liveScene on entering edit mode; clear on returning to show
   useEffect(() => {
     if (isEditing) {
-      setFrozenOutputScene(liveScene);
+      setFrozenProgramScene(liveScene);
     } else {
-      setFrozenOutputScene(null);
+      setFrozenProgramScene(null);
       pendingCommitRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
-  // After push: re-snapshot when liveScene updates with persisted data
   useEffect(() => {
     if (pendingCommitRef.current && isEditing) {
-      setFrozenOutputScene(liveScene);
+      setFrozenProgramScene(liveScene);
       pendingCommitRef.current = false;
     }
   }, [isEditing, liveScene]);
 
-  const commitOutputScene = useCallback(() => {
+  const commitProgramScene = useCallback(() => {
     pendingCommitRef.current = true;
   }, []);
 
-  const outputScene = isEditing && frozenOutputScene ? frozenOutputScene : liveScene;
+  const hasLiveProgram = liveSlide !== null;
+  const programScene = !hasLiveProgram
+    ? liveScene
+    : isEditing && frozenProgramScene
+      ? frozenProgramScene
+      : liveScene;
 
   const editThumbnailScenes = useMemo(() => {
     const sceneMap = new Map<Id, RenderScene>();
@@ -118,11 +125,11 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       editScene,
       showScene,
       liveScene,
-      outputScene,
+      programScene,
       getThumbnailScene,
-      commitOutputScene,
+      commitProgramScene,
     };
-  }, [commitOutputScene, currentSlide?.id, editScene, editThumbnailScenes, liveScene, outputScene, persistedThumbnailScenes, showScene]);
+  }, [commitProgramScene, currentSlide?.id, editScene, editThumbnailScenes, liveScene, persistedThumbnailScenes, programScene, showScene]);
 
   return <RenderSceneContext.Provider value={value}>{children}</RenderSceneContext.Provider>;
 }

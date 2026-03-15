@@ -24,7 +24,7 @@ export function SlideList() {
 
   if (rows.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-[12px] text-text-tertiary">
+      <section className="grid h-full min-h-0 place-items-center text-sm text-text-tertiary">
         No slides available.
       </section>
     );

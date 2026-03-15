@@ -6,13 +6,16 @@ import type {
   ElementUpdateInput,
   Id,
   MediaAsset,
+  NdiDiagnostics,
+  NdiOutputConfig,
   PresentationKind,
   NdiOutputName,
   OverlayCreateInput,
   OverlayUpdateInput,
+  TemplateCreateInput,
+  TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput,
-  SlideFrame
+  SlideNotesUpdateInput
 } from '@core/types';
 import { NdiService } from './ndi/ndi-service';
 
@@ -38,6 +41,9 @@ export const registerIpcHandlers = (
 ): void => {
   ndiService.onOutputStateChanged((state) => {
     getMainWindow()?.webContents.send(NDI_EVENTS.outputStateChanged, state);
+  });
+  ndiService.onDiagnosticsChanged((diagnostics) => {
+    getMainWindow()?.webContents.send(NDI_EVENTS.diagnosticsChanged, diagnostics);
   });
 
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
@@ -90,6 +96,15 @@ export const registerIpcHandlers = (
   safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));
   safeHandle(IPC.deleteOverlay, (_event, overlayId: Id) => repo.deleteOverlay(overlayId));
+  safeHandle(IPC.createTemplate, (_event, input: TemplateCreateInput) => repo.createTemplate(input));
+  safeHandle(IPC.updateTemplate, (_event, input: TemplateUpdateInput) => repo.updateTemplate(input));
+  safeHandle(IPC.deleteTemplate, (_event, templateId: Id) => repo.deleteTemplate(templateId));
+  safeHandle(IPC.applyTemplateToPresentation, (_event, templateId: Id, presentationId: Id) =>
+    repo.applyTemplateToPresentation(templateId, presentationId)
+  );
+  safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
+    repo.applyTemplateToOverlay(templateId, overlayId)
+  );
   safeHandle(IPC.renameLibrary, (_event, id: Id, name: string) => repo.renameLibrary(id, name));
   safeHandle(IPC.renamePlaylist, (_event, id: Id, name: string) => repo.renamePlaylist(id, name));
   safeHandle(IPC.renamePresentation, (_event, id: Id, title: string) => repo.renamePresentation(id, title));
@@ -97,11 +112,16 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deletePlaylist, (_event, id: Id) => repo.deletePlaylist(id));
   safeHandle(IPC.deletePlaylistSegment, (_event, id: Id) => repo.deletePlaylistSegment(id));
   safeHandle(IPC.deletePresentation, (_event, id: Id) => repo.deletePresentation(id));
-  safeHandle(IPC.sendNdiFrame, (_event, frame: SlideFrame) => {
-    ndiService.sendFrame(frame);
-  });
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
     return ndiService.setOutputEnabled(name, enabled);
   });
   safeHandle(IPC.getNdiOutputState, () => ndiService.getOutputState());
+  safeHandle(IPC.getNdiOutputConfigs, () => ndiService.getOutputConfigs());
+  safeHandle(IPC.updateNdiOutputConfig, (_event, name: NdiOutputName, config: Partial<NdiOutputConfig>) => {
+    return ndiService.updateOutputConfig(name, config);
+  });
+  safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
+  safeHandle(IPC.sendNdiFrame, (_event, buffer: ArrayBuffer, width: number, height: number): void => {
+    ndiService.receiveFrame(new Uint8Array(buffer), width, height);
+  });
 };

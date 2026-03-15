@@ -80,7 +80,7 @@ function PresentationCard({
                 <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
               </SceneFrame>
             ) : (
-              <div className="absolute inset-0 grid place-items-center bg-background-tertiary text-[11px] uppercase tracking-wider text-text-tertiary">
+              <div className="absolute inset-0 grid place-items-center bg-background-tertiary text-sm uppercase tracking-wider text-text-tertiary">
                 Empty
               </div>
             )}
@@ -104,7 +104,7 @@ function PresentationCard({
               value={presentation.title}
               onCommit={handleRename}
               editing={isEditing}
-              className="min-w-0 truncate text-[12px] text-text-secondary"
+              className="min-w-0 truncate text-sm text-text-secondary"
             />
           </div>
         )}

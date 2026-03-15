@@ -1,8 +1,9 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
 
-const LABEL_CLASS = 'grid min-w-0 gap-0.5 text-[11px] text-text-secondary';
+const LABEL_CLASS = 'grid min-w-0 gap-0.5 text-sm text-text-secondary';
 
 interface FieldInputProps {
+  disabled?: boolean;
   type?: 'number' | 'text';
   value: string | number;
   onChange: (value: string) => void;
@@ -15,13 +16,13 @@ interface FieldInputProps {
   wide?: boolean;
 }
 
-export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, step, icon, label, wide }: FieldInputProps) {
+export function FieldInput({ disabled = false, type = 'text', value, onChange, onBlur, min, max, step, icon, label, wide }: FieldInputProps) {
   function handleValueChange(event: React.ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value);
   }
 
   const input = (
-    <div className="flex min-w-0 items-center min-h-8 rounded bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -30,12 +31,13 @@ export function FieldInput({ type = 'text', value, onChange, onBlur, min, max, s
       <input
         type={type}
         value={value}
+        disabled={disabled}
         onChange={handleValueChange}
         onBlur={onBlur}
         min={min}
         max={max}
         step={step}
-        className={`min-w-0 w-full bg-transparent py-1 pr-2 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${icon ? 'pl-1' : 'pl-2'}`}
+        className={`min-w-0 w-full bg-transparent py-1 pr-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${icon ? 'pl-1' : 'pl-2'}`}
       />
     </div>
   );
@@ -69,7 +71,7 @@ export function FieldTextarea({ value, onChange, placeholder, className = '', la
       value={value}
       onChange={handleValueChange}
       placeholder={placeholder}
-      className={`min-w-0 w-full rounded border border-border-primary bg-primary px-1.5 py-1 text-[12px] text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
+      className={`min-w-0 w-full rounded border border-border-primary bg-primary px-1.5 py-1 text-sm text-text-primary min-h-[60px] resize-y focus:border-brand focus:outline-none transition-colors ${className}`}
     />
   );
 
@@ -86,19 +88,20 @@ export function FieldTextarea({ value, onChange, placeholder, className = '', la
 interface FieldSelectProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   options: Array<{ value: string; label: string; style?: CSSProperties }>;
   icon?: ReactNode;
   label?: string;
   wide?: boolean;
 }
 
-export function FieldSelect({ value, onChange, options, icon, label, wide }: FieldSelectProps) {
+export function FieldSelect({ value, onChange, onBlur, options, icon, label, wide }: FieldSelectProps) {
   function handleValueChange(event: React.ChangeEvent<HTMLSelectElement>) {
     onChange(event.target.value);
   }
 
   const select = (
-    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 items-center min-h-8 rounded-md bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       {icon ? (
         <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
           {icon}
@@ -107,6 +110,7 @@ export function FieldSelect({ value, onChange, options, icon, label, wide }: Fie
       <select
         value={value}
         onChange={handleValueChange}
+        onBlur={onBlur}
         className={`min-w-0 w-full min-h-8 bg-transparent py-1 pr-2 outline-none ${icon ? 'pl-1' : 'pl-1.5'}`}
       >
         {options.map((opt) => (
@@ -171,7 +175,7 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
   }
 
   const colorField = (
-    <div className="flex min-w-0 items-center gap-1.5 min-h-8 rounded bg-secondary text-[12px] text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
       <button
         type="button"
         onClick={handleSwatchClick}
@@ -186,19 +190,19 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
         className="sr-only"
         tabIndex={-1}
       />
-      <span className="text-text-tertiary text-[11px] select-none">#</span>
+      <span className="text-text-tertiary text-sm select-none">#</span>
       <input
         type="text"
         value={displayHex(safeValue)}
         onChange={handleHexInput}
         maxLength={8}
-        className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-[11px]"
+        className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-sm"
       />
       {onModeChange ? (
         <select
           value={mode}
           onChange={handleModeChange}
-          className="shrink-0 bg-transparent text-[10px] text-text-tertiary outline-none pr-1 cursor-pointer"
+          className="shrink-0 bg-transparent text-sm text-text-tertiary outline-none pr-1 cursor-pointer"
         >
           <option value="solid">Solid</option>
           <option value="gradient">Gradient</option>

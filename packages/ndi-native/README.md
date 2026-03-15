@@ -1,6 +1,6 @@
 # @cast-interface/ndi-native
 
-Native Node-API bridge for sending RGBA frames over NDI.
+Native Node-API bridge for sending BGRA offscreen paint frames over NDI.
 
 ## Build
 
@@ -26,8 +26,8 @@ Typical library names searched:
 ## API
 
 - `initializeSender({ senderName, width, height, withAlpha })`
-- `sendRgbaFrame(senderName, frame, width, height, stride)`
+- `sendBgraFrame(senderName, frame, width, height, stride)`
 - `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
-Frames are accepted in RGBA and converted to BGRA/BGRX before NDI send.
+Frames are accepted in BGRA bitmap order. When alpha is disabled, the bridge normalizes the fourth byte to opaque `255` before NDI send.

@@ -12,11 +12,11 @@ export function LibraryHeader() {
   if (!currentLibraryBundle) return null;
 
   return (
-    <div className="flex items-center gap-2 border-b border-border-primary px-3 py-2">
+    <div className="flex items-center gap-2 border-b border-border-primary px-2.5 py-2">
       <IconButton label="Back to libraries" onClick={handleBack} size="sm" variant="ghost">
         <Icon.chevron_left size={14} strokeWidth={2} />
       </IconButton>
-      <span className="text-[12px] font-semibold uppercase tracking-wider text-text-secondary">{currentLibraryBundle.library.name}</span>
+      <span className="text-sm font-semibold uppercase tracking-wider text-text-secondary">{currentLibraryBundle.library.name}</span>
     </div>
   );
 }

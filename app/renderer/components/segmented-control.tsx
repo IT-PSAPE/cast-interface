@@ -118,7 +118,7 @@ export function SegmentedControlItem({ value, title, children, variant = 'label'
       aria-pressed={isPressed}
       onClick={handleClick}
       disabled={disabled}
-      className={`grid h-7 place-items-center rounded-md text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${paddingClass} ${stateClass}`}
+      className={`grid h-7 place-items-center rounded-md text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${paddingClass} ${stateClass}`}
     >
       {children}
     </button>

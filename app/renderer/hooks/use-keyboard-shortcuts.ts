@@ -13,7 +13,7 @@ export function useKeyboardShortcuts(): void {
   const { selectedElementId, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
   const { setSlideBrowserMode, setPlaylistBrowserMode } = useSlideBrowser();
   const { workbenchMode } = useWorkbench();
-  const isEditSlideBrowser = workbenchMode === 'slide-editor' || workbenchMode === 'overlay-editor';
+  const isEditSlideBrowser = workbenchMode === 'slide-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

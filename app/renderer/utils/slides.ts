@@ -1,4 +1,4 @@
-import type { MediaAsset, Slide, SlideElement } from '@core/types';
+import type { MediaAsset, OverlayAnimation, Slide, SlideElement } from '@core/types';
 import type { SlideBrowserMode, PlaylistBrowserMode, ShortcutItem, SlideVisualState } from '../types/ui';
 import { LAYER_ORDER } from '../types/ui';
 
@@ -115,10 +115,20 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function getOverlayDefaults() {
+interface OverlayDefaultOptions {
+  animationKind?: OverlayAnimation['kind'];
+  durationMs?: number;
+  autoClearDurationMs?: number | null;
+}
+
+export function getOverlayDefaults(options: OverlayDefaultOptions = {}) {
   return {
     name: 'New Overlay',
     elements: [],
-    animation: { kind: 'fade' as const, durationMs: 2500 },
+    animation: {
+      kind: options.animationKind ?? 'dissolve',
+      durationMs: options.durationMs ?? 400,
+      autoClearDurationMs: options.autoClearDurationMs ?? null,
+    },
   };
 }

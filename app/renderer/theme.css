@@ -8,13 +8,13 @@
     --font-family-sans: 'Avenir Next', 'SF Pro Display', 'Segoe UI', sans-serif;
 
     /* FONT SIZE */
-    --text-sm: calc(var(--spacing) * 2.25);
-    --text-sm--line-height: calc(var(--spacing) * 3.5);
+    --text-sm: calc(var(--spacing) * 2.875);
+    --text-sm--line-height: calc(var(--spacing) * 3.75);
 
-    --text-md: calc(var(--spacing) * 2.75);
+    --text-md: calc(var(--spacing) * 3.25);
     --text-md--line-height: calc(var(--spacing) * 4);
 
-    --text-lg: calc(var(--spacing) * 3.25);
+    --text-lg: calc(var(--spacing) * 3.5);
     --text-lg--line-height: calc(var(--spacing) * 5.5);
 
     /* BASE COLOR */
@@ -422,6 +422,13 @@ body,
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   isolation: isolate;
+}
+
+#overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
 }
 
 button,

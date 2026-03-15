@@ -1,6 +1,55 @@
 import { useEffect, useState } from 'react';
 
-export function useKImage(src: string | null): HTMLImageElement | null {
+interface ImageCacheEntry {
+  image: HTMLImageElement;
+  listeners: Set<(status: 'loaded' | 'error') => void>;
+  status: 'loading' | 'loaded' | 'error';
+}
+
+const imageCache = new Map<string, ImageCacheEntry>();
+
+function createCacheEntry(src: string): ImageCacheEntry {
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+
+  const entry: ImageCacheEntry = {
+    image,
+    listeners: new Set(),
+    status: 'loading',
+  };
+
+  function notify(status: 'loaded' | 'error') {
+    entry.status = status;
+    for (const listener of entry.listeners) {
+      listener(status);
+    }
+  }
+
+  image.addEventListener('load', () => {
+    notify('loaded');
+  });
+  image.addEventListener('error', () => {
+    notify('error');
+  });
+  image.src = src;
+
+  if (image.complete) {
+    entry.status = image.naturalWidth > 0 ? 'loaded' : 'error';
+  }
+
+  return entry;
+}
+
+function getImageCacheEntry(src: string): ImageCacheEntry {
+  const existing = imageCache.get(src);
+  if (existing) return existing;
+
+  const next = createCacheEntry(src);
+  imageCache.set(src, next);
+  return next;
+}
+
+export function useKImage(src: string | null, onLoad?: () => void): HTMLImageElement | null {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -8,21 +57,35 @@ export function useKImage(src: string | null): HTMLImageElement | null {
       setImage(null);
       return;
     }
-    const nextImage = new Image();
-    nextImage.crossOrigin = 'anonymous';
-    nextImage.src = src;
+    const entry = getImageCacheEntry(src);
 
-    function handleLoad() {
-      setImage(nextImage);
+    if (entry.status === 'loaded') {
+      setImage(entry.image);
+      onLoad?.();
+      return;
     }
 
-    nextImage.addEventListener('load', handleLoad);
-    if (nextImage.complete) setImage(nextImage);
+    if (entry.status === 'error') {
+      setImage(null);
+      return;
+    }
+
+    function handleStatusChange(status: 'loaded' | 'error') {
+      if (status === 'loaded') {
+        setImage(entry.image);
+        onLoad?.();
+        return;
+      }
+
+      setImage(null);
+    }
+
+    entry.listeners.add(handleStatusChange);
 
     return () => {
-      nextImage.removeEventListener('load', handleLoad);
+      entry.listeners.delete(handleStatusChange);
     };
-  }, [src]);
+  }, [onLoad, src]);
 
   return image;
 }
