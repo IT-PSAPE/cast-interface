@@ -14,6 +14,6 @@ export function SceneNodeImage({ node }: SceneNodeImageProps) {
   return image ? (
     <KonvaImage image={image} x={0} y={0} width={element.width} height={element.height} />
   ) : (
-    <Rect x={0} y={0} width={element.width} height={element.height} fill="#2b3039" />
+    <Rect x={0} y={0} width={element.width} height={element.height} fill="#2b303900" />
   );
 }

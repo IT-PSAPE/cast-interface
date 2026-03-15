@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { overlayToLayerElements } from '@core/presentation-layers';
 import { isLyricPresentation } from '@core/presentation-entities';
 import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, SlideElement } from '@core/types';
@@ -16,6 +16,7 @@ import { useElementHistory } from './use-element-history';
 import { useElementInspectorSync } from './use-element-inspector-sync';
 import { useElementSelection } from './use-element-selection';
 import type { ElementContextValue } from './element-context.types';
+import { cloneElements } from './element-context-utils';
 
 const ElementContext = createContext<ElementContextValue | null>(null);
 
@@ -33,6 +34,8 @@ export function ElementProvider({ children }: { children: ReactNode }) {
 
   const [draftElements, setDraftElements] = useState<Record<Id, Partial<SlideElement>>>({});
   const [isCanvasInteracting, setCanvasInteracting] = useState(false);
+  const previousSlideIdRef = useRef<Id | null>(null);
+  const previousSlideElementsRef = useRef<SlideElement[]>([]);
 
   const baseElements = useMemo(() => {
     if (isOverlayEdit) {
@@ -51,6 +54,25 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     () => sortElements(baseElements.map((element) => ({ ...element, ...(draftElements[element.id] ?? {}) }))),
     [baseElements, draftElements],
   );
+
+  useEffect(() => {
+    const previousSlideId = previousSlideIdRef.current;
+    const previousSlideElements = previousSlideElementsRef.current;
+
+    if (previousSlideId && (!isSlideEdit || previousSlideId !== currentSlide?.id)) {
+      replaceSlideElements(previousSlideId, previousSlideElements);
+      setDraftElements((current) => removeDraftPatchesForElements(current, previousSlideElements));
+    }
+
+    if (!isSlideEdit) {
+      previousSlideIdRef.current = null;
+      previousSlideElementsRef.current = [];
+      return;
+    }
+
+    previousSlideIdRef.current = currentSlide?.id ?? null;
+    previousSlideElementsRef.current = cloneElements(effectiveElements);
+  }, [currentSlide?.id, effectiveElements, isSlideEdit, replaceSlideElements]);
 
   const selection = useElementSelection({ effectiveElements });
 
@@ -320,6 +342,22 @@ function getUnlockedSelectedElementIds(effectiveElements: SlideElement[], select
     .filter((element) => selectedElementIds.includes(element.id))
     .filter((element) => !element.payload.locked)
     .map((element) => element.id);
+}
+
+function removeDraftPatchesForElements(
+  draftElements: Record<Id, Partial<SlideElement>>,
+  elements: SlideElement[],
+): Record<Id, Partial<SlideElement>> {
+  const nextDrafts = { ...draftElements };
+  let changed = false;
+
+  for (const element of elements) {
+    if (!(element.id in nextDrafts)) continue;
+    delete nextDrafts[element.id];
+    changed = true;
+  }
+
+  return changed ? nextDrafts : draftElements;
 }
 
 function applyOverlayDraftUpdates(overlay: Overlay, updates: ElementUpdateInput[]): OverlayUpdateInput {

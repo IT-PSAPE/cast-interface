@@ -2,17 +2,18 @@ import { useCallback, useMemo } from 'react';
 import { isLyricPresentation } from '@core/presentation-entities';
 import type { Id, Slide, SlideElement } from '@core/types';
 import type { SlideVisualState } from '../../../types/ui';
-import { clamp, getSlideVisualState, replacePrimaryLine, slideTextDetails } from '../../../utils/slides';
-import { useCast } from '../../../contexts/cast-context';
+import { clamp, getSlideVisualState, slideTextDetails } from '../../../utils/slides';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useSlides } from '../../../contexts/slide-context';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
+import { useSlideOutlineTextEditing } from './use-slide-outline-text-editing';
 
 export interface OutlineSlideRow {
   slide: Slide;
   index: number;
   state: SlideVisualState;
   elements: SlideElement[];
+  text: string;
   primaryText: string;
   secondaryText: string;
   textElementId: Id | null;
@@ -24,14 +25,14 @@ interface OutlineViewModel {
   currentSlideIndex: number;
   selectSlide: (index: number) => void;
   openSlide: (index: number) => void;
-  updatePrimaryText: (slideId: Id, nextPrimary: string) => void;
+  updateText: (slideId: Id, nextText: string) => void;
 }
 
 export function useOutlineView(): OutlineViewModel {
-  const { mutate, setStatusText } = useCast();
   const { currentPresentation, currentPresentationId, currentOutputPresentationId, isDetachedPresentationBrowser } = useNavigation();
-  const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide } = useSlides();
+  const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
+  const { updateText } = useSlideOutlineTextEditing();
   const textEditable = isLyricPresentation(currentPresentation);
   const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
 
@@ -46,6 +47,7 @@ export function useOutlineView(): OutlineViewModel {
         index,
         state,
         elements,
+        text: details.text,
         primaryText: details.primaryLine,
         secondaryText: details.secondaryLine,
         textElementId: details.textElement?.id ?? null,
@@ -63,32 +65,26 @@ export function useOutlineView(): OutlineViewModel {
   const selectSlide = useCallback((index: number) => {
     if (slides.length === 0) return;
     activateSlide(clamp(index, 0, slides.length - 1));
-  }, [slides.length, activateSlide]);
+  }, [activateSlide, slides.length]);
 
   const openSlide = useCallback((index: number) => {
     if (slides.length === 0) return;
-    activateSlide(clamp(index, 0, slides.length - 1));
+    setCurrentSlideIndex(clamp(index, 0, slides.length - 1));
     setSlideBrowserMode('focus');
-  }, [slides.length, activateSlide, setSlideBrowserMode]);
+  }, [setCurrentSlideIndex, setSlideBrowserMode, slides.length]);
 
-  const updatePrimaryText = useCallback((slideId: Id, nextPrimary: string) => {
+  const commitText = useCallback((slideId: Id, nextText: string) => {
     const row = rowBySlideId.get(slideId);
-    if (!row || !row.textElementId || !row.textEditable) return;
+    if (!row) return;
 
-    const textElement = row.elements.find((element) => element.id === row.textElementId);
-    if (!textElement || !('text' in textElement.payload)) return;
+    updateText({
+      elements: row.elements,
+      nextText,
+      slideIndex: row.index,
+      textEditable: row.textEditable,
+      textElementId: row.textElementId,
+    });
+  }, [rowBySlideId, updateText]);
 
-    const currentText = String(textElement.payload.text ?? '');
-    const nextText = replacePrimaryLine(currentText, nextPrimary);
-    if (!nextText.trim() || nextText === currentText) return;
-
-    void mutate(() => window.castApi.updateElement({
-      id: textElement.id,
-      payload: { ...textElement.payload, text: nextText },
-    }));
-
-    setStatusText(`Updated slide ${row.index + 1} text`);
-  }, [rowBySlideId, mutate, setStatusText]);
-
-  return { rows, currentSlideIndex, selectSlide, openSlide, updatePrimaryText };
+  return { rows, currentSlideIndex, selectSlide, openSlide, updateText: commitText };
 }

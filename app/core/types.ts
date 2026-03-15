@@ -41,6 +41,7 @@ export type TemplateKind = 'slides' | 'lyrics' | 'overlays';
 interface PresentationBase {
   id: Id;
   title: string;
+  templateId?: Id | null;
   createdAt: string;
   updatedAt: string;
 }

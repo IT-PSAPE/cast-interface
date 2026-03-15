@@ -22,6 +22,7 @@ interface TemplateEditorContextValue {
   replaceTemplateElements: (elements: SlideElement[]) => void;
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
+  resetPresentationToAssignedTemplate: (presentationId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -33,7 +34,7 @@ const TemplateEditorContext = createContext<TemplateEditorContextValue | null>(n
 export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
   const { workbenchMode } = useWorkbench();
-  const { templates: persistedTemplates } = useProjectContent();
+  const { presentationsById, templates: persistedTemplates } = useProjectContent();
   const [currentTemplateId, setCurrentTemplateId] = useState<Id | null>(null);
   const [stagedTemplates, setStagedTemplates] = useState<Template[] | null>(null);
   const [isPushingChanges, setIsPushingChanges] = useState(false);
@@ -205,13 +206,18 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTemplateId, isPushingChanges, mutate, persistedTemplates, setStatusText, stagedTemplates]);
 
-  const applyTemplateToTarget = useCallback(async (templateId: Id, target: TemplateApplyTarget) => {
-    let resolvedTemplateId = templateId;
+  const resolveTemplateIdForMutation = useCallback(async (templateId: Id): Promise<Id | null> => {
     if (currentTemplateId === templateId) {
-      resolvedTemplateId = await pushChanges() ?? templateId;
-    } else if (hasPendingChanges) {
+      return await pushChanges() ?? templateId;
+    }
+    if (hasPendingChanges) {
       await pushChanges();
     }
+    return templateId;
+  }, [currentTemplateId, hasPendingChanges, pushChanges]);
+
+  const applyTemplateToTarget = useCallback(async (templateId: Id, target: TemplateApplyTarget) => {
+    const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
     if (target.type === 'presentation') {
       await mutate(() => window.castApi.applyTemplateToPresentation(resolvedTemplateId, target.presentationId));
@@ -220,7 +226,17 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     }
     await mutate(() => window.castApi.applyTemplateToOverlay(resolvedTemplateId, target.overlayId));
     setStatusText('Applied template to overlay');
-  }, [currentTemplateId, hasPendingChanges, mutate, pushChanges, setStatusText]);
+  }, [mutate, resolveTemplateIdForMutation, setStatusText]);
+
+  const resetPresentationToAssignedTemplate = useCallback(async (presentationId: Id) => {
+    const presentation = presentationsById.get(presentationId) ?? null;
+    const templateId = presentation?.templateId ?? null;
+    if (!templateId) return;
+    const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
+    if (!resolvedTemplateId) return;
+    await mutate(() => window.castApi.resetPresentationToTemplate(presentationId));
+    setStatusText('Reset presentation to template');
+  }, [mutate, presentationsById, resolveTemplateIdForMutation, setStatusText]);
 
   useEffect(() => {
     const previousWorkbenchMode = previousWorkbenchModeRef.current;
@@ -242,6 +258,7 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     replaceTemplateElements,
     createTemplate,
     applyTemplateToTarget,
+    resetPresentationToAssignedTemplate,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
@@ -258,6 +275,7 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     openTemplateEditor,
     pushChanges,
     renameTemplate,
+    resetPresentationToAssignedTemplate,
     replaceTemplateElements,
     setCurrentTemplateId,
     templates,

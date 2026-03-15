@@ -3,7 +3,7 @@ import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
 import { SlideOutlineRow } from './slide-list-row';
 
 export function SlideList() {
-  const { rows, currentSlideIndex, selectSlide, openSlide, updatePrimaryText } = useOutlineView();
+  const { rows, currentSlideIndex, selectSlide, openSlide, updateText } = useOutlineView();
   const { getThumbnailScene } = useRenderScenes();
 
   function renderRow(row: (typeof rows)[number]) {
@@ -17,7 +17,7 @@ export function SlideList() {
         isFocused={row.index === currentSlideIndex}
         onSelect={selectSlide}
         onOpen={openSlide}
-        onPrimaryTextCommit={updatePrimaryText}
+        onTextCommit={updateText}
       />
     );
   }

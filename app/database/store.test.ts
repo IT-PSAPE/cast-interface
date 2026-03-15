@@ -1,8 +1,7 @@
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { closeRepository, createTempUserDataPath, databasePath } from './store-test-support';
 
 const electronState = vi.hoisted(() => ({ userDataPath: '' }));
 
@@ -16,14 +15,6 @@ import { CastRepository } from './store';
 
 interface LegacyFixtureOptions {
   duplicatePresentationAcrossLibraries?: boolean;
-}
-
-function createTempUserDataPath(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cast-interface-store-'));
-}
-
-function databasePath(userDataPath: string): string {
-  return path.join(userDataPath, 'cast-interface.sqlite');
 }
 
 function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOptions = {}): void {
@@ -166,13 +157,10 @@ function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOption
   const tx = db.transaction(() => {
     insertLibrary.run('library-1', 'Main Library', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
     insertLibrary.run('library-2', 'Youth Library', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z');
-
     insertPresentation.run('presentation-1', 'library-1', 'Welcome', 'canvas', 0, '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z');
     insertPresentation.run('presentation-2', 'library-2', 'Message', 'canvas', 0, '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
-
     insertSlide.run('slide-1', 'presentation-1', 1920, 1080, '', 0, '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z');
     insertSlide.run('slide-2', 'presentation-2', 1920, 1080, '', 0, '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
-
     insertSlideElement.run(
       'element-1',
       'slide-1',
@@ -189,13 +177,10 @@ function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOption
       '2026-01-03T00:00:00.000Z',
       '2026-01-03T00:00:00.000Z',
     );
-
     insertPlaylist.run('playlist-1', 'library-1', 'Sunday Service', 0, '2026-01-05T00:00:00.000Z', '2026-01-05T00:00:00.000Z');
     insertPlaylist.run('playlist-2', 'library-2', 'Youth Service', 0, '2026-01-06T00:00:00.000Z', '2026-01-06T00:00:00.000Z');
-
     insertSegment.run('segment-1', 'playlist-1', 'Opening', null, 0, '2026-01-05T00:00:00.000Z', '2026-01-05T00:00:00.000Z');
     insertSegment.run('segment-2', 'playlist-2', 'Message', null, 0, '2026-01-06T00:00:00.000Z', '2026-01-06T00:00:00.000Z');
-
     insertEntry.run('entry-1', 'segment-1', 'presentation-1', 0, '2026-01-05T00:00:00.000Z', '2026-01-05T00:00:00.000Z');
     insertEntry.run(
       'entry-2',
@@ -205,10 +190,8 @@ function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOption
       '2026-01-06T00:00:00.000Z',
       '2026-01-06T00:00:00.000Z',
     );
-
     insertMediaAsset.run('media-1', 'library-1', 'Background', 'image', 'cast-media://background-1', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z');
     insertMediaAsset.run('media-2', 'library-2', 'Youth Background', 'image', 'cast-media://background-2', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
-
     insertOverlay.run(
       'overlay-1',
       'library-1',
@@ -251,10 +234,6 @@ function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOption
   db.close();
 }
 
-function closeRepository(repository: CastRepository): void {
-  ((repository as unknown) as { db: Database.Database }).db.close();
-}
-
 describe('CastRepository global project migration', () => {
   let userDataPath = '';
 
@@ -285,8 +264,9 @@ describe('CastRepository global project migration', () => {
     const presentationColumns = db.prepare('PRAGMA table_info(presentations)').all() as Array<{ name: string }>;
     db.close();
 
-    expect(userVersion).toBe(4);
+    expect(userVersion).toBe(5);
     expect(presentationColumns.some((column) => column.name === 'library_id')).toBe(false);
+    expect(presentationColumns.some((column) => column.name === 'template_id')).toBe(true);
   });
 
   it('keeps global presentations, media, and overlays when a library is deleted', () => {
@@ -346,7 +326,7 @@ describe('CastRepository global project migration', () => {
     const userVersion = verificationDb.pragma('user_version', { simple: true }) as number;
     verificationDb.close();
 
-    expect(userVersion).toBe(4);
+    expect(userVersion).toBe(5);
     expect(presentationOrder.order_index).toBe(77);
   });
 });

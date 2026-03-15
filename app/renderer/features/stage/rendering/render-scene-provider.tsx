@@ -21,6 +21,7 @@ interface RenderSceneContextValue {
 const RenderSceneContext = createContext<RenderSceneContextValue | null>(null);
 
 export function thumbnailSourcePolicy(surface: SceneSurface, isCurrentSlide: boolean): SceneSourcePolicy {
+  if (surface === 'slide-editor') return 'draft';
   if (surface === 'show' || surface === 'list') return 'persisted';
   if (isCurrentSlide) return 'draft';
   return 'persisted';
@@ -99,9 +100,9 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   const editThumbnailScenes = useMemo(() => {
     const sceneMap = new Map<Id, RenderScene>();
     for (const slide of slides) {
-      const persistedElements = getSlideElements(slide.id);
-      const policy = thumbnailSourcePolicy('slide-editor', currentSlide?.id === slide.id);
-      sceneMap.set(slide.id, buildThumbnailScene(slide, selectThumbnailElements(policy, effectiveElements, persistedElements)));
+      const isCurrentSlide = currentSlide?.id === slide.id;
+      const elements = isCurrentSlide ? effectiveElements : getSlideElements(slide.id);
+      sceneMap.set(slide.id, buildThumbnailScene(slide, elements));
     }
     return sceneMap;
   }, [currentSlide?.id, effectiveElements, getSlideElements, slides]);
