@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -63,6 +65,7 @@ using FnNdiDestroy = void (*)();
 using FnNdiSendCreate = NDIlib_send_instance_t (*)(const NDIlib_send_create_t*);
 using FnNdiSendDestroy = void (*)(NDIlib_send_instance_t);
 using FnNdiSendVideoV2 = void (*)(NDIlib_send_instance_t, const NDIlib_video_frame_v2_t*);
+using FnNdiSendVideoAsyncV2 = void (*)(NDIlib_send_instance_t, const NDIlib_video_frame_v2_t*);
 using FnNdiSendGetNoConnections = int32_t (*)(NDIlib_send_instance_t, uint32_t);
 
 struct NdiSymbols {
@@ -71,6 +74,7 @@ struct NdiSymbols {
   FnNdiSendCreate sendCreate = nullptr;
   FnNdiSendDestroy sendDestroy = nullptr;
   FnNdiSendVideoV2 sendVideoV2 = nullptr;
+  FnNdiSendVideoAsyncV2 sendVideoAsyncV2 = nullptr;
   FnNdiSendGetNoConnections sendGetNoConnections = nullptr;
 };
 
@@ -336,6 +340,8 @@ void LoadRuntimeIfNeeded(SenderState& state) {
   state.symbols.sendCreate = ResolveRequired<FnNdiSendCreate>(state.runtime, "NDIlib_send_create");
   state.symbols.sendDestroy = ResolveRequired<FnNdiSendDestroy>(state.runtime, "NDIlib_send_destroy");
   state.symbols.sendVideoV2 = ResolveRequired<FnNdiSendVideoV2>(state.runtime, "NDIlib_send_send_video_v2");
+  state.symbols.sendVideoAsyncV2 =
+      ResolveOptional<FnNdiSendVideoAsyncV2>(state.runtime, "NDIlib_send_send_video_async_v2");
   state.symbols.sendGetNoConnections =
       ResolveOptional<FnNdiSendGetNoConnections>(state.runtime, "NDIlib_send_get_no_connections");
 
@@ -360,6 +366,46 @@ void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance* sender) {
   }
 
   if (sender->sender != nullptr) {
+    // Send an opaque black frame before tearing down so remote receivers
+    // see black instead of a frozen last frame.
+    if (state.symbols.sendVideoV2 != nullptr && sender->width > 0 && sender->height > 0) {
+      const int32_t stride = sender->width * 4;
+      auto& scratch = sender->bgraScratch[sender->currentBuffer];
+      if (!scratch.empty()) {
+        // BGRX: B=0, G=0, R=0, X=255 (opaque black)
+        std::memset(scratch.data(), 0, scratch.size());
+        for (size_t i = 3; i < scratch.size(); i += 4) {
+          scratch[i] = 255;
+        }
+
+        NDIlib_video_frame_v2_t frame{};
+        frame.xres = sender->width;
+        frame.yres = sender->height;
+        frame.FourCC = kFourCCBgrx;
+        frame.frame_rate_N = 60000;
+        frame.frame_rate_D = 1001;
+        frame.picture_aspect_ratio =
+            static_cast<float>(sender->width) / static_cast<float>(sender->height);
+        frame.frame_format_type = kFrameFormatProgressive;
+        frame.timecode = kTimecodeSynthesize;
+        frame.p_data = scratch.data();
+        frame.line_stride_in_bytes = stride;
+        frame.p_metadata = nullptr;
+        frame.timestamp = 0;
+
+        state.symbols.sendVideoV2(sender->sender, &frame);
+
+        // Flush: NDIlib_send_send_video_async_v2(sender, NULL) acts as a
+        // synchronization barrier, blocking until pending frames are processed.
+        if (state.symbols.sendVideoAsyncV2 != nullptr) {
+          state.symbols.sendVideoAsyncV2(sender->sender, nullptr);
+        }
+
+        // Brief sleep to let the network stack deliver the frame.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+
     if (state.symbols.sendDestroy != nullptr) {
       state.symbols.sendDestroy(sender->sender);
     }

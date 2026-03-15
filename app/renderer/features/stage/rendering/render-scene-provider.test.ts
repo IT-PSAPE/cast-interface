@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { selectThumbnailElements, thumbnailSourcePolicy } from './render-scene-provider';
 
 describe('thumbnailSourcePolicy', () => {
-  it('uses draft source only for current slide in edit surface', () => {
+  it('uses draft source for all slide editor thumbnails', () => {
     expect(thumbnailSourcePolicy('slide-editor', true)).toBe('draft');
-    expect(thumbnailSourcePolicy('slide-editor', false)).toBe('persisted');
+    expect(thumbnailSourcePolicy('slide-editor', false)).toBe('draft');
     expect(thumbnailSourcePolicy('show', true)).toBe('persisted');
     expect(thumbnailSourcePolicy('list', true)).toBe('persisted');
   });

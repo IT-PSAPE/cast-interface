@@ -2,23 +2,64 @@ import type { Id, SlideElement, TextElementPayload } from '@core/types';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { SelectableRow } from '../../../components/selectable-row';
+import type { StackDropPlacement } from '../utils/reorder-element-stack';
 import { compactText } from '../../../utils/slides';
 
 interface ObjectListRowProps {
   element: SlideElement;
   selected: boolean;
+  dragging: boolean;
+  dropPlacement: StackDropPlacement | null;
   onSelect: (id: Id) => void;
+  onDragEnd: () => void;
+  onDragOver: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragStart: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
+  onDrop: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
   onToggleLock: (id: Id, locked: boolean) => void;
   onToggleVisibility: (id: Id, visible: boolean) => void;
 }
 
-export function ObjectListRow({ element, selected, onSelect, onToggleLock, onToggleVisibility }: ObjectListRowProps) {
+export function ObjectListRow({
+  element,
+  selected,
+  dragging,
+  dropPlacement,
+  onSelect,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
+  onToggleLock,
+  onToggleVisibility,
+}: ObjectListRowProps) {
   const visible = element.payload.visible ?? true;
   const locked = element.payload.locked ?? false;
   const title = objectTitle(element);
+  const dropClassName = dropPlacement === 'before'
+    ? 'shadow-[inset_0_2px_0_0_var(--color-border-brand)]'
+    : dropPlacement === 'after'
+      ? 'shadow-[inset_0_-2px_0_0_var(--color-border-brand)]'
+      : '';
+  const dragClassName = dragging ? 'cursor-grabbing opacity-60' : locked ? '' : 'cursor-grab';
 
   function handleSelect() {
     onSelect(element.id);
+  }
+
+  function handleDragStart(event: React.DragEvent<HTMLButtonElement>) {
+    if (locked) {
+      event.preventDefault();
+      return;
+    }
+    onDragStart(element.id, event);
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLButtonElement>) {
+    onDragOver(element.id, event);
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLButtonElement>) {
+    onDrop(element.id, event);
   }
 
   function handleToggleLock(event: React.MouseEvent<HTMLButtonElement>) {
@@ -35,6 +76,12 @@ export function ObjectListRow({ element, selected, onSelect, onToggleLock, onTog
     <SelectableRow
       selected={selected}
       onClick={handleSelect}
+      className={`${dropClassName} ${dragClassName}`}
+      draggable={!locked}
+      onDragEnd={onDragEnd}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+      onDrop={handleDrop}
       leading={<TypeIcon type={element.type} />}
       title={title}
       trailing={

@@ -4,6 +4,7 @@ interface PresentationEntityInput {
   id: string;
   title: string;
   kind: PresentationKind;
+  templateId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,26 +13,28 @@ export function getPresentationEntityType(kind: PresentationKind): PresentationE
   return kind === 'lyrics' ? 'lyric' : 'presentation';
 }
 
-export function buildPresentationEntity({ id, title, kind, createdAt, updatedAt }: PresentationEntityInput): Presentation {
+export function buildPresentationEntity({ id, title, kind, templateId = null, createdAt, updatedAt }: PresentationEntityInput): Presentation {
   if (kind === 'lyrics') {
     return {
       id,
       title,
       kind,
       entityType: 'lyric',
+      templateId,
       createdAt,
       updatedAt
     };
   }
 
-  return {
-    id,
-    title,
-    kind,
-    entityType: 'presentation',
-    createdAt,
-    updatedAt
-  };
+    return {
+      id,
+      title,
+      kind,
+      entityType: 'presentation',
+      templateId,
+      createdAt,
+      updatedAt
+    };
 }
 
 export function getPresentationEntityLabel(entity: Pick<Presentation, 'entityType'> | PresentationEntityType): 'Presentation' | 'Lyric' {

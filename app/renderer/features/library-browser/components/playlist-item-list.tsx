@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import type { Id, PlaylistTree } from '@core/types';
+import type { PlaylistTree } from '@core/types';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useSlides } from '../../../contexts/slide-context';
+import { useLibraryPanelState } from '../contexts/library-panel-context';
 import { PlaylistSegmentGroup } from './playlist-segment-group';
 
 interface PlaylistItemListProps {
@@ -23,33 +23,9 @@ interface PlaylistItemListProps {
 export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId, onSegmentContextMenu, onSegmentMenuButtonClick, onSegmentPresentationContextMenu, onSegmentPresentationMenuButtonClick, onRenameSegment, onRenamePresentation, onClearEditingSegment, onClearEditingPresentation }: PlaylistItemListProps) {
   const { currentPlaylistPresentationId, createSegment } = useNavigation();
   const { selectPlaylistPresentation } = useSlides();
-  const [collapsedSegmentIds, setCollapsedSegmentIds] = useState<Id[]>([]);
+  const { isSegmentCollapsed, toggleSegmentCollapsed } = useLibraryPanelState();
 
   function handleNewSegment() { void createSegment(); }
-
-  useEffect(() => {
-    if (!tree) {
-      setCollapsedSegmentIds([]);
-      return;
-    }
-
-    const nextSegmentIds = new Set(tree.segments.map((segment) => segment.segment.id));
-    setCollapsedSegmentIds((current) => current.filter((segmentId) => nextSegmentIds.has(segmentId)));
-  }, [tree]);
-
-  function handleToggleSegment(segmentId: Id) {
-    setCollapsedSegmentIds((current) => {
-      if (current.includes(segmentId)) {
-        return current.filter((id) => id !== segmentId);
-      }
-
-      return [...current, segmentId];
-    });
-  }
-
-  function isSegmentCollapsed(segmentId: Id): boolean {
-    return collapsedSegmentIds.includes(segmentId);
-  }
 
   if (!tree) {
     return <div className="grid h-full min-h-0 place-items-center p-4 text-sm text-text-tertiary">Select a playlist</div>;
@@ -74,7 +50,7 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
             editingSegmentId={editingSegmentId}
             editingPresentationId={editingPresentationId}
             onSelectPresentation={selectPlaylistPresentation}
-            onToggleCollapsed={handleToggleSegment}
+            onToggleCollapsed={toggleSegmentCollapsed}
             onSegmentContextMenu={onSegmentContextMenu}
             onSegmentMenuButtonClick={onSegmentMenuButtonClick}
             onPresentationContextMenu={onSegmentPresentationContextMenu}

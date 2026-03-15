@@ -40,7 +40,7 @@ export function TemplateCard({ selected, template, onClick, onDoubleClick, onOpe
       className={selected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : ''}
       body={(
         <>
-          <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0">
+          <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
             <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
           </SceneFrame>
           {onOpenMenu ? (

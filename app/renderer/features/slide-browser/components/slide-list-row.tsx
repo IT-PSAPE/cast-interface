@@ -13,10 +13,10 @@ interface SlideOutlineRowProps {
   isFocused: boolean;
   onSelect: (index: number) => void;
   onOpen: (index: number) => void;
-  onPrimaryTextCommit: (slideId: Id, nextPrimary: string) => void;
+  onTextCommit: (slideId: Id, nextText: string) => void;
 }
 
-export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPrimaryTextCommit }: SlideOutlineRowProps) {
+export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
 
   const rowStateClass = row.state === 'live'
     ? 'border-green-500/70 bg-green-500/10'
@@ -32,11 +32,11 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
     onOpen(row.index);
   }
 
-  function handlePrimaryTextCommit(nextPrimary: string) {
-    onPrimaryTextCommit(row.slide.id, nextPrimary);
+  function handleTextCommit(nextText: string) {
+    onTextCommit(row.slide.id, nextText);
   }
 
-  function renderPrimaryText() {
+  function renderRowText() {
     if (!row.textEditable) {
       return (
         <span className="w-full truncate text-md font-medium text-text-secondary">
@@ -47,10 +47,12 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
 
     return (
       <EditableText
-        value={row.primaryText}
-        onCommit={handlePrimaryTextCommit}
-        placeholder="Slide text"
-        className="w-full text-md font-medium"
+        value={row.text}
+        onCommit={handleTextCommit}
+        multiline
+        trimOnCommit={false}
+        placeholder="Lyric text"
+        className="w-full text-md font-medium leading-6 text-text-secondary"
       />
     );
   }
@@ -59,7 +61,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
     <Button
       variant="ghost"
       onClick={handleSelect}
-      onDoubleClick={handleOpen}
+      onDoubleClick={row.textEditable ? undefined : handleOpen}
       className={`grid w-full grid-cols-[220px_1fr] overflow-hidden rounded border px-0 py-0 text-left transition-colors ${rowStateClass}`}
     >
       <SceneFrame width={scene.width} height={scene.height} className="border-r border-border-primary bg-background-tertiary" stageClassName="absolute inset-0">
@@ -71,14 +73,14 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onPri
         <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
       </SceneFrame>
 
-      <div className="grid min-h-[92px] content-center gap-1.5 p-2.5">
-        <div className="flex items-center gap-2">
+      <div className={`grid min-h-[92px] gap-1.5 p-2.5 ${row.textEditable ? 'content-start' : 'content-center'}`}>
+        <div className={`flex gap-2 ${row.textEditable ? 'items-start' : 'items-center'}`}>
           <span className="shrink-0 text-sm font-semibold tabular-nums text-text-secondary">{row.index + 1}.</span>
-          {renderPrimaryText()}
+          {renderRowText()}
           {row.state === 'live' && <Badge state="live" label="Live" />}
         </div>
 
-        {row.secondaryText && (
+        {!row.textEditable && row.secondaryText && (
           <p className="m-0 truncate text-sm text-text-tertiary" title={row.secondaryText}>
             {row.secondaryText}
           </p>

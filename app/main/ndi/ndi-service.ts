@@ -91,7 +91,7 @@ export class NdiService {
   receiveFrame(rgba: Uint8Array, width: number, height: number): void {
     if (this.destroyed) return;
 
-    this.lastFrame = rgba;
+    this.lastFrame = new Uint8Array(rgba);
     this.lastFrameWidth = width;
     this.lastFrameHeight = height;
 
@@ -139,6 +139,8 @@ export class NdiService {
     this.stopHeartbeat();
 
     try {
+      // destroySender internally sends a black frame, flushes, and waits
+      // for network delivery before tearing down the NDI sender.
       this.module?.destroySender();
     } catch (error) {
       console.error('[NdiService] Error during destroy:', error);

@@ -2,9 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { EmptyStatePanel } from '../../../components/empty-state-panel';
 import { StageViewport } from '../../stage/components/stage-viewport';
 import { useSlideBrowserView } from '../hooks/use-slide-browser-view';
-import { PlaylistBrowserModeControl } from './playlist-browser-mode-control';
 import { SlideBrowserPlaylistTabStrip } from './slide-browser-playlist-tab-strip';
-import { SlideBrowserPresentationStrip } from './slide-browser-presentation-strip';
 import { SlideBrowserToolbar } from './slide-browser-toolbar';
 import { ContinuousSlideGrid } from './continuous-slide-grid';
 import { ContinuousSlideList } from './continuous-slide-list';
@@ -46,25 +44,7 @@ function TabsHeader() {
 
   return (
     <div className="row-start-1 min-h-0">
-      <SlideBrowserPlaylistTabStrip
-        items={state.items}
-        action={state.showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null}
-      />
-    </div>
-  );
-}
-
-function PresentationHeader() {
-  const { state } = useSlideBrowserLayout();
-  if (state.headerVariant !== 'presentation') return null;
-
-  return (
-    <div className="row-start-1 min-h-0">
-      <SlideBrowserPresentationStrip
-        title={state.headerTitle}
-        meta={state.headerMeta}
-        action={state.showPlaylistBrowserModes ? <PlaylistBrowserModeControl /> : null}
-      />
+      <SlideBrowserPlaylistTabStrip items={state.items} />
     </div>
   );
 }
@@ -163,7 +143,6 @@ const SlideBrowserLayout = {
   EmptyState,
   FocusContent,
   Footer,
-  PresentationHeader,
   Root,
   SingleGridContent,
   SingleListContent,
@@ -174,7 +153,6 @@ export function SlideBrowser() {
   return (
     <SlideBrowserLayout.Root>
       <SlideBrowserLayout.TabsHeader />
-      <SlideBrowserLayout.PresentationHeader />
       <SlideBrowserLayout.EmptyState />
       <SlideBrowserLayout.FocusContent />
       <SlideBrowserLayout.SingleGridContent />

@@ -71,11 +71,10 @@ vi.mock('./continuous-slide-list', () => ({
 }));
 
 vi.mock('./slide-browser-playlist-tab-strip', () => ({
-  SlideBrowserPlaylistTabStrip: function SlideBrowserPlaylistTabStrip({ action }: { action?: React.ReactNode }) {
+  SlideBrowserPlaylistTabStrip: function SlideBrowserPlaylistTabStrip() {
     return (
       <div>
         <span>Tabs Header</span>
-        {action}
       </div>
     );
   },
@@ -111,7 +110,7 @@ describe('SlideBrowser', () => {
     });
   });
 
-  it('renders the presentation strip in single playlist mode', () => {
+  it('hides the top header in single playlist mode', () => {
     useSlideBrowserMock.mockReturnValue({
       slideBrowserMode: 'grid',
       playlistBrowserMode: 'current',
@@ -119,13 +118,11 @@ describe('SlideBrowser', () => {
 
     render(<SlideBrowser />);
 
-    expect(screen.getByText('Hello World')).not.toBeNull();
-    expect(screen.getByText('2 slides')).not.toBeNull();
-    expect(screen.getByText('Playlist View Control')).not.toBeNull();
+    expect(screen.getByText('Slide Grid')).not.toBeNull();
     expect(screen.queryByText('Tabs Header')).toBeNull();
   });
 
-  it('swaps the presentation strip for tabs in tab playlist mode', () => {
+  it('shows the tabs header in tab playlist mode', () => {
     useSlideBrowserMock.mockReturnValue({
       slideBrowserMode: 'grid',
       playlistBrowserMode: 'tabs',
@@ -134,11 +131,9 @@ describe('SlideBrowser', () => {
     render(<SlideBrowser />);
 
     expect(screen.getByText('Tabs Header')).not.toBeNull();
-    expect(screen.queryByText('2 slides')).toBeNull();
-    expect(screen.getByText('Playlist View Control')).not.toBeNull();
   });
 
-  it('shows playlist summary metadata in continuous playlist mode', () => {
+  it('hides the top header in continuous playlist mode', () => {
     useSlideBrowserMock.mockReturnValue({
       slideBrowserMode: 'grid',
       playlistBrowserMode: 'continuous',
@@ -146,9 +141,8 @@ describe('SlideBrowser', () => {
 
     render(<SlideBrowser />);
 
-    expect(screen.getByText('Playlist presentations')).not.toBeNull();
-    expect(screen.getByText('2 presentations · 3 slides')).not.toBeNull();
     expect(screen.getByText('Continuous Grid')).not.toBeNull();
+    expect(screen.queryByText('Tabs Header')).toBeNull();
   });
 
   it('hides playlist controls and falls back to single-presentation browsing in detached mode', () => {
@@ -163,7 +157,6 @@ describe('SlideBrowser', () => {
 
     render(<SlideBrowser />);
 
-    expect(screen.queryByText('Playlist View Control')).toBeNull();
     expect(screen.getByText('Slide Grid')).not.toBeNull();
     expect(screen.queryByText('Continuous Grid')).toBeNull();
   });

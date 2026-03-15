@@ -57,6 +57,8 @@ const api = {
   deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
   applyTemplateToPresentation: (templateId: Id, presentationId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToPresentation, templateId, presentationId),
+  resetPresentationToTemplate: (presentationId: Id) =>
+    ipcRenderer.invoke(IPC.resetPresentationToTemplate, presentationId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),

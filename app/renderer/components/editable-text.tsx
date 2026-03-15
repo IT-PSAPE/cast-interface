@@ -4,14 +4,28 @@ interface EditableTextProps {
   value: string;
   onCommit: (newValue: string) => void;
   editing?: boolean;
+  multiline?: boolean;
   placeholder?: string;
   className?: string;
+  trimOnCommit?: boolean;
 }
 
-export function EditableText({ value, onCommit, editing = false, placeholder = 'Untitled', className = '' }: EditableTextProps) {
+export function EditableText({
+  value,
+  onCommit,
+  editing = false,
+  multiline = false,
+  placeholder = 'Untitled',
+  className = '',
+  trimOnCommit = true,
+}: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(editing);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  function setInputRef(node: HTMLInputElement | HTMLTextAreaElement | null) {
+    inputRef.current = node;
+  }
 
   useEffect(() => {
     if (editing) {
@@ -28,10 +42,11 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
   }, [isEditing]);
 
   function commit() {
-    const trimmed = draft.trim();
+    const nextValue = trimOnCommit ? draft.trim() : draft;
     setIsEditing(false);
-    if (trimmed && trimmed !== value) {
-      onCommit(trimmed);
+    if (trimOnCommit && !nextValue) return;
+    if (nextValue !== value) {
+      onCommit(nextValue);
     }
   }
 
@@ -45,9 +60,9 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
     handleDoubleClick();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
     e.stopPropagation();
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       commit();
     }
@@ -57,7 +72,7 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
     }
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setDraft(e.target.value);
   }
 
@@ -65,18 +80,35 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
     commit();
   }
 
-  function handleMouseDownInput(e: React.MouseEvent<HTMLInputElement>) {
+  function handleMouseDownInput(e: React.MouseEvent<HTMLInputElement | HTMLTextAreaElement>) {
     e.stopPropagation();
   }
 
-  function handleClickInput(e: React.MouseEvent<HTMLInputElement>) {
+  function handleClickInput(e: React.MouseEvent<HTMLInputElement | HTMLTextAreaElement>) {
     e.stopPropagation();
   }
 
   if (isEditing) {
+    if (multiline) {
+      return (
+        <textarea
+          ref={setInputRef}
+          value={draft}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          onMouseDown={handleMouseDownInput}
+          onClick={handleClickInput}
+          placeholder={placeholder}
+          rows={Math.max(3, draft.split('\n').length || 1)}
+          className={`m-0 w-full resize-y border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
+        />
+      );
+    }
+
     return (
       <input
-        ref={inputRef}
+        ref={setInputRef}
         value={draft}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -84,8 +116,16 @@ export function EditableText({ value, onCommit, editing = false, placeholder = '
         onMouseDown={handleMouseDownInput}
         onClick={handleClickInput}
         placeholder={placeholder}
-        className={`bg-primary border border-brand rounded-sm px-1 py-0 text-text-primary outline-none ${className}`}
+        className={`m-0 border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
       />
+    );
+  }
+
+  if (multiline) {
+    return (
+      <div onDoubleClick={handleDoubleClickSpan} className={`cursor-default select-none whitespace-pre-wrap ${className}`}>
+        {value || placeholder}
+      </div>
     );
   }
 

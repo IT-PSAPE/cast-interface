@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { isLyricPresentation } from '@core/presentation-entities';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -6,6 +7,7 @@ import { useSlides } from '../../../contexts/slide-context';
 import { useSlideBrowser } from '../../../contexts/slide-browser-context';
 import { getSlideVisualState, slideTextDetails } from '../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
+import { useSlideOutlineTextEditing } from '../hooks/use-slide-outline-text-editing';
 import { buildThumbnailScene } from '../../stage/rendering/build-render-scene';
 import type { OutlineSlideRow } from '../hooks/use-slide-list-view';
 import { SlideOutlineRow } from './slide-list-row';
@@ -25,8 +27,6 @@ interface OutlineSectionProps {
   onOpenSlide: (presentationId: Id, slideIndex: number) => void;
 }
 
-function noopPrimaryTextCommit(_slideId: Id, _nextPrimary: string) {}
-
 function OutlineSection({
   item,
   currentPresentationId,
@@ -37,8 +37,10 @@ function OutlineSection({
   onSelectSlide,
   onOpenSlide,
 }: OutlineSectionProps) {
+  const { updateText } = useSlideOutlineTextEditing();
   const isCurrentPresentation = item.presentation.id === currentPresentationId;
   const isLivePresentation = item.presentation.id === currentOutputPresentationId;
+  const textEditable = isLyricPresentation(item.presentation);
 
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -54,10 +56,11 @@ function OutlineSection({
         elements,
       ),
       elements,
+      text: details.text,
       primaryText: details.primaryLine,
       secondaryText: details.secondaryLine,
-      textElementId: null,
-      textEditable: false,
+      textElementId: details.textElement?.id ?? null,
+      textEditable,
     } satisfies OutlineSlideRow;
 
     function handleSelect() {
@@ -68,6 +71,16 @@ function OutlineSection({
       onOpenSlide(item.presentation.id, index);
     }
 
+    function handleTextCommit(_slideId: Id, nextText: string) {
+      updateText({
+        elements: row.elements,
+        nextText,
+        slideIndex: row.index,
+        textEditable: row.textEditable,
+        textElementId: row.textElementId,
+      });
+    }
+
     return (
       <SlideOutlineRow
         key={slide.id}
@@ -76,10 +89,10 @@ function OutlineSection({
         isFocused={isCurrentPresentation && index === currentSlideIndex}
         onSelect={handleSelect}
         onOpen={handleOpen}
-        onPrimaryTextCommit={noopPrimaryTextCommit}
+        onTextCommit={handleTextCommit}
       />
     );
-  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById]);
+  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById, textEditable, updateText]);
 
   return (
     <section className="grid gap-2">
@@ -95,13 +108,13 @@ function OutlineSection({
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
   const { currentPresentationId, currentOutputPresentationId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, focusPresentationSlide } = useSlides();
+  const { currentSlideIndex, liveSlideIndex, activatePresentationSlide, focusPresentationSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
 
   const handleSelectSlide = useCallback((presentationId: Id, slideIndex: number) => {
-    focusPresentationSlide(presentationId, slideIndex);
-  }, [focusPresentationSlide]);
+    activatePresentationSlide(presentationId, slideIndex);
+  }, [activatePresentationSlide]);
 
   const handleOpenSlide = useCallback((presentationId: Id, slideIndex: number) => {
     focusPresentationSlide(presentationId, slideIndex);

@@ -38,8 +38,7 @@ export function SceneNodeVideo({ node }: SceneNodeVideoProps) {
     <KonvaImage ref={imageRef} image={video} x={0} y={0} width={element.width} height={element.height} />
   ) : (
     <>
-      <Rect x={0} y={0} width={element.width} height={element.height} fill="#2b3039" />
-      <Text text="VIDEO" x={8} y={8} fill="#d4dae6" fontSize={14} fontStyle="bold" />
+      <Rect x={0} y={0} width={element.width} height={element.height} fill="#2b303900" />
     </>
   );
 }
