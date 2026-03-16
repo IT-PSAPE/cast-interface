@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmCommand = 'npm';
 const target = process.argv[2] ?? 'electron';
 const betterSqliteBuildPath = path.join(projectRoot, 'node_modules', 'better-sqlite3', 'build');
 
@@ -17,6 +17,7 @@ function runRebuild(env = process.env) {
     cwd: projectRoot,
     env,
     stdio: 'inherit',
+    shell: true,
   });
 
   if (result.error) throw result.error;
