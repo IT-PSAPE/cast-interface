@@ -19,13 +19,39 @@ Minimal cross-platform Electron prototype for a ProPresenter-style presentation 
 - Node.js `22.13.0` or newer.
 - npm `10` or newer.
 
-## Optional Windows Tools
+## Windows Native Build Requirements
 
-Install these only if you need NDI output on Windows and want to build the native addon locally:
+If the Windows machine needs the full native NDI path, these are required:
 
 - Visual Studio 2026 Build Tools or Visual Studio 2026 with the `Desktop development with C++` workload.
 - Python `3.12` or newer.
 - NDI Runtime with `Processing.NDI.Lib.x64.dll` available in `PATH`, or set `CAST_NDI_RUNTIME_PATH`.
+
+## Windows Native Bootstrap
+
+Run this from an elevated PowerShell window on the Windows machine:
+
+```powershell
+.\scripts\setup-windows-native-dev.ps1
+```
+
+If Node.js is already installed on that machine, you can use:
+
+```powershell
+npm run setup:windows-native
+```
+
+What it does:
+
+- installs Node.js LTS
+- installs Python 3.12
+- installs Visual Studio 2026 Build Tools with the C++ workload
+- attempts to install the NDI runtime
+- validates the installed toolchain
+- runs `npm install`
+- runs `npm run build:ndi-native`
+
+If the NDI runtime install cannot be completed automatically, the script opens the official NDI download page and then fails fast so the machine does not continue in a half-configured state.
 
 ## Run
 
@@ -34,7 +60,7 @@ npm install
 npm run dev
 ```
 
-Optional NDI native build:
+Manual Windows native build flow:
 
 ```bash
 npm run build:ndi-native

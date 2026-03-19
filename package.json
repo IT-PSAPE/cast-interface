@@ -8,6 +8,7 @@
   },
   "main": "out/main/index.js",
   "scripts": {
+    "setup:windows-native": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
