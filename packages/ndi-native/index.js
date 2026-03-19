@@ -7,6 +7,6 @@ try {
 } catch (error) {
   error.message =
     `${error.message}\n` +
-    '[NDI] Native addon is not built. Run: npm run build:ndi-native (from repository root).';
+    '[NDI] Native addon is optional during install and remains disabled until you run: npm run build:ndi-native';
   throw error;
 }

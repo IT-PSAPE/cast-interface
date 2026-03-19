@@ -12,14 +12,19 @@ Minimal cross-platform Electron prototype for a ProPresenter-style presentation 
 - React
 - React-Konva unified rendering engine (dedicated 1920x1080 output scene)
 - Node.js
-- SQLite (`better-sqlite3`)
+- SQLite (`node:sqlite`)
 
 ## Run
 
 ```bash
 npm install
-npm run build:ndi-native
 npm run dev
+```
+
+Optional NDI native build:
+
+```bash
+npm run build:ndi-native
 ```
 
 Build:
@@ -116,6 +121,7 @@ Default macOS candidate paths also include common NDI Tools bundle locations:
 
 - macOS: install NDI Tools or NDI Runtime, then ensure `libndi.dylib` is present.
 - Windows: install NDI Runtime and confirm `Processing.NDI.Lib.x64.dll` is in PATH or set `CAST_NDI_RUNTIME_PATH`.
+- Windows NDI addon builds now target current `node-gyp` releases with Visual Studio 2026-compatible detection. The app install no longer compiles SQLite natively; only the explicit `npm run build:ndi-native` step requires MSVC build tools.
 - If auto-discovery fails, explicitly set:
   - `CAST_NDI_RUNTIME_PATH=/absolute/path/to/libndi.dylib` (macOS/Linux)
   - `CAST_NDI_RUNTIME_PATH=C:\\path\\to\\Processing.NDI.Lib.x64.dll` (Windows)

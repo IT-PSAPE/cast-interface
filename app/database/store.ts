@@ -2,10 +2,10 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
-import Database from 'better-sqlite3';
 import { buildPresentationEntity } from '@core/presentation-entities';
 import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithPresentation } from '@core/templates';
 import { createId, nowIso } from '@core/utils';
+import { SqliteDatabase } from './sqlite';
 import type {
   AppSnapshot,
   ElementCreateInput,
@@ -141,12 +141,12 @@ function legacyOverlayElement(row: {
 }
 
 export class CastRepository {
-  private db: Database.Database;
+  private db: SqliteDatabase;
 
   constructor() {
     const userData = app.getPath('userData');
     const dbPath = path.join(userData, 'cast-interface.sqlite');
-    this.db = new Database(dbPath);
+    this.db = new SqliteDatabase(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.initializeSchema();

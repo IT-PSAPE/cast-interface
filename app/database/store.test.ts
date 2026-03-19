@@ -1,6 +1,6 @@
 import fs from 'node:fs';
-import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SqliteDatabase } from './sqlite';
 import { closeRepository, createTempUserDataPath, databasePath } from './store-test-support';
 
 const electronState = vi.hoisted(() => ({ userDataPath: '' }));
@@ -18,7 +18,7 @@ interface LegacyFixtureOptions {
 }
 
 function createLegacyDatabase(userDataPath: string, options: LegacyFixtureOptions = {}): void {
-  const db = new Database(databasePath(userDataPath));
+  const db = new SqliteDatabase(databasePath(userDataPath));
 
   db.exec(`
     CREATE TABLE libraries (
@@ -259,7 +259,7 @@ describe('CastRepository global project migration', () => {
     expect(snapshot.libraryBundles).toHaveLength(2);
     expect(snapshot.libraryBundles[0]?.playlists[0]?.segments[0]?.entries[0]?.presentation.id).toBe('presentation-1');
 
-    const db = new Database(databasePath(userDataPath), { readonly: true });
+    const db = new SqliteDatabase(databasePath(userDataPath), { readonly: true });
     const userVersion = db.pragma('user_version', { simple: true }) as number;
     const presentationColumns = db.prepare('PRAGMA table_info(presentations)').all() as Array<{ name: string }>;
     db.close();
@@ -314,14 +314,14 @@ describe('CastRepository global project migration', () => {
     const firstRepository = new CastRepository();
     closeRepository(firstRepository);
 
-    const writableDb = new Database(databasePath(userDataPath));
+    const writableDb = new SqliteDatabase(databasePath(userDataPath));
     writableDb.prepare('UPDATE presentations SET order_index = ? WHERE id = ?').run(77, 'presentation-2');
     writableDb.close();
 
     const secondRepository = new CastRepository();
     closeRepository(secondRepository);
 
-    const verificationDb = new Database(databasePath(userDataPath), { readonly: true });
+    const verificationDb = new SqliteDatabase(databasePath(userDataPath), { readonly: true });
     const presentationOrder = verificationDb.prepare('SELECT order_index FROM presentations WHERE id = ?').get('presentation-2') as { order_index: number };
     const userVersion = verificationDb.pragma('user_version', { simple: true }) as number;
     verificationDb.close();
