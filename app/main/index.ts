@@ -56,11 +56,13 @@ process.on('exit', () => {
   teardownNdi('exit');
 });
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(signal, () => {
-    teardownNdi(signal);
-    app.quit();
-  });
+if (process.platform !== 'win32') {
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => {
+      teardownNdi(signal);
+      app.quit();
+    });
+  }
 }
 
 function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {

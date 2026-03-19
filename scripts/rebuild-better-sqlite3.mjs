@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
-const npmCommand = 'npm';
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const target = process.argv[2] ?? 'electron';
 const betterSqliteBuildPath = path.join(projectRoot, 'node_modules', 'better-sqlite3', 'build');
 
