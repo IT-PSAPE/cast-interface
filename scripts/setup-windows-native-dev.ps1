@@ -1,8 +1,13 @@
 param(
-  [switch]$ToolsOnly
+  [switch]$ToolsOnly,
+  [switch]$CheckOnly,
+  [switch]$BuildNativeAddon
 )
 
 $ErrorActionPreference = 'Stop'
+$MinimumNodeVersion = '22.13.0'
+$MinimumPythonVersion = '3.12.0'
+$MinimumNpmMajor = 10
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -19,18 +24,6 @@ function Test-CommandExists([string]$CommandName) {
   return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
 }
 
-function Assert-CommandExists([string]$CommandName, [string]$Message) {
-  if (-not (Test-CommandExists $CommandName)) {
-    throw $Message
-  }
-}
-
-function Assert-LastExitCode([string]$FailureMessage) {
-  if ($LASTEXITCODE -ne 0) {
-    throw "$FailureMessage Exit code: $LASTEXITCODE."
-  }
-}
-
 function Refresh-ProcessPath {
   $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -41,28 +34,71 @@ function Test-MinimumVersion([string]$ActualVersion, [string]$MinimumVersion) {
   return ([version]$ActualVersion) -ge ([version]$MinimumVersion)
 }
 
-function Install-WingetPackage([string]$PackageId, [string]$DisplayName) {
+function Get-NpmCommand {
+  if (Test-CommandExists 'npm.cmd') {
+    return 'npm.cmd'
+  }
+
+  if (Test-CommandExists 'npm') {
+    return 'npm'
+  }
+
+  return $null
+}
+
+function Test-WingetPackageInstalled([string]$PackageId) {
+  $output = (& winget list --id $PackageId --exact 2>&1 | Out-String)
+  return $output -match [regex]::Escape($PackageId)
+}
+
+function Install-WingetPackage([string]$PackageId, [string]$DisplayName, [string]$OverrideArguments = '') {
+  if (Test-WingetPackageInstalled $PackageId) {
+    Write-Step "$DisplayName is already installed"
+    return $true
+  }
+
   Write-Step "Installing $DisplayName"
-  & winget install --id $PackageId --exact --source winget --silent --accept-package-agreements --accept-source-agreements
-  Assert-LastExitCode "$DisplayName installation failed."
+  $arguments = @(
+    'install',
+    '--id', $PackageId,
+    '--exact',
+    '--source', 'winget',
+    '--silent',
+    '--accept-package-agreements',
+    '--accept-source-agreements'
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($OverrideArguments)) {
+    $arguments += @('--override', $OverrideArguments)
+  }
+
+  & winget @arguments
+  if ($LASTEXITCODE -eq 0) {
+    return $true
+  }
+
+  # winget sometimes exits non-zero when package is already present/no upgrade.
+  if (Test-WingetPackageInstalled $PackageId) {
+    Write-Warning "$DisplayName install returned $LASTEXITCODE, but package is present."
+    return $true
+  }
+
+  Write-Warning "$DisplayName installation failed. Exit code: $LASTEXITCODE."
+  return $false
 }
 
 function Install-VisualStudioBuildTools {
-  Write-Step "Installing Visual Studio 2026 Build Tools"
+  $override = '--wait --quiet --norestart --nocache --installWhileDownloading --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended'
+  $installed = Install-WingetPackage -PackageId 'Microsoft.VisualStudio.BuildTools' -DisplayName 'Visual Studio BuildTools 2026' -OverrideArguments $override
+  if ($installed) {
+    return
+  }
 
+  Write-Step 'Falling back to direct Visual Studio Build Tools installer'
   $bootstrapperPath = Join-Path $env:TEMP 'vs_BuildTools_2026.exe'
   Invoke-WebRequest -Uri 'https://aka.ms/vs/18/release/vs_BuildTools.exe' -OutFile $bootstrapperPath
 
-  $arguments = @(
-    '--quiet',
-    '--wait',
-    '--norestart',
-    '--nocache',
-    '--installWhileDownloading',
-    '--add', 'Microsoft.VisualStudio.Workload.VCTools',
-    '--includeRecommended'
-  )
-
+  $arguments = @('--quiet', '--wait', '--norestart', '--nocache', '--installWhileDownloading', '--add', 'Microsoft.VisualStudio.Workload.VCTools', '--includeRecommended')
   $process = Start-Process -FilePath $bootstrapperPath -ArgumentList $arguments -Wait -PassThru
   if ($process.ExitCode -ne 0) {
     throw "Visual Studio Build Tools installer exited with code $($process.ExitCode)."
@@ -74,23 +110,65 @@ function Get-NodeVersion {
 }
 
 function Get-NpmVersion {
-  return (& npm --version).Trim()
-}
-
-function Get-PythonVersion {
-  $versionText = (& py -3.12 --version) 2>$null
-  if (-not $versionText) {
-    $versionText = (& py --version)
+  $npmCommand = Get-NpmCommand
+  if (-not $npmCommand) {
+    return $null
   }
-  return ($versionText -replace '^Python\s+', '').Trim()
+
+  return (& $npmCommand --version).Trim()
 }
 
 function Get-PythonExecutable {
-  $pythonExecutable = (& py -3.12 -c "import sys; print(sys.executable)") 2>$null
-  if (-not $pythonExecutable) {
-    $pythonExecutable = (& py -c "import sys; print(sys.executable)")
+  $configuredPython = [Environment]::GetEnvironmentVariable('PYTHON', 'User')
+  if (-not [string]::IsNullOrWhiteSpace($configuredPython) -and (Test-Path $configuredPython)) {
+    return $configuredPython
   }
-  return $pythonExecutable.Trim()
+
+  $candidates = @(
+    (Join-Path $env:LocalAppData 'Programs\Python\Python312\python.exe'),
+    (Join-Path $env:ProgramFiles 'Python312\python.exe'),
+    (Join-Path $env:ProgramFiles 'Python311\python.exe')
+  )
+
+  foreach ($candidate in $candidates) {
+    if (Test-Path $candidate) {
+      return $candidate
+    }
+  }
+
+  if (Test-CommandExists 'py') {
+    $pythonExecutable = (& py -3.12 -c "import sys; print(sys.executable)") 2>$null
+    if ($pythonExecutable) {
+      return $pythonExecutable.Trim()
+    }
+
+    $pythonExecutable = (& py -c "import sys; print(sys.executable)") 2>$null
+    if ($pythonExecutable) {
+      return $pythonExecutable.Trim()
+    }
+  }
+
+  if (Test-CommandExists 'python') {
+    $pythonExecutable = (& python -c "import sys; print(sys.executable)") 2>$null
+    if ($pythonExecutable) {
+      return $pythonExecutable.Trim()
+    }
+  }
+
+  return $null
+}
+
+function Get-PythonVersion([string]$PythonExecutable) {
+  if ([string]::IsNullOrWhiteSpace($PythonExecutable) -or -not (Test-Path $PythonExecutable)) {
+    return $null
+  }
+
+  $versionText = (& $PythonExecutable --version) 2>&1
+  if (-not $versionText) {
+    return $null
+  }
+
+  return ($versionText -replace '^Python\s+', '').Trim()
 }
 
 function Find-VsWithCppTools {
@@ -108,9 +186,24 @@ function Find-VsWithCppTools {
 }
 
 function Get-NdiRuntimePath {
+  $configuredRuntimePath = [Environment]::GetEnvironmentVariable('CAST_NDI_RUNTIME_PATH', 'User')
+  if (-not [string]::IsNullOrWhiteSpace($configuredRuntimePath) -and (Test-Path $configuredRuntimePath)) {
+    return $configuredRuntimePath
+  }
+
+  $configuredRuntimeDir = [Environment]::GetEnvironmentVariable('NDI_RUNTIME_DIR', 'User')
+  if (-not [string]::IsNullOrWhiteSpace($configuredRuntimeDir)) {
+    $candidate = Join-Path $configuredRuntimeDir 'Processing.NDI.Lib.x64.dll'
+    if (Test-Path $candidate) {
+      return $candidate
+    }
+  }
+
   $candidates = @(
     (Join-Path $env:ProgramFiles 'NDI\NDI 6 Runtime\Processing.NDI.Lib.x64.dll'),
-    (Join-Path $env:ProgramFiles 'NDI\NDI 5 Runtime\Processing.NDI.Lib.x64.dll')
+    (Join-Path $env:ProgramFiles 'NDI\NDI 6 Tools\Runtime\Processing.NDI.Lib.x64.dll'),
+    (Join-Path $env:ProgramFiles 'NDI\NDI 5 Runtime\Processing.NDI.Lib.x64.dll'),
+    (Join-Path $env:ProgramFiles 'Renewed Vision\ProPresenter\Processing.NDI.Lib.x64.dll')
   )
 
   foreach ($candidate in $candidates) {
@@ -134,63 +227,162 @@ function Get-NdiRuntimePath {
 }
 
 function Install-NdiRuntime {
-  Write-Step "Installing NDI runtime"
+  $runtimePath = Get-NdiRuntimePath
+  if ($runtimePath) {
+    return $runtimePath
+  }
 
-  & winget install --id NewTek.NDI5Runtime --exact --source winget --silent --accept-package-agreements --accept-source-agreements
-  if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Automatic NDI runtime install failed. Opening the official NDI tools page."
-    Start-Process 'https://ndi.video/tools/'
-    throw "NDI runtime installation failed. Exit code: $LASTEXITCODE."
+  $runtimeInstalled = Install-WingetPackage -PackageId 'NDI.NDIRuntime' -DisplayName 'NDI Runtime'
+  if ($runtimeInstalled) {
+    Refresh-ProcessPath
+    $runtimePath = Get-NdiRuntimePath
+    if ($runtimePath) {
+      return $runtimePath
+    }
+  }
+
+  Write-Warning 'NDI runtime package did not yield a discoverable runtime DLL. Trying NDI Tools.'
+
+  $toolsInstalled = Install-WingetPackage -PackageId 'NDI.NDITools' -DisplayName 'NDI Tools'
+  if ($toolsInstalled) {
+    Refresh-ProcessPath
+    $runtimePath = Get-NdiRuntimePath
+    if ($runtimePath) {
+      return $runtimePath
+    }
+  }
+
+  Write-Warning 'Automatic NDI installation could not provide Processing.NDI.Lib.x64.dll. Opening the official NDI tools page.'
+  Start-Process 'https://ndi.video/tools/'
+  throw 'NDI runtime was not detected after attempted installs. Install NDI Runtime/Tools manually, then rerun this script.'
+}
+
+function Get-ValidationReport {
+  $nodeVersion = $null
+  $nodeVersionValid = $false
+  if (Test-CommandExists 'node') {
+    $nodeVersion = Get-NodeVersion
+    $nodeVersionValid = Test-MinimumVersion -ActualVersion $nodeVersion -MinimumVersion $MinimumNodeVersion
+  }
+
+  $npmVersion = Get-NpmVersion
+  $npmVersionValid = $false
+  if ($npmVersion) {
+    $majorText = ($npmVersion -split '\.')[0]
+    $npmVersionValid = [int]$majorText -ge $MinimumNpmMajor
+  }
+
+  $pythonExecutable = Get-PythonExecutable
+  $pythonVersion = Get-PythonVersion -PythonExecutable $pythonExecutable
+  $pythonVersionValid = $pythonVersion -and (Test-MinimumVersion -ActualVersion $pythonVersion -MinimumVersion $MinimumPythonVersion)
+
+  $vsPath = Find-VsWithCppTools
+  $vsValid = -not [string]::IsNullOrWhiteSpace($vsPath)
+
+  $ndiRuntimePath = Get-NdiRuntimePath
+  $ndiValid = -not [string]::IsNullOrWhiteSpace($ndiRuntimePath)
+
+  return [pscustomobject]@{
+    NodeVersion = $nodeVersion
+    NodeVersionValid = $nodeVersionValid
+    NpmVersion = $npmVersion
+    NpmVersionValid = $npmVersionValid
+    PythonExecutable = $pythonExecutable
+    PythonVersion = $pythonVersion
+    PythonVersionValid = $pythonVersionValid
+    VisualStudioPath = $vsPath
+    VisualStudioValid = $vsValid
+    NdiRuntimePath = $ndiRuntimePath
+    NdiRuntimeValid = $ndiValid
+  }
+}
+
+function Show-ValidationReport([pscustomobject]$Report) {
+  Write-Step 'Windows native environment report'
+  Write-Host "Node.js: $($Report.NodeVersion)"
+  Write-Host "npm: $($Report.NpmVersion)"
+  Write-Host "Python: $($Report.PythonVersion)"
+  Write-Host "Python executable: $($Report.PythonExecutable)"
+  Write-Host "Visual Studio C++ workload: $($Report.VisualStudioPath)"
+  Write-Host "NDI runtime: $($Report.NdiRuntimePath)"
+}
+
+function Assert-ValidationReport([pscustomobject]$Report) {
+  if (-not $Report.NodeVersionValid) {
+    throw "Node.js $($Report.NodeVersion) is too old or unavailable. Node.js $MinimumNodeVersion or newer is required."
+  }
+
+  if (-not $Report.NpmVersionValid) {
+    throw "npm $($Report.NpmVersion) is too old or unavailable. npm $MinimumNpmMajor or newer is required."
+  }
+
+  if (-not $Report.PythonVersionValid) {
+    throw "Python $($Report.PythonVersion) is too old or unavailable. Python $MinimumPythonVersion or newer is required."
+  }
+
+  if (-not $Report.VisualStudioValid) {
+    throw 'Visual Studio Build Tools with the Desktop development with C++ workload were not detected.'
+  }
+
+  if (-not $Report.NdiRuntimeValid) {
+    throw 'NDI runtime was not detected. Ensure Processing.NDI.Lib.x64.dll is installed and discoverable.'
   }
 }
 
 function Ensure-Environment {
-  Assert-CommandExists winget "winget is required. Install Microsoft's App Installer first, then rerun this script."
+  if (-not (Test-CommandExists 'winget')) {
+    throw "winget is required. Install Microsoft's App Installer first, then rerun this script."
+  }
 
   Install-WingetPackage -PackageId 'OpenJS.NodeJS.LTS' -DisplayName 'Node.js LTS'
   Install-WingetPackage -PackageId 'Python.Python.3.12' -DisplayName 'Python 3.12'
   Install-VisualStudioBuildTools
-  Install-NdiRuntime
+  $ndiRuntimePath = Install-NdiRuntime
   Refresh-ProcessPath
 
-  Assert-CommandExists node "Node.js installation was not detected after setup."
-  Assert-CommandExists npm "npm installation was not detected after setup."
-  Assert-CommandExists py "Python launcher was not detected after setup."
-
-  $nodeVersion = Get-NodeVersion
-  if (-not (Test-MinimumVersion -ActualVersion $nodeVersion -MinimumVersion '22.13.0')) {
-    throw "Node.js $nodeVersion is too old. Node.js 22.13.0 or newer is required."
-  }
-
-  $pythonVersion = Get-PythonVersion
-  if (-not (Test-MinimumVersion -ActualVersion $pythonVersion -MinimumVersion '3.12.0')) {
-    throw "Python $pythonVersion is too old. Python 3.12 or newer is required."
-  }
-
-  $vsPath = Find-VsWithCppTools
-  if (-not $vsPath) {
-    throw 'Visual Studio Build Tools with the Desktop development with C++ workload were not detected.'
-  }
-
-  $ndiRuntimePath = Get-NdiRuntimePath
-  if (-not $ndiRuntimePath) {
-    throw 'NDI runtime was not detected. Install NDI Tools/Runtime, then rerun this script.'
-  }
-
   $pythonExecutable = Get-PythonExecutable
-  [Environment]::SetEnvironmentVariable('PYTHON', $pythonExecutable, 'User')
+  if (-not $pythonExecutable) {
+    throw 'Python executable could not be detected after setup.'
+  }
 
-  Write-Step "Validated toolchain"
-  Write-Host "Node.js: $nodeVersion"
-  Write-Host "npm: $(Get-NpmVersion)"
-  Write-Host "Python: $pythonVersion"
-  Write-Host "Python executable: $pythonExecutable"
-  Write-Host "Visual Studio: $vsPath"
-  Write-Host "NDI runtime: $ndiRuntimePath"
+  $env:PYTHON = $pythonExecutable
+  [Environment]::SetEnvironmentVariable('PYTHON', $pythonExecutable, 'User')
+  $env:CAST_NDI_RUNTIME_PATH = $ndiRuntimePath
+  [Environment]::SetEnvironmentVariable('CAST_NDI_RUNTIME_PATH', $ndiRuntimePath, 'User')
+  [Environment]::SetEnvironmentVariable('NDI_RUNTIME_DIR', (Split-Path -Parent $ndiRuntimePath), 'User')
+
+  $report = Get-ValidationReport
+  Assert-ValidationReport -Report $report
+  Show-ValidationReport -Report $report
 }
 
 if ($env:OS -ne 'Windows_NT') {
   throw 'This script only runs on Windows.'
+}
+
+if ($CheckOnly) {
+  Refresh-ProcessPath
+  $report = Get-ValidationReport
+  Show-ValidationReport -Report $report
+  Assert-ValidationReport -Report $report
+
+  if ($BuildNativeAddon) {
+    Write-Step 'Building the NDI native addon for verification'
+    $npmCommand = Get-NpmCommand
+    if (-not $npmCommand) {
+      throw 'npm was not detected in PATH.'
+    }
+
+    $env:PYTHON = $report.PythonExecutable
+    $env:CAST_NDI_RUNTIME_PATH = $report.NdiRuntimePath
+    & $npmCommand run build:ndi-native
+    if ($LASTEXITCODE -ne 0) {
+      throw "npm run build:ndi-native failed with exit code $LASTEXITCODE."
+    }
+  }
+
+  Write-Step 'Check-only mode complete'
+  exit 0
 }
 
 if (-not (Test-IsAdministrator)) {
@@ -224,6 +416,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Step 'Building the NDI native addon'
+if (-not $env:PYTHON) {
+  $env:PYTHON = [Environment]::GetEnvironmentVariable('PYTHON', 'User')
+}
 & npm.cmd run build:ndi-native
 if ($LASTEXITCODE -ne 0) {
   throw "npm run build:ndi-native failed with exit code $LASTEXITCODE."
