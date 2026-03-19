@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform presentation prototype with reusable content hierarchy, slide rendering, and offscreen-rendered NDI output",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

@@ -14,6 +14,19 @@ Minimal cross-platform Electron prototype for a ProPresenter-style presentation 
 - Node.js
 - SQLite (`node:sqlite`)
 
+## Required Tools
+
+- Node.js `22.13.0` or newer.
+- npm `10` or newer.
+
+## Optional Windows Tools
+
+Install these only if you need NDI output on Windows and want to build the native addon locally:
+
+- Visual Studio 2026 Build Tools or Visual Studio 2026 with the `Desktop development with C++` workload.
+- Python `3.12` or newer.
+- NDI Runtime with `Processing.NDI.Lib.x64.dll` available in `PATH`, or set `CAST_NDI_RUNTIME_PATH`.
+
 ## Run
 
 ```bash
@@ -25,6 +38,14 @@ Optional NDI native build:
 
 ```bash
 npm run build:ndi-native
+```
+
+Windows NDI build flow:
+
+```bash
+npm install
+npm run build:ndi-native
+npm run dev
 ```
 
 Build:
@@ -122,12 +143,14 @@ Default macOS candidate paths also include common NDI Tools bundle locations:
 - macOS: install NDI Tools or NDI Runtime, then ensure `libndi.dylib` is present.
 - Windows: install NDI Runtime and confirm `Processing.NDI.Lib.x64.dll` is in PATH or set `CAST_NDI_RUNTIME_PATH`.
 - Windows NDI addon builds now target current `node-gyp` releases with Visual Studio 2026-compatible detection. The app install no longer compiles SQLite natively; only the explicit `npm run build:ndi-native` step requires MSVC build tools.
+- The project now depends on `node:sqlite`, so Node `22.13.0` or newer is required. Node `22.12.x` and lower require the `--experimental-sqlite` flag and are not supported for normal development here.
 - If auto-discovery fails, explicitly set:
   - `CAST_NDI_RUNTIME_PATH=/absolute/path/to/libndi.dylib` (macOS/Linux)
   - `CAST_NDI_RUNTIME_PATH=C:\\path\\to\\Processing.NDI.Lib.x64.dll` (Windows)
 
 ## Notes
 
+- `node:sqlite` still reports an experimental/release-candidate warning on current Node 22/23/24/25 lines. That warning is expected.
 - Persistence database is stored in Electron user data path as `cast-interface.sqlite`.
 - The repository seeds an initial library/presentation/playlist/overlay for first launch.
 - Prototype intentionally excludes cloud/network automation features.
