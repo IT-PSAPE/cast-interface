@@ -3,19 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform presentation prototype with reusable content hierarchy, slide rendering, and offscreen-rendered NDI output",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "main": "out/main/index.js",
   "scripts": {
-    "postinstall": "node scripts/rebuild-better-sqlite3.mjs electron",
+    "setup:windows-native": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1",
+    "setup:windows-native:tools": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -ToolsOnly",
+    "check:windows-native": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -CheckOnly",
+    "check:windows-native:build": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -CheckOnly -BuildNativeAddon",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/run-vitest-with-native-rebuild.mjs run",
-    "test:watch": "node scripts/run-vitest-with-native-rebuild.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
     "capture:ui-screenshots": "npm run build && node app/e2e/capture-ui-screenshots.mjs",
-    "rebuild:better-sqlite3:node": "node scripts/rebuild-better-sqlite3.mjs node",
-    "rebuild:better-sqlite3:electron": "node scripts/rebuild-better-sqlite3.mjs electron",
     "build:ndi-native": "npm --prefix packages/ndi-native run build",
     "clean:ndi-native": "npm --prefix packages/ndi-native run clean",
     "rebuild:ndi-native": "npm --prefix packages/ndi-native run rebuild"
@@ -26,7 +30,6 @@
     "@tailwindcss/vite": "^4.2.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "better-sqlite3": "^11.7.0",
     "jsdom": "^28.1.0",
     "konva": "^10.2.0",
     "react": "^19.2.4",
@@ -36,7 +39,6 @@
     "vitest": "^4.0.18"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.13.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

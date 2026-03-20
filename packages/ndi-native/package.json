@@ -5,7 +5,7 @@
   "description": "Native NDI sender bridge for Cast Interface",
   "main": "index.js",
   "types": "index.d.ts",
-  "gypfile": true,
+  "gypfile": false,
   "scripts": {
     "build": "node-gyp rebuild",
     "clean": "node-gyp clean",
@@ -15,6 +15,6 @@
     "node-addon-api": "^8.3.1"
   },
   "devDependencies": {
-    "node-gyp": "^11.1.0"
+    "node-gyp": "^12.1.0"
   }
 }

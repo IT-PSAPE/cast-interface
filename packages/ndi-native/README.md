@@ -10,6 +10,8 @@ From repository root:
 npm run build:ndi-native
 ```
 
+`npm install` no longer auto-builds this addon. The main app can install and run without it, and NDI stays disabled until you build the addon explicitly.
+
 ## Runtime requirements
 
 - NDI runtime/library must be installed on the host machine.
@@ -22,6 +24,11 @@ Typical library names searched:
 - macOS: `libndi.dylib`
 - Windows: `Processing.NDI.Lib.x64.dll`
 - Linux: `libndi.so.6`, `libndi.so`
+
+## Windows toolchain
+
+- Use Visual Studio / Build Tools 2026 with the `Desktop development with C++` workload when building on current Windows machines.
+- The package now uses `node-gyp` 12.1+, which is the first line with Visual Studio 2026 support.
 
 ## API
 

@@ -6,6 +6,7 @@
       "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],
       "dependencies": ["<!(node -p \"require('node-addon-api').gyp\")"],
       "defines": ["NAPI_CPP_EXCEPTIONS"],
+      "win_delay_load_hook": "true",
       "cflags_cc": ["-std=c++17"],
       "cflags_cc!": ["-fno-exceptions"],
       "xcode_settings": {

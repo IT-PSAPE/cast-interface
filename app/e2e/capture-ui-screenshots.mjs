@@ -440,6 +440,7 @@ function writeManifest() {
   const files = fs
     .readdirSync(OUTPUT_ROOT, { recursive: true })
     .filter((file) => typeof file === 'string' && file.endsWith('.png'))
+    .map((file) => file.replaceAll('\\', '/'))
     .sort();
 
   const lines = [
