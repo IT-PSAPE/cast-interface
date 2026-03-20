@@ -124,7 +124,7 @@ export const registerIpcHandlers = (
     return ndiService.updateOutputConfig(name, config);
   });
   safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
-  safeHandle(IPC.sendNdiFrame, (_event, buffer: ArrayBuffer, width: number, height: number): void => {
+  ipcMain.on(IPC.sendNdiFrame, (_event, buffer: ArrayBuffer, width: number, height: number) => {
     ndiService.receiveFrame(new Uint8Array(buffer), width, height);
   });
 };

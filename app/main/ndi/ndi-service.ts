@@ -11,6 +11,7 @@ import type {
 import { defaultNdiModuleLoader, type NdiNativeModule } from './ndi-native-module';
 
 const HEARTBEAT_INTERVAL_MS = Math.round(1000 / 30);
+const HEARTBEAT_STALL_THRESHOLD_MS = HEARTBEAT_INTERVAL_MS * 2;
 
 type StateChangeCallback = (state: NdiOutputState) => void;
 type DiagnosticsChangeCallback = (diagnostics: NdiDiagnostics) => void;
@@ -35,6 +36,7 @@ export class NdiService {
   private lastFrame: Uint8Array | null = null;
   private lastFrameWidth = 0;
   private lastFrameHeight = 0;
+  private lastFrameReceivedAt = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private destroyed = false;
 
@@ -91,9 +93,13 @@ export class NdiService {
   receiveFrame(rgba: Uint8Array, width: number, height: number): void {
     if (this.destroyed) return;
 
-    this.lastFrame = new Uint8Array(rgba);
+    if (!this.lastFrame || this.lastFrame.length !== rgba.length) {
+      this.lastFrame = new Uint8Array(rgba.length);
+    }
+    this.lastFrame.set(rgba);
     this.lastFrameWidth = width;
     this.lastFrameHeight = height;
+    this.lastFrameReceivedAt = Date.now();
 
     for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
       if (!this.outputState[name]) continue;
@@ -231,9 +237,11 @@ export class NdiService {
 
     this.heartbeatTimer = setInterval(() => {
       if (this.destroyed) return;
+      const now = Date.now();
 
       for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
         if (!this.outputState[name]) continue;
+        if (now - this.lastFrameReceivedAt <= HEARTBEAT_STALL_THRESHOLD_MS) continue;
         if (this.lastFrame) {
           this.sendFrame(name, this.lastFrame, this.lastFrameWidth, this.lastFrameHeight);
         }

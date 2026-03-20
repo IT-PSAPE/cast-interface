@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Konva from 'konva';
-import { Image as KonvaImage, Rect, Text } from 'react-konva';
+import { Image as KonvaImage, Rect } from 'react-konva';
 import type { VideoElementPayload } from '@core/types';
 import type { RenderNode } from './scene-types';
 import { useKVideo } from './use-k-video';
@@ -22,14 +22,38 @@ export function SceneNodeVideo({ node }: SceneNodeVideoProps) {
   useEffect(() => {
     if (!video) return;
     let rafId: number | null = null;
+    let frameCallbackId: number | null = null;
+    let cancelled = false;
 
     const draw = () => {
       imageRef.current?.getLayer()?.batchDraw();
-      rafId = requestAnimationFrame(draw);
     };
 
-    rafId = requestAnimationFrame(draw);
+    if ('requestVideoFrameCallback' in video) {
+      const handleFrame: VideoFrameRequestCallback = () => {
+        if (cancelled) return;
+        draw();
+        frameCallbackId = video.requestVideoFrameCallback(handleFrame);
+      };
+
+      frameCallbackId = video.requestVideoFrameCallback(handleFrame);
+      return () => {
+        cancelled = true;
+        if (frameCallbackId !== null && 'cancelVideoFrameCallback' in video) {
+          video.cancelVideoFrameCallback(frameCallbackId);
+        }
+      };
+    }
+
+    const tick = () => {
+      if (cancelled) return;
+      draw();
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
     return () => {
+      cancelled = true;
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [video]);

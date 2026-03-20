@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
@@ -25,39 +25,66 @@ export function NdiFrameCapture() {
   const { programScene } = useRenderScenes();
   const stageRef = useRef<Konva.Stage>(null);
   const enabled = outputState.audience;
+  const hasVideoNodes = useMemo(
+    () => programScene.nodes.some((node) => node.element.type === 'video'),
+    [programScene.nodes],
+  );
+
+  const captureFrame = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    try {
+      const [layer] = stage.getLayers();
+      const canvas = layer?.getNativeCanvasElement();
+      const ctx = canvas?.getContext('2d');
+      if (!ctx) return;
+      const imageData = ctx.getImageData(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+      window.castApi.sendNdiFrame(imageData.data.buffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+    } catch (error) {
+      console.error('[NdiFrameCapture] Frame capture failed:', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
 
+    const rafId = requestAnimationFrame(() => {
+      stageRef.current?.batchDraw();
+      captureFrame();
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [captureFrame, enabled, programScene, outputConfigs.audience.withAlpha]);
+
+  useEffect(() => {
+    if (!enabled || !hasVideoNodes) return;
+
+    let rafId: number | null = null;
     let running = true;
     let lastCaptureTime = 0;
 
-    function captureFrame(timestamp: number) {
+    function tick(timestamp: number) {
       if (!running) return;
 
       if (timestamp - lastCaptureTime >= FRAME_INTERVAL_MS) {
         lastCaptureTime = timestamp;
-        const stage = stageRef.current;
-        if (stage) {
-          try {
-            const canvas = stage.toCanvas({ pixelRatio: 1 });
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              const imageData = ctx.getImageData(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
-              window.castApi.sendNdiFrame(imageData.data.buffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
-            }
-          } catch (error) {
-            console.error('[NdiFrameCapture] Frame capture failed:', error);
-          }
-        }
+        captureFrame();
       }
 
-      requestAnimationFrame(captureFrame);
+      rafId = requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(captureFrame);
-    return () => { running = false; };
-  }, [enabled]);
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      running = false;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [captureFrame, enabled, hasVideoNodes]);
 
   if (!enabled) return null;
 

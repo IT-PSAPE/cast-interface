@@ -76,7 +76,7 @@ const api = {
     ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
   getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
   sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => {
-    ipcRenderer.invoke(IPC.sendNdiFrame, buffer, width, height);
+    ipcRenderer.send(IPC.sendNdiFrame, buffer, width, height);
   },
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => {
     const handler = (_event: IpcRendererEvent, state: NdiOutputState) => callback(state);
