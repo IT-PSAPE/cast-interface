@@ -4,6 +4,7 @@ import { Image as KonvaImage, Rect } from 'react-konva';
 import type { VideoElementPayload } from '@core/types';
 import type { RenderNode } from './scene-types';
 import { useKVideo } from './use-k-video';
+import { resolveMediaCover } from './resolve-media-cover';
 
 interface SceneNodeVideoProps {
   node: RenderNode;
@@ -18,6 +19,9 @@ export function SceneNodeVideo({ node }: SceneNodeVideoProps) {
     muted: payload.muted ?? true,
   });
   const imageRef = useRef<Konva.Image | null>(null);
+  const crop = video
+    ? resolveMediaCover(video.videoWidth, video.videoHeight, element.width, element.height)
+    : null;
 
   useEffect(() => {
     if (!video) return;
@@ -59,7 +63,15 @@ export function SceneNodeVideo({ node }: SceneNodeVideoProps) {
   }, [video]);
 
   return video ? (
-    <KonvaImage ref={imageRef} image={video} x={0} y={0} width={element.width} height={element.height} />
+    <KonvaImage
+      ref={imageRef}
+      image={video}
+      x={0}
+      y={0}
+      width={element.width}
+      height={element.height}
+      crop={crop ?? undefined}
+    />
   ) : (
     <>
       <Rect x={0} y={0} width={element.width} height={element.height} fill="#2b303900" />

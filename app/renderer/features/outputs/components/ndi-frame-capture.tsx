@@ -12,10 +12,10 @@ import type { RenderNode } from '../../stage/rendering/scene-types';
 
 const FRAME_INTERVAL_MS = 1000 / 30;
 
-function renderNodeContent(node: RenderNode) {
+function renderNodeContent(node: RenderNode, onImageLoad?: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image') return <SceneNodeImage node={node} />;
+  if (node.element.type === 'image') return <SceneNodeImage node={node} onLoad={onImageLoad} />;
   if (node.element.type === 'video') return <SceneNodeVideo node={node} />;
   return null;
 }
@@ -87,6 +87,11 @@ export function NdiFrameCapture() {
       console.error('[NdiFrameCapture] Frame capture failed:', error);
     }
   }, [getReadbackContext]);
+
+  const handleImageLoad = useCallback(() => {
+    stageRef.current?.batchDraw();
+    captureFrame();
+  }, [captureFrame]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -205,7 +210,7 @@ export function NdiFrameCapture() {
                   offsetX={node.visual.flipX ? node.element.width : 0}
                   offsetY={node.visual.flipY ? node.element.height : 0}
                 >
-                  {renderNodeContent(node)}
+                  {renderNodeContent(node, handleImageLoad)}
                 </Group>
               );
             })}

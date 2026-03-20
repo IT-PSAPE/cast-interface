@@ -49,7 +49,7 @@ function getImageCacheEntry(src: string): ImageCacheEntry {
   return next;
 }
 
-export function useKImage(src: string | null, onLoad?: () => void): HTMLImageElement | null {
+export function useKImage(src: string | null): HTMLImageElement | null {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -61,7 +61,6 @@ export function useKImage(src: string | null, onLoad?: () => void): HTMLImageEle
 
     if (entry.status === 'loaded') {
       setImage(entry.image);
-      onLoad?.();
       return;
     }
 
@@ -73,7 +72,6 @@ export function useKImage(src: string | null, onLoad?: () => void): HTMLImageEle
     function handleStatusChange(status: 'loaded' | 'error') {
       if (status === 'loaded') {
         setImage(entry.image);
-        onLoad?.();
         return;
       }
 
@@ -85,7 +83,7 @@ export function useKImage(src: string | null, onLoad?: () => void): HTMLImageEle
     return () => {
       entry.listeners.delete(handleStatusChange);
     };
-  }, [onLoad, src]);
+  }, [src]);
 
   return image;
 }
