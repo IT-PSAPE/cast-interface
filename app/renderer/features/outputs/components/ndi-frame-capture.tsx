@@ -24,11 +24,52 @@ export function NdiFrameCapture() {
   const { outputState, outputConfigs } = useNdi();
   const { programScene } = useRenderScenes();
   const stageRef = useRef<Konva.Stage>(null);
+  const normalizedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const normalizedContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const enabled = outputState.audience;
   const hasVideoNodes = useMemo(
     () => programScene.nodes.some((node) => node.element.type === 'video'),
     [programScene.nodes],
   );
+
+  const getReadbackContext = useCallback((sourceCanvas: HTMLCanvasElement): CanvasRenderingContext2D | null => {
+    if (sourceCanvas.width === NDI_OUTPUT_WIDTH && sourceCanvas.height === NDI_OUTPUT_HEIGHT) {
+      return sourceCanvas.getContext('2d', { willReadFrequently: true });
+    }
+
+    let normalizedCanvas = normalizedCanvasRef.current;
+    if (!normalizedCanvas) {
+      normalizedCanvas = document.createElement('canvas');
+      normalizedCanvasRef.current = normalizedCanvas;
+    }
+
+    if (normalizedCanvas.width !== NDI_OUTPUT_WIDTH || normalizedCanvas.height !== NDI_OUTPUT_HEIGHT) {
+      normalizedCanvas.width = NDI_OUTPUT_WIDTH;
+      normalizedCanvas.height = NDI_OUTPUT_HEIGHT;
+      normalizedContextRef.current = null;
+    }
+
+    let normalizedContext = normalizedContextRef.current;
+    if (!normalizedContext) {
+      normalizedContext = normalizedCanvas.getContext('2d', { willReadFrequently: true });
+      normalizedContextRef.current = normalizedContext;
+    }
+    if (!normalizedContext) return null;
+
+    normalizedContext.clearRect(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+    normalizedContext.drawImage(
+      sourceCanvas,
+      0,
+      0,
+      sourceCanvas.width,
+      sourceCanvas.height,
+      0,
+      0,
+      NDI_OUTPUT_WIDTH,
+      NDI_OUTPUT_HEIGHT,
+    );
+    return normalizedContext;
+  }, []);
 
   const captureFrame = useCallback(() => {
     const stage = stageRef.current;
@@ -37,14 +78,15 @@ export function NdiFrameCapture() {
     try {
       const [layer] = stage.getLayers();
       const canvas = layer?.getNativeCanvasElement();
-      const ctx = canvas?.getContext('2d');
+      if (!canvas) return;
+      const ctx = getReadbackContext(canvas);
       if (!ctx) return;
       const imageData = ctx.getImageData(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
       window.castApi.sendNdiFrame(imageData.data.buffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
     } catch (error) {
       console.error('[NdiFrameCapture] Frame capture failed:', error);
     }
-  }, []);
+  }, [getReadbackContext]);
 
   useEffect(() => {
     if (!enabled) return;
