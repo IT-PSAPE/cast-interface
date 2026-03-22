@@ -13,16 +13,16 @@ interface SlideBrowserPlaylistTabStripProps {
 interface PlaylistTabItemProps {
   item: PlaylistPresentationSequenceItem;
   active: boolean;
-  onSelect: (presentationId: Id) => void;
+  onSelect: (itemId: Id) => void;
 }
 
 function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
   const handleSelect = useCallback(() => {
-    onSelect(item.presentation.id);
-  }, [item.presentation.id, onSelect]);
+    onSelect(item.item.id);
+  }, [item.item.id, onSelect]);
 
   const duplicateSuffix = item.occurrenceIndex > 1 ? ` (${item.occurrenceIndex})` : '';
-  const tabLabel = `${item.presentation.title}${duplicateSuffix}`;
+  const tabLabel = `${item.item.title}${duplicateSuffix}`;
 
   return (
     <Tab active={active} onClick={handleSelect}>
@@ -34,29 +34,29 @@ function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
 }
 
 export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrowserPlaylistTabStripProps) {
-  const { currentPlaylistPresentationId } = useNavigation();
-  const { slides, selectPlaylistPresentation } = useSlides();
+  const { currentPlaylistContentItemId } = useNavigation();
+  const { slides, selectPlaylistContentItem } = useSlides();
 
-  const handleSelectPresentation = useCallback((presentationId: Id) => {
-    selectPlaylistPresentation(presentationId);
-  }, [selectPlaylistPresentation]);
+  const handleSelectPresentation = useCallback((itemId: Id) => {
+    selectPlaylistContentItem(itemId);
+  }, [selectPlaylistContentItem]);
 
   const renderTabItem = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (
-      <PlaylistTabItem
-        key={item.entryId}
-        item={item}
-        active={item.presentation.id === currentPlaylistPresentationId}
-        onSelect={handleSelectPresentation}
-      />
-    );
-  }, [currentPlaylistPresentationId, handleSelectPresentation]);
+        <PlaylistTabItem
+          key={item.entryId}
+          item={item}
+          active={item.item.id === currentPlaylistContentItemId}
+          onSelect={handleSelectPresentation}
+        />
+      );
+  }, [currentPlaylistContentItemId, handleSelectPresentation]);
 
   return (
     <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
-          <TabBar label="Playlist presentations">
+          <TabBar label="Playlist items">
             {items.map(renderTabItem)}
           </TabBar>
         </div>

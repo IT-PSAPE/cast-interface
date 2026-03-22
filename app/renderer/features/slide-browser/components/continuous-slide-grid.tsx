@@ -15,27 +15,27 @@ interface ContinuousSlideGridProps {
 
 interface GridSectionProps {
   item: PlaylistPresentationSequenceItem;
-  currentPresentationId: Id | null;
-  currentOutputPresentationId: Id | null;
+  currentContentItemId: Id | null;
+  currentOutputContentItemId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
-  onActivateSlide: (presentationId: Id, slideIndex: number) => void;
-  onEditSlide: (presentationId: Id, slideIndex: number) => void;
+  onActivateSlide: (itemId: Id, slideIndex: number) => void;
+  onEditSlide: (itemId: Id, slideIndex: number) => void;
 }
 
 function GridSection({
   item,
-  currentPresentationId,
-  currentOutputPresentationId,
+  currentContentItemId,
+  currentOutputContentItemId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
   onActivateSlide,
   onEditSlide,
 }: GridSectionProps) {
-  const isCurrentPresentation = item.presentation.id === currentPresentationId;
-  const isLivePresentation = item.presentation.id === currentOutputPresentationId;
+  const isCurrentPresentation = item.item.id === currentContentItemId;
+  const isLivePresentation = item.item.id === currentOutputContentItemId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -48,11 +48,11 @@ function GridSection({
     const scene = buildThumbnailScene(slide, elements);
 
     function handleActivate() {
-      onActivateSlide(item.presentation.id, index);
+      onActivateSlide(item.item.id, index);
     }
 
     function handleEdit() {
-      onEditSlide(item.presentation.id, index);
+      onEditSlide(item.item.id, index);
     }
 
     return (
@@ -67,14 +67,14 @@ function GridSection({
         onEdit={handleEdit}
       />
     );
-  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
+  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
 
   return (
     <section className="grid gap-2">
       <header className="px-1">
-        <h3 className="m-0 text-sm font-semibold text-text-primary">{item.presentation.title}</h3>
+        <h3 className="m-0 text-sm font-semibold text-text-primary">{item.item.title}</h3>
       </header>
-      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] auto-rows-max content-start" role="grid" aria-label={`${item.presentation.title} slides`}>
+      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
         {item.slides.map(renderSlideCard)}
       </div>
     </section>
@@ -82,27 +82,27 @@ function GridSection({
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { currentPresentationId, currentOutputPresentationId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, activatePresentationSlide, focusPresentationSlide } = useSlides();
+  const { currentContentItemId, currentOutputContentItemId } = useNavigation();
+  const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
 
-  const handleActivateSlide = useCallback((presentationId: Id, slideIndex: number) => {
-    activatePresentationSlide(presentationId, slideIndex);
-  }, [activatePresentationSlide]);
+  const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
+    activateContentItemSlide(itemId, slideIndex);
+  }, [activateContentItemSlide]);
 
-  const handleEditSlide = useCallback((presentationId: Id, slideIndex: number) => {
-    focusPresentationSlide(presentationId, slideIndex);
+  const handleEditSlide = useCallback((itemId: Id, slideIndex: number) => {
+    focusContentItemSlide(itemId, slideIndex);
     setSlideBrowserMode('focus');
-  }, [focusPresentationSlide, setSlideBrowserMode]);
+  }, [focusContentItemSlide, setSlideBrowserMode]);
 
   const renderSection = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (
       <GridSection
         key={item.entryId}
         item={item}
-        currentPresentationId={currentPresentationId}
-        currentOutputPresentationId={currentOutputPresentationId}
+        currentContentItemId={currentContentItemId}
+        currentOutputContentItemId={currentOutputContentItemId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
         slideElementsById={slideElementsBySlideId}
@@ -110,12 +110,12 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
         onEditSlide={handleEditSlide}
       />
     );
-  }, [currentOutputPresentationId, currentPresentationId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
+  }, [currentContentItemId, currentOutputContentItemId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (
       <section className="grid h-full min-h-0 place-items-center text-sm text-text-tertiary">
-        No playlist presentations available.
+        No playlist items available.
       </section>
     );
   }

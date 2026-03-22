@@ -18,6 +18,7 @@ export function LivePreview() {
       >
         <SceneStage
           scene={scene}
+          surface="show"
           className="h-full w-full"
         />
       </SceneFrame>

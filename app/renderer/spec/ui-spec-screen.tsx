@@ -170,7 +170,7 @@ export function UiSpecScreen() {
                   <Tab active={false} onClick={EMPTY_CALLBACK}>Presentations</Tab>
                 </TabBar>
                 <TabBar label="Inspector">
-                  <Tab active={false} onClick={EMPTY_CALLBACK}>Presentation</Tab>
+                  <Tab active={false} onClick={EMPTY_CALLBACK}>Item</Tab>
                   <Tab active onClick={EMPTY_CALLBACK}>Slide</Tab>
                   <Tab active={false} onClick={EMPTY_CALLBACK}>Shape</Tab>
                   <Tab active={false} onClick={EMPTY_CALLBACK}>Text</Tab>
@@ -211,7 +211,7 @@ export function UiSpecScreen() {
 
                 <div className="rounded-md border border-border-primary bg-primary">
                   <PanelSection
-                    title={<span className="text-sm font-medium text-text-primary">Presentation slides</span>}
+                    title={<span className="text-sm font-medium text-text-primary">Item slides</span>}
                     action={<IconButton label="Add" size="sm"><Icon.plus size={14} strokeWidth={2} /></IconButton>}
                     headerClassName="border-b border-border-primary"
                     bodyClassName="p-2"
@@ -259,7 +259,7 @@ export function UiSpecScreen() {
                 <EmptyStatePanel
                   glyph={<span className="text-lg text-text-tertiary">∅</span>}
                   title="No presentation selected"
-                  description="Select a presentation from a playlist or from the presentations drawer."
+                  description="Select an item from a playlist or from the content drawer."
                 />
               </div>
             </SpecCard>

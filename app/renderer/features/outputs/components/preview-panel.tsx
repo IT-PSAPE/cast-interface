@@ -13,11 +13,11 @@ import { ShowPlaybackPanel } from './show-playback-panel';
 
 export function PreviewPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, contentLayerVisible, activeOverlays } = usePresentationLayers();
-  const { currentOutputPresentationId } = useNavigation();
+  const { currentOutputContentItemId } = useNavigation();
   const { clearCurrentSlideSelection } = useSlides();
   const { actions: audioActions, state: audioState } = useShowAudio();
   const mediaActive = Boolean(mediaLayerAsset);
-  const contentActive = contentLayerVisible && Boolean(currentOutputPresentationId);
+  const contentActive = contentLayerVisible && Boolean(currentOutputContentItemId);
   const overlayActive = activeOverlays.length > 0;
   const audioActive = audioState.isPlaying || audioState.currentTime > 0;
 

@@ -1,38 +1,38 @@
 import { createElement } from 'react';
-import type { Id, PlaylistTree, Presentation } from '@core/types';
+import type { ContentItem, Id, PlaylistTree } from '@core/types';
 import type { ContextMenuItem } from '../../../components/context-menu';
-import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
+import { ContentItemIcon } from '../../../components/presentation-entity-icon';
 import type { LibraryPanelView } from '../../../types/ui';
-import { buildCreatePresentationMenuItems } from '../../../utils/build-create-presentation-menu-items';
-import { buildPresentationMenuItems } from './build-presentation-menu-items';
+import { buildCreateContentMenuItems } from '../../../utils/build-create-presentation-menu-items';
+import { buildContentItemMenuItems } from './build-presentation-menu-items';
 import { SEGMENT_COLOR_OPTIONS } from './segment-header-color';
 
 type LibraryPanelMenuTarget =
   | { type: 'library'; id: Id }
   | { type: 'playlist'; id: Id }
   | { type: 'segment'; id: Id }
-  | { type: 'presentation'; id: Id; scope: 'library' | 'segment' };
+  | { type: 'content-item'; id: Id; scope: 'library' | 'segment' };
 
 interface BuildMenuItemsOptions {
   target: LibraryPanelMenuTarget;
   currentLibraryId: Id | null;
   currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
-  libraryPresentations: Presentation[];
+  libraryContentItems: ContentItem[];
   playlistIds: Id[];
-  presentationIds: Id[];
+  contentItemIds: Id[];
   setLibraryPanelView: (stage: LibraryPanelView) => void;
-  selectPlaylistPresentation: (id: Id) => void;
+  selectPlaylistContentItem: (id: Id) => void;
   deleteLibrary: (id: Id) => Promise<void>;
   deletePlaylist: (id: Id) => Promise<void>;
   deleteSegment: (id: Id) => Promise<void>;
-  deletePresentation: (id: Id) => Promise<void>;
+  deleteContentItem: (id: Id) => Promise<void>;
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  movePresentation: (id: Id, direction: 'up' | 'down') => Promise<void>;
+  moveContentItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
   setSegmentColor: (id: Id, colorKey: string | null) => Promise<void>;
-  addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<void>;
-  movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<void>;
-  createPresentationInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
+  addContentItemToSegment: (segmentId: Id, itemId: Id) => Promise<void>;
+  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
+  createDeckInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
   createLyricInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
   beginRenameLibrary: (id: Id) => void;
   beginRenamePlaylist: (id: Id) => void;
@@ -41,7 +41,7 @@ interface BuildMenuItemsOptions {
 }
 
 export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): ContextMenuItem[] {
-  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryPresentations, playlistIds, presentationIds, setLibraryPanelView, selectPlaylistPresentation, deleteLibrary, deletePlaylist, deleteSegment, deletePresentation, movePlaylist, movePresentation, setSegmentColor, addPresentationToSegment, movePresentationToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
+  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryContentItems, playlistIds, contentItemIds, setLibraryPanelView, selectPlaylistContentItem, deleteLibrary, deletePlaylist, deleteSegment, deleteContentItem, movePlaylist, moveContentItem, setSegmentColor, addContentItemToSegment, moveContentItemToSegment, createDeckInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
 
   if (target.type === 'library') {
     return [
@@ -51,7 +51,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
         label: 'Delete',
         danger: true,
         onSelect: () => {
-          if (!window.confirm('Delete this library and its playlists? Project presentations and lyrics, media, and overlays will remain.')) return;
+          if (!window.confirm('Delete this library and its playlists? Project decks and lyrics, media, and overlays will remain.')) return;
           void deleteLibrary(target.id);
           setLibraryPanelView('libraries');
         }
@@ -79,13 +79,13 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
 
   if (target.type === 'segment') {
     const selectedSegmentColorKey = selectedTree?.segments.find((segment) => segment.segment.id === target.id)?.segment.colorKey ?? null;
-    const addPresentationChildren = libraryPresentations.map((presentation) => ({
-      id: `add-presentation-${presentation.id}`,
-      label: presentation.title,
-      icon: createElement(PresentationEntityIcon, { entity: presentation, size: 14, strokeWidth: 1.75 }),
+    const addPresentationChildren = libraryContentItems.map((item) => ({
+      id: `add-content-item-${item.id}`,
+      label: item.title,
+      icon: createElement(ContentItemIcon, { entity: item, size: 14, strokeWidth: 1.75 }),
       onSelect: () => {
-        void addPresentationToSegment(target.id, presentation.id);
-        selectPlaylistPresentation(presentation.id);
+        void addContentItemToSegment(target.id, item.id);
+        selectPlaylistContentItem(item.id);
       }
     }));
     const colorChildren: ContextMenuItem[] = SEGMENT_COLOR_OPTIONS.map((option) => ({
@@ -119,16 +119,16 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
         id: 'segment-add-new-presentation',
         label: 'Add New',
         disabled: !currentLibraryId,
-        children: currentLibraryId ? buildCreatePresentationMenuItems({
-          createPresentation: async () => {
-            const createdPresentationId = await createPresentationInSegment(currentLibraryId, target.id);
-            if (!createdPresentationId) return;
-            selectPlaylistPresentation(createdPresentationId);
+        children: currentLibraryId ? buildCreateContentMenuItems({
+          createDeck: async () => {
+            const createdItemId = await createDeckInSegment(currentLibraryId, target.id);
+            if (!createdItemId) return;
+            selectPlaylistContentItem(createdItemId);
           },
           createLyric: async () => {
-            const createdPresentationId = await createLyricInSegment(currentLibraryId, target.id);
-            if (!createdPresentationId) return;
-            selectPlaylistPresentation(createdPresentationId);
+            const createdItemId = await createLyricInSegment(currentLibraryId, target.id);
+            if (!createdItemId) return;
+            selectPlaylistContentItem(createdItemId);
           }
         }) : []
       },
@@ -144,16 +144,16 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
     ];
   }
 
-  return buildPresentationMenuItems({
-    presentationId: target.id,
+  return buildContentItemMenuItems({
+    itemId: target.id,
     scope: target.scope,
     currentPlaylistId,
     selectedTree,
-    presentationIds,
-    selectPresentation: selectPlaylistPresentation,
-    movePresentation,
-    movePresentationToSegment,
-    beginRenamePresentation,
-    deletePresentation,
+    itemIds: contentItemIds,
+    selectContentItem: selectPlaylistContentItem,
+    moveContentItem,
+    moveContentItemToSegment,
+    beginRenameContentItem: beginRenamePresentation,
+    deleteContentItem,
   });
 }

@@ -70,7 +70,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
             Empty
           </div>
         )}
-        <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
+        <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
       </SceneFrame>
 
       <div className={`grid min-h-[92px] gap-1.5 p-2.5 ${row.textEditable ? 'content-start' : 'content-center'}`}>

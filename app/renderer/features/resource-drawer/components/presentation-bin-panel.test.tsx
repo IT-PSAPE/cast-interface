@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PresentationBinPanel } from './presentation-bin-panel';
+import { ContentBinPanel } from './presentation-bin-panel';
 
 const sceneFrameMock = vi.fn();
 const useNavigationMock = vi.fn();
@@ -58,18 +58,18 @@ vi.mock('../../library-browser/hooks/use-library-panel-management', () => ({
   useLibraryPanelManagement: () => useLibraryPanelManagementMock(),
 }));
 
-describe('PresentationBinPanel', () => {
-  it('renders presentation thumbnails with a checkerboard transparency background', () => {
+describe('ContentBinPanel', () => {
+  it('renders content thumbnails with a checkerboard transparency background', () => {
     useNavigationMock.mockReturnValue({
-      currentDrawerPresentationId: null,
+      currentDrawerContentItemId: null,
       currentPlaylistId: null,
       currentLibraryBundle: null,
-      browsePresentation: vi.fn(),
-      isDetachedPresentationBrowser: false,
+      browseContentItem: vi.fn(),
+      isDetachedContentBrowser: false,
     });
     useProjectContentMock.mockReturnValue({
-      presentations: [{ id: 'presentation-1', title: 'Presentation', entityType: 'canvas' }],
-      slidesByPresentationId: new Map([
+      contentItems: [{ id: 'presentation-1', title: 'Presentation', type: 'deck' }],
+      slidesByContentItemId: new Map([
         ['presentation-1', [{ id: 'slide-1', order: 0 }]],
       ]),
       slideElementsBySlideId: new Map([
@@ -77,13 +77,13 @@ describe('PresentationBinPanel', () => {
       ]),
     });
     useLibraryPanelManagementMock.mockReturnValue({
-      renamePresentation: vi.fn(),
-      deletePresentation: vi.fn(),
-      movePresentation: vi.fn(),
-      movePresentationToSegment: vi.fn(),
+      renameContentItem: vi.fn(),
+      deleteContentItem: vi.fn(),
+      moveContentItem: vi.fn(),
+      moveContentItemToSegment: vi.fn(),
     });
 
-    render(<PresentationBinPanel filterText="" />);
+    render(<ContentBinPanel filterText="" />);
 
     expect(screen.getByTestId('scene-frame')).toBeTruthy();
     expect(sceneFrameMock).toHaveBeenCalledWith({ checkerboard: true });

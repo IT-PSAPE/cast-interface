@@ -20,7 +20,7 @@ interface MenuState {
 
 export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
   const { templates } = useProjectContent();
-  const { currentPlaylistPresentation, currentPresentation } = useNavigation();
+  const { currentPlaylistContentItem, currentContentItem } = useNavigation();
   const { currentOverlay } = useOverlayEditor();
   const { workbenchMode, setWorkbenchMode } = useWorkbench();
   const {
@@ -41,18 +41,18 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
     });
   }, [normalizedFilter, templates]);
 
-  const activePresentation = currentPlaylistPresentation ?? currentPresentation;
+  const activeContentItem = currentPlaylistContentItem ?? currentContentItem;
 
   function resolvePreviewTarget(template: Template) {
     if (template.kind === 'overlays' && workbenchMode === 'overlay-editor' && currentOverlay) {
       return { type: 'overlay' as const, overlayId: currentOverlay.id };
     }
-    if (!activePresentation) return null;
-    if (template.kind === 'lyrics' && activePresentation.kind === 'lyrics') {
-      return { type: 'presentation' as const, presentationId: activePresentation.id };
+    if (!activeContentItem) return null;
+    if (template.kind === 'lyrics' && activeContentItem.type === 'lyric') {
+      return { type: 'content-item' as const, itemId: activeContentItem.id };
     }
-    if (template.kind === 'slides' && activePresentation.kind === 'canvas') {
-      return { type: 'presentation' as const, presentationId: activePresentation.id };
+    if (template.kind === 'slides' && activeContentItem.type === 'deck') {
+      return { type: 'content-item' as const, itemId: activeContentItem.id };
     }
     return null;
   }
@@ -107,7 +107,7 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
         id: 'apply-template',
         label: previewTarget?.type === 'overlay'
           ? 'Apply to Current Overlay'
-          : 'Apply and Assign to Current Presentation',
+          : 'Apply and Assign to Current Item',
         disabled: !previewTarget,
         onSelect: () => handleApplyTemplate(template),
       },

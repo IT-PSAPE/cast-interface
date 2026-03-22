@@ -4,7 +4,7 @@ import { ContextMenu, type ContextMenuItem } from '../../../components/context-m
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { PanelSection } from '../../../components/panel-section';
-import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
+import { ContentItemIcon } from '../../../components/presentation-entity-icon';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useElements } from '../../../contexts/element-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -22,23 +22,23 @@ interface MenuState {
 }
 
 export function SlideListPanel() {
-  const { browsePresentation, currentPresentation } = useNavigation();
+  const { browseContentItem, currentContentItem } = useNavigation();
   const { effectiveElements } = useElements();
-  const { presentations } = useProjectContent();
+  const { contentItems } = useProjectContent();
   const { getSlideElements } = useSlideEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
   const [menuState, setMenuState] = useState<MenuState | null>(null);
-  const itemLabel = currentPresentation?.entityType === 'lyric' ? 'Lyrics' : 'Slides';
+  const itemLabel = currentContentItem?.type === 'lyric' ? 'Lyrics' : 'Slides';
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
-    return presentations.map((presentation) => ({
-      id: presentation.id,
-      label: presentation.title,
-      icon: <PresentationEntityIcon entity={presentation} className="text-text-tertiary" />,
-      onSelect: () => browsePresentation(presentation.id),
+    return contentItems.map((item) => ({
+      id: item.id,
+      label: item.title,
+      icon: <ContentItemIcon entity={item} className="text-text-tertiary" />,
+      onSelect: () => browseContentItem(item.id),
     }));
-  }, [browsePresentation, presentations]);
+  }, [browseContentItem, contentItems]);
 
   function handleAddSlide() {
     void createSlide();
@@ -90,16 +90,16 @@ export function SlideListPanel() {
             title={(
               <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
                 <span className="flex min-w-0 items-center gap-2">
-                  {currentPresentation ? <PresentationEntityIcon entity={currentPresentation} className="shrink-0 text-text-tertiary" /> : null}
-                  <span className="truncate text-sm font-medium text-text-primary" title={currentPresentation?.title ?? 'No presentation selected'}>
-                    {currentPresentation?.title ?? 'No presentation selected'}
+                  {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-text-tertiary" /> : null}
+                  <span className="truncate text-sm font-medium text-text-primary" title={currentContentItem?.title ?? 'No item selected'}>
+                    {currentContentItem?.title ?? 'No item selected'}
                   </span>
                 </span>
                 <Icon.chevron_selector_vertical size={14} strokeWidth={1.5} className="shrink-0 text-text-tertiary" />
               </Button>
             )}
             action={(
-              <IconButton label={`Add ${currentPresentation?.entityType === 'lyric' ? 'lyric' : 'slide'}`} size="sm" onClick={handleAddSlide}>
+              <IconButton label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="sm" onClick={handleAddSlide}>
                 <Icon.plus size={14} strokeWidth={2} />
               </IconButton>
             )}

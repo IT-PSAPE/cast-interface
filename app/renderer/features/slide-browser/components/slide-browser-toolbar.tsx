@@ -8,18 +8,18 @@ import { SlideBrowserModeControl } from './slide-browser-mode-control';
 
 export function SlideBrowserToolbar() {
   const { createSlide } = useSlides();
-  const { currentPresentation, isDetachedPresentationBrowser } = useNavigation();
+  const { currentContentItem, isDetachedContentBrowser } = useNavigation();
   const { slideBrowserMode } = useSlideBrowser();
-  const showPlaylistModes = !isDetachedPresentationBrowser && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
+  const showPlaylistModes = !isDetachedContentBrowser && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
 
   function handleAddSlide() {
-    if (!currentPresentation) return;
+    if (!currentContentItem) return;
     void createSlide();
   }
 
   return (
     <footer className="flex items-center gap-2 border-t border-border-primary bg-primary/80 px-2 py-1">
-      <IconButton label="Add slide" disabled={!currentPresentation} onClick={handleAddSlide}>
+      <IconButton label="Add slide" disabled={!currentContentItem} onClick={handleAddSlide}>
         <Icon.plus />
       </IconButton>
 

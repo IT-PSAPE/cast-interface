@@ -6,7 +6,8 @@ import { buildLayeredRenderScene, buildRenderScene } from './build-render-scene'
 function slide(): Slide {
   return {
     id: 'slide-1',
-    presentationId: 'p-1',
+    deckId: 'p-1',
+    lyricId: null,
     width: 1920,
     height: 1080,
     notes: '',

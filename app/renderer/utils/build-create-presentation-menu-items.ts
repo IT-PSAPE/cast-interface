@@ -1,31 +1,31 @@
 import { createElement } from 'react';
 import type { ContextMenuItem } from '../components/context-menu';
-import { PresentationEntityIcon } from '../components/presentation-entity-icon';
+import { ContentItemIcon } from '../components/presentation-entity-icon';
 
 interface BuildCreatePresentationMenuItemsOptions {
-  createPresentation: () => void | Promise<void>;
+  createDeck: () => void | Promise<void>;
   createLyric: () => void | Promise<void>;
-  presentationLabel?: string;
+  deckLabel?: string;
   lyricLabel?: string;
 }
 
-export function buildCreatePresentationMenuItems({
-  createPresentation,
+export function buildCreateContentMenuItems({
+  createDeck,
   createLyric,
-  presentationLabel = 'Presentation',
+  deckLabel = 'Deck',
   lyricLabel = 'Lyric'
 }: BuildCreatePresentationMenuItemsOptions): ContextMenuItem[] {
   return [
     {
-      id: 'create-presentation',
-      label: presentationLabel,
-      icon: createElement(PresentationEntityIcon, { entity: 'presentation', size: 14, strokeWidth: 1.75 }),
-      onSelect: () => { void createPresentation(); }
+      id: 'create-deck',
+      label: deckLabel,
+      icon: createElement(ContentItemIcon, { entity: 'deck', size: 14, strokeWidth: 1.75 }),
+      onSelect: () => { void createDeck(); }
     },
     {
       id: 'create-lyric',
       label: lyricLabel,
-      icon: createElement(PresentationEntityIcon, { entity: 'lyric', size: 14, strokeWidth: 1.75 }),
+      icon: createElement(ContentItemIcon, { entity: 'lyric', size: 14, strokeWidth: 1.75 }),
       onSelect: () => { void createLyric(); }
     }
   ];

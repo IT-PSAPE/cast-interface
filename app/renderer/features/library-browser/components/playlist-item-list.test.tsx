@@ -17,16 +17,16 @@ vi.mock('../../../contexts/slide-context', () => ({
 
 describe('PlaylistItemList', () => {
   it('remembers collapsed segments when the show-mode list unmounts and remounts', () => {
-    useNavigationMock.mockReturnValue({ currentPlaylistPresentationId: null, createSegment: vi.fn() });
-    useSlidesMock.mockReturnValue({ selectPlaylistPresentation: vi.fn() });
+    useNavigationMock.mockReturnValue({ currentPlaylistContentItemId: null, createSegment: vi.fn() });
+    useSlidesMock.mockReturnValue({ selectPlaylistContentItem: vi.fn() });
 
     const tree: PlaylistTree = {
       playlist: { id: 'playlist-1', libraryId: 'library-1', name: 'Sunday', createdAt: '', updatedAt: '' },
       segments: [{
         segment: { id: 'segment-1', playlistId: 'playlist-1', name: 'Verse', colorKey: null, order: 0, createdAt: '', updatedAt: '' },
         entries: [{
-          entry: { id: 'entry-1', segmentId: 'segment-1', presentationId: 'presentation-1', order: 0, createdAt: '', updatedAt: '' },
-          presentation: { id: 'presentation-1', title: 'Song Title', kind: 'lyrics', entityType: 'lyric', createdAt: '', updatedAt: '' },
+          entry: { id: 'entry-1', segmentId: 'segment-1', deckId: null, lyricId: 'presentation-1', order: 0, createdAt: '', updatedAt: '' },
+          item: { id: 'presentation-1', title: 'Song Title', type: 'lyric', order: 0, createdAt: '', updatedAt: '' },
         }],
       }],
     };

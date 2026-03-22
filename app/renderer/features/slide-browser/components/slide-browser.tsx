@@ -57,8 +57,8 @@ function EmptyState() {
     <div className="row-start-2 min-h-0">
       <EmptyStatePanel
         glyph={<EmptyStateGlyph />}
-        title="No presentation selected"
-        description="Select a presentation from a playlist or from the presentations drawer to load slides in the browser."
+        title="No item selected"
+        description="Select an item from a playlist or from the content drawer to load slides in the browser."
       />
     </div>
   );

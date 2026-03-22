@@ -248,21 +248,21 @@ async function seedScenario(page) {
       return next.templates.find((template) => template.name === name)?.id ?? null;
     }
 
-    async function ensurePresentation(ids, title, slideSpecs) {
+    async function ensureDeck(ids, title, slideSpecs) {
       let snapshot = await getSnapshot();
-      let presentation = snapshot.presentations.find((item) => item.title === title) ?? null;
+      let deck = snapshot.decks.find((item) => item.title === title) ?? null;
 
-      if (!presentation) {
-        await window.castApi.createPresentation(title, 'canvas');
+      if (!deck) {
+        await window.castApi.createDeck(title);
         snapshot = await getSnapshot();
-        presentation = snapshot.presentations.find((item) => item.title === title) ?? null;
+        deck = snapshot.decks.find((item) => item.title === title) ?? null;
       }
 
-      let slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === presentation.id));
+      let slides = sortByOrder(snapshot.slides.filter((slide) => slide.deckId === deck.id));
       while (slides.length < slideSpecs.length) {
-        await window.castApi.createSlide({ presentationId: presentation.id });
+        await window.castApi.createSlide({ deckId: deck.id });
         snapshot = await getSnapshot();
-        slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === presentation.id));
+        slides = sortByOrder(snapshot.slides.filter((slide) => slide.deckId === deck.id));
       }
 
       for (let index = 0; index < slideSpecs.length; index += 1) {
@@ -289,9 +289,9 @@ async function seedScenario(page) {
       snapshot = await getSnapshot();
       const bundle = snapshot.libraryBundles.find((entry) => entry.library.id === ids.libraryId) ?? null;
       const playlistTree = bundle?.playlists.find((tree) => tree.playlist.id === ids.playlistId) ?? null;
-      const alreadyInSegment = playlistTree?.segments.some((entry) => entry.entries.some((item) => item.presentation.id === presentation.id)) ?? false;
+      const alreadyInSegment = playlistTree?.segments.some((entry) => entry.entries.some((item) => item.item.id === deck.id)) ?? false;
       if (!alreadyInSegment) {
-        await window.castApi.addPresentationToSegment(ids.segmentId, presentation.id);
+        await window.castApi.addContentItemToSegment(ids.segmentId, deck.id);
       }
     }
 
@@ -299,7 +299,7 @@ async function seedScenario(page) {
 
     await ensureMediaAsset('Gradient Backdrop', gradientBackdropSrc);
 
-    await ensurePresentation(ids, 'Welcome Slides', [
+    await ensureDeck(ids, 'Welcome Slides', [
       { notes: 'Live welcome slide for the opening state.', elements: [] },
       {
         notes: 'Editor-selected slide with notes and objects.',
@@ -414,7 +414,7 @@ async function captureAppScreenshots() {
     await captureLocator(page.locator('[data-ui-region="preview-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'preview-panel-overlays.png'));
 
     await clickResourceDrawerTab(page, 'Presentations');
-    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-presentations.png'));
+    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-content.png'));
 
     await clickResourceDrawerTab(page, 'Templates');
     await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-templates.png'));

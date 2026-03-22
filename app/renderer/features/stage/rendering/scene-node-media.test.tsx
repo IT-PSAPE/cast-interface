@@ -19,6 +19,8 @@ vi.mock('react-konva', () => ({
     <div data-testid="scene-media" data-kind={image instanceof HTMLVideoElement ? 'video' : 'image'} />
   ),
   Rect: () => <div data-testid="scene-media-fallback" />,
+  Group: ({ children }: { children?: React.ReactNode }) => <div data-testid="scene-media-group">{children}</div>,
+  Line: () => <div data-testid="scene-media-stripe" />,
 }));
 
 function createNode(type: 'image' | 'video', src: string): RenderNode {
@@ -73,8 +75,8 @@ describe('SceneNodeMedia', () => {
     const image = document.createElement('img');
     const video = document.createElement('video');
 
-    useKImageMock.mockImplementation((src: string | null) => (src ? image : null));
-    useKVideoMock.mockReturnValue(null);
+    useKImageMock.mockImplementation((src: string | null) => (src ? { status: 'loaded', resource: image } : { status: 'empty' }));
+    useKVideoMock.mockReturnValue({ status: 'loading' });
 
     const { rerender } = render(<SceneNodeMedia node={createNode('image', '/background-a.png')} />);
 
@@ -84,9 +86,29 @@ describe('SceneNodeMedia', () => {
 
     expect(screen.getByTestId('scene-media').getAttribute('data-kind')).toBe('image');
 
-    useKVideoMock.mockReturnValue(video);
+    useKVideoMock.mockReturnValue({ status: 'loaded', resource: video });
     rerender(<SceneNodeMedia node={createNode('video', '/background-b.mp4')} />);
 
     expect(screen.getByTestId('scene-media').getAttribute('data-kind')).toBe('video');
+  });
+
+  it('renders a broken placeholder on the slide editor surface', () => {
+    useKImageMock.mockReturnValue({ status: 'broken' });
+    useKVideoMock.mockReturnValue({ status: 'empty' });
+
+    render(<SceneNodeMedia node={createNode('image', '/missing.png')} surface="slide-editor" />);
+
+    expect(screen.getByTestId('scene-media-group')).not.toBeNull();
+    expect(screen.getAllByTestId('scene-media-stripe').length).toBeGreaterThan(0);
+  });
+
+  it('keeps broken media invisible on list surfaces', () => {
+    useKImageMock.mockReturnValue({ status: 'broken' });
+    useKVideoMock.mockReturnValue({ status: 'empty' });
+
+    render(<SceneNodeMedia node={createNode('image', '/missing.png')} surface="list" />);
+
+    expect(screen.queryByTestId('scene-media-group')).toBeNull();
+    expect(screen.getByTestId('scene-media-fallback')).not.toBeNull();
   });
 });

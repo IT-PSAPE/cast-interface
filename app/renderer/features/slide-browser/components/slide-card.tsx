@@ -38,7 +38,7 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
               Empty
             </div>
           ) : null}
-          <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
+          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
         </SceneFrame>
       )}
       caption={(

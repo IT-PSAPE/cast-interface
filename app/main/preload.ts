@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, NDI_EVENTS } from '@core/ipc';
 import type {
+  AppSnapshot,
+  ContentBundleBrokenReferenceDecision,
+  ContentBundleInspection,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -8,7 +11,6 @@ import type {
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
-  PresentationKind,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
@@ -22,21 +24,26 @@ import type {
 const api = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
+  chooseContentBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseContentBundleExportPath, suggestedName) as Promise<string | null>,
+  chooseContentBundleImportPath: () => ipcRenderer.invoke(IPC.chooseContentBundleImportPath) as Promise<string | null>,
+  chooseImportReplacementMediaPath: () => ipcRenderer.invoke(IPC.chooseImportReplacementMediaPath) as Promise<string | null>,
+  exportContentBundle: (itemIds: Id[], filePath: string) => ipcRenderer.invoke(IPC.exportContentBundle, itemIds, filePath) as Promise<{ filePath: string; itemCount: number }>,
+  inspectImportBundle: (filePath: string) => ipcRenderer.invoke(IPC.inspectImportBundle, filePath) as Promise<ContentBundleInspection>,
+  finalizeImportBundle: (filePath: string, decisions: ContentBundleBrokenReferenceDecision[]) =>
+    ipcRenderer.invoke(IPC.finalizeImportBundle, filePath, decisions) as Promise<AppSnapshot>,
   createLibrary: (name: string) => ipcRenderer.invoke(IPC.createLibrary, name),
   createPlaylist: (libraryId: Id, name: string) => ipcRenderer.invoke(IPC.createPlaylist, libraryId, name),
   createPlaylistSegment: (playlistId: Id, name: string) => ipcRenderer.invoke(IPC.createPlaylistSegment, playlistId, name),
   renamePlaylistSegment: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylistSegment, id, name),
   setPlaylistSegmentColor: (id: Id, colorKey: string | null) => ipcRenderer.invoke(IPC.setPlaylistSegmentColor, id, colorKey),
   movePlaylist: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.movePlaylist, id, direction),
-  addPresentationToSegment: (segmentId: Id, presentationId: Id) =>
-    ipcRenderer.invoke(IPC.addPresentationToSegment, segmentId, presentationId),
-  movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) =>
-    ipcRenderer.invoke(IPC.movePresentationToSegment, playlistId, presentationId, segmentId),
-  movePresentation: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.movePresentation, id, direction),
-  createPresentation: (title: string, kind?: PresentationKind) =>
-    ipcRenderer.invoke(IPC.createPresentation, title, kind),
+  addContentItemToSegment: (segmentId: Id, itemId: Id) =>
+    ipcRenderer.invoke(IPC.addContentItemToSegment, segmentId, itemId),
+  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) =>
+    ipcRenderer.invoke(IPC.moveContentItemToSegment, playlistId, itemId, segmentId),
+  moveContentItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveContentItem, id, direction),
+  createDeck: (title: string) => ipcRenderer.invoke(IPC.createDeck, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
-  setPresentationKind: (id: Id, kind: PresentationKind) => ipcRenderer.invoke(IPC.setPresentationKind, id, kind),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
   createElement: (input: ElementCreateInput) => ipcRenderer.invoke(IPC.createElement, input),
@@ -55,19 +62,21 @@ const api = {
   createTemplate: (input: TemplateCreateInput) => ipcRenderer.invoke(IPC.createTemplate, input),
   updateTemplate: (input: TemplateUpdateInput) => ipcRenderer.invoke(IPC.updateTemplate, input),
   deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
-  applyTemplateToPresentation: (templateId: Id, presentationId: Id) =>
-    ipcRenderer.invoke(IPC.applyTemplateToPresentation, templateId, presentationId),
-  resetPresentationToTemplate: (presentationId: Id) =>
-    ipcRenderer.invoke(IPC.resetPresentationToTemplate, presentationId),
+  applyTemplateToContentItem: (templateId: Id, itemId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToContentItem, templateId, itemId),
+  resetContentItemToTemplate: (itemId: Id) =>
+    ipcRenderer.invoke(IPC.resetContentItemToTemplate, itemId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
-  renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
+  renameDeck: (id: Id, title: string) => ipcRenderer.invoke(IPC.renameDeck, id, title),
+  renameLyric: (id: Id, title: string) => ipcRenderer.invoke(IPC.renameLyric, id, title),
   deleteLibrary: (id: Id) => ipcRenderer.invoke(IPC.deleteLibrary, id),
   deletePlaylist: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylist, id),
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
-  deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
+  deleteDeck: (id: Id) => ipcRenderer.invoke(IPC.deleteDeck, id),
+  deleteLyric: (id: Id) => ipcRenderer.invoke(IPC.deleteLyric, id),
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),
   getNdiOutputState: () => ipcRenderer.invoke(IPC.getNdiOutputState),

@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type Konva from 'konva';
-import { Image as KonvaImage, Rect } from 'react-konva';
+import { Group, Image as KonvaImage, Line, Rect } from 'react-konva';
 import type { VideoElementPayload } from '@core/types';
-import type { RenderNode } from './scene-types';
+import type { RenderNode, ResolvedMediaState, SceneSurface } from './scene-types';
 import { resolveMediaCover } from './resolve-media-cover';
 import { useKImage } from './use-k-image';
 import { useKVideo } from './use-k-video';
 
 interface SceneNodeMediaProps {
   node: RenderNode;
+  surface?: SceneSurface;
   onLoad?: () => void;
 }
 
@@ -46,28 +47,59 @@ function resolveCrop(media: LoadedMedia, width: number, height: number) {
   return resolveMediaCover(media.resource.videoWidth, media.resource.videoHeight, width, height);
 }
 
-export function SceneNodeMedia({ node, onLoad }: SceneNodeMediaProps) {
+function renderBrokenPlaceholder(node: RenderNode) {
+  const stripeSpacing = 28;
+  const stripes = Array.from({ length: Math.ceil((node.element.width + node.element.height) / stripeSpacing) }, (_value, index) => {
+    const offset = index * stripeSpacing;
+    return (
+      <Line
+        key={`stripe-${offset}`}
+        points={[offset, node.element.height, offset - node.element.height, 0]}
+        stroke="#050505"
+        strokeWidth={12}
+        opacity={0.9}
+      />
+    );
+  });
+
+  return (
+    <Group>
+      <Rect x={0} y={0} width={node.element.width} height={node.element.height} fill="#101114" />
+      {stripes}
+    </Group>
+  );
+}
+
+function resolveLoadedMedia(
+  node: RenderNode,
+  requestKey: string | null,
+  state: ResolvedMediaState,
+): LoadedMedia | null {
+  if (state.status !== 'loaded' || !requestKey) return null;
+  if (node.element.type === 'image' && state.resource instanceof HTMLImageElement) {
+    return { key: requestKey, kind: 'image', resource: state.resource };
+  }
+  if (node.element.type === 'video' && state.resource instanceof HTMLVideoElement) {
+    return { key: requestKey, kind: 'video', resource: state.resource };
+  }
+  return null;
+}
+
+export function SceneNodeMedia({ node, surface = 'show', onLoad }: SceneNodeMediaProps) {
   const imageRef = useRef<Konva.Image | null>(null);
   const imageSrc = node.element.type === 'image' ? (node.element.payload as { src: string }).src ?? null : null;
   const videoPayload = node.element.type === 'video' ? node.element.payload as VideoElementPayload : null;
-  const image = useKImage(imageSrc);
-  const video = useKVideo(videoPayload?.src ?? null, {
+  const imageState = useKImage(imageSrc);
+  const videoState = useKVideo(videoPayload?.src ?? null, {
     autoplay: videoPayload?.autoplay ?? false,
     loop: videoPayload?.loop ?? false,
     muted: videoPayload?.muted ?? true,
   });
   const requestKey = getMediaRequestKey(node);
+  const resolvedState = node.element.type === 'image' ? imageState : videoState;
   const loadedMedia = useMemo<LoadedMedia | null>(() => {
-    if (node.element.type === 'image' && image && requestKey) {
-      return { key: requestKey, kind: 'image', resource: image };
-    }
-
-    if (node.element.type === 'video' && video && requestKey) {
-      return { key: requestKey, kind: 'video', resource: video };
-    }
-
-    return null;
-  }, [image, node.element.type, requestKey, video]);
+    return resolveLoadedMedia(node, requestKey, resolvedState);
+  }, [node, requestKey, resolvedState]);
   const [displayedMedia, setDisplayedMedia] = useState<LoadedMedia | null>(loadedMedia);
 
   useEffect(() => {
@@ -83,6 +115,11 @@ export function SceneNodeMedia({ node, onLoad }: SceneNodeMediaProps) {
       return loadedMedia;
     });
   }, [loadedMedia, requestKey]);
+
+  useEffect(() => {
+    if (!requestKey || resolvedState.status !== 'broken') return;
+    setDisplayedMedia(null);
+  }, [requestKey, resolvedState.status]);
 
   useEffect(() => {
     if (!loadedMedia || !onLoad) return;
@@ -138,6 +175,7 @@ export function SceneNodeMedia({ node, onLoad }: SceneNodeMediaProps) {
   }, [displayedMedia]);
 
   const crop = displayedMedia ? resolveCrop(displayedMedia, node.element.width, node.element.height) : null;
+  const shouldRenderBrokenPlaceholder = resolvedState.status === 'broken' && surface === 'slide-editor';
 
   return displayedMedia ? (
     <KonvaImage
@@ -149,6 +187,8 @@ export function SceneNodeMedia({ node, onLoad }: SceneNodeMediaProps) {
       height={node.element.height}
       crop={crop ?? undefined}
     />
+  ) : shouldRenderBrokenPlaceholder ? (
+    renderBrokenPlaceholder(node)
   ) : (
     <Rect x={0} y={0} width={node.element.width} height={node.element.height} fill="#2b303900" />
   );

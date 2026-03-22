@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTemplateToElements, isTemplateCompatibleWithPresentation } from './templates';
+import { applyTemplateToElements, isTemplateCompatibleWithContentItem } from './templates';
 import type { SlideElement, Template } from './types';
 
 function createTextElement(input: { id: string; slideId: string; text: string; x?: number; y?: number }): SlideElement {
@@ -110,9 +110,9 @@ describe('template helpers', () => {
   });
 
   it('matches template kinds to supported presentation kinds', () => {
-    expect(isTemplateCompatibleWithPresentation(createSlideTemplate(), 'canvas')).toBe(true);
-    expect(isTemplateCompatibleWithPresentation(createSlideTemplate(), 'lyrics')).toBe(false);
-    expect(isTemplateCompatibleWithPresentation({ ...createSlideTemplate(), kind: 'lyrics' }, 'lyrics')).toBe(true);
-    expect(isTemplateCompatibleWithPresentation({ ...createSlideTemplate(), kind: 'overlays' }, 'canvas')).toBe(false);
+    expect(isTemplateCompatibleWithContentItem(createSlideTemplate(), 'deck')).toBe(true);
+    expect(isTemplateCompatibleWithContentItem(createSlideTemplate(), 'lyric')).toBe(false);
+    expect(isTemplateCompatibleWithContentItem({ ...createSlideTemplate(), kind: 'lyrics' }, 'lyric')).toBe(true);
+    expect(isTemplateCompatibleWithContentItem({ ...createSlideTemplate(), kind: 'overlays' }, 'deck')).toBe(false);
   });
 });

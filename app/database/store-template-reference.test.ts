@@ -28,11 +28,11 @@ describe('CastRepository presentation template references', () => {
 
     const repository = new CastRepository();
     let snapshot = repository.createLyric('Template Song');
-    const presentation = snapshot.presentations.find((item) => item.title === 'Template Song');
-    expect(presentation).toBeDefined();
+    const lyric = snapshot.lyrics.find((item) => item.title === 'Template Song');
+    expect(lyric).toBeDefined();
 
-    snapshot = repository.createSlide({ presentationId: presentation!.id });
-    const firstSlide = snapshot.slides.find((item) => item.presentationId === presentation!.id);
+    snapshot = repository.createSlide({ lyricId: lyric!.id });
+    const firstSlide = snapshot.slides.find((item) => item.lyricId === lyric!.id);
     expect(firstSlide).toBeDefined();
 
     snapshot = repository.createTemplate({
@@ -75,15 +75,15 @@ describe('CastRepository presentation template references', () => {
     const template = snapshot.templates.find((item) => item.name === 'Lyric Template Default');
     expect(template).toBeDefined();
 
-    snapshot = repository.applyTemplateToPresentation(template!.id, presentation!.id);
-    expect(snapshot.presentations.find((item) => item.id === presentation!.id)?.templateId).toBe(template!.id);
+    snapshot = repository.applyTemplateToContentItem(template!.id, lyric!.id);
+    expect(snapshot.lyrics.find((item) => item.id === lyric!.id)?.templateId).toBe(template!.id);
 
     const firstSlideElement = snapshot.slideElements.find((item) => item.slideId === firstSlide!.id);
     expect(firstSlideElement?.x).toBe(240);
     expect((firstSlideElement?.payload as TextElementPayload).text).toBe('Verse line one\nVerse line two');
 
-    snapshot = repository.createSlide({ presentationId: presentation!.id });
-    const newSlides = snapshot.slides.filter((item) => item.presentationId === presentation!.id);
+    snapshot = repository.createSlide({ lyricId: lyric!.id });
+    const newSlides = snapshot.slides.filter((item) => item.lyricId === lyric!.id);
     const secondSlide = newSlides.at(-1);
     const secondSlideElement = snapshot.slideElements.find((item) => item.slideId === secondSlide?.id);
     expect(secondSlideElement?.x).toBe(240);
@@ -93,7 +93,7 @@ describe('CastRepository presentation template references', () => {
       id: firstSlideElement!.id,
       payload: { ...(firstSlideElement!.payload as TextElementPayload), text: 'Edited lyric text' },
     });
-    snapshot = repository.resetPresentationToTemplate(presentation!.id);
+    snapshot = repository.resetContentItemToTemplate(lyric!.id);
 
     const resetFirstSlideElement = snapshot.slideElements.find((item) => item.slideId === firstSlide!.id);
     expect(resetFirstSlideElement?.x).toBe(240);

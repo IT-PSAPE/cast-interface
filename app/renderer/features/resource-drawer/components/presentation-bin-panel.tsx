@@ -1,42 +1,42 @@
 import { useMemo, useState } from 'react';
-import type { Id, Presentation, Slide } from '@core/types';
+import type { ContentItem, Id, Slide } from '@core/types';
 import { ContextMenu, type ContextMenuItem } from '../../../components/context-menu';
 import { Icon } from '../../../components/icon';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
-import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
+import { ContentItemIcon } from '../../../components/presentation-entity-icon';
 import { SceneFrame } from '../../../components/scene-frame';
 import { ThumbnailTile } from '../../../components/thumbnail-tile';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
-import { buildPresentationMenuItems } from '../../library-browser/utils/build-presentation-menu-items';
+import { buildContentItemMenuItems } from '../../library-browser/utils/build-presentation-menu-items';
 import { useLibraryPanelManagement } from '../../library-browser/hooks/use-library-panel-management';
 import { buildThumbnailScene } from '../../stage/rendering/build-render-scene';
 import { SceneStage } from '../../stage/rendering/scene-stage';
 
-interface PresentationBinPanelProps {
+interface ContentBinPanelProps {
   filterText: string;
 }
 
 interface MenuState {
   x: number;
   y: number;
-  presentationId: Id;
+  itemId: Id;
 }
 
 interface PresentationCardProps {
-  presentation: Presentation;
+  item: ContentItem;
   slides: Slide[];
   isSelected: boolean;
   isEditing: boolean;
-  onOpen: (presentationId: Id) => void;
-  onOpenMenu: (presentationId: Id, button: HTMLButtonElement) => void;
-  onContextMenu: (event: React.MouseEvent<HTMLElement>, presentationId: Id) => void;
-  onRename: (presentationId: Id, title: string) => void;
+  onOpen: (itemId: Id) => void;
+  onOpenMenu: (itemId: Id, button: HTMLButtonElement) => void;
+  onContextMenu: (event: React.MouseEvent<HTMLElement>, itemId: Id) => void;
+  onRename: (itemId: Id, title: string) => void;
 }
 
-function PresentationCard({
-  presentation,
+function ContentCard({
+  item,
   slides,
   isSelected,
   isEditing,
@@ -51,20 +51,20 @@ function PresentationCard({
   const scene = firstSlide ? buildThumbnailScene(firstSlide, firstSlideElements) : null;
 
   function handleOpen() {
-    onOpen(presentation.id);
+    onOpen(item.id);
   }
 
   function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
-    onOpenMenu(presentation.id, event.currentTarget);
+    onOpenMenu(item.id, event.currentTarget);
   }
 
   function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, presentation.id);
+    onContextMenu(event, item.id);
   }
 
   function handleRename(title: string) {
-    onRename(presentation.id, title);
+    onRename(item.id, title);
   }
 
   return (
@@ -77,7 +77,7 @@ function PresentationCard({
           <>
             {scene ? (
               <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
-                <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
+                <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
               </SceneFrame>
             ) : (
               <div className="absolute inset-0 grid place-items-center bg-background-tertiary text-sm uppercase tracking-wider text-text-tertiary">
@@ -87,7 +87,7 @@ function PresentationCard({
 
             <div className="absolute right-1 top-1 hidden group-hover:block">
               <IconButton
-                label="Presentation options"
+                label="Content item options"
                 onClick={handleMenuClick}
                 size="sm"
                 className="border-border-primary bg-background-tertiary/80"
@@ -99,9 +99,9 @@ function PresentationCard({
         )}
         caption={(
           <div className="flex items-center gap-2">
-            <PresentationEntityIcon entity={presentation} className="shrink-0 text-text-tertiary" size={14} strokeWidth={1.75} />
+            <ContentItemIcon entity={item} className="shrink-0 text-text-tertiary" size={14} strokeWidth={1.75} />
             <EditableText
-              value={presentation.title}
+              value={item.title}
               onCommit={handleRename}
               editing={isEditing}
               className="min-w-0 truncate text-sm text-text-secondary"
@@ -113,70 +113,70 @@ function PresentationCard({
   );
 }
 
-export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) {
+export function ContentBinPanel({ filterText }: ContentBinPanelProps) {
   const {
-    currentDrawerPresentationId,
+    currentDrawerContentItemId,
     currentPlaylistId,
     currentLibraryBundle,
-    browsePresentation,
-    isDetachedPresentationBrowser,
+    browseContentItem,
+    isDetachedContentBrowser,
   } = useNavigation();
-  const { presentations, slidesByPresentationId } = useProjectContent();
+  const { contentItems, slidesByContentItemId } = useProjectContent();
   const {
-    renamePresentation,
-    deletePresentation,
-    movePresentation,
-    movePresentationToSegment,
+    renameContentItem,
+    deleteContentItem,
+    moveContentItem,
+    moveContentItemToSegment,
   } = useLibraryPanelManagement();
   const [menuState, setMenuState] = useState<MenuState | null>(null);
   const [editingPresentationId, setEditingPresentationId] = useState<Id | null>(null);
 
   const normalizedFilter = filterText.trim().toLowerCase();
   const filteredPresentations = useMemo(() => {
-    return presentations.filter((presentation) => {
+    return contentItems.filter((item) => {
       if (!normalizedFilter) return true;
-      if (presentation.title.toLowerCase().includes(normalizedFilter)) return true;
-      if (presentation.entityType.toLowerCase().includes(normalizedFilter)) return true;
-      const slides = slidesByPresentationId.get(presentation.id) ?? [];
+      if (item.title.toLowerCase().includes(normalizedFilter)) return true;
+      if (item.type.toLowerCase().includes(normalizedFilter)) return true;
+      const slides = slidesByContentItemId.get(item.id) ?? [];
       return slides.some((slide) => {
         const slideLabel = `slide ${slide.order + 1}`.toLowerCase();
         return slideLabel.includes(normalizedFilter);
       });
     });
-  }, [normalizedFilter, presentations, slidesByPresentationId]);
+  }, [contentItems, normalizedFilter, slidesByContentItemId]);
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!menuState) return [];
-    return buildPresentationMenuItems({
-      presentationId: menuState.presentationId,
+    return buildContentItemMenuItems({
+      itemId: menuState.itemId,
       scope: 'library',
       currentPlaylistId,
       selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
-      presentationIds: presentations.map((presentation) => presentation.id),
-      selectPresentation: browsePresentation,
-      movePresentation,
-      movePresentationToSegment,
-      beginRenamePresentation: setEditingPresentationId,
-      deletePresentation,
+      itemIds: contentItems.map((item) => item.id),
+      selectContentItem: browseContentItem,
+      moveContentItem,
+      moveContentItemToSegment,
+      beginRenameContentItem: setEditingPresentationId,
+      deleteContentItem,
     });
-  }, [browsePresentation, currentLibraryBundle, currentPlaylistId, deletePresentation, menuState, movePresentation, movePresentationToSegment, presentations]);
+  }, [browseContentItem, contentItems, currentLibraryBundle, currentPlaylistId, deleteContentItem, menuState, moveContentItem, moveContentItemToSegment]);
 
-  function openMenuAt(presentationId: Id, x: number, y: number) {
-    setMenuState({ presentationId, x, y });
+  function openMenuAt(itemId: Id, x: number, y: number) {
+    setMenuState({ itemId, x, y });
   }
 
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>, presentationId: Id) {
+  function handleContextMenu(event: React.MouseEvent<HTMLElement>, itemId: Id) {
     event.preventDefault();
-    openMenuAt(presentationId, event.clientX, event.clientY);
+    openMenuAt(itemId, event.clientX, event.clientY);
   }
 
-  function handleMenuButtonClick(presentationId: Id, button: HTMLButtonElement) {
+  function handleMenuButtonClick(itemId: Id, button: HTMLButtonElement) {
     const rect = button.getBoundingClientRect();
-    openMenuAt(presentationId, rect.left, rect.bottom + 4);
+    openMenuAt(itemId, rect.left, rect.bottom + 4);
   }
 
-  function handleRename(presentationId: Id, title: string) {
-    void renamePresentation(presentationId, title);
+  function handleRename(itemId: Id, title: string) {
+    void renameContentItem(itemId, title);
     setEditingPresentationId(null);
   }
 
@@ -188,13 +188,13 @@ export function PresentationBinPanel({ filterText }: PresentationBinPanelProps) 
     <>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
         {filteredPresentations.map((presentation) => (
-          <PresentationCard
+          <ContentCard
             key={presentation.id}
-            presentation={presentation}
-            slides={slidesByPresentationId.get(presentation.id) ?? []}
-            isSelected={isDetachedPresentationBrowser && currentDrawerPresentationId === presentation.id}
+            item={presentation}
+            slides={slidesByContentItemId.get(presentation.id) ?? []}
+            isSelected={isDetachedContentBrowser && currentDrawerContentItemId === presentation.id}
             isEditing={editingPresentationId === presentation.id}
-            onOpen={browsePresentation}
+            onOpen={browseContentItem}
             onOpenMenu={handleMenuButtonClick}
             onContextMenu={handleContextMenu}
             onRename={handleRename}

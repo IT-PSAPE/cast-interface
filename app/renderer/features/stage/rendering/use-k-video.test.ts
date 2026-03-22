@@ -78,21 +78,42 @@ describe('useKVideo', () => {
       firstVideo.dispatch('loadeddata');
     });
 
-    expect(result.current).toBe(firstVideo);
+    expect(result.current).toEqual({ status: 'loaded', resource: firstVideo });
 
     rerender({ src: '/media-b.mp4' });
 
     const secondVideo = createdVideos[1];
 
-    expect(result.current).toBe(firstVideo);
+    expect(result.current).toEqual({ status: 'loading' });
     expect(firstVideo.pauseMock).not.toHaveBeenCalled();
 
     act(() => {
       secondVideo.dispatch('loadeddata');
     });
 
-    expect(result.current).toBe(secondVideo);
+    expect(result.current).toEqual({ status: 'loaded', resource: secondVideo });
     expect(firstVideo.pauseMock).toHaveBeenCalledTimes(1);
     expect(firstVideo.removeAttributeMock).toHaveBeenCalledWith('src');
+  });
+
+  it('reports broken when the requested video errors before loading', () => {
+    const createdVideos: FakeVideoElement[] = [];
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'video') {
+        const video = createFakeVideo();
+        createdVideos.push(video);
+        return video;
+      }
+
+      return originalCreateElement(tagName);
+    }) as typeof document.createElement);
+
+    const { result } = renderHook(() => useKVideo('/missing.mp4', { autoplay: false, loop: false, muted: true }));
+
+    act(() => {
+      createdVideos[0].dispatch('error');
+    });
+
+    expect(result.current).toEqual({ status: 'broken' });
   });
 });

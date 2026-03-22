@@ -14,31 +14,31 @@ import { PlaylistList } from './playlist-list';
 
 export function LibraryPanel() {
   const { currentLibraryBundle, currentLibraryId, currentPlaylistId, clearRecentlyCreated } = useNavigation();
-  const { presentations } = useProjectContent();
-  const { selectPlaylistPresentation } = useSlides();
+  const { contentItems } = useProjectContent();
+  const { selectPlaylistContentItem } = useSlides();
   const { libraryPanelView, setLibraryPanelView } = useLibraryPanelState();
   const {
     renameSegment,
-    renamePresentation,
+    renameContentItem,
     deleteLibrary,
     deletePlaylist,
     deleteSegment,
-    deletePresentation,
+    deleteContentItem,
     movePlaylist,
-    movePresentation,
+    moveContentItem,
     setSegmentColor,
-    movePresentationToSegment,
-    addPresentationToSegment,
-    createPresentationInSegment,
+    moveContentItemToSegment,
+    addContentItemToSegment,
+    createDeckInSegment,
     createLyricInSegment
   } = useLibraryPanelManagement();
 
   const selectedTree = currentLibraryBundle?.playlists.find((playlist) => playlist.playlist.id === currentPlaylistId) ?? null;
   const playlistIds = currentLibraryBundle?.playlists.map((playlist) => playlist.playlist.id) ?? [];
-  const presentationIds = presentations.map((presentation) => presentation.id);
+  const contentItemIds = contentItems.map((item) => item.id);
 
   function handleRenameSegment(segmentId: string, name: string) { void renameSegment(segmentId, name); }
-  function handleRenamePresentation(presentationId: string, title: string) { void renamePresentation(presentationId, title); }
+  function handleRenameContentItem(itemId: string, title: string) { void renameContentItem(itemId, title); }
 
   const {
     menuState,
@@ -63,21 +63,21 @@ export function LibraryPanel() {
     currentLibraryId,
     currentPlaylistId,
     selectedTree,
-    libraryPresentations: presentations,
+    libraryContentItems: contentItems,
     playlistIds,
-    presentationIds,
+    contentItemIds,
     setLibraryPanelView,
-    selectPlaylistPresentation,
+    selectPlaylistContentItem,
     deleteLibrary,
     deletePlaylist,
     deleteSegment,
-    deletePresentation,
+    deleteContentItem,
     movePlaylist,
-    movePresentation,
+    moveContentItem,
     setSegmentColor,
-    addPresentationToSegment,
-    movePresentationToSegment,
-    createPresentationInSegment,
+    addContentItemToSegment,
+    moveContentItemToSegment,
+    createDeckInSegment,
     createLyricInSegment
   });
 
@@ -122,7 +122,7 @@ export function LibraryPanel() {
                 onSegmentPresentationContextMenu={handleSegmentPresentationContextMenu}
                 onSegmentPresentationMenuButtonClick={openSegmentPresentationMenuFromButton}
                 onRenameSegment={handleRenameSegment}
-                onRenamePresentation={handleRenamePresentation}
+                onRenamePresentation={handleRenameContentItem}
                 onClearEditingSegment={clearEditingSegment}
                 onClearEditingPresentation={clearEditingPresentation}
               />

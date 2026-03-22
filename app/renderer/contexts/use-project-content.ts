@@ -1,17 +1,20 @@
 import { useMemo, useRef } from 'react';
-import type { Id, MediaAsset, Overlay, Presentation, Slide, SlideElement, Template } from '@core/types';
+import { getSlideContentItemId } from '@core/content-items';
+import type { ContentItem, Deck, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Template } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
 import { useCast } from './cast-context';
 
 interface ProjectContent {
-  presentations: Presentation[];
+  decks: Deck[];
+  lyrics: Lyric[];
+  contentItems: ContentItem[];
   slides: Slide[];
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
   templates: Template[];
-  presentationsById: ReadonlyMap<Id, Presentation>;
-  slidesByPresentationId: ReadonlyMap<Id, Slide[]>;
+  contentItemsById: ReadonlyMap<Id, ContentItem>;
+  slidesByContentItemId: ReadonlyMap<Id, Slide[]>;
   slideElementsBySlideId: ReadonlyMap<Id, SlideElement[]>;
   mediaAssetsById: ReadonlyMap<Id, MediaAsset>;
   overlaysById: ReadonlyMap<Id, Overlay>;
@@ -30,7 +33,8 @@ export function useProjectContent(): ProjectContent {
   const { snapshot } = useCast();
 
   const prevRef = useRef<{
-    presentations: Presentation[];
+    decks: Deck[];
+    lyrics: Lyric[];
     slides: Slide[];
     slideElements: SlideElement[];
     mediaAssets: MediaAsset[];
@@ -40,7 +44,8 @@ export function useProjectContent(): ProjectContent {
 
   const stableInputs = useMemo(() => {
     const raw = {
-      presentations: snapshot?.presentations ?? [],
+      decks: snapshot?.decks ?? [],
+      lyrics: snapshot?.lyrics ?? [],
       slides: snapshot?.slides ?? [],
       slideElements: snapshot?.slideElements ?? [],
       mediaAssets: snapshot?.mediaAssets ?? [],
@@ -50,7 +55,8 @@ export function useProjectContent(): ProjectContent {
 
     const prev = prevRef.current;
     const result = {
-      presentations: stableArray(prev?.presentations ?? null, raw.presentations),
+      decks: stableArray(prev?.decks ?? null, raw.decks),
+      lyrics: stableArray(prev?.lyrics ?? null, raw.lyrics),
       slides: stableArray(prev?.slides ?? null, raw.slides),
       slideElements: stableArray(prev?.slideElements ?? null, raw.slideElements),
       mediaAssets: stableArray(prev?.mediaAssets ?? null, raw.mediaAssets),
@@ -61,27 +67,33 @@ export function useProjectContent(): ProjectContent {
     return result;
   }, [snapshot]);
 
-  const { presentations, slides, slideElements, mediaAssets, overlays, templates } = stableInputs;
+  const { decks, lyrics, slides, slideElements, mediaAssets, overlays, templates } = stableInputs;
 
-  const presentationsById = useMemo(() => {
-    const map = new Map<Id, Presentation>();
-    for (const p of presentations) map.set(p.id, p);
+  const contentItems = useMemo(() => {
+    return [...decks, ...lyrics].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
+  }, [decks, lyrics]);
+
+  const contentItemsById = useMemo(() => {
+    const map = new Map<Id, ContentItem>();
+    for (const item of contentItems) map.set(item.id, item);
     return map;
-  }, [presentations]);
+  }, [contentItems]);
 
-  const slidesByPresentationId = useMemo(() => {
+  const slidesByContentItemId = useMemo(() => {
     const map = new Map<Id, Slide[]>();
-    for (const p of presentations) map.set(p.id, []);
+    for (const item of contentItems) map.set(item.id, []);
     for (const slide of slides) {
-      const existing = map.get(slide.presentationId) ?? [];
+      const itemId = getSlideContentItemId(slide);
+      if (!itemId) continue;
+      const existing = map.get(itemId) ?? [];
       existing.push(slide);
-      map.set(slide.presentationId, existing);
+      map.set(itemId, existing);
     }
-    map.forEach((presentationSlides, presentationId) => {
-      map.set(presentationId, sortSlides(presentationSlides));
+    map.forEach((contentSlides, itemId) => {
+      map.set(itemId, sortSlides(contentSlides));
     });
     return map;
-  }, [presentations, slides]);
+  }, [contentItems, slides]);
 
   const slideElementsBySlideId = useMemo(() => {
     const map = new Map<Id, SlideElement[]>();
@@ -116,21 +128,23 @@ export function useProjectContent(): ProjectContent {
   }, [templates]);
 
   return useMemo(() => ({
-    presentations,
+    decks,
+    lyrics,
+    contentItems,
     slides,
     slideElements,
     mediaAssets,
     overlays,
     templates,
-    presentationsById,
-    slidesByPresentationId,
+    contentItemsById,
+    slidesByContentItemId,
     slideElementsBySlideId,
     mediaAssetsById,
     overlaysById,
     templatesById,
   }), [
-    presentations, slides, slideElements, mediaAssets, overlays, templates,
-    presentationsById, slidesByPresentationId, slideElementsBySlideId,
+    decks, lyrics, contentItems, slides, slideElements, mediaAssets, overlays, templates,
+    contentItemsById, slidesByContentItemId, slideElementsBySlideId,
     mediaAssetsById, overlaysById, templatesById,
   ]);
 }

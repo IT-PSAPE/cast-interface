@@ -1,26 +1,26 @@
-import type { PlaylistTree, Presentation } from '@core/types';
+import type { ContentItem, PlaylistTree } from '@core/types';
 import { describe, expect, it } from 'vitest';
 import {
-  resolveCurrentPlaylistPresentationId,
-  resolveCurrentPresentationId,
-  resolvePinnedLyricPresentationId,
+  resolveCurrentPlaylistContentItemId,
+  resolveCurrentContentItemId,
+  resolvePinnedLyricContentItemId,
 } from './navigation-context';
 
-describe('resolveCurrentPresentationId', () => {
+describe('resolveCurrentContentItemId', () => {
   it('keeps null when nothing is selected', () => {
-    expect(resolveCurrentPresentationId(null, ['p-1', 'p-2'])).toBeNull();
+    expect(resolveCurrentContentItemId(null, ['p-1', 'p-2'])).toBeNull();
   });
 
   it('keeps selection when selected id still exists', () => {
-    expect(resolveCurrentPresentationId('p-2', ['p-1', 'p-2'])).toBe('p-2');
+    expect(resolveCurrentContentItemId('p-2', ['p-1', 'p-2'])).toBe('p-2');
   });
 
   it('clears selection when selected id no longer exists', () => {
-    expect(resolveCurrentPresentationId('p-3', ['p-1', 'p-2'])).toBeNull();
+    expect(resolveCurrentContentItemId('p-3', ['p-1', 'p-2'])).toBeNull();
   });
 });
 
-describe('resolveCurrentPlaylistPresentationId', () => {
+describe('resolveCurrentPlaylistContentItemId', () => {
   const selectedTree: PlaylistTree = {
     playlist: { id: 'playlist-1', libraryId: 'library-1', name: 'Playlist', createdAt: '', updatedAt: '' },
     segments: [
@@ -28,12 +28,12 @@ describe('resolveCurrentPlaylistPresentationId', () => {
         segment: { id: 'segment-1', playlistId: 'playlist-1', name: 'Segment', order: 0, colorKey: null, createdAt: '', updatedAt: '' },
         entries: [
           {
-            entry: { id: 'entry-1', segmentId: 'segment-1', presentationId: 'p-1', order: 0, createdAt: '', updatedAt: '' },
-            presentation: { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' },
+            entry: { id: 'entry-1', segmentId: 'segment-1', deckId: 'p-1', lyricId: null, order: 0, createdAt: '', updatedAt: '' },
+            item: { id: 'p-1', title: 'Presentation 1', type: 'deck', order: 0, createdAt: '', updatedAt: '' },
           },
           {
-            entry: { id: 'entry-2', segmentId: 'segment-1', presentationId: 'p-2', order: 1, createdAt: '', updatedAt: '' },
-            presentation: { id: 'p-2', title: 'Presentation 2', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' },
+            entry: { id: 'entry-2', segmentId: 'segment-1', deckId: 'p-2', lyricId: null, order: 1, createdAt: '', updatedAt: '' },
+            item: { id: 'p-2', title: 'Presentation 2', type: 'deck', order: 1, createdAt: '', updatedAt: '' },
           },
         ],
       },
@@ -41,19 +41,19 @@ describe('resolveCurrentPlaylistPresentationId', () => {
   };
 
   it('keeps the playlist selection when the selected presentation is still in the playlist', () => {
-    expect(resolveCurrentPlaylistPresentationId('p-2', selectedTree)).toBe('p-2');
+    expect(resolveCurrentPlaylistContentItemId('p-2', selectedTree)).toBe('p-2');
   });
 
   it('clears the selection when the current playlist presentation is missing', () => {
-    expect(resolveCurrentPlaylistPresentationId('p-9', selectedTree)).toBeNull();
+    expect(resolveCurrentPlaylistContentItemId('p-9', selectedTree)).toBeNull();
   });
 
   it('returns null when the playlist has no presentations', () => {
-    expect(resolveCurrentPlaylistPresentationId('p-1', { ...selectedTree, segments: [] })).toBeNull();
+    expect(resolveCurrentPlaylistContentItemId('p-1', { ...selectedTree, segments: [] })).toBeNull();
   });
 });
 
-describe('resolvePinnedLyricPresentationId', () => {
+describe('resolvePinnedLyricContentItemId', () => {
   const selectedTree: PlaylistTree = {
     playlist: { id: 'playlist-1', libraryId: 'library-1', name: 'Playlist', createdAt: '', updatedAt: '' },
     segments: [
@@ -61,30 +61,30 @@ describe('resolvePinnedLyricPresentationId', () => {
         segment: { id: 'segment-1', playlistId: 'playlist-1', name: 'Segment', order: 0, colorKey: null, createdAt: '', updatedAt: '' },
         entries: [
           {
-            entry: { id: 'entry-1', segmentId: 'segment-1', presentationId: 'p-1', order: 0, createdAt: '', updatedAt: '' },
-            presentation: { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' },
+            entry: { id: 'entry-1', segmentId: 'segment-1', deckId: 'p-1', lyricId: null, order: 0, createdAt: '', updatedAt: '' },
+            item: { id: 'p-1', title: 'Presentation 1', type: 'deck', order: 0, createdAt: '', updatedAt: '' },
           },
         ],
       },
     ],
   };
 
-  const presentationsById = new Map<string, Presentation>([
-    ['p-1', { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
-    ['p-2', { id: 'p-2', title: 'Lyric 1', entityType: 'lyric', kind: 'lyrics', createdAt: '', updatedAt: '' }],
+  const presentationsById = new Map<string, ContentItem>([
+    ['p-1', { id: 'p-1', title: 'Presentation 1', type: 'deck', order: 0, createdAt: '', updatedAt: '' }],
+    ['p-2', { id: 'p-2', title: 'Lyric 1', type: 'lyric', order: 1, createdAt: '', updatedAt: '' }],
   ]);
 
   it('keeps a selected lyric even when it is outside the visible playlist', () => {
-    expect(resolvePinnedLyricPresentationId('p-2', selectedTree, presentationsById)).toBe('p-2');
+    expect(resolvePinnedLyricContentItemId('p-2', selectedTree, presentationsById)).toBe('p-2');
   });
 
   it('clears the selection for non-lyric presentations that are no longer visible', () => {
-    expect(resolvePinnedLyricPresentationId('p-9', selectedTree, presentationsById)).toBeNull();
+    expect(resolvePinnedLyricContentItemId('p-9', selectedTree, presentationsById)).toBeNull();
   });
 
   it('clears a selected lyric when it no longer exists', () => {
-    expect(resolvePinnedLyricPresentationId('p-2', selectedTree, new Map<string, Presentation>([
-      ['p-1', { id: 'p-1', title: 'Presentation 1', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
+    expect(resolvePinnedLyricContentItemId('p-2', selectedTree, new Map<string, ContentItem>([
+      ['p-1', { id: 'p-1', title: 'Presentation 1', type: 'deck', order: 0, createdAt: '', updatedAt: '' }],
     ]))).toBeNull();
   });
 });

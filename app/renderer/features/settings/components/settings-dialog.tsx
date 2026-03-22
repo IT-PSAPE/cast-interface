@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DialogFrame } from '../../../components/dialog-frame';
 import { AppearanceSettingsPanel } from './appearance-settings-panel';
+import { ImportExportSettingsPanel } from './import-export-settings-panel';
 import { OutputSettingsPanel } from './output-settings-panel';
 import { OverlaySettingsPanel } from './overlay-settings-panel';
 import { SettingsSidebar, type SettingsTabId } from './settings-sidebar';
@@ -30,6 +31,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
           {activeTab === 'appearance' ? <AppearanceSettingsPanel /> : null}
           {activeTab === 'output' ? <OutputSettingsPanel /> : null}
           {activeTab === 'overlays' ? <OverlaySettingsPanel /> : null}
+          {activeTab === 'import-export' ? <ImportExportSettingsPanel /> : null}
         </section>
       </div>
     </DialogFrame>

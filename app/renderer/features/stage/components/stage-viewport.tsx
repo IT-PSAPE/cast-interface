@@ -10,6 +10,7 @@ export function StageViewport() {
       <SceneFrame width={state.scene.width} height={state.scene.height} fit="contain" className="border border-border-primary shadow-2xl" stageClassName="z-10" checkerboard>
         <SceneStage
           scene={state.scene}
+          surface="slide-editor"
           editable={state.editable}
           className="h-full w-full"
           onDragOver={actions.handleDragOver}

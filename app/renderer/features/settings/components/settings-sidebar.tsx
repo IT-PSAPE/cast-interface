@@ -1,6 +1,6 @@
 import { SelectableRow } from '../../../components/selectable-row';
 
-export type SettingsTabId = 'appearance' | 'output' | 'overlays';
+export type SettingsTabId = 'appearance' | 'output' | 'overlays' | 'import-export';
 
 interface SettingsSidebarProps {
   activeTab: SettingsTabId;
@@ -11,6 +11,7 @@ const SETTINGS_TABS: Array<{ id: SettingsTabId; title: string }> = [
   { id: 'appearance', title: 'Appearance' },
   { id: 'output', title: 'Outputs' },
   { id: 'overlays', title: 'Overlays' },
+  { id: 'import-export', title: 'Import / Export' },
 ];
 
 export function SettingsSidebar({ activeTab, onSelectTab }: SettingsSidebarProps) {

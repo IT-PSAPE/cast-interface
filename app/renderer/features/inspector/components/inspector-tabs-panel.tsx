@@ -1,6 +1,6 @@
 import { useInspector } from '../../../contexts/inspector-context';
 import { Inspector } from './inspector';
-import { PresentationInspector } from './presentation-inspector';
+import { ContentItemInspector } from './presentation-inspector';
 import { ShapeElementInspector } from './shape-element-inspector';
 import { SlideInspector } from './slide-inspector';
 import { TextElementInspector } from './text-element-inspector';
@@ -26,7 +26,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
       </Inspector.TabList>
 
       <Inspector.Body className={bodyClassName}>
-        <Inspector.Panel name="presentation"><PresentationInspector /></Inspector.Panel>
+        <Inspector.Panel name="presentation"><ContentItemInspector /></Inspector.Panel>
         <Inspector.Panel name="slide"><SlideInspector /></Inspector.Panel>
         <Inspector.Panel name="shape"><ShapeElementInspector /></Inspector.Panel>
         <Inspector.Panel name="text"><TextElementInspector /></Inspector.Panel>

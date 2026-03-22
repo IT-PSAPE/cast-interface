@@ -1,29 +1,29 @@
 import { useMemo } from 'react';
 import type { ContextMenuItem } from '../components/context-menu';
-import { buildCreatePresentationMenuItems } from '../utils/build-create-presentation-menu-items';
+import { buildCreateContentMenuItems } from '../utils/build-create-presentation-menu-items';
 import { useButtonContextMenu } from './use-button-context-menu';
 
 interface UseCreatePresentationMenuOptions {
-  createPresentation: () => void | Promise<void>;
+  createDeck: () => void | Promise<void>;
   createLyric: () => void | Promise<void>;
-  presentationLabel?: string;
+  deckLabel?: string;
   lyricLabel?: string;
 }
 
-export function useCreatePresentationMenu({
-  createPresentation,
+export function useCreateContentMenu({
+  createDeck,
   createLyric,
-  presentationLabel,
+  deckLabel,
   lyricLabel
 }: UseCreatePresentationMenuOptions) {
   const { menuState, openMenuFromButton, closeMenu } = useButtonContextMenu();
 
-  const menuItems = useMemo<ContextMenuItem[]>(() => buildCreatePresentationMenuItems({
-    createPresentation,
+  const menuItems = useMemo<ContextMenuItem[]>(() => buildCreateContentMenuItems({
+    createDeck,
     createLyric,
-    presentationLabel,
+    deckLabel,
     lyricLabel
-  }), [createLyric, createPresentation, lyricLabel, presentationLabel]);
+  }), [createDeck, createLyric, deckLabel, lyricLabel]);
 
   return {
     menuItems,

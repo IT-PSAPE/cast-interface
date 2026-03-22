@@ -2,56 +2,56 @@ import type { Id, PlaylistTree } from '@core/types';
 import type { ContextMenuItem } from '../../../components/context-menu';
 
 interface BuildPresentationMenuItemsOptions {
-  presentationId: Id;
+  itemId: Id;
   scope: 'library' | 'segment';
   currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
-  presentationIds: Id[];
-  selectPresentation: (id: Id) => void;
-  movePresentation: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<void>;
-  beginRenamePresentation: (id: Id) => void;
-  deletePresentation: (id: Id) => Promise<void>;
+  itemIds: Id[];
+  selectContentItem: (id: Id) => void;
+  moveContentItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
+  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
+  beginRenameContentItem: (id: Id) => void;
+  deleteContentItem: (id: Id) => Promise<void>;
 }
 
-export function buildPresentationMenuItems({
-  presentationId,
+export function buildContentItemMenuItems({
+  itemId,
   scope,
   currentPlaylistId,
   selectedTree,
-  presentationIds,
-  selectPresentation,
-  movePresentation,
-  movePresentationToSegment,
-  beginRenamePresentation,
-  deletePresentation
+  itemIds,
+  selectContentItem,
+  moveContentItem,
+  moveContentItemToSegment,
+  beginRenameContentItem,
+  deleteContentItem
 }: BuildPresentationMenuItemsOptions): ContextMenuItem[] {
-  const presentationIndex = presentationIds.indexOf(presentationId);
+  const itemIndex = itemIds.indexOf(itemId);
   const moveUpItem: ContextMenuItem = {
-    id: 'presentation-up',
+    id: 'content-item-up',
     label: 'Move Up',
-    disabled: presentationIndex <= 0,
-    onSelect: () => { void movePresentation(presentationId, 'up'); }
+    disabled: itemIndex <= 0,
+    onSelect: () => { void moveContentItem(itemId, 'up'); }
   };
   const moveDownItem: ContextMenuItem = {
-    id: 'presentation-down',
+    id: 'content-item-down',
     label: 'Move Down',
-    disabled: presentationIndex < 0 || presentationIndex >= presentationIds.length - 1,
-    onSelect: () => { void movePresentation(presentationId, 'down'); }
+    disabled: itemIndex < 0 || itemIndex >= itemIds.length - 1,
+    onSelect: () => { void moveContentItem(itemId, 'down'); }
   };
   const deleteItem: ContextMenuItem = {
-    id: 'delete-presentation',
+    id: 'delete-content-item',
     label: 'Delete',
     danger: true,
     onSelect: () => {
       if (!window.confirm('Delete this item?')) return;
-      void deletePresentation(presentationId);
+      void deleteContentItem(itemId);
     }
   };
 
   if (scope === 'library') {
     return [
-      { id: 'rename-presentation', label: 'Rename', onSelect: () => beginRenamePresentation(presentationId) },
+      { id: 'rename-content-item', label: 'Rename', onSelect: () => beginRenameContentItem(itemId) },
       moveUpItem,
       moveDownItem,
       deleteItem
@@ -59,24 +59,24 @@ export function buildPresentationMenuItems({
   }
 
   const assignedSegmentId = selectedTree?.segments.find((segment) =>
-    segment.entries.some((entry) => entry.presentation.id === presentationId)
+    segment.entries.some((entry) => entry.item.id === itemId)
   )?.segment.id ?? null;
   const moveOptions = (selectedTree?.segments ?? []).map((segment) => ({
     id: `move-${segment.segment.id}`,
     label: segment.segment.name,
     onSelect: () => {
       if (!currentPlaylistId) return;
-      void movePresentationToSegment(currentPlaylistId, presentationId, segment.segment.id);
-      selectPresentation(presentationId);
+      void moveContentItemToSegment(currentPlaylistId, itemId, segment.segment.id);
+      selectContentItem(itemId);
     }
   }));
 
   return [
-    { id: 'rename-presentation', label: 'Rename', onSelect: () => beginRenamePresentation(presentationId) },
+    { id: 'rename-content-item', label: 'Rename', onSelect: () => beginRenameContentItem(itemId) },
     moveUpItem,
     moveDownItem,
     {
-      id: 'move-presentation',
+      id: 'move-content-item',
       label: 'Move',
       disabled: !currentPlaylistId,
       children: [
@@ -86,8 +86,8 @@ export function buildPresentationMenuItems({
           label: 'Not in selected playlist',
           onSelect: () => {
             if (!currentPlaylistId) return;
-            void movePresentationToSegment(currentPlaylistId, presentationId, null);
-            selectPresentation(presentationId);
+            void moveContentItemToSegment(currentPlaylistId, itemId, null);
+            selectContentItem(itemId);
           }
         }
       ]
@@ -98,8 +98,8 @@ export function buildPresentationMenuItems({
       disabled: !currentPlaylistId || !assignedSegmentId,
       onSelect: () => {
         if (!currentPlaylistId) return;
-        void movePresentationToSegment(currentPlaylistId, presentationId, null);
-        selectPresentation(presentationId);
+        void moveContentItemToSegment(currentPlaylistId, itemId, null);
+        selectContentItem(itemId);
       }
     },
     deleteItem

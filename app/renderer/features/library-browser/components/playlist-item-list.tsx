@@ -12,17 +12,17 @@ interface PlaylistItemListProps {
   editingPresentationId: string | null;
   onSegmentContextMenu: (event: React.MouseEvent<HTMLElement>, segmentId: string) => void;
   onSegmentMenuButtonClick: (segmentId: string, button: HTMLElement) => void;
-  onSegmentPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, presentationId: string) => void;
-  onSegmentPresentationMenuButtonClick: (presentationId: string, button: HTMLElement) => void;
+  onSegmentPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, itemId: string) => void;
+  onSegmentPresentationMenuButtonClick: (itemId: string, button: HTMLElement) => void;
   onRenameSegment: (segmentId: string, name: string) => void;
-  onRenamePresentation: (presentationId: string, title: string) => void;
+  onRenamePresentation: (itemId: string, title: string) => void;
   onClearEditingSegment: () => void;
   onClearEditingPresentation: () => void;
 }
 
 export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId, onSegmentContextMenu, onSegmentMenuButtonClick, onSegmentPresentationContextMenu, onSegmentPresentationMenuButtonClick, onRenameSegment, onRenamePresentation, onClearEditingSegment, onClearEditingPresentation }: PlaylistItemListProps) {
-  const { currentPlaylistPresentationId, createSegment } = useNavigation();
-  const { selectPlaylistPresentation } = useSlides();
+  const { currentPlaylistContentItemId, createSegment } = useNavigation();
+  const { selectPlaylistContentItem } = useSlides();
   const { isSegmentCollapsed, toggleSegmentCollapsed } = useLibraryPanelState();
 
   function handleNewSegment() { void createSegment(); }
@@ -46,10 +46,10 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
             key={segment.segment.id}
             segment={segment}
             collapsed={isSegmentCollapsed(segment.segment.id)}
-            selectedPresentationId={currentPlaylistPresentationId}
+            selectedPresentationId={currentPlaylistContentItemId}
             editingSegmentId={editingSegmentId}
             editingPresentationId={editingPresentationId}
-            onSelectPresentation={selectPlaylistPresentation}
+            onSelectPresentation={selectPlaylistContentItem}
             onToggleCollapsed={toggleSegmentCollapsed}
             onSegmentContextMenu={onSegmentContextMenu}
             onSegmentMenuButtonClick={onSegmentMenuButtonClick}

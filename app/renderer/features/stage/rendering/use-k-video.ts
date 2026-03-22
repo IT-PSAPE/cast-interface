@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ResolvedMediaState } from './scene-types';
 
 interface UseKVideoOptions {
   autoplay: boolean;
@@ -6,13 +7,9 @@ interface UseKVideoOptions {
   muted: boolean;
 }
 
-export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVideoOptions): HTMLVideoElement | null {
-  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVideoOptions): ResolvedMediaState {
+  const [state, setState] = useState<ResolvedMediaState>({ status: 'empty' });
   const activeVideoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    activeVideoRef.current = video;
-  }, [video]);
 
   useEffect(() => {
     if (!src) {
@@ -23,7 +20,7 @@ export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVid
         current.load();
       }
       activeVideoRef.current = null;
-      setVideo(null);
+      setState({ status: 'empty' });
       return;
     }
 
@@ -36,6 +33,7 @@ export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVid
     nextVideo.crossOrigin = 'anonymous';
     nextVideo.preload = 'metadata';
     let promoted = false;
+    setState({ status: 'loading' });
 
     function handleReady() {
       promoted = true;
@@ -46,17 +44,31 @@ export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVid
         previous.load();
       }
       activeVideoRef.current = nextVideo;
-      setVideo(nextVideo);
+      setState({ status: 'loaded', resource: nextVideo });
       if (autoplay) {
         void nextVideo.play().catch(() => undefined);
       }
     }
 
+    function handleError() {
+      if (promoted) return;
+      const previous = activeVideoRef.current;
+      if (previous && previous !== nextVideo) {
+        previous.pause();
+        previous.removeAttribute('src');
+        previous.load();
+        activeVideoRef.current = null;
+      }
+      setState({ status: 'broken' });
+    }
+
     nextVideo.addEventListener('loadeddata', handleReady);
+    nextVideo.addEventListener('error', handleError);
     nextVideo.load();
 
     return () => {
       nextVideo.removeEventListener('loadeddata', handleReady);
+      nextVideo.removeEventListener('error', handleError);
       if (promoted) return;
       nextVideo.pause();
       nextVideo.removeAttribute('src');
@@ -75,5 +87,5 @@ export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVid
     };
   }, []);
 
-  return video;
+  return state;
 }

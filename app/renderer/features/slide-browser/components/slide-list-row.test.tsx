@@ -17,7 +17,7 @@ vi.mock('../../stage/rendering/scene-stage', () => ({
 }));
 
 const SCENE: RenderScene = {
-  slide: { id: 'slide-1', presentationId: 'presentation-1', width: 1920, height: 1080, notes: '', order: 0, createdAt: '', updatedAt: '' },
+  slide: { id: 'slide-1', deckId: 'presentation-1', lyricId: null, width: 1920, height: 1080, notes: '', order: 0, createdAt: '', updatedAt: '' },
   width: 1920,
   height: 1080,
   nodes: [],
@@ -25,7 +25,7 @@ const SCENE: RenderScene = {
 
 function createRow(input: Partial<OutlineSlideRow> = {}): OutlineSlideRow {
   return {
-    slide: { id: 'slide-1', presentationId: 'presentation-1', width: 1920, height: 1080, notes: '', order: 0, createdAt: '', updatedAt: '' },
+    slide: { id: 'slide-1', deckId: 'presentation-1', lyricId: null, width: 1920, height: 1080, notes: '', order: 0, createdAt: '', updatedAt: '' },
     index: 0,
     state: 'selected',
     elements: [],

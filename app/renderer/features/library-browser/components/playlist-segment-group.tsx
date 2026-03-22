@@ -3,7 +3,7 @@ import { Icon } from '../../../components/icon';
 import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
-import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
+import { ContentItemIcon } from '../../../components/presentation-entity-icon';
 import { getSegmentHeaderColors } from '../utils/segment-header-color';
 
 interface PlaylistSegmentGroupProps {
@@ -16,10 +16,10 @@ interface PlaylistSegmentGroupProps {
   onToggleCollapsed: (segmentId: string) => void;
   onSegmentContextMenu: (event: React.MouseEvent<HTMLElement>, segmentId: string) => void;
   onSegmentMenuButtonClick: (segmentId: string, button: HTMLElement) => void;
-  onPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, presentationId: string) => void;
-  onPresentationMenuButtonClick: (presentationId: string, button: HTMLElement) => void;
+  onPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, itemId: string) => void;
+  onPresentationMenuButtonClick: (itemId: string, button: HTMLElement) => void;
   onRenameSegment: (segmentId: string, name: string) => void;
-  onRenamePresentation: (presentationId: string, title: string) => void;
+  onRenamePresentation: (itemId: string, title: string) => void;
   onClearEditingSegment: () => void;
   onClearEditingPresentation: () => void;
 }
@@ -80,18 +80,18 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
       </div>
 
       {!collapsed ? segment.entries.map((entry) => {
-        const isSelected = entry.presentation.id === selectedPresentationId;
-        const isPresentationEditing = entry.presentation.id === editingPresentationId;
+        const isSelected = entry.item.id === selectedPresentationId;
+        const isPresentationEditing = entry.item.id === editingPresentationId;
 
-        function handleSelect() { onSelectPresentation(entry.presentation.id); }
-        function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onPresentationContextMenu(event, entry.presentation.id); }
+        function handleSelect() { onSelectPresentation(entry.item.id); }
+        function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onPresentationContextMenu(event, entry.item.id); }
         function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
           event.stopPropagation();
-          onPresentationMenuButtonClick(entry.presentation.id, event.currentTarget);
+          onPresentationMenuButtonClick(entry.item.id, event.currentTarget);
         }
 
         function handleRename(title: string) {
-          onRenamePresentation(entry.presentation.id, title);
+          onRenamePresentation(entry.item.id, title);
           onClearEditingPresentation();
         }
 
@@ -104,12 +104,12 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
               onContextMenu={handleContextMenu}
               className="flex w-full items-center gap-2 rounded-sm border-0 px-2 py-1 pl-7 pr-8 text-left text-md cursor-pointer hover:bg-background-quaternary/50 hover:text-text-primary"
             >
-              <PresentationEntityIcon entity={entry.presentation} className="shrink-0 text-text-tertiary" />
-              <EditableText value={entry.presentation.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
+              <ContentItemIcon entity={entry.item} className="shrink-0 text-text-tertiary" />
+              <EditableText value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
             </Button>
 
             <IconButton
-              label={`Open ${entry.presentation.title} menu`}
+              label={`Open ${entry.item.title} menu`}
               onClick={handleMenuButtonClick}
               size="sm"
               variant="ghost"

@@ -1,6 +1,6 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSnapshot, Library, LibraryPlaylistBundle, Playlist, PlaylistEntry, PlaylistSegment, PlaylistTree, Presentation, Slide, SlideElement } from '@core/types';
+import type { AppSnapshot, Deck, Library, LibraryPlaylistBundle, Lyric, Playlist, PlaylistEntry, PlaylistSegment, PlaylistTree, Slide, SlideElement } from '@core/types';
 import { NavigationProvider, useNavigation } from './navigation-context';
 import { PresentationLayerProvider, usePresentationLayers } from './presentation-layer-context';
 import { SlideProvider, useSlides } from './slide-context';
@@ -51,32 +51,33 @@ function Probe() {
   return null;
 }
 
-function createPresentation(id: string, title: string): Presentation {
+function createPresentation(id: string, title: string): Deck {
   return {
     id,
     title,
-    entityType: 'presentation',
-    kind: 'canvas',
+    type: 'deck',
+    order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
-function createLyric(id: string, title: string): Presentation {
+function createLyric(id: string, title: string): Lyric {
   return {
     id,
     title,
-    entityType: 'lyric',
-    kind: 'lyrics',
+    type: 'lyric',
+    order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
-function createSlide(id: string, presentationId: string, order: number): Slide {
+function createSlide(id: string, itemId: string, order: number, type: 'deck' | 'lyric' = 'deck'): Slide {
   return {
     id,
-    presentationId,
+    deckId: type === 'deck' ? itemId : null,
+    lyricId: type === 'lyric' ? itemId : null,
     width: 1920,
     height: 1080,
     notes: '',
@@ -157,7 +158,8 @@ function createSnapshot(): AppSnapshot {
   const playlistEntry: PlaylistEntry = {
     id: 'entry-1',
     segmentId: segment.id,
-    presentationId: helloWorld.id,
+    deckId: helloWorld.id,
+    lyricId: null,
     order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -165,7 +167,8 @@ function createSnapshot(): AppSnapshot {
   const lyricEntry: PlaylistEntry = {
     id: 'entry-2',
     segmentId: lyricSegment.id,
-    presentationId: lyricPresentation.id,
+    deckId: null,
+    lyricId: lyricPresentation.id,
     order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -176,7 +179,7 @@ function createSnapshot(): AppSnapshot {
       segment,
       entries: [{
         entry: playlistEntry,
-        presentation: helloWorld,
+        item: helloWorld,
       }],
     }],
   };
@@ -186,7 +189,7 @@ function createSnapshot(): AppSnapshot {
       segment: lyricSegment,
       entries: [{
         entry: lyricEntry,
-        presentation: lyricPresentation,
+        item: lyricPresentation,
       }],
     }],
   };
@@ -198,14 +201,15 @@ function createSnapshot(): AppSnapshot {
   return {
     libraries: [library],
     libraryBundles: [libraryBundle],
-    presentations: [helloWorld, secondPresentation, lyricPresentation],
+    decks: [helloWorld, secondPresentation],
+    lyrics: [lyricPresentation],
     slides: [
-      createSlide('slide-1', helloWorld.id, 0),
-      createSlide('slide-2', helloWorld.id, 1),
-      createSlide('slide-3', helloWorld.id, 2),
-      createSlide('slide-4', secondPresentation.id, 0),
-      createSlide('slide-5', secondPresentation.id, 1),
-      createSlide('slide-6', lyricPresentation.id, 0),
+      createSlide('slide-1', helloWorld.id, 0, 'deck'),
+      createSlide('slide-2', helloWorld.id, 1, 'deck'),
+      createSlide('slide-3', helloWorld.id, 2, 'deck'),
+      createSlide('slide-4', secondPresentation.id, 0, 'deck'),
+      createSlide('slide-5', secondPresentation.id, 1, 'deck'),
+      createSlide('slide-6', lyricPresentation.id, 0, 'lyric'),
     ],
     slideElements: [
       createElement('element-1', 'slide-1', 'Hello Fat World'),
@@ -267,17 +271,17 @@ describe('presentation playback lanes', () => {
     render(<TestProviders />);
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
-      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+      expect(probeValue?.navigation.currentOutputContentItemId).toBeNull();
+      expect(probeValue?.navigation.currentContentItemId).toBeNull();
     });
 
     act(() => {
-      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+      probeValue?.slides.activateContentItemSlide('presentation-1', 0);
     });
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
-      expect(probeValue?.navigation.currentPresentationId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentContentItemId).toBe('presentation-1');
     });
 
     act(() => {
@@ -288,11 +292,11 @@ describe('presentation playback lanes', () => {
     expect(probeValue?.renderScenes.liveScene.nodes).toHaveLength(1);
 
     act(() => {
-      probeValue?.navigation.browsePresentation('presentation-2');
+      probeValue?.navigation.browseContentItem('presentation-2');
     });
 
-    expect(probeValue?.navigation.currentPresentationId).toBe('presentation-2');
-    expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
+    expect(probeValue?.navigation.currentContentItemId).toBe('presentation-2');
+    expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-1');
     expect(probeValue?.slides.currentSlide?.id).toBe('slide-4');
     expect(probeValue?.slides.liveSlide?.id).toBe('slide-2');
     expect(probeValue?.renderScenes.liveScene.nodes).toHaveLength(1);
@@ -304,15 +308,15 @@ describe('presentation playback lanes', () => {
     render(<TestProviders />);
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+      expect(probeValue?.navigation.currentContentItemId).toBeNull();
     });
 
     act(() => {
-      probeValue?.slides.selectPlaylistPresentation('presentation-1');
+      probeValue?.slides.selectPlaylistContentItem('presentation-1');
     });
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentPresentationId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentContentItemId).toBe('presentation-1');
     });
 
     act(() => {
@@ -322,10 +326,10 @@ describe('presentation playback lanes', () => {
     expect(probeValue?.slides.currentSlideIndex).toBe(1);
 
     act(() => {
-      probeValue?.navigation.browsePresentation('presentation-1');
+      probeValue?.navigation.browseContentItem('presentation-1');
     });
 
-    expect(probeValue?.navigation.isDetachedPresentationBrowser).toBe(true);
+    expect(probeValue?.navigation.isDetachedContentBrowser).toBe(true);
     expect(probeValue?.slides.currentSlideIndex).toBe(0);
 
     act(() => {
@@ -335,17 +339,17 @@ describe('presentation playback lanes', () => {
     expect(probeValue?.slides.currentSlideIndex).toBe(2);
 
     act(() => {
-      probeValue?.slides.selectPlaylistPresentation('presentation-1');
+      probeValue?.slides.selectPlaylistContentItem('presentation-1');
     });
 
-    expect(probeValue?.navigation.isDetachedPresentationBrowser).toBe(false);
+    expect(probeValue?.navigation.isDetachedContentBrowser).toBe(false);
     expect(probeValue?.slides.currentSlideIndex).toBe(1);
 
     act(() => {
-      probeValue?.navigation.browsePresentation('presentation-1');
+      probeValue?.navigation.browseContentItem('presentation-1');
     });
 
-    expect(probeValue?.navigation.isDetachedPresentationBrowser).toBe(true);
+    expect(probeValue?.navigation.isDetachedContentBrowser).toBe(true);
     expect(probeValue?.slides.currentSlideIndex).toBe(2);
   });
 
@@ -353,15 +357,15 @@ describe('presentation playback lanes', () => {
     render(<TestProviders />);
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+      expect(probeValue?.navigation.currentOutputContentItemId).toBeNull();
     });
 
     act(() => {
-      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+      probeValue?.slides.activateContentItemSlide('presentation-1', 0);
     });
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-1');
     });
 
     act(() => {
@@ -375,32 +379,32 @@ describe('presentation playback lanes', () => {
       probeValue?.slides.clearCurrentSlideSelection();
     });
 
-    expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentOutputContentItemId).toBeNull();
     expect(probeValue?.slides.liveSlide).toBeNull();
     expect(probeValue?.slides.currentSlide).toBeNull();
     expect(probeValue?.slides.currentSlideIndex).toBe(-1);
     expect(probeValue?.layers.contentLayerVisible).toBe(false);
 
     act(() => {
-      probeValue?.navigation.browsePresentation('presentation-2');
+      probeValue?.navigation.browseContentItem('presentation-2');
     });
 
-    expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentOutputContentItemId).toBeNull();
     expect(probeValue?.slides.liveSlide).toBeNull();
 
     act(() => {
-      probeValue?.slides.selectPlaylistPresentation('presentation-1');
+      probeValue?.slides.selectPlaylistContentItem('presentation-1');
     });
 
-    expect(probeValue?.navigation.currentOutputPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentOutputContentItemId).toBeNull();
     expect(probeValue?.slides.liveSlide).toBeNull();
 
     act(() => {
-      probeValue?.slides.activatePresentationSlide('presentation-1', 0);
+      probeValue?.slides.activateContentItemSlide('presentation-1', 0);
     });
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-1');
+      expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-1');
       expect(probeValue?.layers.contentLayerVisible).toBe(true);
     });
   });
@@ -410,24 +414,24 @@ describe('presentation playback lanes', () => {
 
     await waitFor(() => {
       expect(probeValue?.navigation.currentPlaylistId).toBe('playlist-1');
-      expect(probeValue?.navigation.currentPresentationId).toBeNull();
+      expect(probeValue?.navigation.currentContentItemId).toBeNull();
     });
 
     act(() => {
       probeValue?.navigation.setCurrentPlaylistId('playlist-2');
     });
 
-    expect(probeValue?.navigation.currentPresentationId).toBeNull();
-    expect(probeValue?.navigation.currentPlaylistPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentContentItemId).toBeNull();
+    expect(probeValue?.navigation.currentPlaylistContentItemId).toBeNull();
 
     act(() => {
-      probeValue?.slides.activatePresentationSlide('presentation-3', 0);
+      probeValue?.slides.activateContentItemSlide('presentation-3', 0);
     });
 
     await waitFor(() => {
-      expect(probeValue?.navigation.currentPlaylistPresentationId).toBe('presentation-3');
-      expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-3');
-      expect(probeValue?.navigation.currentPresentationId).toBe('presentation-3');
+      expect(probeValue?.navigation.currentPlaylistContentItemId).toBe('presentation-3');
+      expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-3');
+      expect(probeValue?.navigation.currentContentItemId).toBe('presentation-3');
     });
 
     act(() => {
@@ -435,9 +439,9 @@ describe('presentation playback lanes', () => {
     });
 
     expect(probeValue?.navigation.currentPlaylistId).toBe('playlist-1');
-    expect(probeValue?.navigation.currentPlaylistPresentationId).toBeNull();
-    expect(probeValue?.navigation.currentOutputPresentationId).toBe('presentation-3');
-    expect(probeValue?.navigation.currentPresentationId).toBeNull();
+    expect(probeValue?.navigation.currentPlaylistContentItemId).toBeNull();
+    expect(probeValue?.navigation.currentOutputContentItemId).toBe('presentation-3');
+    expect(probeValue?.navigation.currentContentItemId).toBeNull();
     expect(probeValue?.slides.liveSlide?.id).toBe('slide-6');
   });
 });

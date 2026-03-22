@@ -5,7 +5,8 @@ import { findCreatedSlideIndex } from './slide-context';
 function createSlide(id: string, order: number): Slide {
   return {
     id,
-    presentationId: 'presentation-1',
+    deckId: 'presentation-1',
+    lyricId: null,
     width: 1920,
     height: 1080,
     notes: '',
@@ -20,7 +21,8 @@ describe('findCreatedSlideIndex', () => {
     const snapshot: AppSnapshot = {
       libraries: [],
       libraryBundles: [],
-      presentations: [{ id: 'presentation-1', title: 'Presentation', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
+      decks: [{ id: 'presentation-1', title: 'Presentation', type: 'deck', order: 0, createdAt: '', updatedAt: '' }],
+      lyrics: [],
       slides: [createSlide('slide-1', 0), createSlide('slide-2', 1)],
       slideElements: [],
       mediaAssets: [],
@@ -35,7 +37,8 @@ describe('findCreatedSlideIndex', () => {
     const snapshot: AppSnapshot = {
       libraries: [],
       libraryBundles: [],
-      presentations: [{ id: 'presentation-1', title: 'Presentation', entityType: 'presentation', kind: 'canvas', createdAt: '', updatedAt: '' }],
+      decks: [{ id: 'presentation-1', title: 'Presentation', type: 'deck', order: 0, createdAt: '', updatedAt: '' }],
+      lyrics: [],
       slides: [createSlide('slide-1', 0)],
       slideElements: [],
       mediaAssets: [],

@@ -41,7 +41,7 @@ export function TemplateCard({ selected, template, onClick, onDoubleClick, onOpe
       body={(
         <>
           <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
-            <SceneStage scene={scene} className="absolute inset-0 pointer-events-none" />
+            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
           </SceneFrame>
           {onOpenMenu ? (
             <div className="absolute right-1 top-1 hidden group-hover:block">

@@ -1,33 +1,36 @@
 import { useEffect, useState } from 'react';
+import type { ResolvedMediaState } from './scene-types';
 import { getImageCacheEntry } from './image-cache';
 
-export function useKImage(src: string | null): HTMLImageElement | null {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
+export function useKImage(src: string | null): ResolvedMediaState {
+  const [state, setState] = useState<ResolvedMediaState>({ status: 'empty' });
 
   useEffect(() => {
     if (!src) {
-      setImage(null);
+      setState({ status: 'empty' });
       return;
     }
     const entry = getImageCacheEntry(src);
 
     if (entry.status === 'loaded') {
-      setImage(entry.image);
+      setState({ status: 'loaded', resource: entry.image });
       return;
     }
 
     if (entry.status === 'error') {
-      setImage(null);
+      setState({ status: 'broken' });
       return;
     }
 
+    setState({ status: 'loading' });
+
     function handleStatusChange(status: 'loaded' | 'error') {
       if (status === 'loaded') {
-        setImage(entry.image);
+        setState({ status: 'loaded', resource: entry.image });
         return;
       }
 
-      setImage(null);
+      setState({ status: 'broken' });
     }
 
     entry.listeners.add(handleStatusChange);
@@ -37,5 +40,5 @@ export function useKImage(src: string | null): HTMLImageElement | null {
     };
   }, [src]);
 
-  return image;
+  return state;
 }

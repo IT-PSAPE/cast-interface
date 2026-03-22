@@ -1,22 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import type { PlaylistTree, Presentation, Slide } from '@core/types';
+import type { ContentItem, PlaylistTree, Slide } from '@core/types';
 import { flattenPlaylistPresentationSequence } from './use-playlist-presentation-sequence';
 
-function presentation(id: string, title: string): Presentation {
+function presentation(id: string, title: string): ContentItem {
   return {
     id,
     title,
-    entityType: 'presentation',
-    kind: 'canvas',
+    type: 'deck',
+    order: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
-function slide(id: string, presentationId: string, order: number): Slide {
+function slide(id: string, itemId: string, order: number): Slide {
   return {
     id,
-    presentationId,
+    deckId: itemId,
+    lyricId: null,
     width: 1920,
     height: 1080,
     notes: '',
@@ -60,12 +61,13 @@ describe('flattenPlaylistPresentationSequence', () => {
               entry: {
                 id: 'entry-1',
                 segmentId: 'segment-1',
-                presentationId: 'p-1',
+                deckId: 'p-1',
+                lyricId: null,
                 order: 0,
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
               },
-              presentation: p1,
+              item: p1,
             },
           ],
         },
@@ -84,23 +86,25 @@ describe('flattenPlaylistPresentationSequence', () => {
               entry: {
                 id: 'entry-2',
                 segmentId: 'segment-2',
-                presentationId: 'p-2',
+                deckId: 'p-2',
+                lyricId: null,
                 order: 0,
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
               },
-              presentation: p2,
+              item: p2,
             },
             {
               entry: {
                 id: 'entry-3',
                 segmentId: 'segment-2',
-                presentationId: 'p-1',
+                deckId: 'p-1',
+                lyricId: null,
                 order: 1,
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
               },
-              presentation: p1,
+              item: p1,
             },
           ],
         },
@@ -115,7 +119,7 @@ describe('flattenPlaylistPresentationSequence', () => {
     const items = flattenPlaylistPresentationSequence(tree, slidesByPresentationId);
 
     expect(items.map((item) => item.entryId)).toEqual(['entry-1', 'entry-2', 'entry-3']);
-    expect(items.map((item) => item.presentation.id)).toEqual(['p-1', 'p-2', 'p-1']);
+    expect(items.map((item) => item.item.id)).toEqual(['p-1', 'p-2', 'p-1']);
     expect(items.map((item) => item.occurrenceIndex)).toEqual([1, 1, 2]);
     expect(items[0]?.slides.map((currentSlide) => currentSlide.id)).toEqual(['s-1', 's-2']);
     expect(items[2]?.slides.map((currentSlide) => currentSlide.id)).toEqual(['s-1', 's-2']);

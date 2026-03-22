@@ -7,13 +7,13 @@ import { Tab, TabBar } from '../../../components/tab-bar';
 import { useElements } from '../../../contexts/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useResourceDrawer } from '../../../contexts/resource-drawer-context';
-import { useCreatePresentationMenu } from '../../../hooks/use-create-presentation-menu';
+import { useCreateContentMenu } from '../../../hooks/use-create-presentation-menu';
 import { useCreateTemplateMenu } from '../../../hooks/use-create-template-menu';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import type { DrawerTab } from '../../../types/ui';
 import { MediaBinPanel } from './media-bin-panel';
-import { PresentationBinPanel } from './presentation-bin-panel';
+import { ContentBinPanel } from './presentation-bin-panel';
 import { TemplateBinPanel } from './template-bin-panel';
 
 const ACCEPTED_TYPES = ['image/', 'video/', 'audio/'];
@@ -37,8 +37,8 @@ interface ResourceDrawerContextValue {
   state: {
     drawerTab: DrawerTab;
     filterText: string;
-    menuItems: ReturnType<typeof useCreatePresentationMenu>['menuItems'];
-    menuState: ReturnType<typeof useCreatePresentationMenu>['menuState'];
+    menuItems: ReturnType<typeof useCreateContentMenu>['menuItems'];
+    menuState: ReturnType<typeof useCreateContentMenu>['menuState'];
     templateMenuItems: ReturnType<typeof useCreateTemplateMenu>['menuItems'];
     templateMenuState: ReturnType<typeof useCreateTemplateMenu>['menuState'];
   };
@@ -59,13 +59,13 @@ function useDrawer() {
 function Root({ children }: { children: ReactNode }) {
   const { drawerTab, setDrawerTab } = useResourceDrawer();
   const { importMedia } = useElements();
-  const { createPresentation, createLyric } = useNavigation();
+  const { createDeck, createLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { setWorkbenchMode } = useWorkbench();
   const [filterText, setFilterText] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
-  const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreatePresentationMenu({
-    createPresentation,
+  const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
+    createDeck,
     createLyric
   });
   const {
@@ -134,7 +134,7 @@ function Root({ children }: { children: ReactNode }) {
         'h-full border-t border-border-primary bg-primary grid min-h-0 grid-rows-[auto_1fr]',
         isDragOver ? 'border-t-focus' : ''
       ].join(' '),
-      showCreateAction: drawerTab === 'presentations' || drawerTab === 'templates',
+      showCreateAction: drawerTab === 'content' || drawerTab === 'templates',
       showImportAction: drawerTab === 'media'
     },
     state: {
@@ -157,7 +157,7 @@ function Root({ children }: { children: ReactNode }) {
         onDrop={value.actions.handleDrop}
       >
         {children}
-        {value.state.menuState && value.state.drawerTab === 'presentations' ? (
+        {value.state.menuState && value.state.drawerTab === 'content' ? (
           <ContextMenu
             x={value.state.menuState.x}
             y={value.state.menuState.y}
@@ -252,8 +252,8 @@ function MediaPanel() {
 
 function PresentationsPanel() {
   const { state } = useDrawer();
-  if (state.drawerTab !== 'presentations') return null;
-  return <PresentationBinPanel filterText={state.filterText} />;
+  if (state.drawerTab !== 'content') return null;
+  return <ContentBinPanel filterText={state.filterText} />;
 }
 
 function TemplatesPanel() {
@@ -283,7 +283,7 @@ export function ResourceDrawer() {
       <ResourceDrawerLayout.Header>
         <ResourceDrawerLayout.TabList>
           <ResourceDrawerLayout.Trigger name="media">Media</ResourceDrawerLayout.Trigger>
-          <ResourceDrawerLayout.Trigger name="presentations">Presentations</ResourceDrawerLayout.Trigger>
+          <ResourceDrawerLayout.Trigger name="content">Content</ResourceDrawerLayout.Trigger>
           <ResourceDrawerLayout.Trigger name="templates">Templates</ResourceDrawerLayout.Trigger>
         </ResourceDrawerLayout.TabList>
         <ResourceDrawerLayout.Actions>

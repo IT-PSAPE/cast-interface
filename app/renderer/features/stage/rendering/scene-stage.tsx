@@ -3,7 +3,7 @@ import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
 import type { SlideElement, TextElementPayload } from '@core/types';
 import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
-import type { RenderNode, RenderScene } from './scene-types';
+import type { RenderNode, RenderScene, SceneSurface } from './scene-types';
 import { SceneNodeMedia } from './scene-node-media';
 import { SceneNodeShape } from './scene-node-shape';
 import { SceneNodeText } from './scene-node-text';
@@ -13,6 +13,7 @@ import { useSceneStageViewport } from './use-scene-stage-viewport';
 
 interface SceneStageProps {
   scene: RenderScene;
+  surface?: SceneSurface;
   editable?: boolean;
   className?: string;
   onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
@@ -25,14 +26,14 @@ function rotationSnaps(): number[] {
   return Array.from({ length: 24 }, (_value, index) => index * 15);
 }
 
-function renderNodeContent(node: RenderNode) {
+function renderNodeContent(node: RenderNode, surface: SceneSurface) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} />;
+  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} surface={surface} />;
   return null;
 }
 
-export function SceneStage({ scene, editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
+export function SceneStage({ scene, surface = 'show', editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
   const snaps = useMemo(rotationSnaps, []);
@@ -105,7 +106,7 @@ export function SceneStage({ scene, editable = false, className = '', onDrop, on
           onTransform={editor.handleNodeTransform}
           onTransformEnd={editor.handleNodeTransformEnd}
         >
-          {renderNodeContent(node)}
+          {renderNodeContent(node, surface)}
         </Group>
       </Fragment>
     );

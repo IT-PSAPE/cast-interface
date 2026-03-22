@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { isLyricPresentation } from '@core/presentation-entities';
+import { isLyricContentItem } from '@core/content-items';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -18,19 +18,19 @@ interface ContinuousSlideListProps {
 
 interface OutlineSectionProps {
   item: PlaylistPresentationSequenceItem;
-  currentPresentationId: Id | null;
-  currentOutputPresentationId: Id | null;
+  currentContentItemId: Id | null;
+  currentOutputContentItemId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
-  onSelectSlide: (presentationId: Id, slideIndex: number) => void;
-  onOpenSlide: (presentationId: Id, slideIndex: number) => void;
+  onSelectSlide: (itemId: Id, slideIndex: number) => void;
+  onOpenSlide: (itemId: Id, slideIndex: number) => void;
 }
 
 function OutlineSection({
   item,
-  currentPresentationId,
-  currentOutputPresentationId,
+  currentContentItemId,
+  currentOutputContentItemId,
   currentSlideIndex,
   liveSlideIndex,
   slideElementsById,
@@ -38,9 +38,9 @@ function OutlineSection({
   onOpenSlide,
 }: OutlineSectionProps) {
   const { updateText } = useSlideOutlineTextEditing();
-  const isCurrentPresentation = item.presentation.id === currentPresentationId;
-  const isLivePresentation = item.presentation.id === currentOutputPresentationId;
-  const textEditable = isLyricPresentation(item.presentation);
+  const isCurrentPresentation = item.item.id === currentContentItemId;
+  const isLivePresentation = item.item.id === currentOutputContentItemId;
+  const textEditable = isLyricContentItem(item.item);
 
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -64,11 +64,11 @@ function OutlineSection({
     } satisfies OutlineSlideRow;
 
     function handleSelect() {
-      onSelectSlide(item.presentation.id, index);
+      onSelectSlide(item.item.id, index);
     }
 
     function handleOpen() {
-      onOpenSlide(item.presentation.id, index);
+      onOpenSlide(item.item.id, index);
     }
 
     function handleTextCommit(_slideId: Id, nextText: string) {
@@ -92,14 +92,14 @@ function OutlineSection({
         onTextCommit={handleTextCommit}
       />
     );
-  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.presentation.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById, textEditable, updateText]);
+  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onOpenSlide, onSelectSlide, slideElementsById, textEditable, updateText]);
 
   return (
     <section className="grid gap-2">
       <header className="px-1">
-        <h3 className="m-0 text-sm font-semibold text-text-primary">{item.presentation.title}</h3>
+        <h3 className="m-0 text-sm font-semibold text-text-primary">{item.item.title}</h3>
       </header>
-      <div className="grid content-start gap-2" role="list" aria-label={`${item.presentation.title} outline`}>
+      <div className="grid content-start gap-2" role="list" aria-label={`${item.item.title} outline`}>
         {item.slides.map(renderRow)}
       </div>
     </section>
@@ -107,27 +107,27 @@ function OutlineSection({
 }
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
-  const { currentPresentationId, currentOutputPresentationId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, activatePresentationSlide, focusPresentationSlide } = useSlides();
+  const { currentContentItemId, currentOutputContentItemId } = useNavigation();
+  const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
 
-  const handleSelectSlide = useCallback((presentationId: Id, slideIndex: number) => {
-    activatePresentationSlide(presentationId, slideIndex);
-  }, [activatePresentationSlide]);
+  const handleSelectSlide = useCallback((itemId: Id, slideIndex: number) => {
+    activateContentItemSlide(itemId, slideIndex);
+  }, [activateContentItemSlide]);
 
-  const handleOpenSlide = useCallback((presentationId: Id, slideIndex: number) => {
-    focusPresentationSlide(presentationId, slideIndex);
+  const handleOpenSlide = useCallback((itemId: Id, slideIndex: number) => {
+    focusContentItemSlide(itemId, slideIndex);
     setSlideBrowserMode('focus');
-  }, [focusPresentationSlide, setSlideBrowserMode]);
+  }, [focusContentItemSlide, setSlideBrowserMode]);
 
   const renderSection = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (
       <OutlineSection
         key={item.entryId}
         item={item}
-        currentPresentationId={currentPresentationId}
-        currentOutputPresentationId={currentOutputPresentationId}
+        currentContentItemId={currentContentItemId}
+        currentOutputContentItemId={currentOutputContentItemId}
         currentSlideIndex={currentSlideIndex}
         liveSlideIndex={liveSlideIndex}
         slideElementsById={slideElementsBySlideId}
@@ -135,12 +135,12 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
         onOpenSlide={handleOpenSlide}
       />
     );
-  }, [currentOutputPresentationId, currentPresentationId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsBySlideId]);
+  }, [currentContentItemId, currentOutputContentItemId, currentSlideIndex, handleOpenSlide, handleSelectSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (
       <section className="grid h-full min-h-0 place-items-center text-sm text-text-tertiary">
-        No playlist presentations available.
+        No playlist items available.
       </section>
     );
   }

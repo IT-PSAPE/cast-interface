@@ -6,52 +6,54 @@ import { useProjectContent } from '../../../contexts/use-project-content';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { Section } from './inspector-section';
 
-export function PresentationInspector() {
+export function ContentItemInspector() {
   const {
-    currentPresentation,
-    renamePresentation
+    currentContentItem,
+    renameContentItem,
   } = useNavigation();
   const { templatesById } = useProjectContent();
-  const { resetPresentationToAssignedTemplate } = useTemplateEditor();
+  const { resetContentItemToAssignedTemplate } = useTemplateEditor();
   const [titleDraft, setTitleDraft] = useState('');
 
-  const assignedTemplate = currentPresentation?.templateId
-    ? templatesById.get(currentPresentation.templateId) ?? null
+  const assignedTemplate = currentContentItem?.templateId
+    ? templatesById.get(currentContentItem.templateId) ?? null
     : null;
 
   useEffect(() => {
-    if (!currentPresentation) {
+    if (!currentContentItem) {
       setTitleDraft('');
       return;
     }
-    setTitleDraft(currentPresentation.title);
-  }, [currentPresentation]);
+    setTitleDraft(currentContentItem.title);
+  }, [currentContentItem]);
 
   function handleTitleChange(value: string) {
     setTitleDraft(value);
   }
 
   function handleTitleBlur() {
-    if (!currentPresentation) return;
+    if (!currentContentItem) return;
     const trimmed = titleDraft.trim();
-    if (!trimmed || trimmed === currentPresentation.title) return;
-    void renamePresentation(currentPresentation.id, trimmed);
+    if (!trimmed || trimmed === currentContentItem.title) return;
+    void renameContentItem(currentContentItem.id, trimmed);
   }
 
   function handleResetToTemplate() {
-    if (!currentPresentation?.templateId) return;
-    void resetPresentationToAssignedTemplate(currentPresentation.id);
+    if (!currentContentItem?.templateId) return;
+    void resetContentItemToAssignedTemplate(currentContentItem.id);
   }
 
-  if (!currentPresentation) {
-    return <div className="text-sm text-text-tertiary">No presentation selected.</div>;
+  if (!currentContentItem) {
+    return <div className="text-sm text-text-tertiary">No item selected.</div>;
   }
+
+  const itemLabel = currentContentItem.type === 'lyric' ? 'Lyric' : 'Deck';
 
   return (
     <>
       <Section.Root>
         <Section.Header>
-          <span>Presentation</span>
+          <span>{itemLabel}</span>
         </Section.Header>
         <Section.Body>
           <FieldInput type="text" value={titleDraft} onChange={handleTitleChange} onBlur={handleTitleBlur} />
@@ -66,7 +68,7 @@ export function PresentationInspector() {
           <div className="grid gap-1">
             <span className="text-sm text-text-tertiary uppercase tracking-wider">Created</span>
             <p className="m-0 text-sm text-text-secondary">
-              {new Date(currentPresentation.createdAt).toLocaleDateString()}
+              {new Date(currentContentItem.createdAt).toLocaleDateString()}
             </p>
           </div>
         </Section.Body>
@@ -77,7 +79,7 @@ export function PresentationInspector() {
           <span>Template</span>
         </Section.Header>
         <Section.Body>
-          {currentPresentation.templateId ? (
+          {currentContentItem.templateId ? (
             <>
               <div className="grid gap-1">
                 <span className="text-sm text-text-tertiary uppercase tracking-wider">Assigned Template</span>

@@ -171,7 +171,8 @@ function createScene(nodes: RenderScene['nodes']): RenderScene {
   return {
     slide: {
       id: 'slide-1',
-      presentationId: 'presentation-1',
+      deckId: 'presentation-1',
+      lyricId: null,
       width: 1920,
       height: 1080,
       notes: '',

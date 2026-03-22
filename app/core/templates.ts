@@ -1,4 +1,5 @@
 import type {
+  ContentItemType,
   GroupElementPayload,
   Id,
   ImageElementPayload,
@@ -64,9 +65,9 @@ function consumeTypedMatches(elements: SlideElement[]): Map<SlideElement['type']
   return matches;
 }
 
-export function isTemplateCompatibleWithPresentation(template: Template, presentationKind: 'canvas' | 'lyrics'): boolean {
-  if (template.kind === 'slides') return presentationKind === 'canvas';
-  if (template.kind === 'lyrics') return presentationKind === 'lyrics';
+export function isTemplateCompatibleWithContentItem(template: Template, contentItemType: ContentItemType): boolean {
+  if (template.kind === 'slides') return contentItemType === 'deck';
+  if (template.kind === 'lyrics') return contentItemType === 'lyric';
   return false;
 }
 

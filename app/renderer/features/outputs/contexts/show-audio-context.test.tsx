@@ -73,7 +73,9 @@ describe('ShowAudioProvider', () => {
 
   beforeEach(() => {
     vi.mocked(useProjectContent).mockReturnValue({
-      presentations: [],
+      decks: [],
+      lyrics: [],
+      contentItems: [],
       slides: [],
       slideElements: [],
       mediaAssets: [
@@ -82,8 +84,8 @@ describe('ShowAudioProvider', () => {
       ],
       overlays: [],
       templates: [],
-      presentationsById: new Map(),
-      slidesByPresentationId: new Map(),
+      contentItemsById: new Map(),
+      slidesByContentItemId: new Map(),
       slideElementsBySlideId: new Map(),
       mediaAssetsById: new Map(),
       overlaysById: new Map(),

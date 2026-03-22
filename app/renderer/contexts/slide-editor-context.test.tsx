@@ -33,7 +33,8 @@ function Probe() {
 function createSlide(): Slide {
   return {
     id: 'slide-1',
-    presentationId: 'presentation-1',
+    deckId: 'presentation-1',
+    lyricId: null,
     width: 1920,
     height: 1080,
     notes: '',
@@ -87,14 +88,15 @@ function createSnapshot(slideElements: SlideElement[]): AppSnapshot {
       },
       playlists: [],
     }],
-    presentations: [{
+    decks: [{
       id: 'presentation-1',
       title: 'Presentation',
-      entityType: 'presentation',
-      kind: 'canvas',
+      type: 'deck',
+      order: 0,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     }],
+    lyrics: [],
     slides: [createSlide()],
     slideElements,
     mediaAssets: [],
@@ -136,14 +138,16 @@ describe('SlideEditorProvider', () => {
       mutate,
     });
     vi.mocked(useProjectContent).mockReturnValue({
-      presentations: [],
+      decks: [],
+      lyrics: [],
+      contentItems: [],
       slides: [createSlide()],
       slideElements: [createElement()],
       mediaAssets: [],
       overlays: [],
       templates: [],
-      presentationsById: new Map(),
-      slidesByPresentationId: new Map([['presentation-1', [createSlide()]]]),
+      contentItemsById: new Map(),
+      slidesByContentItemId: new Map([['presentation-1', [createSlide()]]]),
       slideElementsBySlideId: new Map([['slide-1', [createElement()]]]),
       mediaAssetsById: new Map(),
       overlaysById: new Map(),

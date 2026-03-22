@@ -28,39 +28,39 @@ export interface PlaylistSegment {
 export interface PlaylistEntry {
   id: Id;
   segmentId: Id;
-  presentationId: Id;
+  deckId: Id | null;
+  lyricId: Id | null;
   order: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type PresentationKind = 'canvas' | 'lyrics';
-export type PresentationEntityType = 'presentation' | 'lyric';
+export type ContentItemType = 'deck' | 'lyric';
 export type TemplateKind = 'slides' | 'lyrics' | 'overlays';
 
-interface PresentationBase {
+interface ContentItemBase {
   id: Id;
   title: string;
   templateId?: Id | null;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CanvasPresentation extends PresentationBase {
-  entityType: 'presentation';
-  kind: 'canvas';
+export interface Deck extends ContentItemBase {
+  type: 'deck';
 }
 
-export interface Lyric extends PresentationBase {
-  entityType: 'lyric';
-  kind: 'lyrics';
+export interface Lyric extends ContentItemBase {
+  type: 'lyric';
 }
 
-export type Presentation = CanvasPresentation | Lyric;
+export type ContentItem = Deck | Lyric;
 
 export interface Slide {
   id: Id;
-  presentationId: Id;
+  deckId: Id | null;
+  lyricId: Id | null;
   width: number;
   height: number;
   notes: string;
@@ -216,13 +216,97 @@ export interface Template {
   updatedAt: string;
 }
 
+export interface ContentBundleTemplate {
+  id: Id;
+  name: string;
+  kind: TemplateKind;
+  width: number;
+  height: number;
+  order: number;
+  elements: SlideElement[];
+}
+
+export interface ContentBundleSlide {
+  id: Id;
+  width: number;
+  height: number;
+  notes: string;
+  order: number;
+  elements: SlideElement[];
+}
+
+export interface ContentBundleItem {
+  id: Id;
+  type: ContentItemType;
+  title: string;
+  templateId: Id | null;
+  order: number;
+  slides: ContentBundleSlide[];
+}
+
+export interface ContentBundleMediaReference {
+  source: string;
+  elementTypes: Array<'image' | 'video'>;
+  occurrenceCount: number;
+}
+
+export interface ContentBundleManifest {
+  format: 'cast-content-bundle';
+  version: 1;
+  exportedAt: string;
+  items: ContentBundleItem[];
+  templates: ContentBundleTemplate[];
+  mediaReferences: ContentBundleMediaReference[];
+}
+
+export interface ContentBundleInspectionItem {
+  id: Id;
+  title: string;
+  type: ContentItemType;
+  slideCount: number;
+  templateId: Id | null;
+}
+
+export interface ContentBundleInspectionTemplate {
+  id: Id;
+  name: string;
+  kind: TemplateKind;
+}
+
+export interface BrokenContentBundleReference {
+  source: string;
+  elementTypes: Array<'image' | 'video'>;
+  occurrenceCount: number;
+  itemTitles: string[];
+  templateNames: string[];
+}
+
+export interface ContentBundleInspection {
+  exportedAt: string;
+  itemCount: number;
+  templateCount: number;
+  mediaReferenceCount: number;
+  items: ContentBundleInspectionItem[];
+  templates: ContentBundleInspectionTemplate[];
+  mediaReferences: ContentBundleMediaReference[];
+  brokenReferences: BrokenContentBundleReference[];
+}
+
+export type ContentBundleBrokenReferenceAction = 'replace' | 'remove' | 'leave';
+
+export interface ContentBundleBrokenReferenceDecision {
+  source: string;
+  action: ContentBundleBrokenReferenceAction;
+  replacementPath?: string;
+}
+
 export interface PlaylistTree {
   playlist: Playlist;
   segments: Array<{
     segment: PlaylistSegment;
     entries: Array<{
       entry: PlaylistEntry;
-      presentation: Presentation;
+      item: ContentItem;
     }>;
   }>;
 }
@@ -235,7 +319,8 @@ export interface LibraryPlaylistBundle {
 export interface AppSnapshot {
   libraries: Library[];
   libraryBundles: LibraryPlaylistBundle[];
-  presentations: Presentation[];
+  decks: Deck[];
+  lyrics: Lyric[];
   slides: Slide[];
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
@@ -245,14 +330,15 @@ export interface AppSnapshot {
 
 export interface PlaybackState {
   playlistId: Id | null;
-  presentationId: Id | null;
+  contentItemId: Id | null;
   slideIndex: number;
 }
 
-export type SlideBrowserMode = 'library' | 'playlist' | 'presentation' | 'slide-editor';
+export type SlideBrowserMode = 'library' | 'playlist' | 'content' | 'slide-editor';
 
 export interface SlideCreateInput {
-  presentationId: Id;
+  deckId?: Id | null;
+  lyricId?: Id | null;
   width?: number;
   height?: number;
 }

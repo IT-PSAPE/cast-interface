@@ -1,5 +1,7 @@
 import type {
   AppSnapshot,
+  ContentBundleBrokenReferenceDecision,
+  ContentBundleInspection,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -7,7 +9,6 @@ import type {
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
-  PresentationKind,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
@@ -21,18 +22,23 @@ import type {
 export interface MainApi {
   getPathForFile: (file: File) => string;
   getSnapshot: () => Promise<AppSnapshot>;
+  chooseContentBundleExportPath: (suggestedName: string) => Promise<string | null>;
+  chooseContentBundleImportPath: () => Promise<string | null>;
+  chooseImportReplacementMediaPath: () => Promise<string | null>;
+  exportContentBundle: (itemIds: Id[], filePath: string) => Promise<{ filePath: string; itemCount: number }>;
+  inspectImportBundle: (filePath: string) => Promise<ContentBundleInspection>;
+  finalizeImportBundle: (filePath: string, decisions: ContentBundleBrokenReferenceDecision[]) => Promise<AppSnapshot>;
   createLibrary: (name: string) => Promise<AppSnapshot>;
   createPlaylist: (libraryId: Id, name: string) => Promise<AppSnapshot>;
   createPlaylistSegment: (playlistId: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylistSegment: (id: Id, name: string) => Promise<AppSnapshot>;
   setPlaylistSegmentColor: (id: Id, colorKey: string | null) => Promise<AppSnapshot>;
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
-  addPresentationToSegment: (segmentId: Id, presentationId: Id) => Promise<AppSnapshot>;
-  movePresentationToSegment: (playlistId: Id, presentationId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
-  movePresentation: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
-  createPresentation: (title: string, kind?: PresentationKind) => Promise<AppSnapshot>;
+  addContentItemToSegment: (segmentId: Id, itemId: Id) => Promise<AppSnapshot>;
+  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
+  moveContentItem: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
+  createDeck: (title: string) => Promise<AppSnapshot>;
   createLyric: (title: string) => Promise<AppSnapshot>;
-  setPresentationKind: (id: Id, kind: PresentationKind) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
   createElement: (input: ElementCreateInput) => Promise<AppSnapshot>;
@@ -51,16 +57,18 @@ export interface MainApi {
   createTemplate: (input: TemplateCreateInput) => Promise<AppSnapshot>;
   updateTemplate: (input: TemplateUpdateInput) => Promise<AppSnapshot>;
   deleteTemplate: (templateId: Id) => Promise<AppSnapshot>;
-  applyTemplateToPresentation: (templateId: Id, presentationId: Id) => Promise<AppSnapshot>;
-  resetPresentationToTemplate: (presentationId: Id) => Promise<AppSnapshot>;
+  applyTemplateToContentItem: (templateId: Id, itemId: Id) => Promise<AppSnapshot>;
+  resetContentItemToTemplate: (itemId: Id) => Promise<AppSnapshot>;
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<AppSnapshot>;
   renameLibrary: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylist: (id: Id, name: string) => Promise<AppSnapshot>;
-  renamePresentation: (id: Id, title: string) => Promise<AppSnapshot>;
+  renameDeck: (id: Id, title: string) => Promise<AppSnapshot>;
+  renameLyric: (id: Id, title: string) => Promise<AppSnapshot>;
   deleteLibrary: (id: Id) => Promise<AppSnapshot>;
   deletePlaylist: (id: Id) => Promise<AppSnapshot>;
   deletePlaylistSegment: (id: Id) => Promise<AppSnapshot>;
-  deletePresentation: (id: Id) => Promise<AppSnapshot>;
+  deleteDeck: (id: Id) => Promise<AppSnapshot>;
+  deleteLyric: (id: Id) => Promise<AppSnapshot>;
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => Promise<NdiOutputState>;
   getNdiOutputState: () => Promise<NdiOutputState>;
   getNdiOutputConfigs: () => Promise<NdiOutputConfigMap>;
@@ -73,18 +81,23 @@ export interface MainApi {
 
 export const IPC = {
   getSnapshot: 'cast:getSnapshot',
+  chooseContentBundleExportPath: 'cast:chooseContentBundleExportPath',
+  chooseContentBundleImportPath: 'cast:chooseContentBundleImportPath',
+  chooseImportReplacementMediaPath: 'cast:chooseImportReplacementMediaPath',
+  exportContentBundle: 'cast:exportContentBundle',
+  inspectImportBundle: 'cast:inspectImportBundle',
+  finalizeImportBundle: 'cast:finalizeImportBundle',
   createLibrary: 'cast:createLibrary',
   createPlaylist: 'cast:createPlaylist',
   createPlaylistSegment: 'cast:createPlaylistSegment',
   renamePlaylistSegment: 'cast:renamePlaylistSegment',
   setPlaylistSegmentColor: 'cast:setPlaylistSegmentColor',
   movePlaylist: 'cast:movePlaylist',
-  addPresentationToSegment: 'cast:addPresentationToSegment',
-  movePresentationToSegment: 'cast:movePresentationToSegment',
-  movePresentation: 'cast:movePresentation',
-  createPresentation: 'cast:createPresentation',
+  addContentItemToSegment: 'cast:addContentItemToSegment',
+  moveContentItemToSegment: 'cast:moveContentItemToSegment',
+  moveContentItem: 'cast:moveContentItem',
+  createDeck: 'cast:createDeck',
   createLyric: 'cast:createLyric',
-  setPresentationKind: 'cast:setPresentationKind',
   createSlide: 'cast:createSlide',
   updateSlideNotes: 'cast:updateSlideNotes',
   createElement: 'cast:createElement',
@@ -103,16 +116,18 @@ export const IPC = {
   createTemplate: 'cast:createTemplate',
   updateTemplate: 'cast:updateTemplate',
   deleteTemplate: 'cast:deleteTemplate',
-  applyTemplateToPresentation: 'cast:applyTemplateToPresentation',
-  resetPresentationToTemplate: 'cast:resetPresentationToTemplate',
+  applyTemplateToContentItem: 'cast:applyTemplateToContentItem',
+  resetContentItemToTemplate: 'cast:resetContentItemToTemplate',
   applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
-  renamePresentation: 'cast:renamePresentation',
+  renameDeck: 'cast:renameDeck',
+  renameLyric: 'cast:renameLyric',
   deleteLibrary: 'cast:deleteLibrary',
   deletePlaylist: 'cast:deletePlaylist',
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
-  deletePresentation: 'cast:deletePresentation',
+  deleteDeck: 'cast:deleteDeck',
+  deleteLyric: 'cast:deleteLyric',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
   getNdiOutputState: 'ndi:getOutputState',
   getNdiOutputConfigs: 'ndi:getOutputConfigs',

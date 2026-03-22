@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PresentationInspector } from './presentation-inspector';
+import { ContentItemInspector } from './presentation-inspector';
 
 const useNavigationMock = vi.fn();
 const useProjectContentMock = vi.fn();
@@ -18,30 +18,30 @@ vi.mock('../../../contexts/template-editor-context', () => ({
   useTemplateEditor: () => useTemplateEditorMock(),
 }));
 
-describe('PresentationInspector', () => {
+describe('ContentItemInspector', () => {
   it('shows the assigned template and resets through the template editor context', () => {
     const handleReset = vi.fn();
 
     useNavigationMock.mockReturnValue({
-      currentPresentation: {
+      currentContentItem: {
         id: 'presentation-1',
         title: 'Song',
-        kind: 'lyrics',
-        entityType: 'lyric',
+        type: 'lyric',
+        order: 0,
         templateId: 'template-1',
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       },
-      renamePresentation: vi.fn(),
+      renameContentItem: vi.fn(),
     });
     useProjectContentMock.mockReturnValue({
       templatesById: new Map([['template-1', { id: 'template-1', name: 'Lyric Template Default' }]]),
     });
     useTemplateEditorMock.mockReturnValue({
-      resetPresentationToAssignedTemplate: handleReset,
+      resetContentItemToAssignedTemplate: handleReset,
     });
 
-    render(<PresentationInspector />);
+    render(<ContentItemInspector />);
 
     expect(screen.getByText('Lyric Template Default')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Reset To Template' }));

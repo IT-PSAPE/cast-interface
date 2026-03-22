@@ -14,7 +14,7 @@ const FRAME_INTERVAL_MS = 1000 / 30;
 function renderNodeContent(node: RenderNode, onImageLoad?: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} onLoad={onImageLoad} />;
+  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} surface="show" onLoad={onImageLoad} />;
   return null;
 }
 

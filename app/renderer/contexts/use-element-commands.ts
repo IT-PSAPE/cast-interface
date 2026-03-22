@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { isLyricPresentation } from '@core/presentation-entities';
-import type { AppSnapshot, ElementCreateInput, Id, MediaAsset, Presentation, Slide, SlideElement } from '@core/types';
+import { isLyricContentItem } from '@core/content-items';
+import type { AppSnapshot, ContentItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../utils/slides';
 import { createId } from '../utils/create-id';
 import { useOverlayDefaults } from './overlay-defaults-context';
@@ -12,15 +12,15 @@ import { useWorkbench } from './workbench-context';
 
 interface CommandsParams {
   currentSlide: Slide | null;
-  currentPresentation: Presentation | null;
+  currentContentItem: ContentItem | null;
   currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentPresentation, currentTemplate, mutate, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentContentItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
   const { overlayDefaults } = useOverlayDefaults();
-  const isLyricsPresentation = isLyricPresentation(currentPresentation);
+  const isLyricItem = isLyricContentItem(currentContentItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
   const { replaceTemplateElements } = useTemplateEditor();
@@ -78,12 +78,12 @@ export function useElementCommands({ currentSlide, currentPresentation, currentT
       return;
     }
     if (!currentSlide) return;
-    if (isLyricsPresentation) {
+    if (isLyricItem) {
       const existingLyricsText = (slideElementsBySlideId.get(currentSlide.id) ?? []).find((element) => {
         return element.slideId === currentSlide.id && element.type === 'text' && 'text' in element.payload;
       });
       if (existingLyricsText) {
-        setStatusText('Lyrics presentations allow one text element per slide. Edit text in Outline view.');
+        setStatusText('Lyrics keep one text element per slide. Edit text in Outline view.');
         return;
       }
     }
@@ -102,7 +102,7 @@ export function useElementCommands({ currentSlide, currentPresentation, currentT
       zIndex: 20, layer: 'content', payload: newTextPayload('New Text Element', 72, 'center', '700'),
     }));
     setStatusText('Added text element');
-  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricsPresentation, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId]);
+  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricItem, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId]);
 
   const createShape = useCallback(async () => {
     if (isOverlayEdit) {

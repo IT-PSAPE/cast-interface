@@ -6,11 +6,11 @@ import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
 import { SlideCard } from '../../slide-browser/components/slide-card';
 
 export function SlideGrid() {
-  const { currentPresentationId, currentOutputPresentationId, isDetachedPresentationBrowser } = useNavigation();
+  const { currentContentItemId, currentOutputContentItemId, isDetachedContentBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { getThumbnailScene } = useRenderScenes();
-  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
+  const showLiveState = !isDetachedContentBrowser && currentContentItemId === currentOutputContentItemId;
 
   return (
     <section className="h-full min-h-0 overflow-y-auto p-2">

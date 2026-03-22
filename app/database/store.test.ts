@@ -253,20 +253,21 @@ describe('CastRepository global project migration', () => {
     const snapshot = repository.getSnapshot();
     closeRepository(repository);
 
-    expect(snapshot.presentations.map((presentation) => presentation.id)).toEqual(['presentation-1', 'presentation-2']);
+    expect(snapshot.decks.map((item) => item.id)).toEqual(['presentation-1', 'presentation-2']);
+    expect(snapshot.lyrics.map((item) => item.id)).toEqual([]);
     expect(snapshot.mediaAssets.map((asset) => asset.id)).toEqual(['media-1', 'media-2']);
     expect(snapshot.overlays.map((overlay) => overlay.id)).toEqual(['overlay-1', 'overlay-2']);
     expect(snapshot.libraryBundles).toHaveLength(2);
-    expect(snapshot.libraryBundles[0]?.playlists[0]?.segments[0]?.entries[0]?.presentation.id).toBe('presentation-1');
+    expect(snapshot.libraryBundles[0]?.playlists[0]?.segments[0]?.entries[0]?.item.id).toBe('presentation-1');
 
     const db = new SqliteDatabase(databasePath(userDataPath), { readonly: true });
     const userVersion = db.pragma('user_version', { simple: true }) as number;
-    const presentationColumns = db.prepare('PRAGMA table_info(presentations)').all() as Array<{ name: string }>;
+    const deckColumns = db.prepare('PRAGMA table_info(decks)').all() as Array<{ name: string }>;
     db.close();
 
-    expect(userVersion).toBe(5);
-    expect(presentationColumns.some((column) => column.name === 'library_id')).toBe(false);
-    expect(presentationColumns.some((column) => column.name === 'template_id')).toBe(true);
+    expect(userVersion).toBe(6);
+    expect(deckColumns.some((column) => column.name === 'library_id')).toBe(false);
+    expect(deckColumns.some((column) => column.name === 'template_id')).toBe(true);
   });
 
   it('keeps global presentations, media, and overlays when a library is deleted', () => {
@@ -279,7 +280,8 @@ describe('CastRepository global project migration', () => {
     closeRepository(repository);
 
     expect(snapshot.libraries.map((library) => library.id)).toEqual(['library-2']);
-    expect(snapshot.presentations.map((presentation) => presentation.id)).toEqual(['presentation-1', 'presentation-2']);
+    expect(snapshot.decks.map((item) => item.id)).toEqual(['presentation-1', 'presentation-2']);
+    expect(snapshot.lyrics.map((item) => item.id)).toEqual([]);
     expect(snapshot.mediaAssets.map((asset) => asset.id)).toEqual(['media-1', 'media-2']);
     expect(snapshot.overlays.map((overlay) => overlay.id)).toEqual(['overlay-1', 'overlay-2']);
     expect(snapshot.libraryBundles.find((bundle) => bundle.library.id === 'library-1')).toBeUndefined();
@@ -291,16 +293,17 @@ describe('CastRepository global project migration', () => {
     createLegacyDatabase(userDataPath, { duplicatePresentationAcrossLibraries: true });
 
     const repository = new CastRepository();
-    const snapshot = repository.deletePresentation('presentation-1');
+    const snapshot = repository.deleteDeck('presentation-1');
     closeRepository(repository);
 
-    expect(snapshot.presentations.map((presentation) => presentation.id)).toEqual(['presentation-2']);
+    expect(snapshot.decks.map((item) => item.id)).toEqual(['presentation-2']);
+    expect(snapshot.lyrics.map((item) => item.id)).toEqual([]);
     expect(snapshot.slides.map((slide) => slide.id)).toEqual(['slide-2']);
     expect(snapshot.slideElements.map((element) => element.id)).toEqual([]);
     expect(
       snapshot.libraryBundles.flatMap((bundle) =>
         bundle.playlists.flatMap((playlist) =>
-          playlist.segments.flatMap((segment) => segment.entries.map((entry) => entry.presentation.id))
+          playlist.segments.flatMap((segment) => segment.entries.map((entry) => entry.item.id))
         )
       ),
     ).toEqual([]);
@@ -315,18 +318,18 @@ describe('CastRepository global project migration', () => {
     closeRepository(firstRepository);
 
     const writableDb = new SqliteDatabase(databasePath(userDataPath));
-    writableDb.prepare('UPDATE presentations SET order_index = ? WHERE id = ?').run(77, 'presentation-2');
+    writableDb.prepare('UPDATE decks SET order_index = ? WHERE id = ?').run(77, 'presentation-2');
     writableDb.close();
 
     const secondRepository = new CastRepository();
     closeRepository(secondRepository);
 
     const verificationDb = new SqliteDatabase(databasePath(userDataPath), { readonly: true });
-    const presentationOrder = verificationDb.prepare('SELECT order_index FROM presentations WHERE id = ?').get('presentation-2') as { order_index: number };
+    const presentationOrder = verificationDb.prepare('SELECT order_index FROM decks WHERE id = ?').get('presentation-2') as { order_index: number };
     const userVersion = verificationDb.pragma('user_version', { simple: true }) as number;
     verificationDb.close();
 
-    expect(userVersion).toBe(5);
+    expect(userVersion).toBe(6);
     expect(presentationOrder.order_index).toBe(77);
   });
 });

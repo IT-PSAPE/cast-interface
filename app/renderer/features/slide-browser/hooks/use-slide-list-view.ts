@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { isLyricPresentation } from '@core/presentation-entities';
+import { isLyricContentItem } from '@core/content-items';
 import type { Id, Slide, SlideElement } from '@core/types';
 import type { SlideVisualState } from '../../../types/ui';
 import { clamp, getSlideVisualState, slideTextDetails } from '../../../utils/slides';
@@ -29,12 +29,12 @@ interface OutlineViewModel {
 }
 
 export function useOutlineView(): OutlineViewModel {
-  const { currentPresentation, currentPresentationId, currentOutputPresentationId, isDetachedPresentationBrowser } = useNavigation();
+  const { currentContentItem, currentContentItemId, currentOutputContentItemId, isDetachedContentBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { setSlideBrowserMode } = useSlideBrowser();
   const { updateText } = useSlideOutlineTextEditing();
-  const textEditable = isLyricPresentation(currentPresentation);
-  const showLiveState = !isDetachedPresentationBrowser && currentPresentationId === currentOutputPresentationId;
+  const textEditable = isLyricContentItem(currentContentItem);
+  const showLiveState = !isDetachedContentBrowser && currentContentItemId === currentOutputContentItemId;
 
   const rows = useMemo(() => {
     return slides.map((slide, index) => {

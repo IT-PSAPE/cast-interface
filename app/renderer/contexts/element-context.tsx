@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { overlayToLayerElements } from '@core/presentation-layers';
-import { isLyricPresentation } from '@core/presentation-entities';
+import { isLyricContentItem } from '@core/content-items';
 import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, SlideElement } from '@core/types';
 import { applyVisualPayload, readVisualPayload } from '@core/element-payload';
 import { sortElements } from '../utils/slides';
@@ -22,7 +22,7 @@ const ElementContext = createContext<ElementContextValue | null>(null);
 
 export function ElementProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { currentPresentation } = useNavigation();
+  const { currentContentItem } = useNavigation();
   const { currentSlide } = useSlides();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
@@ -167,7 +167,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     const protectedLyricTextIds = new Set(getProtectedLyricTextSelectionIds(
       effectiveElements,
       selection.selectedElementIds,
-      isTemplateEdit ? currentTemplate?.kind === 'lyrics' : isLyricPresentation(currentPresentation),
+      isTemplateEdit ? currentTemplate?.kind === 'lyrics' : isLyricContentItem(currentContentItem),
     ));
     const targetIds = getUnlockedSelectedElementIds(effectiveElements, selection.selectedElementIds)
       .filter((id) => !protectedLyricTextIds.has(id));
@@ -197,7 +197,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
     setStatusText('Deleted selected object(s)');
     selection.selectElements(selection.selectedElementIds.filter((id) => protectedLyricTextIds.has(id)));
     setDraftElements({});
-  }, [currentOverlay, currentPresentation, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
+  }, [currentContentItem, currentOverlay, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
 
   const toggleElementVisibility = useCallback(async (id: Id, visible: boolean) => {
     const target = effectiveElements.find((element) => element.id === id);
@@ -220,7 +220,7 @@ export function ElementProvider({ children }: { children: ReactNode }) {
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
     currentSlide,
-    currentPresentation,
+    currentContentItem,
     currentTemplate,
     mutate,
     setStatusText,

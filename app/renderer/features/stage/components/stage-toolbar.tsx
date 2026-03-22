@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { isLyricPresentation } from '@core/presentation-entities';
+import { isLyricContentItem } from '@core/content-items';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { useCast } from '../../../contexts/cast-context';
@@ -37,11 +37,11 @@ interface StageToolbarProps {
 export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   const { createText, createShape } = useElements();
   const { setStatusText } = useCast();
-  const { currentPresentation } = useNavigation();
+  const { currentContentItem } = useNavigation();
   const { currentTemplate } = useTemplateEditor();
   const { workbenchMode } = useWorkbench();
   const hideAddText = workbenchMode === 'slide-editor'
-    ? isLyricPresentation(currentPresentation)
+    ? isLyricContentItem(currentContentItem)
     : workbenchMode === 'template-editor'
       ? currentTemplate?.kind === 'lyrics'
       : false;

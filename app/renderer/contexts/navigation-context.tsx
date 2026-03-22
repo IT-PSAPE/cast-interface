@@ -1,45 +1,45 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { isLyricPresentation } from '@core/presentation-entities';
-import type { Id, LibraryPlaylistBundle, PlaylistTree, Presentation } from '@core/types';
+import { getSlideContentItemId, isLyricContentItem } from '@core/content-items';
+import type { ContentItem, Id, LibraryPlaylistBundle, PlaylistTree } from '@core/types';
 import { useCast } from './cast-context';
 import { useProjectContent } from './use-project-content';
 
-type PresentationBrowseSource = 'playlist' | 'project';
+type ContentBrowseSource = 'playlist' | 'project';
 
 interface NavigationStateValue {
   currentLibraryId: Id | null;
   currentPlaylistId: Id | null;
-  currentPresentationId: Id | null;
-  currentPlaylistPresentationId: Id | null;
-  currentDrawerPresentationId: Id | null;
-  currentOutputPresentationId: Id | null;
+  currentContentItemId: Id | null;
+  currentPlaylistContentItemId: Id | null;
+  currentDrawerContentItemId: Id | null;
+  currentOutputContentItemId: Id | null;
   currentLibraryBundle: LibraryPlaylistBundle | null;
-  currentPresentation: Presentation | null;
-  currentPlaylistPresentation: Presentation | null;
-  isDetachedPresentationBrowser: boolean;
+  currentContentItem: ContentItem | null;
+  currentPlaylistContentItem: ContentItem | null;
+  isDetachedContentBrowser: boolean;
   outputArmVersion: number;
-  slideCountByPresentation: Map<Id, number>;
+  slideCountByContentItem: Map<Id, number>;
   recentlyCreatedId: Id | null;
 }
 
 interface NavigationActionsValue {
   selectLibrary: (id: Id) => void;
-  selectPlaylistPresentation: (id: Id) => void;
-  browsePresentation: (id: Id) => void;
-  armOutputPresentation: (id: Id) => void;
-  clearOutputPresentation: () => void;
+  selectPlaylistContentItem: (id: Id) => void;
+  browseContentItem: (id: Id) => void;
+  armOutputContentItem: (id: Id) => void;
+  clearOutputContentItem: () => void;
   setCurrentPlaylistId: (id: Id | null) => void;
   clearRecentlyCreated: () => void;
   createLibrary: () => Promise<void>;
   createPlaylist: () => Promise<void>;
-  createPresentation: () => Promise<void>;
+  createDeck: () => Promise<void>;
   createLyric: () => Promise<void>;
   createSegment: () => Promise<void>;
-  addPresentationToSegment: (segmentId: Id) => Promise<void>;
-  moveCurrentPresentationToSegment: (segmentId: Id | null) => Promise<void>;
+  addContentItemToSegment: (segmentId: Id) => Promise<void>;
+  moveCurrentContentItemToSegment: (segmentId: Id | null) => Promise<void>;
   renameLibrary: (id: Id, name: string) => Promise<void>;
   renamePlaylist: (id: Id, name: string) => Promise<void>;
-  renamePresentation: (id: Id, title: string) => Promise<void>;
+  renameContentItem: (id: Id, title: string) => Promise<void>;
 }
 
 type NavigationContextValue = NavigationStateValue & NavigationActionsValue;
@@ -47,43 +47,43 @@ type NavigationContextValue = NavigationStateValue & NavigationActionsValue;
 const NavigationStateContext = createContext<NavigationStateValue | null>(null);
 const NavigationActionsContext = createContext<NavigationActionsValue | null>(null);
 
-export function resolveCurrentPresentationId(currentPresentationId: Id | null, presentationIds: Iterable<Id>): Id | null {
-  if (!currentPresentationId) return null;
-  for (const presentationId of presentationIds) {
-    if (presentationId === currentPresentationId) return currentPresentationId;
+export function resolveCurrentContentItemId(currentContentItemId: Id | null, itemIds: Iterable<Id>): Id | null {
+  if (!currentContentItemId) return null;
+  for (const itemId of itemIds) {
+    if (itemId === currentContentItemId) return currentContentItemId;
   }
   return null;
 }
 
-export function resolveCurrentPlaylistPresentationId(currentPresentationId: Id | null, selectedTree: PlaylistTree | null): Id | null {
-  const presentationIds = extractPlaylistPresentationIds(selectedTree);
-  if (!currentPresentationId) return null;
-  if (presentationIds.includes(currentPresentationId)) return currentPresentationId;
+export function resolveCurrentPlaylistContentItemId(currentContentItemId: Id | null, selectedTree: PlaylistTree | null): Id | null {
+  const itemIds = extractPlaylistContentItemIds(selectedTree);
+  if (!currentContentItemId) return null;
+  if (itemIds.includes(currentContentItemId)) return currentContentItemId;
   return null;
 }
 
-export function resolvePinnedLyricPresentationId(
-  currentPresentationId: Id | null,
+export function resolvePinnedLyricContentItemId(
+  currentContentItemId: Id | null,
   selectedTree: PlaylistTree | null,
-  presentationsById: ReadonlyMap<Id, Presentation>,
+  contentItemsById: ReadonlyMap<Id, ContentItem>,
 ): Id | null {
-  if (currentPresentationId && isLyricPresentation(presentationsById.get(currentPresentationId) ?? null)) {
-    return resolveCurrentPresentationId(currentPresentationId, presentationsById.keys());
+  if (currentContentItemId && isLyricContentItem(contentItemsById.get(currentContentItemId) ?? null)) {
+    return resolveCurrentContentItemId(currentContentItemId, contentItemsById.keys());
   }
 
-  return resolveCurrentPlaylistPresentationId(currentPresentationId, selectedTree);
+  return resolveCurrentPlaylistContentItemId(currentContentItemId, selectedTree);
 }
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const { snapshot, mutate, setStatusText } = useCast();
-  const { presentations, slides, presentationsById } = useProjectContent();
+  const { contentItems, contentItemsById, slides } = useProjectContent();
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
   const [currentPlaylistId, setCurrentPlaylistIdState] = useState<Id | null>(null);
-  const [currentPlaylistPresentationId, setCurrentPlaylistPresentationId] = useState<Id | null>(null);
-  const [currentDrawerPresentationId, setCurrentDrawerPresentationId] = useState<Id | null>(null);
-  const [currentOutputPresentationId, setCurrentOutputPresentationId] = useState<Id | null>(null);
-  const [presentationBrowseSource, setPresentationBrowseSource] = useState<PresentationBrowseSource>('playlist');
+  const [currentPlaylistContentItemId, setCurrentPlaylistContentItemId] = useState<Id | null>(null);
+  const [currentDrawerContentItemId, setCurrentDrawerContentItemId] = useState<Id | null>(null);
+  const [currentOutputContentItemId, setCurrentOutputContentItemId] = useState<Id | null>(null);
+  const [contentBrowseSource, setContentBrowseSource] = useState<ContentBrowseSource>('playlist');
   const [outputArmVersion, setOutputArmVersion] = useState(0);
   const [recentlyCreatedId, setRecentlyCreatedId] = useState<Id | null>(null);
 
@@ -108,73 +108,75 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       ? bundle.playlists.find((tree) => tree.playlist.id === nextPlaylistId) ?? null
       : null;
 
-    const nextDrawerPresentationId = resolveCurrentPresentationId(
-      currentDrawerPresentationId,
-      presentations.map((presentation) => presentation.id),
+    const nextDrawerContentItemId = resolveCurrentContentItemId(
+      currentDrawerContentItemId,
+      contentItems.map((item) => item.id),
     );
-    if (nextDrawerPresentationId !== currentDrawerPresentationId) {
-      setCurrentDrawerPresentationId(nextDrawerPresentationId);
+    if (nextDrawerContentItemId !== currentDrawerContentItemId) {
+      setCurrentDrawerContentItemId(nextDrawerContentItemId);
     }
 
-    const nextPlaylistPresentationId = resolvePinnedLyricPresentationId(
-      currentPlaylistPresentationId,
+    const nextPlaylistContentItemId = resolvePinnedLyricContentItemId(
+      currentPlaylistContentItemId,
       selectedTree,
-      presentationsById,
+      contentItemsById,
     );
-    if (nextPlaylistPresentationId !== currentPlaylistPresentationId) {
-      setCurrentPlaylistPresentationId(nextPlaylistPresentationId);
+    if (nextPlaylistContentItemId !== currentPlaylistContentItemId) {
+      setCurrentPlaylistContentItemId(nextPlaylistContentItemId);
     }
 
-    if (currentOutputPresentationId !== null) {
-      const nextOutputPresentationId = resolvePinnedLyricPresentationId(
-        currentOutputPresentationId,
+    if (currentOutputContentItemId !== null) {
+      const nextOutputContentItemId = resolvePinnedLyricContentItemId(
+        currentOutputContentItemId,
         selectedTree,
-        presentationsById,
+        contentItemsById,
       );
-      if (nextOutputPresentationId !== currentOutputPresentationId) {
-        setCurrentOutputPresentationId(nextOutputPresentationId);
+      if (nextOutputContentItemId !== currentOutputContentItemId) {
+        setCurrentOutputContentItemId(nextOutputContentItemId);
       }
     }
 
-    if (presentationBrowseSource === 'project' && nextDrawerPresentationId === null) {
-      setPresentationBrowseSource('playlist');
+    if (contentBrowseSource === 'project' && nextDrawerContentItemId === null) {
+      setContentBrowseSource('playlist');
     }
   }, [
-    currentDrawerPresentationId,
+    contentBrowseSource,
+    contentItems,
+    contentItemsById,
+    currentDrawerContentItemId,
     currentLibraryId,
-    currentOutputPresentationId,
+    currentOutputContentItemId,
+    currentPlaylistContentItemId,
     currentPlaylistId,
-    currentPlaylistPresentationId,
-    presentationBrowseSource,
-    presentations,
-    presentationsById,
     snapshot,
   ]);
 
-  const currentPresentationId = useMemo(() => {
-    if (presentationBrowseSource === 'project') return currentDrawerPresentationId;
-    return currentPlaylistPresentationId;
-  }, [currentDrawerPresentationId, currentPlaylistPresentationId, presentationBrowseSource]);
+  const currentContentItemId = useMemo(() => {
+    if (contentBrowseSource === 'project') return currentDrawerContentItemId;
+    return currentPlaylistContentItemId;
+  }, [contentBrowseSource, currentDrawerContentItemId, currentPlaylistContentItemId]);
 
   const currentLibraryBundle = useMemo<LibraryPlaylistBundle | null>(() => {
     if (!snapshot || !currentLibraryId) return null;
     return snapshot.libraryBundles.find((bundle) => bundle.library.id === currentLibraryId) ?? null;
   }, [currentLibraryId, snapshot]);
 
-  const currentPresentation = useMemo(
-    () => (currentPresentationId ? presentationsById.get(currentPresentationId) ?? null : null),
-    [currentPresentationId, presentationsById],
+  const currentContentItem = useMemo(
+    () => (currentContentItemId ? contentItemsById.get(currentContentItemId) ?? null : null),
+    [contentItemsById, currentContentItemId],
   );
 
-  const currentPlaylistPresentation = useMemo(
-    () => (currentPlaylistPresentationId ? presentationsById.get(currentPlaylistPresentationId) ?? null : null),
-    [currentPlaylistPresentationId, presentationsById],
+  const currentPlaylistContentItem = useMemo(
+    () => (currentPlaylistContentItemId ? contentItemsById.get(currentPlaylistContentItemId) ?? null : null),
+    [contentItemsById, currentPlaylistContentItemId],
   );
 
-  const slideCountByPresentation = useMemo(() => {
+  const slideCountByContentItem = useMemo(() => {
     const counts = new Map<Id, number>();
     for (const slide of slides) {
-      counts.set(slide.presentationId, (counts.get(slide.presentationId) ?? 0) + 1);
+      const itemId = getSlideContentItemId(slide);
+      if (!itemId) continue;
+      counts.set(itemId, (counts.get(itemId) ?? 0) + 1);
     }
     return counts;
   }, [slides]);
@@ -183,10 +185,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setRecentlyCreatedId(null);
   }, []);
 
-  const clearPresentationBrowser = useCallback(() => {
-    setCurrentPlaylistPresentationId(null);
-    setCurrentDrawerPresentationId(null);
-    setPresentationBrowseSource('playlist');
+  const clearContentBrowser = useCallback(() => {
+    setCurrentPlaylistContentItemId(null);
+    setCurrentDrawerContentItemId(null);
+    setContentBrowseSource('playlist');
   }, []);
 
   function findNewId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
@@ -201,39 +203,39 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     const bundle = snapshot.libraryBundles.find((entry) => entry.library.id === libraryId);
     if (!bundle) return;
     if (libraryId !== currentLibraryId) {
-      clearPresentationBrowser();
+      clearContentBrowser();
     }
     setCurrentLibraryId(libraryId);
     setCurrentPlaylistIdState(bundle.playlists[0]?.playlist.id ?? null);
     setStatusText(`Switched to ${bundle.library.name}`);
-  }, [clearPresentationBrowser, currentLibraryId, setStatusText, snapshot]);
+  }, [clearContentBrowser, currentLibraryId, setStatusText, snapshot]);
 
   const setCurrentPlaylistId = useCallback((playlistId: Id | null) => {
     if (playlistId !== currentPlaylistId) {
-      clearPresentationBrowser();
+      clearContentBrowser();
     }
     setCurrentPlaylistIdState(playlistId);
-  }, [clearPresentationBrowser, currentPlaylistId]);
+  }, [clearContentBrowser, currentPlaylistId]);
 
-  const selectPlaylistPresentation = useCallback((presentationId: Id) => {
-    setCurrentPlaylistPresentationId(presentationId);
-    setPresentationBrowseSource('playlist');
+  const selectPlaylistContentItem = useCallback((itemId: Id) => {
+    setCurrentPlaylistContentItemId(itemId);
+    setContentBrowseSource('playlist');
     setStatusText('Opened item');
   }, [setStatusText]);
 
-  const browsePresentation = useCallback((presentationId: Id) => {
-    setCurrentDrawerPresentationId(presentationId);
-    setPresentationBrowseSource('project');
+  const browseContentItem = useCallback((itemId: Id) => {
+    setCurrentDrawerContentItemId(itemId);
+    setContentBrowseSource('project');
     setStatusText('Browsing item');
   }, [setStatusText]);
 
-  const armOutputPresentation = useCallback((presentationId: Id) => {
-    setCurrentOutputPresentationId(presentationId);
+  const armOutputContentItem = useCallback((itemId: Id) => {
+    setCurrentOutputContentItemId(itemId);
     setOutputArmVersion((current) => current + 1);
   }, []);
 
-  const clearOutputPresentation = useCallback(() => {
-    setCurrentOutputPresentationId(null);
+  const clearOutputContentItem = useCallback(() => {
+    setCurrentOutputContentItemId(null);
   }, []);
 
   const createLibrary = useCallback(async () => {
@@ -257,29 +259,29 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [currentLibraryBundle, currentLibraryId, mutate, setCurrentPlaylistId, setStatusText]);
 
-  const createPresentation = useCallback(async () => {
-    const previousIds = new Set(presentations.map((presentation) => presentation.id));
-    const next = await mutate(() => window.castApi.createPresentation('New Presentation'));
-    const createdId = findNewId(previousIds, next.presentations.map((presentation) => presentation.id));
+  const createDeck = useCallback(async () => {
+    const previousIds = new Set(contentItems.map((item) => item.id));
+    const next = await mutate(() => window.castApi.createDeck('New Deck'));
+    const createdId = findNewId(previousIds, [...next.decks, ...next.lyrics].map((item) => item.id));
     if (!createdId) return;
-    await mutate(() => window.castApi.createSlide({ presentationId: createdId }));
-    setCurrentDrawerPresentationId(createdId);
-    setPresentationBrowseSource('project');
+    await mutate(() => window.castApi.createSlide({ deckId: createdId }));
+    setCurrentDrawerContentItemId(createdId);
+    setContentBrowseSource('project');
     setRecentlyCreatedId(createdId);
-    setStatusText('Created presentation');
-  }, [mutate, presentations, setStatusText]);
+    setStatusText('Created deck');
+  }, [contentItems, mutate, setStatusText]);
 
   const createLyric = useCallback(async () => {
-    const previousIds = new Set(presentations.map((presentation) => presentation.id));
+    const previousIds = new Set(contentItems.map((item) => item.id));
     const next = await mutate(() => window.castApi.createLyric('New Lyric'));
-    const createdId = findNewId(previousIds, next.presentations.map((presentation) => presentation.id));
+    const createdId = findNewId(previousIds, [...next.decks, ...next.lyrics].map((item) => item.id));
     if (!createdId) return;
-    await mutate(() => window.castApi.createSlide({ presentationId: createdId }));
-    setCurrentDrawerPresentationId(createdId);
-    setPresentationBrowseSource('project');
+    await mutate(() => window.castApi.createSlide({ lyricId: createdId }));
+    setCurrentDrawerContentItemId(createdId);
+    setContentBrowseSource('project');
     setRecentlyCreatedId(createdId);
     setStatusText('Created lyric');
-  }, [mutate, presentations, setStatusText]);
+  }, [contentItems, mutate, setStatusText]);
 
   const createSegment = useCallback(async () => {
     if (!currentPlaylistId) return;
@@ -293,17 +295,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (createdId) setRecentlyCreatedId(createdId);
   }, [currentLibraryBundle, currentLibraryId, currentPlaylistId, mutate, setStatusText]);
 
-  const addPresentationToSegment = useCallback(async (segmentId: Id) => {
-    if (!currentPresentationId || !currentPlaylistId) return;
-    await mutate(() => window.castApi.addPresentationToSegment(segmentId, currentPresentationId));
+  const addContentItemToSegment = useCallback(async (segmentId: Id) => {
+    if (!currentContentItemId || !currentPlaylistId) return;
+    await mutate(() => window.castApi.addContentItemToSegment(segmentId, currentContentItemId));
     setStatusText('Moved item to segment');
-  }, [currentPlaylistId, currentPresentationId, mutate, setStatusText]);
+  }, [currentContentItemId, currentPlaylistId, mutate, setStatusText]);
 
-  const moveCurrentPresentationToSegment = useCallback(async (segmentId: Id | null) => {
-    if (!currentPresentationId || !currentPlaylistId) return;
-    await mutate(() => window.castApi.movePresentationToSegment(currentPlaylistId, currentPresentationId, segmentId));
+  const moveCurrentContentItemToSegment = useCallback(async (segmentId: Id | null) => {
+    if (!currentContentItemId || !currentPlaylistId) return;
+    await mutate(() => window.castApi.moveContentItemToSegment(currentPlaylistId, currentContentItemId, segmentId));
     setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
-  }, [currentPlaylistId, currentPresentationId, mutate, setStatusText]);
+  }, [currentContentItemId, currentPlaylistId, mutate, setStatusText]);
 
   const renameLibrary = useCallback(async (id: Id, name: string) => {
     await mutate(() => window.castApi.renameLibrary(id, name));
@@ -315,77 +317,83 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText(`Renamed playlist: ${name}`);
   }, [mutate, setStatusText]);
 
-  const renamePresentation = useCallback(async (id: Id, title: string) => {
-    await mutate(() => window.castApi.renamePresentation(id, title));
+  const renameContentItem = useCallback(async (id: Id, title: string) => {
+    const item = contentItemsById.get(id);
+    if (!item) return;
+    if (item.type === 'deck') {
+      await mutate(() => window.castApi.renameDeck(id, title));
+    } else {
+      await mutate(() => window.castApi.renameLyric(id, title));
+    }
     setStatusText(`Renamed item: ${title}`);
-  }, [mutate, setStatusText]);
+  }, [contentItemsById, mutate, setStatusText]);
 
   const stateValue = useMemo<NavigationStateValue>(() => ({
     currentLibraryId,
     currentPlaylistId,
-    currentPresentationId,
-    currentPlaylistPresentationId,
-    currentDrawerPresentationId,
-    currentOutputPresentationId,
+    currentContentItemId,
+    currentPlaylistContentItemId,
+    currentDrawerContentItemId,
+    currentOutputContentItemId,
     currentLibraryBundle,
-    currentPresentation,
-    currentPlaylistPresentation,
-    isDetachedPresentationBrowser: presentationBrowseSource === 'project',
+    currentContentItem,
+    currentPlaylistContentItem,
+    isDetachedContentBrowser: contentBrowseSource === 'project',
     outputArmVersion,
-    slideCountByPresentation,
+    slideCountByContentItem,
     recentlyCreatedId,
   }), [
-    currentDrawerPresentationId,
+    contentBrowseSource,
+    currentContentItem,
+    currentContentItemId,
+    currentDrawerContentItemId,
     currentLibraryBundle,
     currentLibraryId,
-    currentOutputPresentationId,
+    currentOutputContentItemId,
+    currentPlaylistContentItem,
+    currentPlaylistContentItemId,
     currentPlaylistId,
-    currentPlaylistPresentation,
-    currentPlaylistPresentationId,
-    currentPresentation,
-    currentPresentationId,
     outputArmVersion,
-    presentationBrowseSource,
     recentlyCreatedId,
-    slideCountByPresentation,
+    slideCountByContentItem,
   ]);
 
   const actionsValue = useMemo<NavigationActionsValue>(() => ({
     selectLibrary,
-    selectPlaylistPresentation,
-    browsePresentation,
-    armOutputPresentation,
-    clearOutputPresentation,
+    selectPlaylistContentItem,
+    browseContentItem,
+    armOutputContentItem,
+    clearOutputContentItem,
     setCurrentPlaylistId,
     clearRecentlyCreated,
     createLibrary,
     createPlaylist,
-    createPresentation,
+    createDeck,
     createLyric,
     createSegment,
-    addPresentationToSegment,
-    moveCurrentPresentationToSegment,
+    addContentItemToSegment,
+    moveCurrentContentItemToSegment,
     renameLibrary,
     renamePlaylist,
-    renamePresentation,
+    renameContentItem,
   }), [
-    addPresentationToSegment,
-    armOutputPresentation,
-    browsePresentation,
-    clearOutputPresentation,
+    addContentItemToSegment,
+    armOutputContentItem,
+    browseContentItem,
+    clearOutputContentItem,
     clearRecentlyCreated,
+    createDeck,
     createLibrary,
     createLyric,
     createPlaylist,
-    createPresentation,
     createSegment,
-    moveCurrentPresentationToSegment,
+    moveCurrentContentItemToSegment,
+    renameContentItem,
     renameLibrary,
     renamePlaylist,
-    renamePresentation,
     selectLibrary,
+    selectPlaylistContentItem,
     setCurrentPlaylistId,
-    selectPlaylistPresentation,
   ]);
 
   return (
@@ -397,17 +405,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function extractPlaylistPresentationIds(selectedTree: PlaylistTree | null): Id[] {
+function extractPlaylistContentItemIds(selectedTree: PlaylistTree | null): Id[] {
   if (!selectedTree) return [];
 
-  const presentationIds: Id[] = [];
+  const itemIds: Id[] = [];
   for (const segment of selectedTree.segments) {
     for (const entry of segment.entries) {
-      presentationIds.push(entry.presentation.id);
+      itemIds.push(entry.item.id);
     }
   }
 
-  return presentationIds;
+  return itemIds;
 }
 
 export function useNavigationState(): NavigationStateValue {

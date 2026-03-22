@@ -4,6 +4,12 @@ import type { VisualPayloadState } from '@core/element-payload';
 export type SceneSurface = 'slide-editor' | 'show' | 'list';
 export type SceneSourcePolicy = 'draft' | 'persisted' | 'live';
 
+export type ResolvedMediaState =
+  | { status: 'empty' }
+  | { status: 'loading' }
+  | { status: 'broken' }
+  | { status: 'loaded'; resource: HTMLImageElement | HTMLVideoElement };
+
 export interface RenderNode {
   id: Id;
   element: SlideElement;
