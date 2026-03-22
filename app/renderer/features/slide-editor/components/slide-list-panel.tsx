@@ -5,7 +5,6 @@ import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { PanelSection } from '../../../components/panel-section';
 import { PresentationEntityIcon } from '../../../components/presentation-entity-icon';
-import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useElements } from '../../../contexts/element-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -13,6 +12,7 @@ import { useSlideEditor } from '../../../contexts/slide-editor-context';
 import { useSlides } from '../../../contexts/slide-context';
 import { getSlideVisualState } from '../../../utils/slides';
 import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
+import { PanelRoute } from '../../workbench/components/panel-route';
 import { ObjectListPanel } from './object-list-panel';
 import { SlideCard } from '../../slide-browser/components/slide-card';
 
@@ -84,15 +84,8 @@ export function SlideListPanel() {
       data-ui-region="slide-list-panel"
       className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-primary"
     >
-      <TwoPaneVerticalSplit
-        className="h-full"
-        topPaneId="slide-list"
-        bottomPaneId="slide-objects"
-        defaultTopSize={440}
-        defaultBottomSize={220}
-        minTopSize={180}
-        minBottomSize={160}
-        topPane={(
+      <PanelRoute.Split splitId="slide-list-panel" orientation="vertical" className="h-full">
+        <PanelRoute.Panel id="slide-list" defaultSize={440} minSize={180}>
           <PanelSection
             title={(
               <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
@@ -117,8 +110,8 @@ export function SlideListPanel() {
               {slides.map(renderSlide)}
             </div>
           </PanelSection>
-        )}
-        bottomPane={(
+        </PanelRoute.Panel>
+        <PanelRoute.Panel id="slide-objects" defaultSize={220} minSize={160}>
           <PanelSection
             title={<span className="text-sm font-medium text-text-primary">Objects</span>}
             headerClassName="border-b border-t border-border-primary"
@@ -126,8 +119,8 @@ export function SlideListPanel() {
           >
             <ObjectListPanel />
           </PanelSection>
-        )}
-      />
+        </PanelRoute.Panel>
+      </PanelRoute.Split>
       {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={presentationMenuItems} onClose={handleClosePresentationMenu} /> : null}
     </aside>
   );

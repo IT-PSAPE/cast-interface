@@ -4,10 +4,9 @@ import type Konva from 'konva';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { useNdi } from '../../../contexts/ndi-context';
 import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
+import { SceneNodeMedia } from '../../stage/rendering/scene-node-media';
 import { SceneNodeShape } from '../../stage/rendering/scene-node-shape';
 import { SceneNodeText } from '../../stage/rendering/scene-node-text';
-import { SceneNodeImage } from '../../stage/rendering/scene-node-image';
-import { SceneNodeVideo } from '../../stage/rendering/scene-node-video';
 import type { RenderNode } from '../../stage/rendering/scene-types';
 
 const FRAME_INTERVAL_MS = 1000 / 30;
@@ -15,8 +14,7 @@ const FRAME_INTERVAL_MS = 1000 / 30;
 function renderNodeContent(node: RenderNode, onImageLoad?: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image') return <SceneNodeImage node={node} onLoad={onImageLoad} />;
-  if (node.element.type === 'video') return <SceneNodeVideo node={node} />;
+  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} onLoad={onImageLoad} />;
   return null;
 }
 
@@ -26,6 +24,7 @@ export function NdiFrameCapture() {
   const stageRef = useRef<Konva.Stage>(null);
   const normalizedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const normalizedContextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const frameBufferRef = useRef<Uint8Array | null>(null);
   const enabled = outputState.audience;
   const hasVideoNodes = useMemo(
     () => programScene.nodes.some((node) => node.element.type === 'video'),
@@ -82,7 +81,12 @@ export function NdiFrameCapture() {
       const ctx = getReadbackContext(canvas);
       if (!ctx) return;
       const imageData = ctx.getImageData(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
-      window.castApi.sendNdiFrame(imageData.data.buffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+      const requiredSize = NDI_OUTPUT_WIDTH * NDI_OUTPUT_HEIGHT * 4;
+      if (!frameBufferRef.current || frameBufferRef.current.byteLength !== requiredSize) {
+        frameBufferRef.current = new Uint8Array(requiredSize);
+      }
+      frameBufferRef.current.set(imageData.data);
+      window.castApi.sendNdiFrame(frameBufferRef.current.buffer as ArrayBuffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
     } catch (error) {
       console.error('[NdiFrameCapture] Frame capture failed:', error);
     }

@@ -7,7 +7,11 @@ const sendNdiFrame = vi.fn();
 const batchDraw = vi.fn();
 const getImageData = vi.fn(() => ({ data: new Uint8ClampedArray(4) }));
 const getContext = vi.fn(() => ({ getImageData }));
-const getNativeCanvasElement = vi.fn(() => ({ getContext }));
+const getNativeCanvasElement = vi.fn(() => ({
+  width: 1920,
+  height: 1080,
+  getContext,
+}));
 const getLayers = vi.fn(() => [{ getNativeCanvasElement }]);
 
 const useNdiMock = vi.fn();
@@ -55,14 +59,10 @@ vi.mock('../../stage/rendering/scene-node-text', () => ({
   SceneNodeText: () => <div data-testid="scene-node-text" />,
 }));
 
-vi.mock('../../stage/rendering/scene-node-video', () => ({
-  SceneNodeVideo: () => <div data-testid="scene-node-video" />,
-}));
-
-vi.mock('../../stage/rendering/scene-node-image', async () => {
+vi.mock('../../stage/rendering/scene-node-media', async () => {
   const React = await import('react');
 
-  function SceneNodeImage({ onLoad }: { onLoad?: () => void }) {
+  function SceneNodeMedia({ onLoad }: { onLoad?: () => void }) {
     React.useEffect(() => {
       if (!onLoad) return;
 
@@ -75,10 +75,10 @@ vi.mock('../../stage/rendering/scene-node-image', async () => {
       };
     }, [onLoad]);
 
-    return <div data-testid="scene-node-image" />;
+    return <div data-testid="scene-node-media" />;
   }
 
-  return { SceneNodeImage };
+  return { SceneNodeMedia };
 });
 
 describe('NdiFrameCapture', () => {
@@ -117,9 +117,9 @@ describe('NdiFrameCapture', () => {
     useRenderScenesMock.mockReturnValue({
       programScene: createScene([
         {
-          id: '__layer_media_media-1',
+          id: '__layer_media',
           element: {
-            id: '__layer_media_media-1',
+            id: '__layer_media',
             slideId: '__layer_preview__',
             type: 'image',
             x: 0,

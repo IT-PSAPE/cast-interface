@@ -29,7 +29,7 @@ export interface SplitResizeResult {
 }
 
 export function cloneSplitLayout(layout: SplitLayoutState): SplitLayoutState {
-  const panes: Partial<Record<PaneId, PaneLayoutState>> = {};
+  const panes: Record<PaneId, PaneLayoutState> = {};
   const paneIds = Object.keys(layout.panes) as PaneId[];
 
   for (const paneId of paneIds) {
@@ -41,8 +41,23 @@ export function cloneSplitLayout(layout: SplitLayoutState): SplitLayoutState {
   return { panes };
 }
 
+export function createDefaultSplitLayout(definition: SplitDefinition): SplitLayoutState {
+  const panes: Record<PaneId, PaneLayoutState> = {};
+
+  for (const paneId of definition.paneOrder) {
+    const paneDefinition = requirePaneDefinition(definition, paneId);
+    panes[paneId] = {
+      size: paneDefinition.defaultSize,
+      visible: true,
+      lastVisibleSize: paneDefinition.defaultSize,
+    };
+  }
+
+  return { panes };
+}
+
 export function coerceSplitLayout(definition: SplitDefinition, input: SplitLayoutState, fallback: SplitLayoutState): SplitLayoutState {
-  const panes: Partial<Record<PaneId, PaneLayoutState>> = {};
+  const panes: Record<PaneId, PaneLayoutState> = {};
 
   for (const paneId of definition.paneOrder) {
     const fallbackPane = requirePaneState(fallback, paneId);
@@ -318,7 +333,7 @@ function synchronizeDynamicBounds(items: WorkingPane[]): void {
 }
 
 function toSplitLayout(definition: SplitDefinition, items: WorkingPane[]): SplitLayoutState {
-  const panes: Partial<Record<PaneId, PaneLayoutState>> = {};
+  const panes: Record<PaneId, PaneLayoutState> = {};
 
   for (let index = 0; index < definition.paneOrder.length; index++) {
     const paneId = definition.paneOrder[index];

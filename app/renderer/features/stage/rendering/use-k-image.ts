@@ -1,53 +1,5 @@
 import { useEffect, useState } from 'react';
-
-interface ImageCacheEntry {
-  image: HTMLImageElement;
-  listeners: Set<(status: 'loaded' | 'error') => void>;
-  status: 'loading' | 'loaded' | 'error';
-}
-
-const imageCache = new Map<string, ImageCacheEntry>();
-
-function createCacheEntry(src: string): ImageCacheEntry {
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-
-  const entry: ImageCacheEntry = {
-    image,
-    listeners: new Set(),
-    status: 'loading',
-  };
-
-  function notify(status: 'loaded' | 'error') {
-    entry.status = status;
-    for (const listener of entry.listeners) {
-      listener(status);
-    }
-  }
-
-  image.addEventListener('load', () => {
-    notify('loaded');
-  });
-  image.addEventListener('error', () => {
-    notify('error');
-  });
-  image.src = src;
-
-  if (image.complete) {
-    entry.status = image.naturalWidth > 0 ? 'loaded' : 'error';
-  }
-
-  return entry;
-}
-
-function getImageCacheEntry(src: string): ImageCacheEntry {
-  const existing = imageCache.get(src);
-  if (existing) return existing;
-
-  const next = createCacheEntry(src);
-  imageCache.set(src, next);
-  return next;
-}
+import { getImageCacheEntry } from './image-cache';
 
 export function useKImage(src: string | null): HTMLImageElement | null {
   const [image, setImage] = useState<HTMLImageElement | null>(null);

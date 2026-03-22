@@ -4,10 +4,9 @@ import type Konva from 'konva';
 import type { SlideElement, TextElementPayload } from '@core/types';
 import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
 import type { RenderNode, RenderScene } from './scene-types';
-import { SceneNodeImage } from './scene-node-image';
+import { SceneNodeMedia } from './scene-node-media';
 import { SceneNodeShape } from './scene-node-shape';
 import { SceneNodeText } from './scene-node-text';
-import { SceneNodeVideo } from './scene-node-video';
 import { useSceneStageEditor } from './use-scene-stage-editor';
 import type { SceneViewportTransform } from './use-scene-stage-viewport';
 import { useSceneStageViewport } from './use-scene-stage-viewport';
@@ -29,8 +28,7 @@ function rotationSnaps(): number[] {
 function renderNodeContent(node: RenderNode) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image') return <SceneNodeImage node={node} />;
-  if (node.element.type === 'video') return <SceneNodeVideo node={node} />;
+  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} />;
   return null;
 }
 

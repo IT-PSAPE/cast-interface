@@ -16,7 +16,7 @@ import { MediaBinPanel } from './media-bin-panel';
 import { PresentationBinPanel } from './presentation-bin-panel';
 import { TemplateBinPanel } from './template-bin-panel';
 
-const ACCEPTED_TYPES = ['image/', 'video/'];
+const ACCEPTED_TYPES = ['image/', 'video/', 'audio/'];
 
 interface ResourceDrawerContextValue {
   actions: {

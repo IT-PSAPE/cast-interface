@@ -40,7 +40,7 @@ export function PlaylistItemList({ tree, editingSegmentId, editingPresentationId
         </IconButton>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1">
         {tree.segments.map((segment) => (
           <PlaylistSegmentGroup
             key={segment.segment.id}

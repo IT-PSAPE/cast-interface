@@ -27,7 +27,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
         </IconButton>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5" role="list" aria-label="Playlists">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1" role="list" aria-label="Playlists">
         {currentLibraryBundle.playlists.map((tree) => {
           const isSelected = tree.playlist.id === currentPlaylistId;
           const isEditing = tree.playlist.id === recentlyCreatedId || tree.playlist.id === editingPlaylistId;
@@ -64,13 +64,7 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
                 </span>
               </Button>
 
-              <IconButton
-                label={`Open ${tree.playlist.name} menu`}
-                onClick={handleMenuButtonClick}
-                size="sm"
-                variant="ghost"
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
-              >
+              <IconButton label={`Open ${tree.playlist.name} menu`} onClick={handleMenuButtonClick} size="sm" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" >
                 <Icon.dots_vertical size={14} strokeWidth={2} />
               </IconButton>
             </div>

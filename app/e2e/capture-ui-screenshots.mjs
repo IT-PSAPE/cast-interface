@@ -68,11 +68,6 @@ async function clickToolbarView(page, label) {
   await page.waitForTimeout(350);
 }
 
-async function clickTab(page, label) {
-  await page.getByRole('tab', { name: label }).click();
-  await page.waitForTimeout(350);
-}
-
 async function clickSlideBrowserMode(page, label) {
   await page.locator('[data-ui-region="slide-browser"]').getByRole('button', { name: label }).click();
   await page.waitForTimeout(350);
@@ -80,6 +75,26 @@ async function clickSlideBrowserMode(page, label) {
 
 async function clickPlaylistBrowserMode(page, label) {
   await page.locator('[data-ui-region="slide-browser"]').getByRole('button', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickSettingsTab(page, label) {
+  await page.locator('[data-ui-region="settings-dialog"]').getByRole('button', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickInspectorTab(page, label) {
+  await page.locator('[data-ui-region="inspector-panel"]').getByRole('tab', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickPreviewTab(page, label) {
+  await page.locator('[data-ui-region="preview-panel"]').getByRole('tab', { name: label }).click();
+  await page.waitForTimeout(350);
+}
+
+async function clickResourceDrawerTab(page, label) {
+  await page.locator('[data-ui-region="resource-drawer"]').getByRole('tab', { name: label }).click();
   await page.waitForTimeout(350);
 }
 
@@ -113,14 +128,14 @@ async function selectSlideInEditor(page, index) {
 }
 
 async function assignMediaLayer(page) {
-  await clickTab(page, 'Media');
+  await clickResourceDrawerTab(page, 'Media');
   await page.locator('[data-ui-region="resource-drawer"]').getByRole('button', { name: /Gradient Backdrop/i }).click();
   await page.waitForTimeout(350);
 }
 
 async function assignOverlayLayer(page) {
-  await clickTab(page, 'Overlays');
-  await page.locator('[data-ui-region="resource-drawer"]').getByRole('button', { name: /Watermark/i }).click();
+  await clickPreviewTab(page, 'Overlays');
+  await page.locator('[data-ui-region="preview-panel"]').getByRole('button', { name: /Watermark/i }).click();
   await page.waitForTimeout(350);
 }
 
@@ -218,6 +233,21 @@ async function seedScenario(page) {
       return next.mediaAssets.find((asset) => asset.name === name)?.id ?? null;
     }
 
+    async function ensureTemplate(name, kind, elements) {
+      const snapshot = await getSnapshot();
+      const existing = snapshot.templates.find((template) => template.name === name);
+      if (existing) return existing.id;
+      await window.castApi.createTemplate({
+        name,
+        kind,
+        width: 1920,
+        height: 1080,
+        elements,
+      });
+      const next = await getSnapshot();
+      return next.templates.find((template) => template.name === name)?.id ?? null;
+    }
+
     async function ensurePresentation(ids, title, slideSpecs) {
       let snapshot = await getSnapshot();
       let presentation = snapshot.presentations.find((item) => item.title === title) ?? null;
@@ -297,6 +327,16 @@ async function seedScenario(page) {
         ],
       },
     ]);
+
+    await ensureTemplate('Service Slide Template', 'slides', [
+      createShapeElement('#111827CC', 160, 280, 1600, 440),
+      createTextElement('Template Title', 240, 420, 1440, 140),
+    ]);
+
+    await ensureTemplate('Lower Third Overlay', 'overlays', [
+      createShapeElement('#0F172ACC', 120, 820, 1680, 180),
+      createTextElement('Overlay Title', 220, 850, 1280, 90),
+    ]);
   }, { gradientBackdropSrc: gradientBackdrop });
 
   await page.reload();
@@ -334,7 +374,7 @@ async function captureAppScreenshots() {
 
     await selectPresentation(page, 'Welcome Slides');
 
-    await clickToolbarView(page, 'Slides');
+    await clickToolbarView(page, 'Edit');
     await captureLocator(page.locator('[data-ui-region="app-toolbar"]'), path.join(APP_OUTPUT_DIR, 'app-toolbar-slide-editor.png'));
 
     await selectSlideInEditor(page, 1);
@@ -342,10 +382,8 @@ async function captureAppScreenshots() {
     await captureLocator(page.locator('[data-ui-region="slide-list-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-list-panel.png'));
     await captureLocator(page.locator('[data-ui-region="slide-notes-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-notes-panel.png'));
     await captureLocator(page.locator('[data-ui-region="stage-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'stage-panel-slide-editor.png'));
+    await captureLocator(page.locator('[data-ui-region="object-list-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'object-list-panel.png'));
     await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-presentation.png'));
-
-    await clickTab(page, 'Slide');
-    await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-slide.png'));
 
     await page.locator('[data-ui-region="object-list-panel"] button', { hasText: 'Shape' }).first().click();
     await page.waitForTimeout(350);
@@ -353,14 +391,8 @@ async function captureAppScreenshots() {
 
     await page.locator('[data-ui-region="object-list-panel"] button', { hasText: 'Service begins in 5 minutes' }).first().click();
     await page.waitForTimeout(350);
-    await clickTab(page, 'Text');
+    await clickInspectorTab(page, 'Text');
     await captureLocator(page.locator('[data-ui-region="inspector-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'inspector-text.png'));
-
-    await page.locator('[data-ui-region="stage-panel"]').getByRole('button', { name: 'Add Media' }).click();
-    await page.waitForTimeout(350);
-    await captureLocator(page.locator('[data-ui-region="media-picker-dialog"]'), path.join(FEATURE_OUTPUT_DIR, 'media-picker-dialog.png'));
-    await page.locator('[data-ui-region="media-picker-dialog"]').getByRole('button', { name: 'Close' }).click();
-    await page.waitForTimeout(350);
 
     await clickToolbarView(page, 'Overlay');
     await captureLocator(page.locator('[data-ui-region="app-toolbar"]'), path.join(APP_OUTPUT_DIR, 'app-toolbar-overlay-editor.png'));
@@ -379,17 +411,23 @@ async function captureAppScreenshots() {
     await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-media.png'));
 
     await assignOverlayLayer(page);
-    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-overlays.png'));
+    await captureLocator(page.locator('[data-ui-region="preview-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'preview-panel-overlays.png'));
 
-    await clickTab(page, 'Presentations');
+    await clickResourceDrawerTab(page, 'Presentations');
     await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-presentations.png'));
 
-    await clickTab(page, 'Media');
+    await clickResourceDrawerTab(page, 'Templates');
+    await captureLocator(page.locator('[data-ui-region="resource-drawer"]'), path.join(FEATURE_OUTPUT_DIR, 'resource-drawer-templates.png'));
+
+    await clickResourceDrawerTab(page, 'Media');
     await clickSlideBrowserMode(page, 'Grid view');
     await clickPlaylistBrowserMode(page, 'Current');
     await captureLocator(page.locator('[data-ui-region="slide-browser"]'), path.join(FEATURE_OUTPUT_DIR, 'slide-browser-grid-current.png'));
     await captureLocator(page.locator('[data-ui-region="show-mode-layout"]'), path.join(APP_OUTPUT_DIR, 'show-mode-layout.png'));
     await captureLocator(page.locator('[data-ui-region="preview-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'preview-panel.png'));
+    await clickPreviewTab(page, 'Audio');
+    await captureLocator(page.locator('[data-ui-region="preview-panel"]'), path.join(FEATURE_OUTPUT_DIR, 'preview-panel-audio.png'));
+    await clickPreviewTab(page, 'Overlays');
     await captureLocator(page.locator('[data-ui-region="status-bar"]'), path.join(APP_OUTPUT_DIR, 'status-bar.png'));
 
     await clickSlideBrowserMode(page, 'List view');
@@ -411,6 +449,11 @@ async function captureAppScreenshots() {
     await page.locator('[data-ui-region="app-toolbar"]').getByRole('button', { name: 'Settings' }).click();
     await page.waitForTimeout(350);
     await captureLocator(page.locator('[data-ui-region="settings-dialog"]'), path.join(APP_OUTPUT_DIR, 'settings-dialog.png'));
+    await captureLocator(page.locator('[data-ui-region="settings-dialog"]'), path.join(APP_OUTPUT_DIR, 'settings-dialog-appearance.png'));
+    await clickSettingsTab(page, 'Outputs');
+    await captureLocator(page.locator('[data-ui-region="settings-dialog"]'), path.join(APP_OUTPUT_DIR, 'settings-dialog-outputs.png'));
+    await clickSettingsTab(page, 'Overlays');
+    await captureLocator(page.locator('[data-ui-region="settings-dialog"]'), path.join(APP_OUTPUT_DIR, 'settings-dialog-overlays.png'));
   } finally {
     await app.close();
   }

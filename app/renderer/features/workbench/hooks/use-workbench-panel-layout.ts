@@ -1,26 +1,23 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  DEFAULT_WORKBENCH_LAYOUTS,
-  WORKBENCH_SPLIT_DEFINITIONS,
-  type DragSessionState,
-  type PaneId,
-  type PanelToggleId,
-  type SplitLayoutState,
-  type WorkbenchPanelLayouts,
-  type WorkbenchSplitId,
+import type {
+  DragSessionState,
+  PaneId,
+  SplitDefinition,
+  SplitId,
+  SplitLayoutState,
+  WorkbenchPanelLayouts,
 } from '../types/workbench-panel-layout';
 import {
   applyMeasuredPaneSizes,
   cloneSplitLayout,
   coerceSplitLayout,
+  createDefaultSplitLayout,
   resizeSplitFromDelta,
   setPaneVisibility,
 } from '../utils/split-resize';
 
 const STORAGE_KEY = 'cast-interface.workbench-layout.v1';
-const STORAGE_VERSION = 2;
-
-type LayoutKey = keyof WorkbenchPanelLayouts;
+const STORAGE_VERSION = 3;
 
 interface PersistedWorkbenchLayouts {
   version: number;
@@ -28,72 +25,32 @@ interface PersistedWorkbenchLayouts {
 }
 
 interface ResizeStartInput {
-  splitId: WorkbenchSplitId;
+  definition: SplitDefinition;
   handleIndex: number;
   pointerPosition: number;
   paneSizes: Record<string, number>;
 }
 
 interface ResizeMoveInput {
-  splitId: WorkbenchSplitId;
+  definition: SplitDefinition;
   pointerPosition: number;
 }
 
 interface ResizeEndInput {
-  splitId: WorkbenchSplitId;
-}
-
-interface WorkbenchPanelToggleState {
-  show: {
-    left: boolean;
-    right: boolean;
-    bottom: boolean;
-  };
-  slideEditor: {
-    left: boolean;
-    right: boolean;
-    bottom: boolean;
-  };
-  overlayEditor: {
-    left: boolean;
-    right: boolean;
-  };
+  splitId: SplitId;
 }
 
 interface UseWorkbenchPanelLayoutResult {
   liveLayouts: WorkbenchPanelLayouts;
   committedLayouts: WorkbenchPanelLayouts;
-  panelVisibility: WorkbenchPanelToggleState;
+  registerSplit: (definition: SplitDefinition) => void;
+  getSplitLayout: (definition: SplitDefinition) => SplitLayoutState;
   startDrag: (input: ResizeStartInput) => void;
   updateDrag: (input: ResizeMoveInput) => void;
   endDrag: (input: ResizeEndInput) => void;
-  togglePanel: (view: 'show' | 'slideEditor' | 'overlayEditor', panel: PanelToggleId) => void;
+  togglePanel: (splitId: SplitId, paneId: PaneId) => void;
+  isPanelVisible: (splitId: SplitId, paneId: PaneId) => boolean;
 }
-
-const SPLIT_LAYOUT_KEYS: Record<WorkbenchSplitId, LayoutKey> = {
-  'show-main': 'showMain',
-  'show-center': 'showCenter',
-  'edit-main': 'editMain',
-  'edit-center': 'editCenter',
-  'overlay-main': 'overlayMain',
-};
-
-const PANEL_TO_SPLIT_AND_PANE: Record<'show' | 'slideEditor' | 'overlayEditor', Partial<Record<PanelToggleId, { splitId: WorkbenchSplitId; paneId: PaneId }>>> = {
-  show: {
-    left: { splitId: 'show-main', paneId: 'show-left' },
-    right: { splitId: 'show-main', paneId: 'show-right' },
-    bottom: { splitId: 'show-center', paneId: 'show-bottom' },
-  },
-  slideEditor: {
-    left: { splitId: 'edit-main', paneId: 'edit-left' },
-    right: { splitId: 'edit-main', paneId: 'edit-right' },
-    bottom: { splitId: 'edit-center', paneId: 'edit-bottom' },
-  },
-  overlayEditor: {
-    left: { splitId: 'overlay-main', paneId: 'overlay-left' },
-    right: { splitId: 'overlay-main', paneId: 'overlay-right' },
-  },
-};
 
 export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
   const initialLayouts = useMemo(() => hydratePersistedLayouts(), []);
@@ -104,25 +61,7 @@ export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
   const committedLayoutsRef = useRef(committedLayouts);
   const liveLayoutsRef = useRef(liveLayouts);
   const dragSessionRef = useRef<DragSessionState | null>(null);
-
-  const panelVisibility = useMemo<WorkbenchPanelToggleState>(() => {
-    return {
-      show: {
-        left: requirePaneVisible(liveLayouts.showMain, 'show-left'),
-        right: requirePaneVisible(liveLayouts.showMain, 'show-right'),
-        bottom: requirePaneVisible(liveLayouts.showCenter, 'show-bottom'),
-      },
-      slideEditor: {
-        left: requirePaneVisible(liveLayouts.editMain, 'edit-left'),
-        right: requirePaneVisible(liveLayouts.editMain, 'edit-right'),
-        bottom: requirePaneVisible(liveLayouts.editCenter, 'edit-bottom'),
-      },
-      overlayEditor: {
-        left: requirePaneVisible(liveLayouts.overlayMain, 'overlay-left'),
-        right: requirePaneVisible(liveLayouts.overlayMain, 'overlay-right'),
-      },
-    };
-  }, [liveLayouts]);
+  const definitionsRef = useRef<Record<SplitId, SplitDefinition>>({});
 
   const persistLayouts = useCallback((layouts: WorkbenchPanelLayouts) => {
     if (typeof window === 'undefined') return;
@@ -147,44 +86,49 @@ export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
     }
   }, [persistLayouts]);
 
-  const startDrag = useCallback((input: ResizeStartInput) => {
-    const definition = WORKBENCH_SPLIT_DEFINITIONS[input.splitId];
-    const currentLiveLayouts = liveLayoutsRef.current;
-    const baseSplit = getSplitLayout(currentLiveLayouts, input.splitId);
+  const registerSplit = useCallback((definition: SplitDefinition) => {
+    definitionsRef.current[definition.id] = definition;
+  }, []);
 
+  const getSplitLayout = useCallback((definition: SplitDefinition) => {
+    return resolveSplitLayout(liveLayoutsRef.current, definition);
+  }, []);
+
+  const startDrag = useCallback((input: ResizeStartInput) => {
+    registerSplit(input.definition);
+
+    const baseSplit = resolveSplitLayout(liveLayoutsRef.current, input.definition);
     const measuredSplit = applyMeasuredPaneSizes(
-      definition,
+      input.definition,
       baseSplit,
       input.paneSizes as Partial<Record<PaneId, number>>,
     );
 
-    const measuredLiveLayouts = setSplitLayout(currentLiveLayouts, input.splitId, measuredSplit);
+    const measuredLiveLayouts = setSplitLayout(liveLayoutsRef.current, input.definition.id, measuredSplit);
     liveLayoutsRef.current = measuredLiveLayouts;
     setLiveLayouts(measuredLiveLayouts);
 
     dragSessionRef.current = {
-      splitId: input.splitId,
+      splitId: input.definition.id,
       handleIndex: input.handleIndex,
       startPointer: input.pointerPosition,
       rawDelta: 0,
       baseLayouts: measuredLiveLayouts,
     };
-  }, []);
+  }, [registerSplit]);
 
   const updateDrag = useCallback((input: ResizeMoveInput) => {
     const session = dragSessionRef.current;
     if (!session) return;
-    if (session.splitId !== input.splitId) return;
+    if (session.splitId !== input.definition.id) return;
 
-    const definition = WORKBENCH_SPLIT_DEFINITIONS[input.splitId];
     const rawDelta = input.pointerPosition - session.startPointer;
-    const baseSplit = getSplitLayout(session.baseLayouts, input.splitId);
-    const resized = resizeSplitFromDelta(definition, baseSplit, session.handleIndex, rawDelta);
+    const baseSplit = resolveSplitLayout(session.baseLayouts, input.definition);
+    const resized = resizeSplitFromDelta(input.definition, baseSplit, session.handleIndex, rawDelta);
+    const nextLayouts = setSplitLayout(liveLayoutsRef.current, input.definition.id, resized.layout);
 
-    const nextLayouts = setSplitLayout(liveLayoutsRef.current, input.splitId, resized.layout);
     liveLayoutsRef.current = nextLayouts;
     setLiveLayouts(nextLayouts);
-
     session.rawDelta = rawDelta;
   }, []);
 
@@ -195,95 +139,102 @@ export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
 
     dragSessionRef.current = null;
 
+    const currentDefinition = definitionsRef.current[input.splitId];
+    if (!currentDefinition) return;
+
     const committedNext = setSplitLayout(
       committedLayoutsRef.current,
       input.splitId,
-      getSplitLayout(liveLayoutsRef.current, input.splitId),
+      resolveSplitLayout(liveLayoutsRef.current, currentDefinition),
     );
 
     replaceBothLayouts(committedNext, true);
   }, [replaceBothLayouts]);
 
-  const togglePanel = useCallback((view: 'show' | 'slideEditor' | 'overlayEditor', panel: PanelToggleId) => {
-    const mapping = PANEL_TO_SPLIT_AND_PANE[view][panel];
-    if (!mapping) return;
-
+  const togglePanel = useCallback((splitId: SplitId, paneId: PaneId) => {
     dragSessionRef.current = null;
 
-    const definition = WORKBENCH_SPLIT_DEFINITIONS[mapping.splitId];
-    const baseSplit = getSplitLayout(committedLayoutsRef.current, mapping.splitId);
-    const isVisible = requirePaneVisible(baseSplit, mapping.paneId);
-    const nextSplit = setPaneVisibility(definition, baseSplit, mapping.paneId, !isVisible);
+    const definition = definitionsRef.current[splitId];
+    if (!definition) return;
 
-    const nextLayouts = setSplitLayout(committedLayoutsRef.current, mapping.splitId, nextSplit);
-    replaceBothLayouts(nextLayouts, true);
+    const paneDefinition = definition.panes[paneId];
+    if (!paneDefinition) return;
+
+    const baseSplit = resolveSplitLayout(committedLayoutsRef.current, definition);
+    const nextSplit = setPaneVisibility(definition, baseSplit, paneId, !baseSplit.panes[paneId].visible);
+
+    replaceBothLayouts(setSplitLayout(committedLayoutsRef.current, splitId, nextSplit), true);
   }, [replaceBothLayouts]);
+
+  const isPanelVisible = useCallback((splitId: SplitId, paneId: PaneId) => {
+    const visible = liveLayoutsRef.current[splitId]?.panes[paneId]?.visible;
+    return typeof visible === 'boolean' ? visible : true;
+  }, []);
 
   return {
     liveLayouts,
     committedLayouts,
-    panelVisibility,
+    registerSplit,
+    getSplitLayout,
     startDrag,
     updateDrag,
     endDrag,
     togglePanel,
+    isPanelVisible,
   };
 }
 
 function hydratePersistedLayouts(): WorkbenchPanelLayouts {
-  const defaults = cloneWorkbenchLayouts(DEFAULT_WORKBENCH_LAYOUTS);
-
-  if (typeof window === 'undefined') return defaults;
+  if (typeof window === 'undefined') return {};
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaults;
+    if (!raw) return {};
 
     const parsed = JSON.parse(raw) as PersistedWorkbenchLayouts;
-    if (parsed.version !== STORAGE_VERSION) return defaults;
-    if (!parsed.layouts) return defaults;
+    if (parsed.version !== STORAGE_VERSION) return {};
+    if (!isLayoutsRecord(parsed.layouts)) return {};
 
-    return {
-      showMain: coerceSplitLayout(WORKBENCH_SPLIT_DEFINITIONS['show-main'], parsed.layouts.showMain, defaults.showMain),
-      showCenter: coerceSplitLayout(WORKBENCH_SPLIT_DEFINITIONS['show-center'], parsed.layouts.showCenter, defaults.showCenter),
-      editMain: coerceSplitLayout(WORKBENCH_SPLIT_DEFINITIONS['edit-main'], parsed.layouts.editMain, defaults.editMain),
-      editCenter: coerceSplitLayout(WORKBENCH_SPLIT_DEFINITIONS['edit-center'], parsed.layouts.editCenter, defaults.editCenter),
-      overlayMain: coerceSplitLayout(WORKBENCH_SPLIT_DEFINITIONS['overlay-main'], parsed.layouts.overlayMain, defaults.overlayMain),
-    };
+    return parsed.layouts;
   } catch {
-    return defaults;
+    return {};
   }
 }
 
-function cloneWorkbenchLayouts(layouts: WorkbenchPanelLayouts): WorkbenchPanelLayouts {
-  return {
-    showMain: cloneSplitLayout(layouts.showMain),
-    showCenter: cloneSplitLayout(layouts.showCenter),
-    editMain: cloneSplitLayout(layouts.editMain),
-    editCenter: cloneSplitLayout(layouts.editCenter),
-    overlayMain: cloneSplitLayout(layouts.overlayMain),
-  };
+function resolveSplitLayout(layouts: WorkbenchPanelLayouts, definition: SplitDefinition): SplitLayoutState {
+  const fallback = createDefaultSplitLayout(definition);
+  const input = layouts[definition.id] ?? fallback;
+  return coerceSplitLayout(definition, input, fallback);
 }
 
-function getSplitLayout(layouts: WorkbenchPanelLayouts, splitId: WorkbenchSplitId): SplitLayoutState {
-  const key = SPLIT_LAYOUT_KEYS[splitId];
-  return layouts[key];
-}
-
-function setSplitLayout(layouts: WorkbenchPanelLayouts, splitId: WorkbenchSplitId, splitLayout: SplitLayoutState): WorkbenchPanelLayouts {
-  const key = SPLIT_LAYOUT_KEYS[splitId];
+function setSplitLayout(layouts: WorkbenchPanelLayouts, splitId: SplitId, splitLayout: SplitLayoutState): WorkbenchPanelLayouts {
   return {
     ...layouts,
-    [key]: splitLayout,
+    [splitId]: cloneSplitLayout(splitLayout),
   };
 }
 
-function requirePaneVisible(layout: SplitLayoutState, paneId: PaneId): boolean {
-  const pane = layout.panes[paneId];
-  if (!pane) {
-    throw new Error(`Missing pane visibility for: ${paneId}`);
-  }
-  return pane.visible;
+function isLayoutsRecord(value: unknown): value is WorkbenchPanelLayouts {
+  if (!value || typeof value !== 'object') return false;
+
+  const layouts = value as Record<string, unknown>;
+  return Object.values(layouts).every(isSplitLayoutState);
+}
+
+function isSplitLayoutState(value: unknown): value is SplitLayoutState {
+  if (!value || typeof value !== 'object') return false;
+
+  const panes = (value as SplitLayoutState).panes;
+  if (!panes || typeof panes !== 'object') return false;
+
+  return Object.values(panes).every((pane) => {
+    if (!pane || typeof pane !== 'object') return false;
+
+    const candidate = pane as { size?: unknown; visible?: unknown; lastVisibleSize?: unknown };
+    return typeof candidate.size === 'number'
+      && typeof candidate.visible === 'boolean'
+      && typeof candidate.lastVisibleSize === 'number';
+  });
 }
 
 export type {
@@ -291,5 +242,4 @@ export type {
   ResizeMoveInput,
   ResizeEndInput,
   UseWorkbenchPanelLayoutResult,
-  WorkbenchPanelToggleState,
 };

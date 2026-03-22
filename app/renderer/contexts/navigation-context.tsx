@@ -6,7 +6,7 @@ import { useProjectContent } from './use-project-content';
 
 type PresentationBrowseSource = 'playlist' | 'project';
 
-interface NavigationContextValue {
+interface NavigationStateValue {
   currentLibraryId: Id | null;
   currentPlaylistId: Id | null;
   currentPresentationId: Id | null;
@@ -20,6 +20,9 @@ interface NavigationContextValue {
   outputArmVersion: number;
   slideCountByPresentation: Map<Id, number>;
   recentlyCreatedId: Id | null;
+}
+
+interface NavigationActionsValue {
   selectLibrary: (id: Id) => void;
   selectPlaylistPresentation: (id: Id) => void;
   browsePresentation: (id: Id) => void;
@@ -39,7 +42,10 @@ interface NavigationContextValue {
   renamePresentation: (id: Id, title: string) => Promise<void>;
 }
 
-const NavigationContext = createContext<NavigationContextValue | null>(null);
+type NavigationContextValue = NavigationStateValue & NavigationActionsValue;
+
+const NavigationStateContext = createContext<NavigationStateValue | null>(null);
+const NavigationActionsContext = createContext<NavigationActionsValue | null>(null);
 
 export function resolveCurrentPresentationId(currentPresentationId: Id | null, presentationIds: Iterable<Id>): Id | null {
   if (!currentPresentationId) return null;
@@ -314,7 +320,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText(`Renamed item: ${title}`);
   }, [mutate, setStatusText]);
 
-  const value = useMemo<NavigationContextValue>(() => ({
+  const stateValue = useMemo<NavigationStateValue>(() => ({
     currentLibraryId,
     currentPlaylistId,
     currentPresentationId,
@@ -328,6 +334,23 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     outputArmVersion,
     slideCountByPresentation,
     recentlyCreatedId,
+  }), [
+    currentDrawerPresentationId,
+    currentLibraryBundle,
+    currentLibraryId,
+    currentOutputPresentationId,
+    currentPlaylistId,
+    currentPlaylistPresentation,
+    currentPlaylistPresentationId,
+    currentPresentation,
+    currentPresentationId,
+    outputArmVersion,
+    presentationBrowseSource,
+    recentlyCreatedId,
+    slideCountByPresentation,
+  ]);
+
+  const actionsValue = useMemo<NavigationActionsValue>(() => ({
     selectLibrary,
     selectPlaylistPresentation,
     browsePresentation,
@@ -356,29 +379,22 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     createPlaylist,
     createPresentation,
     createSegment,
-    currentDrawerPresentationId,
-    currentLibraryBundle,
-    currentLibraryId,
-    currentOutputPresentationId,
-    currentPlaylistId,
-    currentPlaylistPresentation,
-    currentPlaylistPresentationId,
-    currentPresentation,
-    currentPresentationId,
     moveCurrentPresentationToSegment,
-    outputArmVersion,
-    presentationBrowseSource,
-    recentlyCreatedId,
     renameLibrary,
     renamePlaylist,
     renamePresentation,
     selectLibrary,
     setCurrentPlaylistId,
     selectPlaylistPresentation,
-    slideCountByPresentation,
   ]);
 
-  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
+  return (
+    <NavigationStateContext.Provider value={stateValue}>
+      <NavigationActionsContext.Provider value={actionsValue}>
+        {children}
+      </NavigationActionsContext.Provider>
+    </NavigationStateContext.Provider>
+  );
 }
 
 function extractPlaylistPresentationIds(selectedTree: PlaylistTree | null): Id[] {
@@ -394,8 +410,20 @@ function extractPlaylistPresentationIds(selectedTree: PlaylistTree | null): Id[]
   return presentationIds;
 }
 
-export function useNavigation(): NavigationContextValue {
-  const context = useContext(NavigationContext);
-  if (!context) throw new Error('useNavigation must be used within NavigationProvider');
+export function useNavigationState(): NavigationStateValue {
+  const context = useContext(NavigationStateContext);
+  if (!context) throw new Error('useNavigationState must be used within NavigationProvider');
   return context;
+}
+
+export function useNavigationActions(): NavigationActionsValue {
+  const context = useContext(NavigationActionsContext);
+  if (!context) throw new Error('useNavigationActions must be used within NavigationProvider');
+  return context;
+}
+
+export function useNavigation(): NavigationContextValue {
+  const state = useNavigationState();
+  const actions = useNavigationActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }

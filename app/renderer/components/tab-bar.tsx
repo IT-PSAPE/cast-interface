@@ -4,12 +4,19 @@ interface TabBarProps {
   label: string;
   children: ReactNode;
   className?: string;
+  actions?: ReactNode;
+  tabsClassName?: string;
 }
 
-export function TabBar({ label, children, className = '' }: TabBarProps) {
+export function TabBar({ label, children, className = '', actions, tabsClassName = '' }: TabBarProps) {
   return (
-    <nav className={`flex items-center gap-0.5 ${className}`.trim()} role="tablist" aria-label={label}>
-      {children}
+    <nav className={`flex min-w-0 items-center gap-2 ${className}`.trim()} aria-label={label}>
+      <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className={`flex w-max items-center gap-0.5 ${tabsClassName}`.trim()} role="tablist" aria-label={label}>
+          {children}
+        </div>
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
     </nav>
   );
 }
@@ -23,6 +30,7 @@ interface TabProps {
 export function Tab({ active, onClick, children }: TabProps) {
   return (
     <button
+      type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}

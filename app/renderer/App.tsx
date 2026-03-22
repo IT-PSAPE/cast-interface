@@ -20,65 +20,76 @@ import { ShowModeLayout } from './features/workbench/components/show-mode-layout
 import { SlideEditorLayout } from './features/workbench/components/slide-editor-layout';
 import { OverlayEditorLayout } from './features/workbench/components/overlay-editor-layout';
 import { TemplateEditorLayout } from './features/workbench/components/template-editor-layout';
+import { PanelRoute, usePanelRoute } from './features/workbench/components/panel-route';
 import { ErrorBoundary } from './components/error-boundary';
 import { RenderSceneProvider } from './features/stage/rendering/render-scene-provider';
 import { StatusBar } from './components/status-bar';
 import { useNdi } from './contexts/ndi-context';
-import { useWorkbenchPanelLayout } from './features/workbench/hooks/use-workbench-panel-layout';
 import { ProgramOutputProvider } from './features/outputs/contexts/program-output-context';
+import { ShowAudioProvider } from './features/outputs/contexts/show-audio-context';
 import { NdiFrameCapture } from './features/outputs/components/ndi-frame-capture';
 
 export function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-      <CastProvider>
-        <NdiProvider>
-          <NavigationProvider>
-            <PresentationLayerProvider>
-              <SlideProvider>
-                <WorkbenchProvider>
-                  <SlideBrowserProvider>
-                    <ResourceDrawerProvider>
-                      <InspectorProvider>
-                        <LibraryPanelProvider>
-                          <OverlayDefaultsProvider>
-                            <OverlayEditorProvider>
-                              <TemplateEditorProvider>
-                                <SlideEditorProvider>
-                                  <ElementProvider>
-                                  <RenderSceneProvider>
-                                      <ProgramOutputProvider>
-                                        <NdiFrameCapture />
-                                        <AppLayout />
-                                      </ProgramOutputProvider>
-                                  </RenderSceneProvider>
-                                  </ElementProvider>
-                                </SlideEditorProvider>
-                              </TemplateEditorProvider>
-                            </OverlayEditorProvider>
-                          </OverlayDefaultsProvider>
-                        </LibraryPanelProvider>
-                      </InspectorProvider>
-                    </ResourceDrawerProvider>
-                  </SlideBrowserProvider>
-                </WorkbenchProvider>
-              </SlideProvider>
-            </PresentationLayerProvider>
-          </NavigationProvider>
-        </NdiProvider>
-      </CastProvider>
+        <CastProvider>
+          <NdiProvider>
+            <NavigationProvider>
+              <PresentationLayerProvider>
+                <SlideProvider>
+                  <WorkbenchProvider>
+                    <SlideBrowserProvider>
+                      <ResourceDrawerProvider>
+                        <InspectorProvider>
+                          <LibraryPanelProvider>
+                            <OverlayDefaultsProvider>
+                              <OverlayEditorProvider>
+                                <TemplateEditorProvider>
+                                  <SlideEditorProvider>
+                                    <ElementProvider>
+                                      <RenderSceneProvider>
+                                        <ProgramOutputProvider>
+                                          <ShowAudioProvider>
+                                            <NdiFrameCapture />
+                                            <AppLayout />
+                                          </ShowAudioProvider>
+                                        </ProgramOutputProvider>
+                                      </RenderSceneProvider>
+                                    </ElementProvider>
+                                  </SlideEditorProvider>
+                                </TemplateEditorProvider>
+                              </OverlayEditorProvider>
+                            </OverlayDefaultsProvider>
+                          </LibraryPanelProvider>
+                        </InspectorProvider>
+                      </ResourceDrawerProvider>
+                    </SlideBrowserProvider>
+                  </WorkbenchProvider>
+                </SlideProvider>
+              </PresentationLayerProvider>
+            </NavigationProvider>
+          </NdiProvider>
+        </CastProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
 }
 
 function AppLayout() {
+  return (
+    <PanelRoute.Root>
+      <AppLayoutContent />
+    </PanelRoute.Root>
+  );
+}
+
+function AppLayoutContent() {
   useKeyboardShortcuts();
   const { snapshot } = useCast();
   const { outputState, toggleAudienceOutput } = useNdi();
   const { workbenchMode } = useWorkbench();
-  const panelLayout = useWorkbenchPanelLayout();
+  const panelRoute = usePanelRoute();
 
   if (!snapshot) {
     return (
@@ -89,52 +100,52 @@ function AppLayout() {
   }
 
   function handleToggleShowLeftPanel() {
-    panelLayout.togglePanel('show', 'left');
+    panelRoute.actions.togglePanel('show-main', 'show-left');
   }
 
   function handleToggleShowBottomPanel() {
-    panelLayout.togglePanel('show', 'bottom');
+    panelRoute.actions.togglePanel('show-center', 'show-bottom');
   }
 
   function handleToggleShowRightPanel() {
-    panelLayout.togglePanel('show', 'right');
+    panelRoute.actions.togglePanel('show-main', 'show-right');
   }
 
   function handleToggleEditLeftPanel() {
-    panelLayout.togglePanel('slideEditor', 'left');
+    panelRoute.actions.togglePanel('edit-main', 'edit-left');
   }
 
   function handleToggleEditRightPanel() {
-    panelLayout.togglePanel('slideEditor', 'right');
+    panelRoute.actions.togglePanel('edit-main', 'edit-right');
   }
 
   function handleToggleEditBottomPanel() {
-    panelLayout.togglePanel('slideEditor', 'bottom');
+    panelRoute.actions.togglePanel('edit-center', 'edit-bottom');
   }
 
   function handleToggleOverlayLeftPanel() {
-    panelLayout.togglePanel('overlayEditor', 'left');
+    panelRoute.actions.togglePanel('overlay-main', 'overlay-left');
   }
 
   function handleToggleOverlayRightPanel() {
-    panelLayout.togglePanel('overlayEditor', 'right');
+    panelRoute.actions.togglePanel('overlay-main', 'overlay-right');
   }
 
   const showPanelToggles = [
-    { id: 'left' as const, label: 'Left', active: panelLayout.panelVisibility.show.left, onToggle: handleToggleShowLeftPanel },
-    { id: 'bottom' as const, label: 'Bottom', active: panelLayout.panelVisibility.show.bottom, onToggle: handleToggleShowBottomPanel },
-    { id: 'right' as const, label: 'Right', active: panelLayout.panelVisibility.show.right, onToggle: handleToggleShowRightPanel },
+    { id: 'left' as const, label: 'Left', active: panelRoute.meta.isPanelVisible('show-main', 'show-left'), onToggle: handleToggleShowLeftPanel },
+    { id: 'bottom' as const, label: 'Bottom', active: panelRoute.meta.isPanelVisible('show-center', 'show-bottom'), onToggle: handleToggleShowBottomPanel },
+    { id: 'right' as const, label: 'Right', active: panelRoute.meta.isPanelVisible('show-main', 'show-right'), onToggle: handleToggleShowRightPanel },
   ];
 
   const editPanelToggles = [
-    { id: 'left' as const, label: 'Left', active: panelLayout.panelVisibility.slideEditor.left, onToggle: handleToggleEditLeftPanel },
-    { id: 'bottom' as const, label: 'Bottom', active: panelLayout.panelVisibility.slideEditor.bottom, onToggle: handleToggleEditBottomPanel },
-    { id: 'right' as const, label: 'Right', active: panelLayout.panelVisibility.slideEditor.right, onToggle: handleToggleEditRightPanel },
+    { id: 'left' as const, label: 'Left', active: panelRoute.meta.isPanelVisible('edit-main', 'edit-left'), onToggle: handleToggleEditLeftPanel },
+    { id: 'bottom' as const, label: 'Bottom', active: panelRoute.meta.isPanelVisible('edit-center', 'edit-bottom'), onToggle: handleToggleEditBottomPanel },
+    { id: 'right' as const, label: 'Right', active: panelRoute.meta.isPanelVisible('edit-main', 'edit-right'), onToggle: handleToggleEditRightPanel },
   ];
 
   const overlayPanelToggles = [
-    { id: 'left' as const, label: 'Left', active: panelLayout.panelVisibility.overlayEditor.left, onToggle: handleToggleOverlayLeftPanel },
-    { id: 'right' as const, label: 'Right', active: panelLayout.panelVisibility.overlayEditor.right, onToggle: handleToggleOverlayRightPanel },
+    { id: 'left' as const, label: 'Left', active: panelRoute.meta.isPanelVisible('overlay-main', 'overlay-left'), onToggle: handleToggleOverlayLeftPanel },
+    { id: 'right' as const, label: 'Right', active: panelRoute.meta.isPanelVisible('overlay-main', 'overlay-right'), onToggle: handleToggleOverlayRightPanel },
   ];
 
   const panelToggles = workbenchMode === 'show'
@@ -153,36 +164,16 @@ function AppLayout() {
         panelToggles={panelToggles}
       />
       {workbenchMode === 'show' && (
-        <ShowModeLayout
-          liveLayouts={panelLayout.liveLayouts}
-          startDrag={panelLayout.startDrag}
-          updateDrag={panelLayout.updateDrag}
-          endDrag={panelLayout.endDrag}
-        />
+        <ShowModeLayout />
       )}
       {workbenchMode === 'slide-editor' && (
-        <SlideEditorLayout
-          liveLayouts={panelLayout.liveLayouts}
-          startDrag={panelLayout.startDrag}
-          updateDrag={panelLayout.updateDrag}
-          endDrag={panelLayout.endDrag}
-        />
+        <SlideEditorLayout />
       )}
       {workbenchMode === 'overlay-editor' && (
-        <OverlayEditorLayout
-          liveLayouts={panelLayout.liveLayouts}
-          startDrag={panelLayout.startDrag}
-          updateDrag={panelLayout.updateDrag}
-          endDrag={panelLayout.endDrag}
-        />
+        <OverlayEditorLayout />
       )}
       {workbenchMode === 'template-editor' && (
-        <TemplateEditorLayout
-          liveLayouts={panelLayout.liveLayouts}
-          startDrag={panelLayout.startDrag}
-          updateDrag={panelLayout.updateDrag}
-          endDrag={panelLayout.endDrag}
-        />
+        <TemplateEditorLayout />
       )}
       <StatusBar />
     </div>

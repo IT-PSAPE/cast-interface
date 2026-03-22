@@ -111,7 +111,7 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,audio/*"
         onChange={handleFileChange}
         className="hidden"
       />

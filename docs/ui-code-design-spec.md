@@ -270,9 +270,13 @@ States covered:
 States covered:
 
 - settings dialog open from the app toolbar
+- settings sidebar on `Appearance`, `Outputs`, and `Overlays`
 - status bar with current cast status and audience indicator
 
 ![Settings dialog](./ui-spec-assets/app/settings-dialog.png)
+![Settings dialog appearance](./ui-spec-assets/app/settings-dialog-appearance.png)
+![Settings dialog outputs](./ui-spec-assets/app/settings-dialog-outputs.png)
+![Settings dialog overlays](./ui-spec-assets/app/settings-dialog-overlays.png)
 ![Status bar](./ui-spec-assets/app/status-bar.png)
 
 ## 10. Feature-Level Components
@@ -310,20 +314,24 @@ States covered:
 States covered:
 
 - `media`
-- `overlays`
 - `presentations`
+- `templates`
 
 ![Resource drawer media](./ui-spec-assets/features/resource-drawer-media.png)
-![Resource drawer overlays](./ui-spec-assets/features/resource-drawer-overlays.png)
 ![Resource drawer presentations](./ui-spec-assets/features/resource-drawer-presentations.png)
+![Resource drawer templates](./ui-spec-assets/features/resource-drawer-templates.png)
 
 ### Outputs
 
 States covered:
 
 - `PreviewPanel` with content and media assigned
+- `PreviewPanel` overlays tab with active overlay controls
+- `PreviewPanel` audio tab empty state
 
 ![Preview panel](./ui-spec-assets/features/preview-panel.png)
+![Preview panel overlays](./ui-spec-assets/features/preview-panel-overlays.png)
+![Preview panel audio](./ui-spec-assets/features/preview-panel-audio.png)
 
 ### Slide Editor
 
@@ -331,13 +339,13 @@ States covered:
 
 - `SlideListPanel`
 - `SlideNotesPanel`
+- `ObjectListPanel`
 - `StagePanel` in `slide-editor`
-- `MediaPickerDialog` from the stage toolbar
 
 ![Slide list panel](./ui-spec-assets/features/slide-list-panel.png)
 ![Slide notes panel](./ui-spec-assets/features/slide-notes-panel.png)
+![Object list panel](./ui-spec-assets/features/object-list-panel.png)
 ![Stage panel slide editor](./ui-spec-assets/features/stage-panel-slide-editor.png)
-![Media picker dialog](./ui-spec-assets/features/media-picker-dialog.png)
 
 ### Overlay Editor
 
@@ -354,13 +362,11 @@ States covered:
 States covered:
 
 - `presentation`
-- `slide`
 - `shape`
 - `text`
 - overlay editing with the `Overlay` inspector branch
 
 ![Inspector presentation](./ui-spec-assets/features/inspector-presentation.png)
-![Inspector slide](./ui-spec-assets/features/inspector-slide.png)
 ![Inspector shape](./ui-spec-assets/features/inspector-shape.png)
 ![Inspector text](./ui-spec-assets/features/inspector-text.png)
 ![Inspector overlay](./ui-spec-assets/features/inspector-overlay.png)

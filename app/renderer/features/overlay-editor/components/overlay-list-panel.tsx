@@ -1,9 +1,9 @@
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
 import { PanelSection } from '../../../components/panel-section';
-import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
 import { ObjectListPanel } from '../../slide-editor/components/object-list-panel';
+import { PanelRoute } from '../../workbench/components/panel-route';
 import { OverlayCard } from './overlay-card';
 
 export function OverlayListPanel() {
@@ -36,15 +36,8 @@ export function OverlayListPanel() {
       data-ui-region="overlay-list-panel"
       className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-primary"
     >
-      <TwoPaneVerticalSplit
-        className="h-full"
-        topPaneId="overlay-list"
-        bottomPaneId="overlay-objects"
-        defaultTopSize={440}
-        defaultBottomSize={220}
-        minTopSize={180}
-        minBottomSize={160}
-        topPane={(
+      <PanelRoute.Split splitId="overlay-list-panel" orientation="vertical" className="h-full">
+        <PanelRoute.Panel id="overlay-list" defaultSize={440} minSize={180}>
           <PanelSection
             title={<span className="truncate text-sm font-medium text-text-primary">Overlays</span>}
             action={(
@@ -59,8 +52,8 @@ export function OverlayListPanel() {
               {overlays.map(renderOverlayCard)}
             </div>
           </PanelSection>
-        )}
-        bottomPane={(
+        </PanelRoute.Panel>
+        <PanelRoute.Panel id="overlay-objects" defaultSize={220} minSize={160}>
           <PanelSection
             title={<span className="text-sm font-medium text-text-primary">Objects</span>}
             headerClassName="border-b border-t border-border-primary"
@@ -68,8 +61,8 @@ export function OverlayListPanel() {
           >
             <ObjectListPanel />
           </PanelSection>
-        )}
-      />
+        </PanelRoute.Panel>
+      </PanelRoute.Split>
     </aside>
   );
 }

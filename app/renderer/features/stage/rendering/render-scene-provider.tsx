@@ -97,40 +97,32 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
       ? frozenProgramScene
       : liveScene;
 
-  const editThumbnailScenes = useMemo(() => {
-    const sceneMap = new Map<Id, RenderScene>();
+  const slidesById = useMemo(() => {
+    const map = new Map<Id, (typeof slides)[number]>();
     for (const slide of slides) {
-      const isCurrentSlide = currentSlide?.id === slide.id;
-      const elements = isCurrentSlide ? effectiveElements : getSlideElements(slide.id);
-      sceneMap.set(slide.id, buildThumbnailScene(slide, elements));
+      map.set(slide.id, slide);
     }
-    return sceneMap;
-  }, [currentSlide?.id, effectiveElements, getSlideElements, slides]);
+    return map;
+  }, [slides]);
 
-  const persistedThumbnailScenes = useMemo(() => {
-    const sceneMap = new Map<Id, RenderScene>();
-    for (const slide of slides) {
-      sceneMap.set(slide.id, buildThumbnailScene(slide, slideElementsById.get(slide.id) ?? []));
-    }
-    return sceneMap;
-  }, [slideElementsById, slides]);
+  const getThumbnailScene = useCallback((slideId: Id, surface: SceneSurface): RenderScene | null => {
+    const slide = slidesById.get(slideId);
+    if (!slide) return null;
+    const policy = thumbnailSourcePolicy(surface, currentSlide?.id === slideId);
+    const elements = policy === 'draft'
+      ? (currentSlide?.id === slideId ? effectiveElements : getSlideElements(slideId))
+      : (slideElementsById.get(slideId) ?? []);
+    return buildThumbnailScene(slide, elements);
+  }, [currentSlide?.id, effectiveElements, getSlideElements, slideElementsById, slidesById]);
 
-  const value = useMemo<RenderSceneContextValue>(() => {
-    function getThumbnailScene(slideId: Id, surface: SceneSurface): RenderScene | null {
-      const policy = thumbnailSourcePolicy(surface, currentSlide?.id === slideId);
-      if (policy === 'draft') return editThumbnailScenes.get(slideId) ?? null;
-      return persistedThumbnailScenes.get(slideId) ?? null;
-    }
-
-    return {
-      editScene,
-      showScene,
-      liveScene,
-      programScene,
-      getThumbnailScene,
-      commitProgramScene,
-    };
-  }, [commitProgramScene, currentSlide?.id, editScene, editThumbnailScenes, liveScene, persistedThumbnailScenes, programScene, showScene]);
+  const value = useMemo<RenderSceneContextValue>(() => ({
+    editScene,
+    showScene,
+    liveScene,
+    programScene,
+    getThumbnailScene,
+    commitProgramScene,
+  }), [commitProgramScene, editScene, getThumbnailScene, liveScene, programScene, showScene]);
 
   return <RenderSceneContext.Provider value={value}>{children}</RenderSceneContext.Provider>;
 }

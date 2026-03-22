@@ -17,7 +17,7 @@ export const LAYER_PREVIEW_SLIDE: Slide = {
 export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
   if (asset.type === 'audio') {
     return {
-      id: `__layer_media_${asset.id}`,
+      id: '__layer_media',
       slideId: LAYER_PREVIEW_SLIDE.id,
       type: 'text',
       x: 0,
@@ -46,7 +46,7 @@ export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
   const isVideo = asset.type === 'video' || asset.type === 'animation';
 
   return {
-    id: `__layer_media_${asset.id}`,
+    id: '__layer_media',
     slideId: LAYER_PREVIEW_SLIDE.id,
     type: isVideo ? 'video' : 'image',
     x: 0,

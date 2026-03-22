@@ -103,6 +103,6 @@ describe('buildRenderScene', () => {
       includeContent: true,
     });
 
-    expect(scene.nodes.map((node) => node.id)).toEqual(['__layer_media_asset-1', 'shape-1', 'text-1', 'overlay-1']);
+    expect(scene.nodes.map((node) => node.id)).toEqual(['__layer_media', 'shape-1', 'text-1', 'overlay-1']);
   });
 });

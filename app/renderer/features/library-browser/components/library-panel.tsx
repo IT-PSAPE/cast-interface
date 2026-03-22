@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { ContextMenu } from '../../../components/context-menu';
-import { TwoPaneVerticalSplit } from '../../../components/resizable-split';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { useSlides } from '../../../contexts/slide-context';
+import { PanelRoute } from '../../workbench/components/panel-route';
 import { useLibraryPanelState } from '../contexts/library-panel-context';
 import { useLibraryPanelContextMenu } from '../hooks/use-library-panel-context-menu';
 import { useLibraryPanelManagement } from '../hooks/use-library-panel-management';
@@ -103,23 +103,16 @@ export function LibraryPanel() {
       {libraryPanelView === 'playlist' ? (
         <>
           <LibraryHeader />
-          <TwoPaneVerticalSplit
-            className="flex-1"
-            topPaneId="library-playlists"
-            bottomPaneId="library-segments"
-            defaultTopSize={200}
-            defaultBottomSize={320}
-            minTopSize={120}
-            minBottomSize={180}
-            topPane={(
+          <PanelRoute.Split splitId="library-panel" orientation="vertical" className="flex-1">
+            <PanelRoute.Panel id="library-playlists" defaultSize={200} minSize={120}>
               <PlaylistList
                 editingPlaylistId={editingPlaylistId}
                 onPlaylistContextMenu={handlePlaylistContextMenu}
                 onPlaylistMenuButtonClick={openPlaylistMenuFromButton}
                 onClearEditingPlaylist={clearEditingPlaylist}
               />
-            )}
-            bottomPane={(
+            </PanelRoute.Panel>
+            <PanelRoute.Panel id="library-segments" defaultSize={320} minSize={180}>
               <PlaylistItemList
                 tree={selectedTree}
                 editingSegmentId={editingSegmentId}
@@ -133,8 +126,8 @@ export function LibraryPanel() {
                 onClearEditingSegment={clearEditingSegment}
                 onClearEditingPresentation={clearEditingPresentation}
               />
-            )}
-          />
+            </PanelRoute.Panel>
+          </PanelRoute.Split>
         </>
       ) : null}
 
