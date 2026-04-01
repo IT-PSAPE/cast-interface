@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { CastRepository } from '@database/store';
-import { IPC, NDI_EVENTS } from '@core/ipc';
+import { IPC, NDI_EVENTS, type InlineWindowMenuItem } from '@core/ipc';
 import type {
   ContentBundleBrokenReferenceDecision,
   ElementCreateInput,
@@ -15,8 +15,10 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput
+  SlideNotesUpdateInput,
+  SlideOrderUpdateInput
 } from '@core/types';
+import { getInlineWindowMenuItems, popupInlineWindowMenu } from './application-menu';
 import { readContentBundleArchive, writeContentBundleArchive } from './content-bundle-archive';
 import { NdiService } from './ndi/ndi-service';
 
@@ -70,6 +72,12 @@ export const registerIpcHandlers = (
     getMainWindow()?.webContents.send(NDI_EVENTS.diagnosticsChanged, diagnostics);
   });
 
+  safeHandle(IPC.getInlineWindowMenuItems, (): InlineWindowMenuItem[] => getInlineWindowMenuItems());
+  safeHandle(IPC.popupInlineWindowMenu, async (event, menuId: string, x: number, y: number) => {
+    const browserWindow = getDialogWindow(event);
+    if (!browserWindow) return;
+    await popupInlineWindowMenu(menuId, browserWindow, x, y);
+  });
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
   safeHandle(IPC.chooseContentBundleExportPath, async (event, suggestedName: string) => {
     const result = await showSaveDialogForEvent(event, {
@@ -139,7 +147,9 @@ export const registerIpcHandlers = (
     repo.createLyric(title)
   );
   safeHandle(IPC.createSlide, (_event, input: SlideCreateInput) => repo.createSlide(input));
+  safeHandle(IPC.deleteSlide, (_event, slideId: Id) => repo.deleteSlide(slideId));
   safeHandle(IPC.updateSlideNotes, (_event, input: SlideNotesUpdateInput) => repo.updateSlideNotes(input));
+  safeHandle(IPC.setSlideOrder, (_event, input: SlideOrderUpdateInput) => repo.setSlideOrder(input));
   safeHandle(IPC.createElement, (_event, input: ElementCreateInput) => repo.createElement(input));
   safeHandle(IPC.createElementsBatch, (_event, inputs: ElementCreateInput[]) => repo.createElementsBatch(inputs));
   safeHandle(IPC.updateElement, (_event, input: ElementUpdateInput) => repo.updateElement(input));

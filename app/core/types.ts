@@ -348,6 +348,11 @@ export interface SlideNotesUpdateInput {
   notes: string;
 }
 
+export interface SlideOrderUpdateInput {
+  slideId: Id;
+  newOrder: number;
+}
+
 export interface ElementCreateInput {
   id?: Id;
   slideId: Id;
