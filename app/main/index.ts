@@ -1,7 +1,8 @@
-import { app, BrowserWindow, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CastRepository } from '@database/store';
+import { createApplicationMenu } from './application-menu';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
 import { NdiConfigStore } from './ndi/ndi-config-store';
@@ -71,6 +72,16 @@ function createRendererWindowOptions(view: RendererView, width: number, height: 
     height,
     show: false,
     backgroundColor: '#121212',
+    ...(process.platform === 'win32'
+      ? {
+        titleBarStyle: 'hidden' as const,
+        titleBarOverlay: {
+          color: '#111111',
+          symbolColor: '#d4d4d4',
+          height: 36,
+        },
+      }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       sandbox: false,
@@ -102,6 +113,9 @@ function loadRendererView(window: BrowserWindow, view: RendererView): void {
 function createMainWindow(): void {
   const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
   mainWindow = window;
+  if (process.platform === 'win32') {
+    window.setMenuBarVisibility(false);
+  }
   window.once('ready-to-show', () => {
     window.show();
   });
@@ -119,6 +133,7 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(filePath).toString());
   });
 
+  Menu.setApplicationMenu(createApplicationMenu());
   registerIpcHandlers(repository, ndiService, () => mainWindow);
   createMainWindow();
 

@@ -16,11 +16,15 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput
+  SlideNotesUpdateInput,
+  SlideOrderUpdateInput
 } from './types';
 
 export interface MainApi {
+  platform: NodeJS.Platform;
   getPathForFile: (file: File) => string;
+  getInlineWindowMenuItems: () => Promise<InlineWindowMenuItem[]>;
+  popupInlineWindowMenu: (menuId: string, x: number, y: number) => Promise<void>;
   getSnapshot: () => Promise<AppSnapshot>;
   chooseContentBundleExportPath: (suggestedName: string) => Promise<string | null>;
   chooseContentBundleImportPath: () => Promise<string | null>;
@@ -40,7 +44,9 @@ export interface MainApi {
   createDeck: (title: string) => Promise<AppSnapshot>;
   createLyric: (title: string) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
+  deleteSlide: (slideId: Id) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
+  setSlideOrder: (input: SlideOrderUpdateInput) => Promise<AppSnapshot>;
   createElement: (input: ElementCreateInput) => Promise<AppSnapshot>;
   createElementsBatch: (inputs: ElementCreateInput[]) => Promise<AppSnapshot>;
   updateElement: (input: ElementUpdateInput) => Promise<AppSnapshot>;
@@ -79,7 +85,14 @@ export interface MainApi {
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
 }
 
+export interface InlineWindowMenuItem {
+  id: string;
+  label: string;
+}
+
 export const IPC = {
+  getInlineWindowMenuItems: 'cast:getInlineWindowMenuItems',
+  popupInlineWindowMenu: 'cast:popupInlineWindowMenu',
   getSnapshot: 'cast:getSnapshot',
   chooseContentBundleExportPath: 'cast:chooseContentBundleExportPath',
   chooseContentBundleImportPath: 'cast:chooseContentBundleImportPath',
@@ -99,7 +112,9 @@ export const IPC = {
   createDeck: 'cast:createDeck',
   createLyric: 'cast:createLyric',
   createSlide: 'cast:createSlide',
+  deleteSlide: 'cast:deleteSlide',
   updateSlideNotes: 'cast:updateSlideNotes',
+  setSlideOrder: 'cast:setSlideOrder',
   createElement: 'cast:createElement',
   createElementsBatch: 'cast:createElementsBatch',
   updateElement: 'cast:updateElement',

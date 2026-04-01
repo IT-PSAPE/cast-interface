@@ -18,11 +18,15 @@ import type {
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
-  SlideNotesUpdateInput
+  SlideNotesUpdateInput,
+  SlideOrderUpdateInput
 } from '@core/types';
 
 const api = {
+  platform: process.platform,
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  getInlineWindowMenuItems: () => ipcRenderer.invoke(IPC.getInlineWindowMenuItems) as Promise<import('@core/ipc').InlineWindowMenuItem[]>,
+  popupInlineWindowMenu: (menuId: string, x: number, y: number) => ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, x, y) as Promise<void>,
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
   chooseContentBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseContentBundleExportPath, suggestedName) as Promise<string | null>,
   chooseContentBundleImportPath: () => ipcRenderer.invoke(IPC.chooseContentBundleImportPath) as Promise<string | null>,
@@ -45,7 +49,9 @@ const api = {
   createDeck: (title: string) => ipcRenderer.invoke(IPC.createDeck, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
+  deleteSlide: (slideId: Id) => ipcRenderer.invoke(IPC.deleteSlide, slideId),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
+  setSlideOrder: (input: SlideOrderUpdateInput) => ipcRenderer.invoke(IPC.setSlideOrder, input),
   createElement: (input: ElementCreateInput) => ipcRenderer.invoke(IPC.createElement, input),
   createElementsBatch: (inputs: ElementCreateInput[]) => ipcRenderer.invoke(IPC.createElementsBatch, inputs),
   updateElement: (input: ElementUpdateInput) => ipcRenderer.invoke(IPC.updateElement, input),

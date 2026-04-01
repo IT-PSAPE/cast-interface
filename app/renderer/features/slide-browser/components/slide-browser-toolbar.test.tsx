@@ -30,11 +30,17 @@ vi.mock('./slide-browser-mode-control', () => ({
   },
 }));
 
+vi.mock('./lyric-editor-modal', () => ({
+  LyricEditorModal: function LyricEditorModal() {
+    return null;
+  },
+}));
+
 describe('SlideBrowserToolbar', () => {
   beforeEach(() => {
     useNavigationMock.mockReturnValue({
-      currentPresentation: { id: 'presentation-1', title: 'Hello World' },
-      isDetachedPresentationBrowser: false,
+      currentContentItem: { id: 'presentation-1', title: 'Hello World', type: 'deck', order: 0, createdAt: '', updatedAt: '' },
+      isDetachedContentBrowser: false,
     });
     useSlideBrowserMock.mockReturnValue({
       slideBrowserMode: 'grid',
@@ -60,5 +66,25 @@ describe('SlideBrowserToolbar', () => {
 
     expect(screen.queryByText('Playlist Mode Control')).toBeNull();
     expect(screen.getByText('Slide Mode Control')).not.toBeNull();
+  });
+
+  it('renders the toolbar with lyric content', () => {
+    useNavigationMock.mockReturnValue({
+      currentContentItem: { id: 'lyric-1', title: 'Lyrics', type: 'lyric', order: 0, createdAt: '', updatedAt: '' },
+      isDetachedContentBrowser: false,
+    });
+    useSlideBrowserMock.mockReturnValue({ slideBrowserMode: 'list' });
+
+    expect(() => render(<SlideBrowserToolbar />)).not.toThrow();
+  });
+
+  it('renders the toolbar with non-lyric content', () => {
+    useNavigationMock.mockReturnValue({
+      currentContentItem: { id: 'deck-1', title: 'Deck', type: 'deck', order: 0, createdAt: '', updatedAt: '' },
+      isDetachedContentBrowser: false,
+    });
+    useSlideBrowserMock.mockReturnValue({ slideBrowserMode: 'list' });
+
+    expect(() => render(<SlideBrowserToolbar />)).not.toThrow();
   });
 });

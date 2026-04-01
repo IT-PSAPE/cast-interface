@@ -333,3 +333,52 @@ describe('CastRepository global project migration', () => {
     expect(presentationOrder.order_index).toBe(77);
   });
 });
+
+describe('CastRepository slide management', () => {
+  let userDataPath = '';
+
+  afterEach(() => {
+    if (userDataPath) {
+      fs.rmSync(userDataPath, { recursive: true, force: true });
+      userDataPath = '';
+    }
+  });
+
+  it('deletes an individual lyric slide and normalizes sibling order', () => {
+    userDataPath = createTempUserDataPath();
+    electronState.userDataPath = userDataPath;
+
+    const repository = new CastRepository();
+    repository.createLyric('Audit Song');
+    const lyricId = repository.getSnapshot().lyrics.find((item) => item.title === 'Audit Song')?.id ?? null;
+
+    expect(lyricId).not.toBeNull();
+    if (!lyricId) {
+      closeRepository(repository);
+      return;
+    }
+
+    repository.createSlide({ lyricId });
+    repository.createSlide({ lyricId });
+    repository.createSlide({ lyricId });
+
+    const createdSlides = repository.getSnapshot().slides.filter((slide) => slide.lyricId === lyricId);
+    const deletedSlideId = createdSlides[1]?.id ?? null;
+
+    expect(createdSlides.map((slide) => slide.order)).toEqual([0, 1, 2]);
+    expect(deletedSlideId).not.toBeNull();
+    if (!deletedSlideId) {
+      closeRepository(repository);
+      return;
+    }
+
+    const snapshot = repository.deleteSlide(deletedSlideId);
+    closeRepository(repository);
+
+    const remainingSlides = snapshot.slides.filter((slide) => slide.lyricId === lyricId);
+    expect(remainingSlides).toHaveLength(2);
+    expect(remainingSlides.map((slide) => slide.id)).toEqual([createdSlides[0].id, createdSlides[2].id]);
+    expect(remainingSlides.map((slide) => slide.order)).toEqual([0, 1]);
+    expect(snapshot.slideElements.some((element) => element.slideId === deletedSlideId)).toBe(false);
+  });
+});

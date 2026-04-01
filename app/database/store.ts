@@ -40,6 +40,7 @@ import type {
   SlideElementPayload,
   SlideCreateInput,
   SlideNotesUpdateInput,
+  SlideOrderUpdateInput,
   Template,
   TemplateCreateInput,
   TemplateKind,
@@ -1773,11 +1774,82 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  deleteSlide(slideId: Id): AppSnapshot {
+    const slide = this.db
+      .prepare('SELECT deck_id, lyric_id FROM slides WHERE id = ?')
+      .get(slideId) as { deck_id: string | null; lyric_id: string | null } | undefined;
+
+    if (!slide) return this.getSnapshot();
+
+    const ownerColumn = slide.deck_id ? 'deck_id' : 'lyric_id';
+    const ownerId = slide.deck_id ?? slide.lyric_id;
+    if (!ownerId) return this.getSnapshot();
+
+    const tx = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?').run(slideId);
+      this.db.prepare('DELETE FROM slides WHERE id = ?').run(slideId);
+      this.normalizeSlideOrder(ownerColumn, ownerId);
+    });
+
+    tx();
+    return this.getSnapshot();
+  }
+
   updateSlideNotes(input: SlideNotesUpdateInput): AppSnapshot {
     const now = nowIso();
     this.db
       .prepare('UPDATE slides SET notes = ?, updated_at = ? WHERE id = ?')
       .run(input.notes, now, input.slideId);
+    return this.getSnapshot();
+  }
+
+  setSlideOrder(input: SlideOrderUpdateInput): AppSnapshot {
+    const now = nowIso();
+    
+    // Get the current slide to find its parent
+    const slide = this.db
+      .prepare('SELECT id, deck_id, lyric_id FROM slides WHERE id = ?')
+      .get(input.slideId) as { id: string; deck_id: string | null; lyric_id: string | null } | undefined;
+    
+    if (!slide) return this.getSnapshot();
+    
+    // Determine parent column and value
+    const isDecksSlide = slide.deck_id !== null;
+    const ownerColumn = isDecksSlide ? 'deck_id' : 'lyric_id';
+    const ownerId = isDecksSlide ? slide.deck_id : slide.lyric_id;
+    
+    if (!ownerId) return this.getSnapshot();
+    
+    // Get all sibling slides sorted by current order_index
+    const siblings = this.db
+      .prepare(`SELECT id, order_index FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
+      .all(ownerId) as { id: string; order_index: number }[];
+    
+    // Find current position
+    const currentIndex = siblings.findIndex(s => s.id === input.slideId);
+    if (currentIndex === -1) return this.getSnapshot();
+    
+    // Clamp newOrder to valid range
+    const maxOrder = siblings.length - 1;
+    const targetOrder = Math.max(0, Math.min(input.newOrder, maxOrder));
+    
+    // No-op if already at target position
+    if (currentIndex === targetOrder) return this.getSnapshot();
+    
+    // Reorder siblings by removing current and inserting at newOrder
+    const reordered = siblings.filter((_, i) => i !== currentIndex);
+    reordered.splice(targetOrder, 0, siblings[currentIndex]);
+    
+    // Update all siblings with new order_index values
+    const tx = this.db.transaction(() => {
+      reordered.forEach((sibling, index) => {
+        this.db
+          .prepare('UPDATE slides SET order_index = ?, updated_at = ? WHERE id = ?')
+          .run(index, now, sibling.id);
+      });
+    });
+    
+    tx();
     return this.getSnapshot();
   }
 
@@ -2225,6 +2297,23 @@ export class CastRepository {
       strokeEnabled: false,
       shadowEnabled: false,
     };
+  }
+
+  private normalizeSlideOrder(ownerColumn: 'deck_id' | 'lyric_id', ownerId: Id): void {
+    const now = nowIso();
+    this.db
+      .prepare(
+        `WITH ranked AS (
+           SELECT id, ROW_NUMBER() OVER (ORDER BY order_index ASC, created_at ASC, id ASC) - 1 AS next_order
+           FROM slides
+           WHERE ${ownerColumn} = ?
+         )
+         UPDATE slides
+         SET order_index = (SELECT next_order FROM ranked WHERE ranked.id = slides.id),
+             updated_at = ?
+         WHERE ${ownerColumn} = ?`
+      )
+      .run(ownerId, now, ownerId);
   }
 
   private assertMediaSource(src: string): void {
