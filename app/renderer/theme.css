@@ -634,3 +634,14 @@ select:focus-visible {
 
     }
 }
+
+.scrollbar-hidden {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Internet Explorer/Edge */
+  -ms-overflow-style: none;
+}
+/* Chrome, Safari, and Opera */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

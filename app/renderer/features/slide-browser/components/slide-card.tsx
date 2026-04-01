@@ -1,5 +1,6 @@
 import type { SlideElement } from '@core/types';
 import { ThumbnailTile } from '../../../components/thumbnail-tile';
+import { ThumbnailLiveBadge } from '../../../components/thumbnail-live-badge';
 import type { RenderScene } from '../../stage/rendering/scene-types';
 import { SceneFrame } from '../../../components/scene-frame';
 import type { SlideVisualState } from '../../../types/ui';
@@ -20,17 +21,12 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
   const isLive = state === 'live';
   const isEmpty = state === 'warning';
 
-  const outlineClass = isLive
-    ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-background-primary'
-    : isFocused
-      ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary'
-      : '';
-
   return (
     <ThumbnailTile
       onClick={onActivate}
       onDoubleClick={onEdit}
-      className={outlineClass}
+      selected={isFocused}
+      overlay={isLive ? <ThumbnailLiveBadge className="absolute left-2 top-2" /> : null}
       body={(
         <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard>
           {isEmpty ? (

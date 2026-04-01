@@ -4,44 +4,39 @@ import { Button } from '../../../components/button';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
 import { ContentItemIcon } from '../../../components/presentation-entity-icon';
+import { useNavigation } from '../../../contexts/navigation-context';
+import { useSlides } from '../../../contexts/slide-context';
+import { useLibraryBrowser } from '../contexts/library-browser-context';
+import { useLibraryPanelState } from '../contexts/library-panel-context';
 import { getSegmentHeaderColors } from '../utils/segment-header-color';
 
 interface PlaylistSegmentGroupProps {
   segment: PlaylistTree['segments'][number];
-  collapsed: boolean;
-  selectedPresentationId: string | null;
-  editingSegmentId: string | null;
-  editingPresentationId: string | null;
-  onSelectPresentation: (id: string) => void;
-  onToggleCollapsed: (segmentId: string) => void;
-  onSegmentContextMenu: (event: React.MouseEvent<HTMLElement>, segmentId: string) => void;
-  onSegmentMenuButtonClick: (segmentId: string, button: HTMLElement) => void;
-  onPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, itemId: string) => void;
-  onPresentationMenuButtonClick: (itemId: string, button: HTMLElement) => void;
-  onRenameSegment: (segmentId: string, name: string) => void;
-  onRenamePresentation: (itemId: string, title: string) => void;
-  onClearEditingSegment: () => void;
-  onClearEditingPresentation: () => void;
 }
 
-export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationId, editingSegmentId, editingPresentationId, onSelectPresentation, onToggleCollapsed, onSegmentContextMenu, onSegmentMenuButtonClick, onPresentationContextMenu, onPresentationMenuButtonClick, onRenameSegment, onRenamePresentation, onClearEditingSegment, onClearEditingPresentation }: PlaylistSegmentGroupProps) {
-  const isSegmentEditing = segment.segment.id === editingSegmentId;
+export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
+  const { currentPlaylistContentItemId } = useNavigation();
+  const { selectPlaylistContentItem } = useSlides();
+  const { state, actions } = useLibraryBrowser();
+  const { isSegmentCollapsed, toggleSegmentCollapsed } = useLibraryPanelState();
+  const collapsed = isSegmentCollapsed(segment.segment.id);
+  const isSegmentEditing = segment.segment.id === state.editingSegmentId;
   const segmentHeaderColors = getSegmentHeaderColors(segment.segment.id, segment.segment.colorKey);
 
-  function handleSegmentContextMenu(event: React.MouseEvent<HTMLElement>) { onSegmentContextMenu(event, segment.segment.id); }
+  function handleSegmentContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentContextMenu(event, segment.segment.id); }
 
   function handleCollapseToggle() {
-    onToggleCollapsed(segment.segment.id);
+    toggleSegmentCollapsed(segment.segment.id);
   }
 
   function handleSegmentMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
-    onSegmentMenuButtonClick(segment.segment.id, event.currentTarget);
+    actions.openSegmentMenuFromButton(segment.segment.id, event.currentTarget);
   }
 
   function handleSegmentRename(name: string) {
-    onRenameSegment(segment.segment.id, name);
-    onClearEditingSegment();
+    actions.renameSegment(segment.segment.id, name);
+    actions.clearEditingSegment();
   }
 
   return (
@@ -80,19 +75,19 @@ export function PlaylistSegmentGroup({ segment, collapsed, selectedPresentationI
       </div>
 
       {!collapsed ? segment.entries.map((entry) => {
-        const isSelected = entry.item.id === selectedPresentationId;
-        const isPresentationEditing = entry.item.id === editingPresentationId;
+        const isSelected = entry.item.id === currentPlaylistContentItemId;
+        const isPresentationEditing = entry.item.id === state.editingPresentationId;
 
-        function handleSelect() { onSelectPresentation(entry.item.id); }
-        function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onPresentationContextMenu(event, entry.item.id); }
+        function handleSelect() { selectPlaylistContentItem(entry.item.id); }
+        function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentPresentationContextMenu(event, entry.item.id); }
         function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
           event.stopPropagation();
-          onPresentationMenuButtonClick(entry.item.id, event.currentTarget);
+          actions.openSegmentPresentationMenuFromButton(entry.item.id, event.currentTarget);
         }
 
         function handleRename(title: string) {
-          onRenamePresentation(entry.item.id, title);
-          onClearEditingPresentation();
+          actions.renameContentItem(entry.item.id, title);
+          actions.clearEditingPresentation();
         }
 
         return (

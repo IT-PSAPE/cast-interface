@@ -2,7 +2,6 @@ import { createContext, useContext, useState, type ChangeEvent, type ReactNode }
 import { ContextMenu } from '../../../components/context-menu';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
-import { SearchField } from '../../../components/search-field';
 import { Tab, TabBar } from '../../../components/tab-bar';
 import { useElements } from '../../../contexts/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -16,7 +15,7 @@ import { MediaBinPanel } from './media-bin-panel';
 import { ContentBinPanel } from './presentation-bin-panel';
 import { TemplateBinPanel } from './template-bin-panel';
 
-const ACCEPTED_TYPES = ['image/', 'video/', 'audio/'];
+const ACCEPTED_TYPES = ['image/', 'video/'];
 
 interface ResourceDrawerContextValue {
   actions: {
@@ -27,7 +26,6 @@ interface ResourceDrawerContextValue {
     handleDrop: (event: React.DragEvent<HTMLElement>) => void;
     handleImport: (event: ChangeEvent<HTMLInputElement>) => void;
     setDrawerTab: (tab: DrawerTab) => void;
-    setFilterText: (value: string) => void;
   };
   meta: {
     footerClass: string;
@@ -36,7 +34,6 @@ interface ResourceDrawerContextValue {
   };
   state: {
     drawerTab: DrawerTab;
-    filterText: string;
     menuItems: ReturnType<typeof useCreateContentMenu>['menuItems'];
     menuState: ReturnType<typeof useCreateContentMenu>['menuState'];
     templateMenuItems: ReturnType<typeof useCreateTemplateMenu>['menuItems'];
@@ -52,7 +49,7 @@ function hasMediaFiles(transfer: DataTransfer): boolean {
 
 function useDrawer() {
   const context = useContext(ResourceDrawerContext);
-  if (!context) throw new Error('ResourceDrawer sub-components must be used within ResourceDrawerLayout.Root');
+  if (!context) throw new Error('ResourceDrawer components must be used within ResourceDrawerRoot');
   return context;
 }
 
@@ -62,7 +59,6 @@ function Root({ children }: { children: ReactNode }) {
   const { createDeck, createLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { setWorkbenchMode } = useWorkbench();
-  const [filterText, setFilterText] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
     createDeck,
@@ -127,7 +123,6 @@ function Root({ children }: { children: ReactNode }) {
       handleDrop,
       handleImport,
       setDrawerTab,
-      setFilterText
     },
     meta: {
       footerClass: [
@@ -139,7 +134,6 @@ function Root({ children }: { children: ReactNode }) {
     },
     state: {
       drawerTab,
-      filterText,
       menuItems,
       menuState,
       templateMenuItems,
@@ -151,7 +145,7 @@ function Root({ children }: { children: ReactNode }) {
     <ResourceDrawerContext.Provider value={value}>
       <footer
         data-ui-region="resource-drawer"
-        className={value.meta.footerClass}
+        className={`${value.meta.footerClass} overflow-hidden`}
         onDragOver={value.actions.handleDragOver}
         onDragLeave={value.actions.handleDragLeave}
         onDrop={value.actions.handleDrop}
@@ -178,125 +172,69 @@ function Root({ children }: { children: ReactNode }) {
   );
 }
 
-function Header({ children }: { children: ReactNode }) {
-  return <div className="flex items-center">{children}</div>;
+function ResourceDrawerActions() {
+  const { actions, meta } = useDrawer();
+
+  return (
+    <>
+      {meta.showImportAction ? (
+        <IconButton label="Import media" size="sm" variant="ghost" className="relative">
+          <Icon.plus size={14} strokeWidth={1.5} />
+          <input type="file" multiple accept="image/*,video/*" onChange={actions.handleImport} className="absolute inset-0 cursor-pointer opacity-0" />
+        </IconButton>
+      ) : null}
+      {meta.showCreateAction ? (
+        <IconButton label="Create item" size="sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
+          <Icon.plus size={14} strokeWidth={1.5} />
+        </IconButton>
+      ) : null}
+    </>
+  );
 }
 
-function TabList({ children }: { children: ReactNode }) {
-  return <TabBar label="Resource tabs">{children}</TabBar>;
-}
-
-function Trigger({ children, name }: { children: ReactNode; name: DrawerTab }) {
+function ResourceDrawerContent() {
   const { actions, state } = useDrawer();
 
-  function handleSelect() {
-    actions.setDrawerTab(name);
+  function handleSelectContent() {
+    actions.setDrawerTab('content');
+  }
+
+  function handleSelectMedia() {
+    actions.setDrawerTab('media');
+  }
+
+  function handleSelectTemplates() {
+    actions.setDrawerTab('templates');
   }
 
   return (
-    <Tab active={state.drawerTab === name} onClick={handleSelect}>
-      {children}
-    </Tab>
+    <>
+      <div className="border-b border-border-primary px-1 py-0.5">
+        <TabBar
+          label="Resource tabs"
+          className="min-w-0 flex-1"
+          actionsClassName="gap-0.5"
+          tabsClassName="gap-0.5"
+          actions={<ResourceDrawerActions />}
+        >
+          <Tab active={state.drawerTab === 'content'} onClick={handleSelectContent} className="px-1 py-0.5 text-[11px]">Content</Tab>
+          <Tab active={state.drawerTab === 'media'} onClick={handleSelectMedia} className="px-1 py-0.5 text-[11px]">Media</Tab>
+          <Tab active={state.drawerTab === 'templates'} onClick={handleSelectTemplates} className="px-1 py-0.5 text-[11px]">Templates</Tab>
+        </TabBar>
+      </div>
+      <div className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
+        {state.drawerTab === 'media' ? <MediaBinPanel filterText="" /> : null}
+        {state.drawerTab === 'content' ? <ContentBinPanel filterText="" /> : null}
+        {state.drawerTab === 'templates' ? <TemplateBinPanel filterText="" /> : null}
+      </div>
+    </>
   );
 }
-
-function Actions({ children }: { children: ReactNode }) {
-  return <div className="ml-auto flex items-center gap-2 px-2">{children}</div>;
-}
-
-function ImportAction() {
-  const { actions, meta } = useDrawer();
-  if (!meta.showImportAction) return null;
-
-  return (
-    <IconButton label="Import media" size="sm" variant="ghost" className="relative">
-      <Icon.plus size={14} strokeWidth={1.5} />
-      <input type="file" multiple accept="image/*,video/*,audio/*" onChange={actions.handleImport} className="absolute inset-0 cursor-pointer opacity-0" />
-    </IconButton>
-  );
-}
-
-function CreatePresentationAction() {
-  const { actions, meta } = useDrawer();
-  if (!meta.showCreateAction) return null;
-
-  return (
-    <IconButton label="Create item" size="sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
-      <Icon.plus size={14} strokeWidth={1.5} />
-    </IconButton>
-  );
-}
-
-function Search() {
-  const { actions, state } = useDrawer();
-
-  return (
-    <SearchField
-      className="w-[140px]"
-      placeholder="Filter"
-      value={state.filterText}
-      onChange={actions.setFilterText}
-    />
-  );
-}
-
-function Body({ children }: { children: ReactNode }) {
-  return <div className="min-h-0 overflow-auto px-2 py-2">{children}</div>;
-}
-
-function MediaPanel() {
-  const { state } = useDrawer();
-  if (state.drawerTab !== 'media') return null;
-  return <MediaBinPanel filterText={state.filterText} />;
-}
-
-function PresentationsPanel() {
-  const { state } = useDrawer();
-  if (state.drawerTab !== 'content') return null;
-  return <ContentBinPanel filterText={state.filterText} />;
-}
-
-function TemplatesPanel() {
-  const { state } = useDrawer();
-  if (state.drawerTab !== 'templates') return null;
-  return <TemplateBinPanel filterText={state.filterText} />;
-}
-
-const ResourceDrawerLayout = {
-  Actions,
-  Body,
-  CreatePresentationAction,
-  Header,
-  ImportAction,
-  MediaPanel,
-  PresentationsPanel,
-  TemplatesPanel,
-  Root,
-  Search,
-  TabList,
-  Trigger
-};
 
 export function ResourceDrawer() {
   return (
-    <ResourceDrawerLayout.Root>
-      <ResourceDrawerLayout.Header>
-        <ResourceDrawerLayout.TabList>
-          <ResourceDrawerLayout.Trigger name="media">Media</ResourceDrawerLayout.Trigger>
-          <ResourceDrawerLayout.Trigger name="content">Content</ResourceDrawerLayout.Trigger>
-          <ResourceDrawerLayout.Trigger name="templates">Templates</ResourceDrawerLayout.Trigger>
-        </ResourceDrawerLayout.TabList>
-        <ResourceDrawerLayout.Actions>
-          <ResourceDrawerLayout.ImportAction />
-          <ResourceDrawerLayout.CreatePresentationAction />
-          <ResourceDrawerLayout.Search />
-        </ResourceDrawerLayout.Actions>
-      </ResourceDrawerLayout.Header>
-      <ResourceDrawerLayout.Body>
-        <ResourceDrawerLayout.MediaPanel />
-        <ResourceDrawerLayout.PresentationsPanel />
-        <ResourceDrawerLayout.TemplatesPanel />
-      </ResourceDrawerLayout.Body>
-    </ResourceDrawerLayout.Root>
+    <Root>
+      <ResourceDrawerContent />
+    </Root>
   );
 }

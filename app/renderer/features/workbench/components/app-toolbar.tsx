@@ -89,12 +89,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
 
 function renderPanelToggleItem(toggle: PanelToggleButton) {
   return (
-    <SegmentedControlItem
-      key={toggle.id}
-      value={toggle.id}
-      title={`${toggle.active ? 'Hide' : 'Show'} ${toggle.label} panel`}
-      variant="icon"
-    >
+    <SegmentedControlItem key={toggle.id} value={toggle.id} title={`${toggle.active ? 'Hide' : 'Show'} ${toggle.label} panel`} variant="icon" >
       <SegmentedControlItemIcon>{panelToggleIcon(toggle.id)}</SegmentedControlItemIcon>
       <span className="sr-only">{toggle.label}</span>
     </SegmentedControlItem>

@@ -9,6 +9,7 @@ interface ShowAudioContextValue {
     play: () => void;
     playNext: () => void;
     playPrevious: () => void;
+    seekTo: (time: number) => void;
     selectAudio: (assetId: Id) => void;
     toggleLoop: () => void;
     togglePlayback: () => void;
@@ -153,6 +154,14 @@ export function ShowAudioProvider({ children }: { children: ReactNode }) {
     setLoopEnabled((current) => !current);
   }, []);
 
+  const seekTo = useCallback((time: number) => {
+    const audio = audioElementRef.current;
+    if (!audio) return;
+    const nextTime = Number.isFinite(time) ? Math.min(Math.max(time, 0), Number.isFinite(audio.duration) ? audio.duration : time) : 0;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  }, []);
+
   const clearAudio = useCallback(() => {
     const firstAsset = audioAssets[0] ?? null;
     setCurrentAudioAssetId(firstAsset?.id ?? null);
@@ -239,6 +248,7 @@ export function ShowAudioProvider({ children }: { children: ReactNode }) {
       play,
       playNext,
       playPrevious,
+      seekTo,
       selectAudio,
       toggleLoop,
       togglePlayback,
@@ -252,7 +262,7 @@ export function ShowAudioProvider({ children }: { children: ReactNode }) {
       isPlaying,
       loopEnabled,
     },
-  }), [audioAssets, clearAudio, currentAudioAsset, currentTime, duration, isPlaying, loopEnabled, pause, play, playNext, playPrevious, selectAudio, toggleLoop, togglePlayback]);
+  }), [audioAssets, clearAudio, currentAudioAsset, currentTime, duration, isPlaying, loopEnabled, pause, play, playNext, playPrevious, seekTo, selectAudio, toggleLoop, togglePlayback]);
 
   return <ShowAudioContext.Provider value={value}>{children}</ShowAudioContext.Provider>;
 }

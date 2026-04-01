@@ -132,4 +132,30 @@ describe('ShowAudioProvider', () => {
     expect(result.current.state.currentTime).toBe(0);
     expect(fakeAudio.pauseMock).toHaveBeenCalled();
   });
+
+  it('seeks the current track and updates the exposed playback time', () => {
+    const fakeAudio = createFakeAudioElement();
+    Object.defineProperty(fakeAudio, 'duration', {
+      configurable: true,
+      value: 180,
+    });
+
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'audio') {
+        return fakeAudio;
+      }
+
+      return originalCreateElement(tagName);
+    }) as typeof document.createElement);
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => <ShowAudioProvider>{children}</ShowAudioProvider>;
+    const { result } = renderHook(() => useShowAudio(), { wrapper });
+
+    act(() => {
+      result.current.actions.seekTo(42.5);
+    });
+
+    expect(fakeAudio.currentTime).toBe(42.5);
+    expect(result.current.state.currentTime).toBe(42.5);
+  });
 });

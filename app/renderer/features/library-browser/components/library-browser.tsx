@@ -1,49 +1,55 @@
 import { Button } from '../../../components/button';
+import { EditableText } from '../../../components/editable-text';
 import { Icon } from '../../../components/icon';
 import { IconButton } from '../../../components/icon-button';
+import { SectionHeader } from '../../../components/section-header';
 import { useCast } from '../../../contexts/cast-context';
 import { useNavigation } from '../../../contexts/navigation-context';
-import { EditableText } from '../../../components/editable-text';
+import { useLibraryBrowser } from '../contexts/library-browser-context';
 import { useLibraryPanelState } from '../contexts/library-panel-context';
 
-interface LibrarySelectorProps {
-  editingLibraryId: string | null;
-  onLibraryContextMenu: (event: React.MouseEvent<HTMLElement>, libraryId: string) => void;
-  onClearEditingLibrary: () => void;
-}
-
-export function LibrarySelector({ editingLibraryId, onLibraryContextMenu, onClearEditingLibrary }: LibrarySelectorProps) {
+export function LibraryBrowser() {
   const { snapshot } = useCast();
   const { currentLibraryId, selectLibrary, createLibrary, renameLibrary, recentlyCreatedId, clearRecentlyCreated } = useNavigation();
-  const { setLibraryPanelView } = useLibraryPanelState();
+  const { libraryPanelView } = useLibraryPanelState();
+  const { state, actions } = useLibraryBrowser();
 
   function handleCreate() { void createLibrary(); }
 
+  if (libraryPanelView !== 'libraries') return null;
   if (!snapshot) return null;
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-2.5 py-2">
-        <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
-        <IconButton label="New library" onClick={handleCreate} variant="ghost">
-          <Icon.plus size={14} strokeWidth={1.75} />
-        </IconButton>
-      </div>
+      <SectionHeader.Root bordered={false}>
+        <SectionHeader.Body>
+          <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
+        </SectionHeader.Body>
+        <SectionHeader.Trailing>
+          <IconButton label="New library" onClick={handleCreate} variant="ghost">
+            <Icon.plus size={14} strokeWidth={1.75} />
+          </IconButton>
+        </SectionHeader.Trailing>
+      </SectionHeader.Root>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5" role="list" aria-label="Libraries">
         {snapshot.libraryBundles.map((bundle) => {
           const isSelected = bundle.library.id === currentLibraryId;
-          const isEditing = bundle.library.id === recentlyCreatedId || bundle.library.id === editingLibraryId;
+          const isEditing = bundle.library.id === recentlyCreatedId || bundle.library.id === state.editingLibraryId;
 
           function handleSelect() {
             selectLibrary(bundle.library.id);
-            setLibraryPanelView('playlist');
+            actions.setPlaylistView();
           }
-          function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onLibraryContextMenu(event, bundle.library.id); }
+
+          function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+            actions.handleLibraryContextMenu(event, bundle.library.id);
+          }
+
           function handleRename(name: string) {
             void renameLibrary(bundle.library.id, name);
             clearRecentlyCreated();
-            onClearEditingLibrary();
+            actions.clearEditingLibrary();
           }
 
           return (

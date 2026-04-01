@@ -1,23 +1,29 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PlaylistTree } from '@core/types';
-import { PlaylistItemList } from './playlist-item-list';
+import { SegmentsBrowser } from './segments-browser';
 import { LibraryPanelProvider } from '../contexts/library-panel-context';
 
 const useNavigationMock = vi.fn();
+const useLibraryBrowserMock = vi.fn();
 const useSlidesMock = vi.fn();
 
 vi.mock('../../../contexts/navigation-context', () => ({
   useNavigation: () => useNavigationMock(),
 }));
 
+vi.mock('../contexts/library-browser-context', () => ({
+  useLibraryBrowser: () => useLibraryBrowserMock(),
+}));
+
 vi.mock('../../../contexts/slide-context', () => ({
   useSlides: () => useSlidesMock(),
 }));
 
-describe('PlaylistItemList', () => {
+describe('SegmentsBrowser', () => {
   it('remembers collapsed segments when the show-mode list unmounts and remounts', () => {
-    useNavigationMock.mockReturnValue({ currentPlaylistContentItemId: null, createSegment: vi.fn() });
+    window.localStorage.setItem('cast-interface.library-panel-view.v1', 'playlist');
+    useNavigationMock.mockReturnValue({ createSegment: vi.fn(), currentPlaylistContentItemId: null });
     useSlidesMock.mockReturnValue({ selectPlaylistContentItem: vi.fn() });
 
     const tree: PlaylistTree = {
@@ -31,24 +37,36 @@ describe('PlaylistItemList', () => {
       }],
     };
 
-    const props = {
-      tree,
-      editingSegmentId: null,
-      editingPresentationId: null,
-      onSegmentContextMenu: vi.fn(),
-      onSegmentMenuButtonClick: vi.fn(),
-      onSegmentPresentationContextMenu: vi.fn(),
-      onSegmentPresentationMenuButtonClick: vi.fn(),
-      onRenameSegment: vi.fn(),
-      onRenamePresentation: vi.fn(),
-      onClearEditingSegment: vi.fn(),
-      onClearEditingPresentation: vi.fn(),
-    };
+    useLibraryBrowserMock.mockReturnValue({
+      state: {
+        selectedTree: tree,
+        editingSegmentId: null,
+        editingPresentationId: null,
+      },
+      actions: {
+        setLibrariesView: vi.fn(),
+        setPlaylistView: vi.fn(),
+        renameSegment: vi.fn(),
+        renameContentItem: vi.fn(),
+        handleLibraryContextMenu: vi.fn(),
+        handlePlaylistContextMenu: vi.fn(),
+        handleSegmentContextMenu: vi.fn(),
+        handleSegmentPresentationContextMenu: vi.fn(),
+        openPlaylistMenuFromButton: vi.fn(),
+        openSegmentMenuFromButton: vi.fn(),
+        openSegmentPresentationMenuFromButton: vi.fn(),
+        clearEditingLibrary: vi.fn(),
+        clearEditingPlaylist: vi.fn(),
+        clearEditingSegment: vi.fn(),
+        clearEditingPresentation: vi.fn(),
+        closeMenu: vi.fn(),
+      },
+    });
 
     const { rerender } = render(
       <LibraryPanelProvider>
-        <PlaylistItemList {...props} />
-      </LibraryPanelProvider>
+        <SegmentsBrowser />
+      </LibraryPanelProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Collapse Verse' }));
@@ -57,8 +75,8 @@ describe('PlaylistItemList', () => {
     rerender(<LibraryPanelProvider>{null}</LibraryPanelProvider>);
     rerender(
       <LibraryPanelProvider>
-        <PlaylistItemList {...props} />
-      </LibraryPanelProvider>
+        <SegmentsBrowser />
+      </LibraryPanelProvider>,
     );
 
     expect(screen.getByRole('button', { name: 'Expand Verse' }).getAttribute('aria-expanded')).toBe('false');

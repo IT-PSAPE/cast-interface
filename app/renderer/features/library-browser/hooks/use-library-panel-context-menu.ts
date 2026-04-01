@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react';
-import type { ContentItem, Id, PlaylistTree } from '@core/types';
-import type { LibraryPanelView } from '../../../types/ui';
+import type { Id } from '@core/types';
+import { useNavigation } from '../../../contexts/navigation-context';
+import { useProjectContent } from '../../../contexts/use-project-content';
+import { useSlides } from '../../../contexts/slide-context';
+import { useLibraryPanelState } from '../contexts/library-panel-context';
 import { buildLibraryPanelMenuItems } from '../utils/library-panel-menu-items';
+import { useLibraryPanelManagement } from './use-library-panel-management';
 
 type LibraryPanelMenuTarget =
   | { type: 'library'; id: Id }
@@ -9,34 +13,20 @@ type LibraryPanelMenuTarget =
   | { type: 'segment'; id: Id }
   | { type: 'content-item'; id: Id; scope: 'library' | 'segment' };
 
-interface LibraryPanelContextMenuOptions {
-  currentLibraryId: Id | null;
-  currentPlaylistId: Id | null;
-  selectedTree: PlaylistTree | null;
-  libraryContentItems: ContentItem[];
-  playlistIds: Id[];
-  contentItemIds: Id[];
-  setLibraryPanelView: (stage: LibraryPanelView) => void;
-  selectPlaylistContentItem: (id: Id) => void;
-  deleteLibrary: (id: Id) => Promise<void>;
-  deletePlaylist: (id: Id) => Promise<void>;
-  deleteSegment: (id: Id) => Promise<void>;
-  deleteContentItem: (id: Id) => Promise<void>;
-  movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  moveContentItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  setSegmentColor: (id: Id, colorKey: string | null) => Promise<void>;
-  addContentItemToSegment: (segmentId: Id, itemId: Id) => Promise<void>;
-  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
-  createDeckInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
-  createLyricInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
-}
-
-export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId, selectedTree, libraryContentItems, playlistIds, contentItemIds, setLibraryPanelView, selectPlaylistContentItem, deleteLibrary, deletePlaylist, deleteSegment, deleteContentItem, movePlaylist, moveContentItem, setSegmentColor, addContentItemToSegment, moveContentItemToSegment, createDeckInSegment, createLyricInSegment }: LibraryPanelContextMenuOptions) {
+export function useLibraryPanelContextMenu() {
+  const { currentLibraryBundle, currentLibraryId, currentPlaylistId } = useNavigation();
+  const { contentItems } = useProjectContent();
+  const { selectPlaylistContentItem } = useSlides();
+  const { setLibraryPanelView } = useLibraryPanelState();
+  const { deleteLibrary, deletePlaylist, deleteSegment, deleteContentItem, movePlaylist, moveContentItem, setSegmentColor, addContentItemToSegment, moveContentItemToSegment, createDeckInSegment, createLyricInSegment } = useLibraryPanelManagement();
   const [menuState, setMenuState] = useState<{ x: number; y: number; target: LibraryPanelMenuTarget } | null>(null);
   const [editingLibraryId, setEditingLibraryId] = useState<string | null>(null);
   const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
   const [editingPresentationId, setEditingPresentationId] = useState<string | null>(null);
+  const selectedTree = currentLibraryBundle?.playlists.find((playlist) => playlist.playlist.id === currentPlaylistId) ?? null;
+  const playlistIds = currentLibraryBundle?.playlists.map((playlist) => playlist.playlist.id) ?? [];
+  const contentItemIds = contentItems.map((item) => item.id);
 
   function openMenuAt(target: LibraryPanelMenuTarget, x: number, y: number) {
     setMenuState({ x, y, target });
@@ -59,7 +49,7 @@ export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId
       currentLibraryId,
       currentPlaylistId,
       selectedTree,
-      libraryContentItems,
+      libraryContentItems: contentItems,
       playlistIds,
       contentItemIds,
       setLibraryPanelView,
@@ -80,7 +70,7 @@ export function useLibraryPanelContextMenu({ currentLibraryId, currentPlaylistId
       beginRenameSegment: setEditingSegmentId,
       beginRenamePresentation: setEditingPresentationId
     });
-  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, libraryContentItems, playlistIds, contentItemIds, setLibraryPanelView, selectPlaylistContentItem, deleteLibrary, deletePlaylist, deleteSegment, deleteContentItem, movePlaylist, moveContentItem, setSegmentColor, addContentItemToSegment, moveContentItemToSegment, createDeckInSegment, createLyricInSegment]);
+  }, [menuState, currentLibraryId, currentPlaylistId, selectedTree, contentItems, playlistIds, contentItemIds, setLibraryPanelView, selectPlaylistContentItem, deleteLibrary, deletePlaylist, deleteSegment, deleteContentItem, movePlaylist, moveContentItem, setSegmentColor, addContentItemToSegment, moveContentItemToSegment, createDeckInSegment, createLyricInSegment]);
 
   return {
     menuState,

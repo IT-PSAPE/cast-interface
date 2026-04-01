@@ -2,17 +2,13 @@ import { Button } from '../../../components/button';
 import { Icon } from '../../../components/icon';
 import { EditableText } from '../../../components/editable-text';
 import { IconButton } from '../../../components/icon-button';
+import { SectionHeader } from '../../../components/section-header';
 import { useNavigation } from '../../../contexts/navigation-context';
+import { useLibraryBrowser } from '../contexts/library-browser-context';
 
-interface PlaylistListProps {
-  editingPlaylistId: string | null;
-  onPlaylistContextMenu: (event: React.MouseEvent<HTMLElement>, playlistId: string) => void;
-  onPlaylistMenuButtonClick: (playlistId: string, button: HTMLElement) => void;
-  onClearEditingPlaylist: () => void;
-}
-
-export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlaylistMenuButtonClick, onClearEditingPlaylist }: PlaylistListProps) {
+export function PlaylistList() {
   const { currentLibraryBundle, currentPlaylistId, setCurrentPlaylistId, createPlaylist, renamePlaylist, recentlyCreatedId, clearRecentlyCreated } = useNavigation();
+  const { state, actions } = useLibraryBrowser();
 
   function handleCreate() { void createPlaylist(); }
 
@@ -20,28 +16,32 @@ export function PlaylistList({ editingPlaylistId, onPlaylistContextMenu, onPlayl
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden border-b border-border-primary">
-      <div className="flex items-center justify-between px-2.5 py-2">
-        <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
-        <IconButton label="New playlist" onClick={handleCreate}>
-          <Icon.plus size={14} strokeWidth={1.75} />
-        </IconButton>
-      </div>
+      <SectionHeader.Root bordered={false}>
+        <SectionHeader.Body>
+          <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
+        </SectionHeader.Body>
+        <SectionHeader.Trailing>
+          <IconButton label="New playlist" onClick={handleCreate}>
+            <Icon.plus size={14} strokeWidth={1.75} />
+          </IconButton>
+        </SectionHeader.Trailing>
+      </SectionHeader.Root>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1" role="list" aria-label="Playlists">
         {currentLibraryBundle.playlists.map((tree) => {
           const isSelected = tree.playlist.id === currentPlaylistId;
-          const isEditing = tree.playlist.id === recentlyCreatedId || tree.playlist.id === editingPlaylistId;
+          const isEditing = tree.playlist.id === recentlyCreatedId || tree.playlist.id === state.editingPlaylistId;
 
           function handleSelect() { setCurrentPlaylistId(tree.playlist.id); }
-          function handleContextMenu(event: React.MouseEvent<HTMLElement>) { onPlaylistContextMenu(event, tree.playlist.id); }
+          function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handlePlaylistContextMenu(event, tree.playlist.id); }
           function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
             event.stopPropagation();
-            onPlaylistMenuButtonClick(tree.playlist.id, event.currentTarget);
+            actions.openPlaylistMenuFromButton(tree.playlist.id, event.currentTarget);
           }
           function handleRename(name: string) {
             void renamePlaylist(tree.playlist.id, name);
             clearRecentlyCreated();
-            onClearEditingPlaylist();
+            actions.clearEditingPlaylist();
           }
 
           return (
