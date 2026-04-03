@@ -158,25 +158,23 @@ function AppLayoutContent() {
         : overlayPanelToggles;
 
   return (
-    <div className="relative grid h-full min-h-0 grid-rows-[auto_auto_1fr_auto]">
+    <div className="relative flex flex-col h-full">
       <WindowsInlineMenuBar />
-      <AppToolbar
-        audienceOutputActive={outputState.audience}
-        onToggleAudienceOutput={toggleAudienceOutput}
-        panelToggles={panelToggles}
-      />
-      {workbenchMode === 'show' && (
-        <ShowModeLayout />
-      )}
-      {workbenchMode === 'slide-editor' && (
-        <SlideEditorLayout />
-      )}
-      {workbenchMode === 'overlay-editor' && (
-        <OverlayEditorLayout />
-      )}
-      {workbenchMode === 'template-editor' && (
-        <TemplateEditorLayout />
-      )}
+      <AppToolbar audienceOutputActive={outputState.audience} onToggleAudienceOutput={toggleAudienceOutput} panelToggles={panelToggles} />
+      <main className='flex-1'>
+        {workbenchMode === 'show' && (
+          <ShowModeLayout />
+        )}
+        {workbenchMode === 'slide-editor' && (
+          <SlideEditorLayout />
+        )}
+        {workbenchMode === 'overlay-editor' && (
+          <OverlayEditorLayout />
+        )}
+        {workbenchMode === 'template-editor' && (
+          <TemplateEditorLayout />
+        )}
+      </main>
       <StatusBar />
     </div>
   );
