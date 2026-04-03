@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { TemplateKind } from '@core/types';
-import type { ContextMenuItem } from '../components/context-menu';
+import type { ContextMenuItem } from '../components/overlays/context-menu';
 import { buildCreateTemplateMenuItems } from '../utils/build-create-template-menu-items';
 import { useButtonContextMenu } from './use-button-context-menu';
 

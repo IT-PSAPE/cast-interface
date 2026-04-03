@@ -1,10 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { LibraryPanelProvider } from './features/library-browser/contexts/library-panel-context';
+import { LibraryPanelProvider } from './features/show/library/contexts/library-panel-context';
 import { NdiProvider } from './contexts/ndi-context';
 import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
-import { SlideBrowserProvider } from './contexts/slide-browser-context';
+import { SlideBrowserProvider } from './features/show/slides/contexts/slide-browser-context';
 import { ThemeProvider } from './contexts/theme-context';
 import { WorkbenchProvider } from './contexts/workbench-context';
 import { UiSpecScreen } from './spec/ui-spec-screen';

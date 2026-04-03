@@ -1,4 +1,4 @@
-import { SceneFrame } from '../../../components/scene-frame';
+import { SceneFrame } from '../../../components/display/scene-frame';
 import { SceneStage } from '../../stage/rendering/scene-stage';
 import { useStageViewportController } from '../hooks/use-stage-viewport-controller';
 

@@ -13,7 +13,7 @@ import {
   type ActiveOverlayEntry,
   type OverlayPlaybackMode,
   type OverlayPlaybackState,
-} from './overlay-playback';
+} from './overlay-editor/overlay-playback';
 
 export type PresentationLayerKey = 'media' | 'content' | 'overlay';
 

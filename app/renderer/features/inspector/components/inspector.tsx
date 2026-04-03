@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { TabBar, Tab } from '../../../components/tab-bar';
+import { TabBar, Tab } from '../../../components/display/tab-bar';
 import type { InspectorTab } from '../../../types/ui';
 
 interface InspectorContextValue {

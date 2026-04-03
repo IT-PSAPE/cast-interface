@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AppSnapshot, Id, SlideElement } from '@core/types';
-import { buildSnapshotDiff } from './element-history-utils';
+import { buildSnapshotDiff } from './element/element-history-utils';
 import { useCast } from './cast-context';
 import { useSlides } from './slide-context';
 import { useProjectContent } from './use-project-content';
@@ -19,7 +19,7 @@ const SlideEditorContext = createContext<SlideEditorContextValue | null>(null);
 export function SlideEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
   const { currentSlide } = useSlides();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const { slideElementsBySlideId } = useProjectContent();
   const [stagedSlides, setStagedSlides] = useState<Record<Id, SlideElement[]>>({});
   const [isPushingChanges, setIsPushingChanges] = useState(false);

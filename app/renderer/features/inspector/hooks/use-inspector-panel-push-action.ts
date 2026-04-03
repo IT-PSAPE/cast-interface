@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
+import { useOverlayEditor } from '../../../contexts/overlay-editor/overlay-editor-context';
 import { useSlideEditor } from '../../../contexts/slide-editor-context';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
@@ -18,7 +18,7 @@ interface InspectorPanelPushAction {
 }
 
 export function useInspectorPanelPushAction(): InspectorPanelPushAction {
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const overlayEditor = useOverlayEditor();
   const slideEditor = useSlideEditor();
   const templateEditor = useTemplateEditor();

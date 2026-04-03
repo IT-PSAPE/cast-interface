@@ -33,7 +33,7 @@ const TemplateEditorContext = createContext<TemplateEditorContextValue | null>(n
 
 export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const { contentItemsById, templates: persistedTemplates } = useProjectContent();
   const [currentTemplateId, setCurrentTemplateId] = useState<Id | null>(null);
   const [stagedTemplates, setStagedTemplates] = useState<Template[] | null>(null);

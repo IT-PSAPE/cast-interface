@@ -1,28 +1,17 @@
 import { applyVisualPayload, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
 import { parseNumber } from '../../../utils/slides';
-import { useElements } from '../../../contexts/element-context';
+import { useElements } from '../../../contexts/element/element-context';
 import type { StrokePosition } from '@core/types';
-import { ColorPicker } from '../../../components/color-picker';
-import { FieldInput, FieldSelect } from '../../../components/labeled-field';
-import { StrokeWidth } from '@renderer/components/icon/stroke-width';
+import { ColorPicker } from '../../../components/form/color-picker';
+import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
+import {
+  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
+  AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
+  CornerUpRight, Eye, FlipHorizontal2, MoveHorizontal, MoveVertical,
+  RotateCcw, RulerDimensionLine, Square, Sun,
+} from 'lucide-react';
 import type { ElementInspectorDraft } from '../../../types/ui';
-import { LetterX } from '@renderer/components/icon/letter-x';
-import { LetterY } from '@renderer/components/icon/letter-y';
-import { SpacingWidth01 } from '@renderer/components/icon/spacing-width-01';
-import { SpacingHeight01 } from '@renderer/components/icon/spacing-height-01';
-import { RefreshCcw04 } from '@renderer/components/icon/refresh-ccw-04';
-import { Eye } from '@renderer/components/icon/eye';
-import { Sun } from '@renderer/components/icon/sun';
 import { IconGroup } from '@renderer/components/icon-group';
-import { AlignLeft02 } from '@renderer/components/icon/align-left-02';
-import { AlignHorizontalCentre02 } from '@renderer/components/icon/align-horizontal-centre-02';
-import { AlignRight02 } from '@renderer/components/icon/align-right-02';
-import { AlignTop02 } from '@renderer/components/icon/align-top-02';
-import { AlignVerticalCenter02 } from '@renderer/components/icon/align-vertical-center-02';
-import { AlignBottom02 } from '@renderer/components/icon/align-bottom-02';
-import { Reflect01 } from '@renderer/components/icon/reflect-01';
-import { CornerUpRight } from '@renderer/components/icon/corner-up-right';
-import { Square } from '@renderer/components/icon/square';
 import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
 import { alignElementDraft } from '../utils/align-element-draft';
 import { Section } from './inspector-section';
@@ -114,42 +103,42 @@ export function ShapeElementInspector() {
           <Section.Row>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignLeft} title="Align left" aria-label="Align left">
-                <AlignLeft02 />
+                <AlignStartHorizontal />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignCenter} title="Align center" aria-label="Align center">
-                <AlignHorizontalCentre02 />
+                <AlignCenterHorizontal />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignRight} title="Align right" aria-label="Align right">
-                <AlignRight02 />
+                <AlignEndHorizontal />
               </IconGroup.Item>
             </IconGroup.Root>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignTop} title="Align top" aria-label="Align top">
-                <AlignTop02 />
+                <AlignStartVertical />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignMiddle} title="Align middle" aria-label="Align middle">
-                <AlignVerticalCenter02 />
+                <AlignCenterVertical />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignBottom} title="Align bottom" aria-label="Align bottom">
-                <AlignBottom02 />
+                <AlignEndVertical />
               </IconGroup.Item>
             </IconGroup.Root>
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<LetterX size={14} />} type="number" value={Math.round(elementDraft.x)} onChange={handleXChange} />
-            <FieldInput icon={<LetterY size={14} />} type="number" value={Math.round(elementDraft.y)} onChange={handleYChange} />
+            <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={Math.round(elementDraft.x)} onChange={handleXChange} />
+            <FieldInput icon={<MoveVertical size={14} />} type="number" value={Math.round(elementDraft.y)} onChange={handleYChange} />
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<RefreshCcw04 size={14} />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
+            <FieldInput icon={<RotateCcw size={14} />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
             <IconGroup.Root fill>
               <IconGroup.Item>
                 <CornerUpRight />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleFlipX}>
-                <Reflect01 />
+                <FlipHorizontal2 />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleFlipY}>
-                <Reflect01 className='rotate-90' />
+                <FlipHorizontal2 className='rotate-90' />
               </IconGroup.Item>
             </IconGroup.Root>
           </Section.Row>
@@ -162,8 +151,8 @@ export function ShapeElementInspector() {
         </Section.Header>
         <Section.Body>
           <Section.Row>
-            <FieldInput icon={<SpacingWidth01 size={14} />} type="number" value={Math.round(elementDraft.width)} onChange={handleWChange} />
-            <FieldInput icon={<SpacingHeight01 size={14} />} type="number" value={Math.round(elementDraft.height)} onChange={handleHChange} />
+            <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={Math.round(elementDraft.width)} onChange={handleWChange} />
+            <FieldInput icon={<MoveVertical size={14} />} type="number" value={Math.round(elementDraft.height)} onChange={handleHChange} />
           </Section.Row>
         </Section.Body>
       </Section.Root>
@@ -206,7 +195,7 @@ export function ShapeElementInspector() {
             </Section.Row>
             <Section.Row>
               <FieldSelect value={visual.strokePosition} onChange={handleStrokePositionChange} options={STROKE_POSITION_OPTIONS} />
-              <FieldInput icon={<StrokeWidth size={14} />} type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} />
+              <FieldInput icon={<RulerDimensionLine size={14} />} type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} />
             </Section.Row>
           </Section.Body>
         ) : null}
@@ -220,8 +209,8 @@ export function ShapeElementInspector() {
         {visual.shadowEnabled ? (
           <Section.Body>
             <Section.Row>
-              <FieldInput icon={<LetterX size={14} />} type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
-              <FieldInput icon={<LetterY size={14} />} type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
+              <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
+              <FieldInput icon={<MoveVertical size={14} />} type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
             </Section.Row>
             <Section.Row>
               <FieldInput icon={<Sun size={14} />} type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} />

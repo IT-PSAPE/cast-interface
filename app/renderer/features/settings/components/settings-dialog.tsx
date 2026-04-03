@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DialogFrame } from '../../../components/dialog-frame';
+import { DialogFrame } from '../../../components/overlays/dialog-frame';
 import { AppearanceSettingsPanel } from './appearance-settings-panel';
 import { ImportExportSettingsPanel } from './import-export-settings-panel';
 import { OutputSettingsPanel } from './output-settings-panel';

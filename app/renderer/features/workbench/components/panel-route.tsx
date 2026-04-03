@@ -15,7 +15,7 @@ import {
   type ResizableSplitResizeEndEvent,
   type ResizableSplitResizeMoveEvent,
   type ResizableSplitResizeStartEvent,
-} from '../../../components/resizable-split';
+} from '../../../components/layout/resizable-split';
 import { useWorkbenchPanelLayout } from '../hooks/use-workbench-panel-layout';
 import type { PaneId, SplitDefinition, SplitId, SplitPaneDefinition } from '../types/workbench-panel-layout';
 

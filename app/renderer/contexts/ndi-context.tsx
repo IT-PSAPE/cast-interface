@@ -2,14 +2,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createDefaultNdiOutputConfigs } from '@core/ndi';
 import type { NdiDiagnostics, NdiOutputConfig, NdiOutputConfigMap, NdiOutputName, NdiOutputState } from '@core/types';
 
-interface NdiContextValue {
-  diagnostics: NdiDiagnostics | null;
-  outputConfigs: NdiOutputConfigMap;
-  outputState: NdiOutputState;
-  setOutputEnabled: (name: NdiOutputName, enabled: boolean) => void;
-  toggleAudienceOutput: () => void;
-  updateOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => void;
-}
+type NdiContextValue = {
+  state: {
+    diagnostics: NdiDiagnostics | null;
+    outputConfigs: NdiOutputConfigMap;
+    outputState: NdiOutputState;
+  };
+  actions: {
+    setOutputEnabled: (name: NdiOutputName, enabled: boolean) => void;
+    toggleAudienceOutput: () => void;
+    updateOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => void;
+  };
+};
 
 const NdiContext = createContext<NdiContextValue | null>(null);
 
@@ -55,21 +59,22 @@ export function NdiProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value = useMemo(() => ({
+  const state = useMemo<NdiContextValue['state']>(() => ({
     diagnostics,
     outputConfigs,
     outputState,
+  }), [diagnostics, outputConfigs, outputState]);
+
+  const actions = useMemo<NdiContextValue['actions']>(() => ({
     setOutputEnabled,
     toggleAudienceOutput,
     updateOutputConfig,
-  }), [
-    diagnostics,
-    outputConfigs,
-    outputState,
-    setOutputEnabled,
-    toggleAudienceOutput,
-    updateOutputConfig,
-  ]);
+  }), [setOutputEnabled, toggleAudienceOutput, updateOutputConfig]);
+
+  const value = useMemo<NdiContextValue>(() => ({
+    state,
+    actions,
+  }), [state, actions]);
 
   return <NdiContext.Provider value={value}>{children}</NdiContext.Provider>;
 }

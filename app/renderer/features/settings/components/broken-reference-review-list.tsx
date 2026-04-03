@@ -7,8 +7,8 @@ import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemLabel,
-} from '../../../components/segmented-control';
-import { Button } from '../../../components/button';
+} from '../../../components/controls/segmented-control';
+import { Button } from '../../../components/controls/button';
 
 interface BrokenReferenceReviewListProps {
   inspection: ContentBundleInspection;

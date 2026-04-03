@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Icon } from '../../../components/icon';
-import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon, type SegmentedControlValue } from '../../../components/segmented-control';
-import { SettingsDialog } from '../../../components/settings-dialog';
+import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
+import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon, type SegmentedControlValue } from '../../../components/controls/segmented-control';
+import { SettingsDialog } from '../../../components/overlays/settings-dialog';
 import { useWorkbench } from '../../../contexts/workbench-context';
-import { OutputToggle } from '../../outputs/components/output-toggle';
+import { OutputToggle } from '../../show/playback/components/output-toggle';
 import type { WorkbenchMode } from '../../../types/ui';
-import { SegmentedControl as Control } from '../../../components/segmented-controls';
-import { IconButton } from '@renderer/components/icon-button';
+import { SegmentedControl as Control } from '../../../components/controls/segmented-controls';
+import { IconButton } from '@renderer/components/controls/icon-button';
 
 interface PanelToggleButton {
   id: 'left' | 'right' | 'bottom';
@@ -22,7 +22,7 @@ interface AppToolbarProps {
 }
 
 export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panelToggles }: AppToolbarProps) {
-  const { workbenchMode, setWorkbenchMode } = useWorkbench();
+  const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const [showSettings, setShowSettings] = useState(false);
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
@@ -78,7 +78,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
           </SegmentedControl>
 
           <IconButton type="button" onClick={handleOpenSettings} title="Settings" aria-label="Settings">
-            <Icon.settings_01 />
+            <Settings />
           </IconButton>
         </div>
       </div>
@@ -101,7 +101,7 @@ function isWorkbenchMode(value: string): value is WorkbenchMode {
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {
-  if (id === 'left') return <Icon.layout_left size={14} strokeWidth={1.5} />;
-  if (id === 'bottom') return <Icon.layout_bottom size={14} strokeWidth={1.5} />;
-  return <Icon.layout_right size={14} strokeWidth={1.5} />;
+  if (id === 'left') return <PanelLeft size={14} strokeWidth={1.5} />;
+  if (id === 'bottom') return <PanelBottom size={14} strokeWidth={1.5} />;
+  return <PanelRight size={14} strokeWidth={1.5} />;
 }

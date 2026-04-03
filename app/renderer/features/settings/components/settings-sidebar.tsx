@@ -1,4 +1,4 @@
-import { SelectableRow } from '../../../components/selectable-row';
+import { SelectableRow } from '../../../components/display/selectable-row';
 
 export type SettingsTabId = 'appearance' | 'output' | 'overlays' | 'import-export';
 

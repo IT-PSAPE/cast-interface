@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from '../components/context-menu';
+import type { ContextMenuItem } from '../components/overlays/context-menu';
 import type { TemplateKind } from '@core/types';
 
 interface BuildCreateTemplateMenuItemsOptions {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Button } from '../../../components/button';
-import { FieldInput } from '../../../components/labeled-field';
+import { Button } from '../../../components/controls/button';
+import { FieldInput } from '../../../components/form/labeled-field';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';

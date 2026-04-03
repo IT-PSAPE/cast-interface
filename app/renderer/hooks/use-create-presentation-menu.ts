@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ContextMenuItem } from '../components/context-menu';
+import type { ContextMenuItem } from '../components/overlays/context-menu';
 import { buildCreateContentMenuItems } from '../utils/build-create-presentation-menu-items';
 import { useButtonContextMenu } from './use-button-context-menu';
 

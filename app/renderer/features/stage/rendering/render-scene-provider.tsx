@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Id, SlideElement } from '@core/types';
-import { useElements } from '../../../contexts/element-context';
-import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
+import { useElements } from '../../../contexts/element/element-context';
+import { useOverlayEditor } from '../../../contexts/overlay-editor/overlay-editor-context';
 import { useSlideEditor } from '../../../contexts/slide-editor-context';
 import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
 import { useSlides } from '../../../contexts/slide-context';
@@ -38,7 +38,7 @@ export function RenderSceneProvider({ children }: { children: ReactNode }) {
   const { currentOverlay } = useOverlayEditor();
   const { getSlideElements } = useSlideEditor();
   const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const isTemplateEdit = workbenchMode === 'template-editor';
 

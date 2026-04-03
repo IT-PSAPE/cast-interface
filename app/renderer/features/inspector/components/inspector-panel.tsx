@@ -1,4 +1,4 @@
-import { Button } from '../../../components/button';
+import { Button } from '../../../components/controls/button';
 import { useInspectorPanelPushAction } from '../hooks/use-inspector-panel-push-action';
 import { InspectorTabsPanel } from './inspector-tabs-panel';
 

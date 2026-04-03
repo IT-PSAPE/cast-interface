@@ -1,4 +1,4 @@
-import { MediaPickerDialog } from '../../../components/media-picker-dialog';
+import { MediaPickerDialog } from '../../../components/overlays/media-picker-dialog';
 import { useStagePanelController } from '../hooks/use-stage-panel-controller';
 import { StageViewport } from '../../stage/components/stage-viewport';
 import { StageToolbar } from './stage-toolbar';

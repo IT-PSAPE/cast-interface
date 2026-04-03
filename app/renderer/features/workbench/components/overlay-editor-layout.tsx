@@ -1,6 +1,6 @@
 import { InspectorPanel } from '../../inspector/components/inspector-panel';
 import { StagePanel } from '../../stage/components/stage-panel';
-import { OverlayListPanel } from '../../overlay-editor/components/overlay-list-panel';
+import { OverlayListPanel } from '../../editor/components/overlay-list-panel';
 import { PanelRoute } from './panel-route';
 
 export function OverlayEditorLayout() {

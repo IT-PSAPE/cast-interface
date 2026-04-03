@@ -1,6 +1,6 @@
 import { createElement } from 'react';
-import type { ContextMenuItem } from '../components/context-menu';
-import { ContentItemIcon } from '../components/presentation-entity-icon';
+import type { ContextMenuItem } from '../components/overlays/context-menu';
+import { ContentItemIcon } from '../components/display/presentation-entity-icon';
 
 interface BuildCreatePresentationMenuItemsOptions {
   createDeck: () => void | Promise<void>;

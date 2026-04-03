@@ -1,4 +1,4 @@
-import { useInspector } from '../../../contexts/inspector-context';
+import { useInspector } from '../contexts/inspector-context';
 import { Inspector } from './inspector';
 import { ContentItemInspector } from './presentation-inspector';
 import { ShapeElementInspector } from './shape-element-inspector';

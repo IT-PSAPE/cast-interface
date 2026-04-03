@@ -1,5 +1,5 @@
-import { Button } from '../../../components/button';
-import { SearchField } from '../../../components/search-field';
+import { Button } from '../../../components/controls/button';
+import { SearchField } from '../../../components/form/search-field';
 import { SettingsSection } from './settings-section';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';
 import { ContentBundleSelectionList } from './content-bundle-selection-list';

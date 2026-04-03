@@ -1,7 +1,7 @@
 import { InspectorPanel } from '../../inspector/components/inspector-panel';
 import { StagePanel } from '../../stage/components/stage-panel';
-import { SlideNotesPanel } from '../../slide-editor/components/slide-notes-panel';
-import { SlideListPanel } from '../../slide-editor/components/slide-list-panel';
+import { SlideNotesPanel } from '../../editor/components/slide-notes-panel';
+import { SlideListPanel } from '../../editor/components/slide-list-panel';
 import { PanelRoute } from './panel-route';
 
 export function SlideEditorLayout() {

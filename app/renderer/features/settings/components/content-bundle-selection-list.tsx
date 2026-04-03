@@ -1,6 +1,6 @@
 import type { ContentItem, Id } from '@core/types';
-import { ContentItemIcon } from '../../../components/presentation-entity-icon';
-import { SelectableRow } from '../../../components/selectable-row';
+import { ContentItemIcon } from '../../../components/display/presentation-entity-icon';
+import { SelectableRow } from '../../../components/display/selectable-row';
 
 interface ContentBundleSelectionListProps {
   items: ContentItem[];

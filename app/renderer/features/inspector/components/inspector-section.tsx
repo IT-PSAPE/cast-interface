@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
-import { Check } from '@renderer/components/icon/check';
+import { Check } from 'lucide-react';
 
 function Root({ children }: { children: ReactNode }) {
   return (

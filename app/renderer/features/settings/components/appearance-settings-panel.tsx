@@ -1,12 +1,12 @@
 import type { ThemeMode } from '../../../types/ui';
-import { SegmentedControl as Control } from '../../../components/segmented-controls';
+import { SegmentedControl as Control } from '../../../components/controls/segmented-controls';
 import { useTheme } from '../../../contexts/theme-context';
 import { SettingsSection } from './settings-section';
 
 const THEME_OPTIONS: ThemeMode[] = ['light', 'dark', 'system'];
 
 export function AppearanceSettingsPanel() {
-  const { themeMode, setThemeMode } = useTheme();
+  const { state: { themeMode }, actions: { setThemeMode } } = useTheme();
   const themeOptions = THEME_OPTIONS.map(renderThemeOption);
 
   function handleThemeModeChange(value: string) {

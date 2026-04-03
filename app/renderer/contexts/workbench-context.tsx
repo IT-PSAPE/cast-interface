@@ -1,21 +1,39 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { WorkbenchMode } from '../types/ui';
 
-interface WorkbenchContextValue {
-  workbenchMode: WorkbenchMode;
-  setWorkbenchMode: (mode: WorkbenchMode) => void;
-}
+type WorkbenchContextValue = {
+  state: {
+    workbenchMode: WorkbenchMode;
+  };
+  actions: {
+    setWorkbenchMode: (mode: WorkbenchMode) => void;
+  };
+};
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
 const STORAGE_KEY = 'cast-interface.workbench-mode.v1';
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
-  const [workbenchMode, setWorkbenchModeState] = useState<WorkbenchMode>(getStoredWorkbenchMode);
-  const setWorkbenchMode = (mode: WorkbenchMode) => {
-    setWorkbenchModeState(mode);
+  const [workbenchMode, setWorkbenchModeRaw] = useState<WorkbenchMode>(getStoredWorkbenchMode);
+
+  const setWorkbenchMode = useCallback((mode: WorkbenchMode) => {
+    setWorkbenchModeRaw(mode);
     window.localStorage.setItem(STORAGE_KEY, mode);
-  };
-  const value = useMemo(() => ({ workbenchMode, setWorkbenchMode }), [workbenchMode]);
+  }, []);
+
+  const state = useMemo<WorkbenchContextValue['state']>(() => ({
+    workbenchMode,
+  }), [workbenchMode]);
+
+  const actions = useMemo<WorkbenchContextValue['actions']>(() => ({
+    setWorkbenchMode,
+  }), [setWorkbenchMode]);
+
+  const value = useMemo<WorkbenchContextValue>(() => ({
+    state,
+    actions,
+  }), [state, actions]);
+
   return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;
 }
 

@@ -1,6 +1,6 @@
 import { InspectorPanel } from '../../inspector/components/inspector-panel';
 import { StagePanel } from '../../stage/components/stage-panel';
-import { TemplateListPanel } from '../../template-editor/components/template-list-panel';
+import { TemplateListPanel } from '../../editor/components/template-list-panel';
 import { PanelRoute } from './panel-route';
 
 export function TemplateEditorLayout() {

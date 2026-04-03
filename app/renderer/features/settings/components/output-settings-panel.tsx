@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { CheckboxField } from '../../../components/checkbox-field';
-import { FieldInput } from '../../../components/labeled-field';
+import { CheckboxField } from '../../../components/form/checkbox-field';
+import { FieldInput } from '../../../components/form/labeled-field';
 import { useNdi } from '../../../contexts/ndi-context';
 import { SettingsSection } from './settings-section';
 
 export function OutputSettingsPanel() {
-  const { outputState, outputConfigs, setOutputEnabled, updateOutputConfig, diagnostics } = useNdi();
+  const { state: { outputState, outputConfigs, diagnostics }, actions: { setOutputEnabled, updateOutputConfig } } = useNdi();
   const config = outputConfigs.audience;
   const [senderNameDraft, setSenderNameDraft] = useState(config.senderName);
 

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MediaAsset } from '@core/types';
-import { useElements } from '../../../contexts/element-context';
-import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
+import { useElements } from '../../../contexts/element/element-context';
+import { useOverlayEditor } from '../../../contexts/overlay-editor/overlay-editor-context';
 import { useSlides } from '../../../contexts/slide-context';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
@@ -38,7 +38,7 @@ export function useStagePanelController(): StagePanelController {
   const { currentOverlay } = useOverlayEditor();
   const { currentTemplate } = useTemplateEditor();
   const { selectedElement, elementDraft, createFromMedia } = useElements();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const { mediaAssets } = useProjectContent();
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 

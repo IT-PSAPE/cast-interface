@@ -1,81 +1,132 @@
+import { type ReactNode } from 'react';
 import { CastProvider, useCast } from './contexts/cast-context';
 import { ThemeProvider } from './contexts/theme-context';
-import { NdiProvider } from './contexts/ndi-context';
+import { NdiProvider, useNdi } from './contexts/ndi-context';
 import { NavigationProvider } from './contexts/navigation-context';
 import { PresentationLayerProvider } from './contexts/presentation-layer-context';
 import { SlideProvider } from './contexts/slide-context';
 import { SlideEditorProvider } from './contexts/slide-editor-context';
-import { ElementProvider } from './contexts/element-context';
-import { OverlayEditorProvider } from './contexts/overlay-editor-context';
+import { ElementProvider } from './contexts/element/element-context';
+import { OverlayEditorProvider } from './contexts/overlay-editor/overlay-editor-context';
 import { TemplateEditorProvider } from './contexts/template-editor-context';
-import { InspectorProvider } from './contexts/inspector-context';
-import { ResourceDrawerProvider } from './contexts/resource-drawer-context';
-import { SlideBrowserProvider } from './contexts/slide-browser-context';
+import { InspectorProvider } from './features/inspector/contexts/inspector-context';
+import { ResourceDrawerProvider } from './features/show/resources/contexts/resource-drawer-context';
+import { SlideBrowserProvider } from './features/show/slides/contexts/slide-browser-context';
 import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
 import { WorkbenchProvider, useWorkbench } from './contexts/workbench-context';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { AppToolbar } from './features/workbench/components/app-toolbar';
 import { WindowsInlineMenuBar } from './features/workbench/components/windows-inline-menu-bar';
-import { LibraryPanelProvider } from './features/library-browser/contexts/library-panel-context';
+import { LibraryPanelProvider } from './features/show/library/contexts/library-panel-context';
 import { ShowModeLayout } from './features/workbench/components/show-mode-layout';
 import { SlideEditorLayout } from './features/workbench/components/slide-editor-layout';
 import { OverlayEditorLayout } from './features/workbench/components/overlay-editor-layout';
 import { TemplateEditorLayout } from './features/workbench/components/template-editor-layout';
 import { PanelRoute, usePanelRoute } from './features/workbench/components/panel-route';
-import { ErrorBoundary } from './components/error-boundary';
+import { ErrorBoundary } from './components/feedback/error-boundary';
+import { OverlayProvider } from './components/overlays/overlay-provider';
 import { RenderSceneProvider } from './features/stage/rendering/render-scene-provider';
-import { StatusBar } from './components/status-bar';
-import { useNdi } from './contexts/ndi-context';
-import { ProgramOutputProvider } from './features/outputs/contexts/program-output-context';
-import { ShowAudioProvider } from './features/outputs/contexts/show-audio-context';
-import { NdiFrameCapture } from './features/outputs/components/ndi-frame-capture';
+import { StatusBar } from './components/display/status-bar';
+import { ProgramOutputProvider } from './features/show/playback/contexts/program-output-context';
+import { ShowAudioProvider } from './features/show/playback/contexts/show-audio-context';
+import { NdiFrameCapture } from './features/show/playback/components/ndi-frame-capture';
+
+// ─── Provider Groups ─────────────────────────────────────────────────
+// Organized by responsibility tier following moc-console patterns:
+// Global → App Shell → Editor → Feature UI
+
+function GlobalProviders({ children }: { children: ReactNode }) {
+  return (
+    <OverlayProvider>
+      <ThemeProvider>
+        <CastProvider>
+          <NdiProvider>
+            {children}
+          </NdiProvider>
+        </CastProvider>
+      </ThemeProvider>
+    </OverlayProvider>
+  );
+}
+
+function AppShellProviders({ children }: { children: ReactNode }) {
+  return (
+    <NavigationProvider>
+      <PresentationLayerProvider>
+        <SlideProvider>
+          <WorkbenchProvider>
+            <OverlayDefaultsProvider>
+              {children}
+            </OverlayDefaultsProvider>
+          </WorkbenchProvider>
+        </SlideProvider>
+      </PresentationLayerProvider>
+    </NavigationProvider>
+  );
+}
+
+function EditorProviders({ children }: { children: ReactNode }) {
+  return (
+    <OverlayEditorProvider>
+      <TemplateEditorProvider>
+        <SlideEditorProvider>
+          <ElementProvider>
+            {children}
+          </ElementProvider>
+        </SlideEditorProvider>
+      </TemplateEditorProvider>
+    </OverlayEditorProvider>
+  );
+}
+
+function FeatureUIProviders({ children }: { children: ReactNode }) {
+  return (
+    <SlideBrowserProvider>
+      <ResourceDrawerProvider>
+        <InspectorProvider>
+          <LibraryPanelProvider>
+            {children}
+          </LibraryPanelProvider>
+        </InspectorProvider>
+      </ResourceDrawerProvider>
+    </SlideBrowserProvider>
+  );
+}
+
+function OutputProviders({ children }: { children: ReactNode }) {
+  return (
+    <RenderSceneProvider>
+      <ProgramOutputProvider>
+        <ShowAudioProvider>
+          {children}
+        </ShowAudioProvider>
+      </ProgramOutputProvider>
+    </RenderSceneProvider>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────
 
 export function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <CastProvider>
-          <NdiProvider>
-            <NavigationProvider>
-              <PresentationLayerProvider>
-                <SlideProvider>
-                  <WorkbenchProvider>
-                    <SlideBrowserProvider>
-                      <ResourceDrawerProvider>
-                        <InspectorProvider>
-                          <LibraryPanelProvider>
-                            <OverlayDefaultsProvider>
-                              <OverlayEditorProvider>
-                                <TemplateEditorProvider>
-                                  <SlideEditorProvider>
-                                    <ElementProvider>
-                                      <RenderSceneProvider>
-                                        <ProgramOutputProvider>
-                                          <ShowAudioProvider>
-                                            <NdiFrameCapture />
-                                            <AppLayout />
-                                          </ShowAudioProvider>
-                                        </ProgramOutputProvider>
-                                      </RenderSceneProvider>
-                                    </ElementProvider>
-                                  </SlideEditorProvider>
-                                </TemplateEditorProvider>
-                              </OverlayEditorProvider>
-                            </OverlayDefaultsProvider>
-                          </LibraryPanelProvider>
-                        </InspectorProvider>
-                      </ResourceDrawerProvider>
-                    </SlideBrowserProvider>
-                  </WorkbenchProvider>
-                </SlideProvider>
-              </PresentationLayerProvider>
-            </NavigationProvider>
-          </NdiProvider>
-        </CastProvider>
-      </ThemeProvider>
+      <GlobalProviders>
+        <AppShellProviders>
+          <EditorProviders>
+            <FeatureUIProviders>
+              <OutputProviders>
+                <NdiFrameCapture />
+                <AppLayout />
+              </OutputProviders>
+            </FeatureUIProviders>
+          </EditorProviders>
+        </AppShellProviders>
+      </GlobalProviders>
     </ErrorBoundary>
   );
 }
+
+// ─── Layout ──────────────────────────────────────────────────────────
 
 function AppLayout() {
   return (
@@ -88,14 +139,14 @@ function AppLayout() {
 function AppLayoutContent() {
   useKeyboardShortcuts();
   const { snapshot } = useCast();
-  const { outputState, toggleAudienceOutput } = useNdi();
-  const { workbenchMode } = useWorkbench();
+  const { state: { outputState }, actions: { toggleAudienceOutput } } = useNdi();
+  const { state: { workbenchMode } } = useWorkbench();
   const panelRoute = usePanelRoute();
 
   if (!snapshot) {
     return (
       <div className="grid place-items-center h-full text-text-secondary">
-        Loading Cast Interface\u2026
+        Loading Cast Interface…
       </div>
     );
   }

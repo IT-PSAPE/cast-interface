@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useWorkbench } from '../../../contexts/workbench-context';
-import { useElements } from '../../../contexts/element-context';
+import { useElements } from '../../../contexts/element/element-context';
 import type { InspectorTab } from '../../../types/ui';
 
 export interface InspectorTabDefinition {
@@ -9,7 +9,7 @@ export interface InspectorTabDefinition {
 }
 
 export function useAvailableInspectorTabs(): InspectorTabDefinition[] {
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const { selectedElement } = useElements();
   const hasSelection = Boolean(selectedElement);
   const isOverlayEdit = workbenchMode === 'overlay-editor';

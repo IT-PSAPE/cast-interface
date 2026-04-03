@@ -1,30 +1,19 @@
 import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVerticalAlign, StrokePosition } from '@core/types';
 import { applyTextVisualPayload, readTextFormatting, readTextVisualPayload, type TextVisualState } from '@core/element-payload';
 import { parseNumber } from '../../../utils/slides';
-import { useElements } from '../../../contexts/element-context';
-import { ColorPicker } from '../../../components/color-picker';
-import { FieldInput, FieldSelect } from '../../../components/labeled-field';
+import { useElements } from '../../../contexts/element/element-context';
+import { ColorPicker } from '../../../components/form/color-picker';
+import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
 import { useSystemFonts } from '../hooks/use-system-fonts';
 
-import { SegmentedControl as Control } from '../../../components/segmented-controls';
-import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon } from '../../../components/segmented-control';
-import { AlignTop01 } from '@renderer/components/icon/align-top-01';
-import { AlignBottom01 } from '@renderer/components/icon/align-bottom-01';
-import { AlignVerticalCenter01 } from '@renderer/components/icon/align-vertical-center-01';
-import { AlignLeft } from '@renderer/components/icon/align-left';
-import { AlignCenter } from '@renderer/components/icon/align-center';
-import { AlignJustify } from '@renderer/components/icon/align-justify';
-import { AlignRight } from '@renderer/components/icon/align-right';
-import { Bold02 } from '@renderer/components/icon/bold-02';
-import { Italic01 } from '@renderer/components/icon/italic-01';
-import { Underline01 } from '@renderer/components/icon/underline-01';
-import { Strikethrough01 } from '@renderer/components/icon/strikethrough-01';
-import { Type01 } from '@renderer/components/icon/type-01';
-import { LineHeight } from '@renderer/components/icon/line-height';
-import { LetterX } from '@renderer/components/icon/letter-x';
-import { LetterY } from '@renderer/components/icon/letter-y';
-import { Sun } from '@renderer/components/icon/sun';
-import { StrokeWidth } from '@renderer/components/icon/stroke-width';
+import { SegmentedControl as Control } from '../../../components/controls/segmented-controls';
+import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon } from '../../../components/controls/segmented-control';
+import {
+  AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
+  AlignLeft, AlignRight, AlignStartVertical,
+  Baseline, Bold, Italic, MoveHorizontal, MoveVertical,
+  RulerDimensionLine, Strikethrough, Sun, Type, Underline,
+} from 'lucide-react';
 import { Section } from './inspector-section';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
@@ -137,8 +126,8 @@ export function TextElementInspector() {
             <FieldInput type="text" value={formatting.weight} onChange={handleWeightChange} />
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<Type01 />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
-            <FieldInput icon={<LineHeight />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
+            <FieldInput icon={<Type />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
+            <FieldInput icon={<Baseline />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
           </Section.Row>
         </Section.Body>
       </Section.Root>
@@ -150,16 +139,16 @@ export function TextElementInspector() {
         <Section.Body>
           <SegmentedControl label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
             <SegmentedControlItem value="bold" title="Bold" variant="icon">
-              <SegmentedControlItemIcon><Bold02 /></SegmentedControlItemIcon>
+              <SegmentedControlItemIcon><Bold /></SegmentedControlItemIcon>
             </SegmentedControlItem>
             <SegmentedControlItem value="italic" title="Italic" variant="icon">
-              <SegmentedControlItemIcon><Italic01 /></SegmentedControlItemIcon>
+              <SegmentedControlItemIcon><Italic /></SegmentedControlItemIcon>
             </SegmentedControlItem>
             <SegmentedControlItem value="underline" title="Underline" variant="icon">
-              <SegmentedControlItemIcon><Underline01 /></SegmentedControlItemIcon>
+              <SegmentedControlItemIcon><Underline /></SegmentedControlItemIcon>
             </SegmentedControlItem>
             <SegmentedControlItem value="strikethrough" title="Strikethrough" variant="icon">
-              <SegmentedControlItemIcon><Strikethrough01 /></SegmentedControlItemIcon>
+              <SegmentedControlItemIcon><Strikethrough /></SegmentedControlItemIcon>
             </SegmentedControlItem>
           </SegmentedControl>
           <Section.Row>
@@ -192,13 +181,13 @@ export function TextElementInspector() {
 
             <Control.Root fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
               <Control.Icon fill value="top" title="Align top" aria-label="Align top">
-                <AlignTop01 />
+                <AlignStartVertical />
               </Control.Icon>
               <Control.Icon fill value="middle" title="Align middle" aria-label="Align middle">
-                <AlignVerticalCenter01 />
+                <AlignCenterVertical />
               </Control.Icon>
               <Control.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
-                <AlignBottom01 />
+                <AlignEndVertical />
               </Control.Icon>
             </Control.Root>
           </div>
@@ -217,7 +206,7 @@ export function TextElementInspector() {
             </Section.Row>
             <Section.Row>
               <FieldSelect value={textVisual.strokePosition} onChange={handleStrokePositionChange} options={STROKE_POSITION_OPTIONS} />
-              <FieldInput icon={<StrokeWidth size={14} />} type="number" value={textVisual.strokeWidth} onChange={handleStrokeWidthChange} />
+              <FieldInput icon={<RulerDimensionLine size={14} />} type="number" value={textVisual.strokeWidth} onChange={handleStrokeWidthChange} />
             </Section.Row>
           </Section.Body>
         ) : null}
@@ -231,8 +220,8 @@ export function TextElementInspector() {
         {textVisual.shadowEnabled ? (
           <Section.Body>
             <Section.Row>
-              <FieldInput icon={<LetterX size={14} />} type="number" value={textVisual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
-              <FieldInput icon={<LetterY size={14} />} type="number" value={textVisual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
+              <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={textVisual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
+              <FieldInput icon={<MoveVertical size={14} />} type="number" value={textVisual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
             </Section.Row>
             <Section.Row>
               <FieldInput icon={<Sun size={14} />} type="number" value={textVisual.shadowBlur} onChange={handleShadowBlurChange} />

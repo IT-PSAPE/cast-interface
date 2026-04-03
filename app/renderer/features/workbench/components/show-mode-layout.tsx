@@ -1,7 +1,7 @@
-import { ResourceDrawer } from '../../resource-drawer/components/resource-drawer';
-import { PreviewPanel } from '../../outputs/components/preview-panel';
-import { LibraryPanel } from '../../library-browser/components/library-panel';
-import { SlideBrowser } from '../../slide-browser/components/slide-browser';
+import { ResourceDrawer } from '../../show/resources/components/resource-drawer';
+import { PreviewPanel } from '../../show/playback/components/preview-panel';
+import { LibraryPanel } from '../../show/library/components/library-panel';
+import { SlideBrowser } from '../../show/slides/components/slide-browser';
 import { PanelRoute } from './panel-route';
 
 export function ShowModeLayout() {

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { isLyricContentItem } from '@core/content-items';
-import { Icon } from '../../../components/icon';
-import { IconButton } from '../../../components/icon-button';
+import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
+import { IconButton } from '../../../components/controls/icon-button';
 import { useCast } from '../../../contexts/cast-context';
-import { useElements } from '../../../contexts/element-context';
+import { useElements } from '../../../contexts/element/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
@@ -39,7 +39,7 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   const { setStatusText } = useCast();
   const { currentContentItem } = useNavigation();
   const { currentTemplate } = useTemplateEditor();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const hideAddText = workbenchMode === 'slide-editor'
     ? isLyricContentItem(currentContentItem)
     : workbenchMode === 'template-editor'
@@ -68,20 +68,20 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
     <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-border-primary bg-background-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
       {!hideAddText ? (
         <ToolbarButton label="Add Text" onClick={handleAddText}>
-          <Icon.type_01 size={18} strokeWidth={1.5} />
+          <Type size={18} strokeWidth={1.5} />
         </ToolbarButton>
       ) : null}
       <ToolbarButton label="Add Shape" onClick={handleAddShape}>
-        <Icon.square size={18} strokeWidth={1.5} />
+        <Square size={18} strokeWidth={1.5} />
       </ToolbarButton>
       <ToolbarButton label="Add Media" onClick={handleAddMedia}>
-        <Icon.image_03 size={18} strokeWidth={1.5} />
+        <Image size={18} strokeWidth={1.5} />
       </ToolbarButton>
       <ToolbarButton label="Draw Path" onClick={handleUnavailable} disabled>
-        <Icon.pencil_line size={18} strokeWidth={1.5} />
+        <PencilLine size={18} strokeWidth={1.5} />
       </ToolbarButton>
       <ToolbarButton label="Add Web Source" onClick={handleUnavailable} disabled>
-        <Icon.globe_01 size={18} strokeWidth={1.5} />
+        <Globe size={18} strokeWidth={1.5} />
       </ToolbarButton>
     </div>
   );

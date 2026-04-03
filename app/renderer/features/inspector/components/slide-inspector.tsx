@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { FieldInput, FieldSelect } from '../../../components/labeled-field';
+import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
 import { useCast } from '../../../contexts/cast-context';
-import { useOverlayEditor } from '../../../contexts/overlay-editor-context';
+import { useOverlayEditor } from '../../../contexts/overlay-editor/overlay-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { Section } from './inspector-section';
 
@@ -13,7 +13,7 @@ const TRANSITION_OPTIONS = [
 export function SlideInspector() {
   const { setStatusText } = useCast();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const [overlayNameDraft, setOverlayNameDraft] = useState('');
   const [transitionKindDraft, setTransitionKindDraft] = useState('none');

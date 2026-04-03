@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useInspector } from '../../../contexts/inspector-context';
+import { useInspector } from '../contexts/inspector-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
-import { useElements } from '../../../contexts/element-context';
+import { useElements } from '../../../contexts/element/element-context';
 
 export function useInspectorAutoTab() {
   const { inspectorTab, setInspectorTab } = useInspector();
-  const { workbenchMode } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
   const { selectedElement } = useElements();
   const hasSelection = Boolean(selectedElement);
   const isOverlayEdit = workbenchMode === 'overlay-editor';
