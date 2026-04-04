@@ -1,5 +1,5 @@
 import { Rect, Text } from 'react-konva';
-import type { TextCaseTransform, TextHorizontalAlign } from '@core/types';
+import type { StrokePosition, TextCaseTransform, TextHorizontalAlign } from '@core/types';
 import type { RenderNode } from './scene-types';
 import { resolveKonvaTextStyle } from './resolve-konva-text-style';
 
@@ -38,6 +38,7 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
     textStrokeEnabled?: boolean;
     textStrokeColor?: string;
     textStrokeWidth?: number;
+    textStrokePosition?: StrokePosition;
     textShadowEnabled?: boolean;
     textShadowColor?: string;
     textShadowBlur?: number;
@@ -49,6 +50,10 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
   const lineHeight = payload.lineHeight ?? 1.25;
   const verticalAlign = payload.verticalAlign ?? 'middle';
   const text = transformTextCase(payload.text ?? '', payload.caseTransform ?? 'none');
+  const textStrokeWidth = payload.textStrokeWidth ?? 0;
+  const textStrokePosition = payload.textStrokePosition ?? 'outside';
+  const textStrokeEnabled = Boolean(payload.textStrokeEnabled) && textStrokeWidth > 0;
+  const fillAfterStrokeEnabled = textStrokePosition === 'outside';
 
   return (
     <>
@@ -81,8 +86,9 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
         lineHeight={lineHeight}
         fill={payload.color}
         textDecoration={`${payload.underline ? 'underline' : ''} ${payload.strikethrough ? 'line-through' : ''}`.trim()}
-        stroke={payload.textStrokeEnabled ? payload.textStrokeColor : undefined}
-        strokeWidth={payload.textStrokeEnabled ? payload.textStrokeWidth ?? 0 : 0}
+        stroke={textStrokeEnabled ? payload.textStrokeColor : undefined}
+        strokeWidth={textStrokeEnabled ? textStrokeWidth : 0}
+        fillAfterStrokeEnabled={fillAfterStrokeEnabled}
         shadowEnabled={payload.textShadowEnabled}
         shadowColor={payload.textShadowColor}
         shadowBlur={payload.textShadowBlur}

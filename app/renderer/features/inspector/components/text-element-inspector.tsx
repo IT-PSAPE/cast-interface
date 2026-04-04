@@ -23,7 +23,7 @@ const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
 ];
 
 const STROKE_POSITION_OPTIONS = [
-  { value: 'inside', label: 'Inside' },
+  { value: 'inside', label: 'Inside (uses center)' },
   { value: 'center', label: 'Center' },
   { value: 'outside', label: 'Outside' },
 ];

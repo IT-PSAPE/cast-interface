@@ -169,6 +169,7 @@ Native module API:
 
 - `initializeSender({ senderName, width, height, withAlpha })`
 - `sendBgraFrame(senderName, buffer, width, height, stride)`
+- `sendRgbaFrame(senderName, buffer, width, height)`
 - `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
