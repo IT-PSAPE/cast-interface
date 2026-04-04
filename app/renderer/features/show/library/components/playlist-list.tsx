@@ -1,7 +1,7 @@
 import { Button } from '../../../../components/controls/button';
 import { EllipsisVertical, List, Plus } from 'lucide-react';
 import { EditableText } from '../../../../components/form/editable-text';
-import { IconButton } from '../../../../components/controls/icon-button';
+
 import { SectionHeader } from '../../../../components/display/section-header';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useLibraryBrowser } from '../contexts/library-browser-context';
@@ -21,9 +21,9 @@ export function PlaylistList() {
           <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Playlist</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <IconButton label="New playlist" onClick={handleCreate}>
+          <Button label="New playlist" onClick={handleCreate} size="icon-md">
             <Plus size={14} strokeWidth={1.75} />
-          </IconButton>
+          </Button>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
 
@@ -64,9 +64,9 @@ export function PlaylistList() {
                 </span>
               </Button>
 
-              <IconButton label={`Open ${tree.playlist.name} menu`} onClick={handleMenuButtonClick} size="sm" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" >
+              <Button label={`Open ${tree.playlist.name} menu`} onClick={handleMenuButtonClick} size="icon-sm" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" >
                 <EllipsisVertical size={14} strokeWidth={2} />
-              </IconButton>
+              </Button>
             </div>
           );
         })}

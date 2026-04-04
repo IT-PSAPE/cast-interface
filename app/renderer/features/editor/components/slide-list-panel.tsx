@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button } from '../../../components/controls/button';
 import { ContextMenu, type ContextMenuItem } from '../../../components/overlays/context-menu';
-import { ChevronsUpDown, Plus } from 'lucide-react';
-import { IconButton } from '../../../components/controls/icon-button';
+import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react';
 import { PanelSection } from '../../../components/display/panel-section';
 import { ContentItemIcon } from '../../../components/display/presentation-entity-icon';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -21,14 +20,19 @@ interface MenuState {
   y: number;
 }
 
+interface SlideMenuState extends MenuState {
+  slideId: string;
+}
+
 export function SlideListPanel() {
   const { browseContentItem, currentContentItem } = useNavigation();
   const { effectiveElements } = useElements();
   const { contentItems } = useProjectContent();
   const { getSlideElements } = useSlideEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
+  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
   const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const [slideMenuState, setSlideMenuState] = useState<SlideMenuState | null>(null);
   const itemLabel = currentContentItem?.type === 'lyric' ? 'Lyrics' : 'Slides';
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
@@ -53,6 +57,33 @@ export function SlideListPanel() {
     setMenuState(null);
   }
 
+  function handleSlideContextMenu(event: React.MouseEvent, slideId: string) {
+    event.preventDefault();
+    setSlideMenuState({ x: event.clientX, y: event.clientY, slideId });
+  }
+
+  function handleCloseSlideMenu() {
+    setSlideMenuState(null);
+  }
+
+  function handleDeleteSlide(slideId: string) {
+    if (!window.confirm('Delete this slide? This cannot be undone.')) return;
+    void deleteSlide(slideId);
+  }
+
+  const slideMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!slideMenuState) return [];
+    return [
+      {
+        id: 'delete',
+        label: 'Delete',
+        icon: <Trash2 size={14} />,
+        danger: true,
+        onSelect: () => handleDeleteSlide(slideMenuState.slideId),
+      },
+    ];
+  }, [slideMenuState]);
+
   function renderSlide(slide: (typeof slides)[number], index: number) {
     const elements = currentSlide?.id === slide.id
       ? effectiveElements
@@ -65,17 +96,22 @@ export function SlideListPanel() {
       setCurrentSlideIndex(index);
     }
 
+    function handleContextMenu(event: React.MouseEvent) {
+      handleSlideContextMenu(event, slide.id);
+    }
+
     return (
-      <SlideCard
-        key={slide.id}
-        index={index}
-        state={state}
-        scene={scene}
-        elements={elements}
-        isFocused={index === currentSlideIndex}
-        onActivate={handleSelect}
-        onEdit={handleSelect}
-      />
+      <div key={slide.id} onContextMenu={handleContextMenu}>
+        <SlideCard
+          index={index}
+          state={state}
+          scene={scene}
+          elements={elements}
+          isFocused={index === currentSlideIndex}
+          onActivate={handleSelect}
+          onEdit={handleSelect}
+        />
+      </div>
     );
   }
 
@@ -99,9 +135,9 @@ export function SlideListPanel() {
               </Button>
             )}
             action={(
-              <IconButton label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="sm" onClick={handleAddSlide}>
+              <Button label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="icon-sm" onClick={handleAddSlide}>
                 <Plus size={14} strokeWidth={2} />
-              </IconButton>
+              </Button>
             )}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"
@@ -122,6 +158,7 @@ export function SlideListPanel() {
         </PanelRoute.Panel>
       </PanelRoute.Split>
       {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={presentationMenuItems} onClose={handleClosePresentationMenu} /> : null}
+      {slideMenuState ? <ContextMenu x={slideMenuState.x} y={slideMenuState.y} items={slideMenuItems} onClose={handleCloseSlideMenu} /> : null}
     </aside>
   );
 }

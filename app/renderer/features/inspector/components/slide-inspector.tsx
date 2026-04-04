@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
+import { FieldInput } from '../../../components/form/field-input';
+import { FieldSelect } from '../../../components/form/field-select';
 import { useCast } from '../../../contexts/cast-context';
 import { useOverlayEditor } from '../../../contexts/overlay-editor/overlay-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';

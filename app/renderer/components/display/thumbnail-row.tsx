@@ -19,12 +19,7 @@ export function ThumbnailRow({ preview, body, className = '', previewClassName =
     : 'border-border-primary hover:border-border-secondary';
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      className={cn('group relative grid w-full grid-cols-[200px_1fr] overflow-hidden rounded-md border bg-background-primary text-left transition-colors', selectionClass, className)}
-    >
+    <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={cn('group relative grid w-full grid-cols-[200px_1fr] overflow-hidden rounded-md border bg-background-primary text-left transition-colors', selectionClass, className)} >
       <div className={cn('relative overflow-hidden border-r border-border-primary bg-background-tertiary', previewClassName)}>
         {preview}
       </div>

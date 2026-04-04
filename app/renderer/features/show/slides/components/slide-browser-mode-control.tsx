@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Grid2x2, List, Maximize } from 'lucide-react';
-import { SegmentedControl as Control } from '../../../../components/controls/segmented-controls';
+import { SegmentedControl } from '../../../../components/controls/segmented-controls';
 import { useSlideBrowser } from '../contexts/slide-browser-context';
 
 interface ViewOption {
@@ -18,7 +18,8 @@ export function SlideBrowserModeControl() {
     { mode: 'list', label: 'List view', icon: <List size={14} strokeWidth={1.5} /> },
   ];
 
-  function handleValueChange(nextValue: string) {
+  function handleValueChange(nextValue: string | string[]) {
+    if (Array.isArray(nextValue)) return;
     if (!isSlideBrowserMode(nextValue)) {
       return;
     }
@@ -28,16 +29,16 @@ export function SlideBrowserModeControl() {
 
   function renderViewItem(option: ViewOption) {
     return (
-      <Control.Icon key={option.mode} value={option.mode} title={option.label} aria-label={option.label}>
+      <SegmentedControl.Icon key={option.mode} value={option.mode} title={option.label} aria-label={option.label}>
         {option.icon}
-      </Control.Icon>
+      </SegmentedControl.Icon>
     );
   }
 
   return (
-    <Control.Root value={slideBrowserMode} onValueChange={handleValueChange} aria-label="Slide browser mode">
+    <SegmentedControl.Root value={slideBrowserMode} onValueChange={handleValueChange} aria-label="Slide browser mode">
       {viewOptions.map(renderViewItem)}
-    </Control.Root>
+    </SegmentedControl.Root>
   );
 }
 

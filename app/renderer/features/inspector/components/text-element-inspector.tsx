@@ -3,11 +3,11 @@ import { applyTextVisualPayload, readTextFormatting, readTextVisualPayload, type
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element/element-context';
 import { ColorPicker } from '../../../components/form/color-picker';
-import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
+import { FieldInput } from '../../../components/form/field-input';
+import { FieldSelect } from '../../../components/form/field-select';
 import { useSystemFonts } from '../hooks/use-system-fonts';
 
-import { SegmentedControl as Control } from '../../../components/controls/segmented-controls';
-import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon } from '../../../components/controls/segmented-control';
+import { SegmentedControl } from '../../../components/controls/segmented-controls';
 import {
   AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
   AlignLeft, AlignRight, AlignStartVertical,
@@ -72,11 +72,13 @@ export function TextElementInspector() {
   function handleShadowBlurChange(value: string) { updateTextVisual({ shadowBlur: Math.max(0, parseNumber(value, textVisual.shadowBlur)) }); }
   function handleShadowOffsetXChange(value: string) { updateTextVisual({ shadowOffsetX: parseNumber(value, textVisual.shadowOffsetX) }); }
   function handleShadowOffsetYChange(value: string) { updateTextVisual({ shadowOffsetY: parseNumber(value, textVisual.shadowOffsetY) }); }
-  function handleVerticalAlighmentChange(value: string) {
+  function handleVerticalAlighmentChange(value: string | string[]) {
+    if (Array.isArray(value)) return;
     updateText({ verticalAlign: value as TextVerticalAlign });
   }
 
-  function handleHorizontalAlighmentChange(value: string) {
+  function handleHorizontalAlighmentChange(value: string | string[]) {
+    if (Array.isArray(value)) return;
     updateText({ alignment: value as TextHorizontalAlign });
   }
 
@@ -126,8 +128,8 @@ export function TextElementInspector() {
             <FieldInput type="text" value={formatting.weight} onChange={handleWeightChange} />
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<Type />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
-            <FieldInput icon={<Baseline />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
+            <FieldInput icon={<Type className="size-4" />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
+            <FieldInput icon={<Baseline className="size-4" />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
           </Section.Row>
         </Section.Body>
       </Section.Root>
@@ -137,20 +139,20 @@ export function TextElementInspector() {
           <span>Formatting</span>
         </Section.Header>
         <Section.Body>
-          <SegmentedControl label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
-            <SegmentedControlItem value="bold" title="Bold" variant="icon">
-              <SegmentedControlItemIcon><Bold /></SegmentedControlItemIcon>
-            </SegmentedControlItem>
-            <SegmentedControlItem value="italic" title="Italic" variant="icon">
-              <SegmentedControlItemIcon><Italic /></SegmentedControlItemIcon>
-            </SegmentedControlItem>
-            <SegmentedControlItem value="underline" title="Underline" variant="icon">
-              <SegmentedControlItemIcon><Underline /></SegmentedControlItemIcon>
-            </SegmentedControlItem>
-            <SegmentedControlItem value="strikethrough" title="Strikethrough" variant="icon">
-              <SegmentedControlItemIcon><Strikethrough /></SegmentedControlItemIcon>
-            </SegmentedControlItem>
-          </SegmentedControl>
+          <SegmentedControl.Root label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
+            <SegmentedControl.Icon value="bold" title="Bold" fill>
+              <Bold className="size-4" />
+            </SegmentedControl.Icon>
+            <SegmentedControl.Icon value="italic" title="Italic" fill>
+              <Italic className="size-4" />
+            </SegmentedControl.Icon>
+            <SegmentedControl.Icon value="underline" title="Underline" fill>
+              <Underline className="size-4" />
+            </SegmentedControl.Icon>
+            <SegmentedControl.Icon value="strikethrough" title="Strikethrough" fill>
+              <Strikethrough className="size-4" />
+            </SegmentedControl.Icon>
+          </SegmentedControl.Root>
           <Section.Row>
             <FieldSelect value={formatting.caseTransform} onChange={handleCaseChange} options={CASE_OPTIONS} />
             <ColorPicker value={textVisual.color} onChange={handleTextColorChange} />
@@ -164,32 +166,32 @@ export function TextElementInspector() {
         </Section.Header>
         <Section.Body>
           <div className="flex gap-2">
-            <Control.Root fill className="w-full" value={formatting.alignment} onValueChange={handleHorizontalAlighmentChange} aria-label="Horizontal text alignment">
-              <Control.Icon fill value="left" title="Align left" aria-label="Align left">
-                <AlignLeft />
-              </Control.Icon>
-              <Control.Icon fill value="center" title="Align center" aria-label="Align center">
-                <AlignCenter />
-              </Control.Icon>
-              <Control.Icon fill value="right" title="Align right" aria-label="Align right">
-                <AlignRight />
-              </Control.Icon>
-              <Control.Icon fill value="justify" title="Justify text" aria-label="Justify text">
-                <AlignJustify />
-              </Control.Icon>
-            </Control.Root>
+            <SegmentedControl.Root fill className="w-full" value={formatting.alignment} onValueChange={handleHorizontalAlighmentChange} aria-label="Horizontal text alignment">
+              <SegmentedControl.Icon fill value="left" title="Align left" aria-label="Align left">
+                <AlignLeft className="size-4" />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon fill value="center" title="Align center" aria-label="Align center">
+                <AlignCenter className="size-4" />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon fill value="right" title="Align right" aria-label="Align right">
+                <AlignRight className="size-4" />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon fill value="justify" title="Justify text" aria-label="Justify text">
+                <AlignJustify className="size-4" />
+              </SegmentedControl.Icon>
+            </SegmentedControl.Root>
 
-            <Control.Root fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
-              <Control.Icon fill value="top" title="Align top" aria-label="Align top">
-                <AlignStartVertical />
-              </Control.Icon>
-              <Control.Icon fill value="middle" title="Align middle" aria-label="Align middle">
-                <AlignCenterVertical />
-              </Control.Icon>
-              <Control.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
-                <AlignEndVertical />
-              </Control.Icon>
-            </Control.Root>
+            <SegmentedControl.Root fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
+              <SegmentedControl.Icon fill value="top" title="Align top" aria-label="Align top">
+                <AlignStartVertical className="size-4" />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon fill value="middle" title="Align middle" aria-label="Align middle">
+                <AlignCenterVertical className="size-4" />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
+                <AlignEndVertical className="size-4" />
+              </SegmentedControl.Icon>
+            </SegmentedControl.Root>
           </div>
         </Section.Body>
       </Section.Root>

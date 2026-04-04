@@ -7,5 +7,3 @@ export const SegmentedControl = {
   Icon: SegmentIcon,
   Label: SegmentLabel,
 };
-
-export { SegmentedControlRoot, SegmentIcon, SegmentLabel };

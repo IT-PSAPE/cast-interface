@@ -33,11 +33,11 @@ export function PreviewPanel() {
         <LivePreview />
         <div className="border-b border-border-primary p-[1px]">
           <IconGroup.Root fill >
-            <IconGroup.Item aria-label="Clear all layers" title="Clear all layers" onClick={handleClearAll}><XCircle /></IconGroup.Item>
-            <IconGroup.Item active={mediaActive} aria-label="Clear media layer" title="Clear media layer" onClick={handleClearMedia}><Image /></IconGroup.Item>
-            <IconGroup.Item active={contentActive} aria-label="Clear content layer" title="Clear content layer" onClick={handleClearContent}><AlignLeft /></IconGroup.Item>
-            <IconGroup.Item active={overlayActive} aria-label="Clear overlays" title="Clear overlays" onClick={handleClearOverlay}><Layers2 /></IconGroup.Item>
-            <IconGroup.Item active={audioActive} aria-label="Clear audio" title="Clear audio" onClick={handleClearAudio}><VolumeX /></IconGroup.Item>
+            <IconGroup.Item aria-label="Clear all layers" title="Clear all layers" onClick={handleClearAll}><XCircle className="size-4" /></IconGroup.Item>
+            <IconGroup.Item active={mediaActive} aria-label="Clear media layer" title="Clear media layer" onClick={handleClearMedia}><Image className="size-4" /></IconGroup.Item>
+            <IconGroup.Item active={contentActive} aria-label="Clear content layer" title="Clear content layer" onClick={handleClearContent}><AlignLeft className="size-4" /></IconGroup.Item>
+            <IconGroup.Item active={overlayActive} aria-label="Clear overlays" title="Clear overlays" onClick={handleClearOverlay}><Layers2 className="size-4" /></IconGroup.Item>
+            <IconGroup.Item active={audioActive} aria-label="Clear audio" title="Clear audio" onClick={handleClearAudio}><VolumeX className="size-4" /></IconGroup.Item>
           </IconGroup.Root>
         </div>
       </div>

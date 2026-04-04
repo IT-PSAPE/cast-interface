@@ -19,12 +19,7 @@ export function ThumbnailTile({ body, caption, className = '', bodyClassName = '
     : 'border-border-primary hover:border-border-secondary';
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      className={cn('group relative w-full overflow-hidden rounded-md border bg-background-primary text-left transition-colors', selectionClass, className)}
-    >
+    <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={cn('group relative w-full overflow-hidden rounded-md border bg-background-primary text-left transition-colors', selectionClass, className)} >
       <div className={cn('relative aspect-video overflow-hidden bg-background-primary', bodyClassName)}>{body}</div>
       {overlay}
       <div className={cn('truncate border-t border-border-primary bg-background-tertiary px-2 py-1 text-sm text-text-secondary transition-colors group-hover:text-text-primary', captionClassName)}>

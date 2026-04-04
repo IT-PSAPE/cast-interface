@@ -1,6 +1,6 @@
 // utils/createVariants.ts
 
-import clsx from "./clsx";
+import { cn } from "./cn";
 
 /**
  * A map of variant-names to a map of variant-values → arrays of class strings
@@ -73,6 +73,6 @@ export function cv<V extends VariantDefinitions>(
             classes.push(className);
         }
 
-        return clsx(...classes);
+        return cn(...classes);
     };
 }

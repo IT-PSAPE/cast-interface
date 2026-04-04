@@ -3,7 +3,7 @@ import type { Id, MediaAsset } from '@core/types';
 import { Ellipsis } from 'lucide-react';
 import { ContextMenu } from '../../../../components/overlays/context-menu';
 import type { ContextMenuItem } from '../../../../components/overlays/context-menu';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { MediaAssetIcon } from '../../../../components/display/media-asset-icon';
 import { useElements } from '../../../../contexts/element/element-context';
 import { usePresentationLayers } from '../../../../contexts/presentation-layer-context';
@@ -94,9 +94,9 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
                 <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
                 <MediaThumbnail asset={asset} />
                 <div className="absolute right-1 top-1 hidden group-hover:block">
-                  <IconButton label="Media options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
+                  <Button label="Media options" onClick={handleMenuClick} size="icon-sm" className="border-border-primary bg-background-tertiary/80">
                     <Ellipsis size={14} strokeWidth={2} />
-                  </IconButton>
+                  </Button>
                 </div>
               </button>
               <div className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm text-text-secondary">

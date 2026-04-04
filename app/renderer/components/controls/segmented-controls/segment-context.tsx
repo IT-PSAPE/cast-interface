@@ -1,9 +1,12 @@
 import { createContext, useContext } from 'react';
 
+export type SegmentSelectionMode = 'single' | 'multiple';
+
 interface SegmentContextValue {
   fill: boolean;
-  selectedValue: string | null;
-  onSelect: (value: string) => void;
+  selectionMode: SegmentSelectionMode;
+  selectedValues: string[];
+  onToggle: (value: string) => void;
 }
 
 const SegmentContext = createContext<SegmentContextValue | null>(null);

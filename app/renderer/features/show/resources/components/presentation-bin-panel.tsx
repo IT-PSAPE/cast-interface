@@ -3,7 +3,7 @@ import type { ContentItem, Id, Slide } from '@core/types';
 import { ContextMenu, type ContextMenuItem } from '../../../../components/overlays/context-menu';
 import { Ellipsis } from 'lucide-react';
 import { EditableText } from '../../../../components/form/editable-text';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { ContentItemIcon } from '../../../../components/display/presentation-entity-icon';
 import { SceneFrame } from '../../../../components/display/scene-frame';
 import { ThumbnailTile } from '../../../../components/display/thumbnail-tile';
@@ -86,14 +86,14 @@ function ContentCard({
             )}
 
             <div className="absolute right-1 top-1 hidden group-hover:block">
-              <IconButton
+              <Button
                 label="Content item options"
                 onClick={handleMenuClick}
-                size="sm"
+                size="icon-sm"
                 className="border-border-primary bg-background-tertiary/80"
               >
                 <Ellipsis size={14} strokeWidth={2} />
-              </IconButton>
+              </Button>
             </div>
           </>
         )}

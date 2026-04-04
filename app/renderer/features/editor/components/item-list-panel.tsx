@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
-import { IconButton } from '../../../components/controls/icon-button';
+import { Button } from '../../../components/controls/button';
 import { PanelSection } from '../../../components/display/panel-section';
 import { PanelRoute } from '../../workbench/components/panel-route';
 import { ObjectListPanel } from './object-list-panel';
@@ -25,9 +25,9 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
           <PanelSection
             title={<span className="truncate text-sm font-medium text-text-primary">{title}</span>}
             action={(
-              <IconButton label={addLabel} size="sm" onClick={onAdd}>
+              <Button label={addLabel} size="icon-sm" onClick={onAdd}>
                 <Plus size={14} strokeWidth={2} />
-              </IconButton>
+              </Button>
             )}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"

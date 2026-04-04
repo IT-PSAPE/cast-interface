@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { isLyricContentItem } from '@core/content-items';
 import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
-import { IconButton } from '../../../components/controls/icon-button';
+import { Button } from '../../../components/controls/button';
 import { useCast } from '../../../contexts/cast-context';
 import { useElements } from '../../../contexts/element/element-context';
 import { useNavigation } from '../../../contexts/navigation-context';
@@ -17,16 +17,16 @@ interface ToolbarButtonProps {
 
 function ToolbarButton({ label, onClick, disabled = false, children }: ToolbarButtonProps) {
   return (
-    <IconButton
+    <Button
       label={label}
       onClick={onClick}
       disabled={disabled}
-      size="lg"
+      size="icon-lg"
       variant="ghost"
       className="text-text-primary hover:bg-white/10"
     >
       {children}
-    </IconButton>
+    </Button>
   );
 }
 

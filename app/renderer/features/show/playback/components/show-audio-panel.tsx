@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { IconGroup } from '@renderer/components/icon-group';
 import { CirclePause, CirclePlay, Plus, Repeat, SkipBack, SkipForward } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { useElements } from '../../../../contexts/element/element-context';
 import { useShowAudio } from '../contexts/show-audio-context';
 import { formatAudioTime } from '../utils/format-audio-time';
@@ -37,9 +37,9 @@ export function ShowAudioPanel() {
             <div className="truncate text-sm font-medium text-text-primary">{currentTrackLabel}</div>
             <div className="text-xs text-text-tertiary">Now playing</div>
           </div>
-          <IconButton label="Import audio" size="sm" variant="ghost" onClick={handleImportClick}>
+          <Button label="Import audio" size="icon-sm" variant="ghost" onClick={handleImportClick}>
             <Plus size={14} strokeWidth={1.75} />
-          </IconButton>
+          </Button>
         </div>
 
         <div className="grid gap-1">

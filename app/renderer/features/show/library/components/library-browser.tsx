@@ -1,7 +1,7 @@
 import { Button } from '../../../../components/controls/button';
 import { EditableText } from '../../../../components/form/editable-text';
 import { Folder, Plus } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+
 import { SectionHeader } from '../../../../components/display/section-header';
 import { useCast } from '../../../../contexts/cast-context';
 import { useNavigation } from '../../../../contexts/navigation-context';
@@ -26,9 +26,9 @@ export function LibraryBrowser() {
           <span className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">Library</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <IconButton label="New library" onClick={handleCreate} variant="ghost">
+          <Button label="New library" onClick={handleCreate} variant="ghost" size="icon-md">
             <Plus size={14} strokeWidth={1.75} />
-          </IconButton>
+          </Button>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Plus } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { useSlides } from '../../../../contexts/slide-context';
@@ -29,17 +29,18 @@ export function SlideBrowserToolbar() {
   return (
     <>
       <footer className="flex items-center gap-2 border-t border-border-primary bg-primary/80 px-2 py-1">
-        <IconButton label="Add slide" disabled={!currentContentItem} onClick={handleAddSlide}>
-          <Plus />
-        </IconButton>
+        <Button label="Add slide" size="icon-md" disabled={!currentContentItem} onClick={handleAddSlide}>
+          <Plus className="size-4" />
+        </Button>
 
-        <IconButton
+        <Button
           label="Open lyric editor"
+          size="icon-md"
           disabled={!currentContentItem || currentContentItem.type !== 'lyric'}
           onClick={handleOpenEditor}
         >
-          <Pencil />
-        </IconButton>
+          <Pencil className="size-4" />
+        </Button>
 
         <div className="ml-auto flex items-center gap-2">
           {showPlaylistModes ? (

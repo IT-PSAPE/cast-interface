@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { CheckboxField } from '../../../components/form/checkbox-field';
-import { FieldInput } from '../../../components/form/labeled-field';
+import { FieldInput } from '../../../components/form/field-input';
 import { useNdi } from '../../../contexts/ndi-context';
 import { SettingsSection } from './settings-section';
 

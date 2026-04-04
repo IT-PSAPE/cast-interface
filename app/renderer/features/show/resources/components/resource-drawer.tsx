@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ContextMenu } from '../../../../components/overlays/context-menu';
 import { Plus } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { Tab, TabBar } from '../../../../components/display/tab-bar';
 import { useElements } from '../../../../contexts/element/element-context';
 import { useNavigation } from '../../../../contexts/navigation-context';
@@ -178,15 +178,15 @@ function ResourceDrawerActions() {
   return (
     <>
       {meta.showImportAction ? (
-        <IconButton label="Import media" size="sm" variant="ghost" className="relative">
+        <Button label="Import media" size="icon-sm" variant="ghost" className="relative">
           <Plus size={14} strokeWidth={1.5} />
           <input type="file" multiple accept="image/*,video/*" onChange={actions.handleImport} className="absolute inset-0 cursor-pointer opacity-0" />
-        </IconButton>
+        </Button>
       ) : null}
       {meta.showCreateAction ? (
-        <IconButton label="Create item" size="sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
+        <Button label="Create item" size="icon-sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
           <Plus size={14} strokeWidth={1.5} />
-        </IconButton>
+        </Button>
       ) : null}
     </>
   );

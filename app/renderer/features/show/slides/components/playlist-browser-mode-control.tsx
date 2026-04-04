@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SegmentedControl as Control } from '../../../../components/controls/segmented-controls';
+import { SegmentedControl } from '../../../../components/controls/segmented-controls';
 import { useSlideBrowser } from '../contexts/slide-browser-context';
 
 interface PlaylistViewOption {
@@ -44,7 +44,8 @@ export function PlaylistBrowserModeControl() {
     { mode: 'continuous', label: 'Continuous', icon: <PlaylistContinuousIcon /> },
   ];
 
-  function handleValueChange(nextValue: string) {
+  function handleValueChange(nextValue: string | string[]) {
+    if (Array.isArray(nextValue)) return;
     if (!isPlaylistBrowserMode(nextValue)) {
       return;
     }
@@ -54,16 +55,16 @@ export function PlaylistBrowserModeControl() {
 
   function renderPlaylistViewItem(option: PlaylistViewOption) {
     return (
-      <Control.Icon key={option.mode} value={option.mode} title={option.label} aria-label={option.label}>
+      <SegmentedControl.Icon key={option.mode} value={option.mode} title={option.label} aria-label={option.label}>
         {option.icon}
-      </Control.Icon>
+      </SegmentedControl.Icon>
     );
   }
 
   return (
-    <Control.Root value={playlistBrowserMode} onValueChange={handleValueChange} aria-label="Playlist browser mode">
+    <SegmentedControl.Root value={playlistBrowserMode} onValueChange={handleValueChange} aria-label="Playlist browser mode">
       {playlistViewOptions.map(renderPlaylistViewItem)}
-    </Control.Root>
+    </SegmentedControl.Root>
   );
 }
 

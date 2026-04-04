@@ -1,5 +1,5 @@
 import { FolderPlus } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { SectionHeader } from '../../../../components/display/section-header';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useLibraryBrowser } from '../contexts/library-browser-context';
@@ -25,9 +25,9 @@ export function SegmentsBrowser() {
           <span className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <IconButton label="New segment" onClick={handleNewSegment}>
+          <Button label="New segment" onClick={handleNewSegment} size="icon-md">
             <FolderPlus size={14} strokeWidth={1.75} />
-          </IconButton>
+          </Button>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
 

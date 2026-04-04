@@ -1,5 +1,5 @@
 import { Layers, Layers2, Plus } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { useOverlayEditor } from '../../../../contexts/overlay-editor/overlay-editor-context';
 import { usePresentationLayers } from '../../../../contexts/presentation-layer-context';
 import { useWorkbench } from '../../../../contexts/workbench-context';
@@ -23,12 +23,12 @@ export function ShowOverlayPanelActions() {
 
   return (
     <>
-      <IconButton label={modeLabel} size="sm" variant="ghost" onClick={handleModeToggle}>
+      <Button label={modeLabel} size="icon-sm" variant="ghost" onClick={handleModeToggle}>
         {overlayMode === 'single' ? <Layers size={14} /> : <Layers2 size={14} />}
-      </IconButton>
-      <IconButton label="Add overlay" size="sm" onClick={handleCreateOverlay}>
+      </Button>
+      <Button label="Add overlay" size="icon-sm" onClick={handleCreateOverlay}>
         <Plus size={14} strokeWidth={2} />
-      </IconButton>
+      </Button>
     </>
   );
 }

@@ -3,11 +3,7 @@ import type {
   ContentBundleBrokenReferenceAction,
   ContentBundleInspection,
 } from '@core/types';
-import {
-  SegmentedControl,
-  SegmentedControlItem,
-  SegmentedControlItemLabel,
-} from '../../../components/controls/segmented-control';
+import { SegmentedControl } from '../../../components/controls/segmented-controls';
 import { Button } from '../../../components/controls/button';
 
 interface BrokenReferenceReviewListProps {
@@ -55,17 +51,11 @@ function BrokenReferenceRow({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <SegmentedControl label={`Broken reference action for ${reference.source}`} value={action ?? ''} onValueChange={handleValueChange}>
-          <SegmentedControlItem value="replace" title="Replace">
-            <SegmentedControlItemLabel>Replace</SegmentedControlItemLabel>
-          </SegmentedControlItem>
-          <SegmentedControlItem value="remove" title="Remove">
-            <SegmentedControlItemLabel>Remove</SegmentedControlItemLabel>
-          </SegmentedControlItem>
-          <SegmentedControlItem value="leave" title="Leave Broken">
-            <SegmentedControlItemLabel>Leave Broken</SegmentedControlItemLabel>
-          </SegmentedControlItem>
-        </SegmentedControl>
+        <SegmentedControl.Root label={`Broken reference action for ${reference.source}`} value={action ?? ''} onValueChange={handleValueChange}>
+          <SegmentedControl.Label value="replace">Replace</SegmentedControl.Label>
+          <SegmentedControl.Label value="remove">Remove</SegmentedControl.Label>
+          <SegmentedControl.Label value="leave">Leave Broken</SegmentedControl.Label>
+        </SegmentedControl.Root>
 
         {action === 'replace' ? (
           <Button variant="ghost" onClick={handleChooseReplacement}>

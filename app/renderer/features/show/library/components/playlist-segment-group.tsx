@@ -2,7 +2,7 @@ import type { PlaylistTree } from '@core/types';
 import { ChevronDown, ChevronRight, EllipsisVertical } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
 import { EditableText } from '../../../../components/form/editable-text';
-import { IconButton } from '../../../../components/controls/icon-button';
+
 import { ContentItemIcon } from '../../../../components/display/presentation-entity-icon';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlides } from '../../../../contexts/slide-context';
@@ -50,28 +50,28 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
         onContextMenu={handleSegmentContextMenu}
       >
         <div className="flex min-w-0 items-center gap-1.5">
-          <IconButton
+          <Button
             label={collapsed ? `Expand ${segment.segment.name}` : `Collapse ${segment.segment.name}`}
             onClick={handleCollapseToggle}
             aria-expanded={!collapsed}
-            size="sm"
+            size="icon-sm"
             variant="ghost"
             className="shrink-0 border-transparent text-current hover:border-border-primary"
           >
             {collapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
-          </IconButton>
+          </Button>
           <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
         </div>
 
-        <IconButton
+        <Button
           label={`Open ${segment.segment.name} menu`}
           onClick={handleSegmentMenuButtonClick}
-          size="sm"
+          size="icon-sm"
           variant="ghost"
           className="border-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
         >
           <EllipsisVertical size={14} strokeWidth={2} />
-        </IconButton>
+        </Button>
       </div>
 
       {!collapsed ? segment.entries.map((entry) => {
@@ -103,15 +103,15 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
               <EditableText value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
             </Button>
 
-            <IconButton
+            <Button
               label={`Open ${entry.item.title} menu`}
               onClick={handleMenuButtonClick}
-              size="sm"
+              size="icon-sm"
               variant="ghost"
               className="absolute right-1 top-1/2 -translate-y-1/2 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
             >
               <EllipsisVertical size={14} strokeWidth={2} />
-            </IconButton>
+            </Button>
           </div>
         );
       }) : null}

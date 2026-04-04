@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
-import { SegmentedControl, SegmentedControlItem, SegmentedControlItemIcon, type SegmentedControlValue } from '../../../components/controls/segmented-control';
 import { SettingsDialog } from '../../../components/overlays/settings-dialog';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { OutputToggle } from '../../show/playback/components/output-toggle';
 import type { WorkbenchMode } from '../../../types/ui';
-import { SegmentedControl as Control } from '../../../components/controls/segmented-controls';
-import { IconButton } from '@renderer/components/controls/icon-button';
+import { SegmentedControl } from '../../../components/controls/segmented-controls';
+import { Button } from '@renderer/components/controls/button';
 
 interface PanelToggleButton {
   id: 'left' | 'right' | 'bottom';
@@ -29,12 +28,13 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
     [panelToggles],
   );
 
-  function handleWorkbenchModeChange(nextValue: string) {
+  function handleWorkbenchModeChange(nextValue: string | string[]) {
+    if (Array.isArray(nextValue)) return;
     if (!isWorkbenchMode(nextValue) || nextValue === workbenchMode) return;
     setWorkbenchMode(nextValue);
   }
 
-  function handlePanelToggleChange(nextValue: SegmentedControlValue) {
+  function handlePanelToggleChange(nextValue: string | string[]) {
     if (!Array.isArray(nextValue)) return;
     for (const toggle of panelToggles) {
       const shouldBeActive = nextValue.includes(toggle.id);
@@ -57,29 +57,29 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
     >
       <div className="flex items-center gap-3">
         <div className="flex items-center">
-          <Control.Root value={workbenchMode} onValueChange={handleWorkbenchModeChange} aria-label="Application views">
-            <Control.Label value="show">Show</Control.Label>
-            <Control.Label value="slide-editor">Edit</Control.Label>
-            <Control.Label value="overlay-editor">Overlay</Control.Label>
-            <Control.Label value="template-editor">Templates</Control.Label>
-          </Control.Root>
+          <SegmentedControl.Root value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
+            <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
+            <SegmentedControl.Label value="slide-editor">Edit</SegmentedControl.Label>
+            <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
+            <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
+          </SegmentedControl.Root>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
           <OutputToggle label="Audience" active={audienceOutputActive} onClick={onToggleAudienceOutput} />
 
-          <SegmentedControl
+          <SegmentedControl.Root
             label="Panel visibility"
             selectionMode="multiple"
             value={activePanelIds}
             onValueChange={handlePanelToggleChange}
           >
             {panelToggles.map(renderPanelToggleItem)}
-          </SegmentedControl>
+          </SegmentedControl.Root>
 
-          <IconButton type="button" onClick={handleOpenSettings} title="Settings" aria-label="Settings">
-            <Settings />
-          </IconButton>
+          <Button type="button" onClick={handleOpenSettings} title="Settings" aria-label="Settings" size="icon-md">
+            <Settings className="size-4" />
+          </Button>
         </div>
       </div>
       {showSettings ? <SettingsDialog onClose={handleCloseSettings} /> : null}
@@ -89,10 +89,10 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
 
 function renderPanelToggleItem(toggle: PanelToggleButton) {
   return (
-    <SegmentedControlItem key={toggle.id} value={toggle.id} title={`${toggle.active ? 'Hide' : 'Show'} ${toggle.label} panel`} variant="icon" >
-      <SegmentedControlItemIcon>{panelToggleIcon(toggle.id)}</SegmentedControlItemIcon>
+    <SegmentedControl.Icon key={toggle.id} value={toggle.id} title={`${toggle.active ? 'Hide' : 'Show'} ${toggle.label} panel`}>
+      {panelToggleIcon(toggle.id)}
       <span className="sr-only">{toggle.label}</span>
-    </SegmentedControlItem>
+    </SegmentedControl.Icon>
   );
 }
 

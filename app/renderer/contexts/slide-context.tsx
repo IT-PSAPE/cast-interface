@@ -25,6 +25,7 @@ interface SlideContextValue {
   focusContentItemSlide: (itemId: Id, index: number) => void;
   activateContentItemSlide: (itemId: Id, index: number) => void;
   createSlide: () => Promise<void>;
+  deleteSlide: (slideId: Id) => Promise<void>;
   updateCurrentSlideNotes: (notes: string) => Promise<void>;
 }
 
@@ -216,6 +217,17 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     setStatusText('Created slide');
   }, [currentContentItem, currentContentItemId, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
+  const deleteSlideAction = useCallback(async (slideId: Id) => {
+    if (!currentContentItemId) return;
+    const deletedIndex = slides.findIndex((slide) => slide.id === slideId);
+    await mutate(() => window.castApi.deleteSlide(slideId));
+    if (deletedIndex >= 0 && slides.length > 1) {
+      const nextIndex = clamp(deletedIndex >= slides.length - 1 ? deletedIndex - 1 : deletedIndex, 0, slides.length - 2);
+      updateVisibleSelectedSlideIndex(currentContentItemId, nextIndex);
+    }
+    setStatusText('Deleted slide');
+  }, [currentContentItemId, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;
     await mutate(() => window.castApi.updateSlideNotes({ slideId: currentSlide.id, notes }));
@@ -258,12 +270,14 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     focusContentItemSlide,
     activateContentItemSlide,
     createSlide: createSlideAction,
+    deleteSlide: deleteSlideAction,
     updateCurrentSlideNotes,
   }), [
     activateContentItemSlide,
     activateSlide,
     armCurrentPlaylistSelection,
     createSlideAction,
+    deleteSlideAction,
     currentSlide,
     currentSlideIndex,
     clearCurrentSlideSelection,

@@ -1,6 +1,6 @@
 import type { Id, SlideElement, TextElementPayload } from '@core/types';
 import { Box, Eye, EyeOff, Film, Image, Lock, LockOpen, Square, Type } from 'lucide-react';
-import { IconButton } from '../../../components/controls/icon-button';
+import { Button } from '../../../components/controls/button';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import type { StackDropPlacement } from '../utils/reorder-element-stack';
 import { compactText } from '../../../utils/slides';
@@ -86,12 +86,12 @@ export function ObjectListRow({
       title={title}
       trailing={
         <span className="ml-auto flex items-center gap-1">
-          <IconButton size="sm" variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-text-primary' : 'text-text-tertiary'}>
+          <Button size="icon-sm" variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-text-primary' : 'text-text-tertiary'}>
             <LockIcon closed={locked} />
-          </IconButton>
-          <IconButton size="sm" variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-text-primary' : 'text-text-tertiary'}>
+          </Button>
+          <Button size="icon-sm" variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-text-primary' : 'text-text-tertiary'}>
             <VisibilityIcon visible={visible} />
-          </IconButton>
+          </Button>
         </span>
       }
     />

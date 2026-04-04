@@ -7,7 +7,7 @@ import { useTemplateEditor } from '../../../../contexts/template-editor-context'
 import { useProjectContent } from '../../../../contexts/use-project-content';
 import { useWorkbench } from '../../../../contexts/workbench-context';
 import { Ellipsis } from 'lucide-react';
-import { IconButton } from '../../../../components/controls/icon-button';
+import { Button } from '../../../../components/controls/button';
 import { buildRenderScene } from '../../../stage/rendering/build-render-scene';
 import { SceneThumbnailCard } from '../../../../components/display/scene-thumbnail-card';
 
@@ -146,9 +146,9 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
         onClick={handleOpen}
         onDoubleClick={handleEdit}
         menuButton={(
-          <IconButton label="Template options" onClick={(e) => { e.stopPropagation(); handleOpenMenu(e.currentTarget as HTMLButtonElement); }} size="sm" className="border-border-primary bg-background-tertiary/80">
+          <Button label="Template options" onClick={(e) => { e.stopPropagation(); handleOpenMenu(e.currentTarget as HTMLButtonElement); }} size="icon-sm" className="border-border-primary bg-background-tertiary/80">
             <Ellipsis size={14} strokeWidth={2} />
-          </IconButton>
+          </Button>
         )}
       />
     );

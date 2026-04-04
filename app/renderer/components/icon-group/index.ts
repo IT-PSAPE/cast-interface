@@ -5,5 +5,3 @@ export const IconGroup = {
   Root: IconGroupRoot,
   Item: IconGroupItem,
 };
-
-export { IconGroupItem, IconGroupRoot };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
+import { FieldInput } from '../../../components/form/field-input';
+import { FieldSelect } from '../../../components/form/field-select';
 import { useOverlayDefaults } from '../../../contexts/overlay-defaults-context';
 import { SettingsSection } from './settings-section';
 

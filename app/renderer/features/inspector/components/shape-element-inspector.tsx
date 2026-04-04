@@ -3,7 +3,8 @@ import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element/element-context';
 import type { StrokePosition } from '@core/types';
 import { ColorPicker } from '../../../components/form/color-picker';
-import { FieldInput, FieldSelect } from '../../../components/form/labeled-field';
+import { FieldInput } from '../../../components/form/field-input';
+import { FieldSelect } from '../../../components/form/field-select';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
   AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
@@ -103,24 +104,24 @@ export function ShapeElementInspector() {
           <Section.Row>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignLeft} title="Align left" aria-label="Align left">
-                <AlignStartHorizontal />
+                <AlignStartHorizontal className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignCenter} title="Align center" aria-label="Align center">
-                <AlignCenterHorizontal />
+                <AlignCenterHorizontal className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignRight} title="Align right" aria-label="Align right">
-                <AlignEndHorizontal />
+                <AlignEndHorizontal className="size-4" />
               </IconGroup.Item>
             </IconGroup.Root>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignTop} title="Align top" aria-label="Align top">
-                <AlignStartVertical />
+                <AlignStartVertical className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignMiddle} title="Align middle" aria-label="Align middle">
-                <AlignCenterVertical />
+                <AlignCenterVertical className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignBottom} title="Align bottom" aria-label="Align bottom">
-                <AlignEndVertical />
+                <AlignEndVertical className="size-4" />
               </IconGroup.Item>
             </IconGroup.Root>
           </Section.Row>
@@ -132,13 +133,13 @@ export function ShapeElementInspector() {
             <FieldInput icon={<RotateCcw size={14} />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
             <IconGroup.Root fill>
               <IconGroup.Item>
-                <CornerUpRight />
+                <CornerUpRight className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleFlipX}>
-                <FlipHorizontal2 />
+                <FlipHorizontal2 className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleFlipY}>
-                <FlipHorizontal2 className='rotate-90' />
+                <FlipHorizontal2 className="size-4 rotate-90" />
               </IconGroup.Item>
             </IconGroup.Root>
           </Section.Row>
