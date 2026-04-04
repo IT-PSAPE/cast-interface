@@ -176,7 +176,7 @@ The sender is initialized with:
 
 - sender name: `Cast Interface - Audience`
 - resolution: `1920x1080`
-- alpha enabled: `true`
+- alpha enabled: `false`
 
 Main process NDI behavior:
 
@@ -187,6 +187,8 @@ Main process NDI behavior:
 - If paint frames stop arriving, the main process re-sends the last paint or an empty frame that matches the current alpha mode at `30 FPS`.
 - The offscreen renderer window is recreated automatically after crash/load failure and replays the latest program scene.
 - Output raster is fixed at `1920x1080`; only sender name and alpha are operator-configurable.
+- Audience output defaults to opaque video because many NDI receivers present transparent frames as a white surface.
+- If you enable alpha and preview in NDI Studio Monitor, make sure `Show the NDI source's Alpha Channel` is turned off unless you want to inspect the matte.
 - Graceful shutdown (`before-quit`, `will-quit`, process exit/signals) tears down all NDI senders and runtime.
 
 ### NDI runtime discovery

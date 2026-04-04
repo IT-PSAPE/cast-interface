@@ -47,9 +47,13 @@ export function OutputSettingsPanel() {
 
         <CheckboxField
           checked={config.withAlpha}
-          label="Advertise alpha channel"
+          label="Include alpha channel"
           onChange={handleSetWithAlpha}
         />
+        <p className="text-sm text-text-tertiary">
+          Leave this off for normal audience playback. In NDI Studio Monitor, also disable `Show the NDI source's Alpha Channel`
+          unless you intentionally want to view the matte.
+        </p>
       </SettingsSection>
 
       <SettingsSection title="NDI diagnostics">
