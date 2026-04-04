@@ -1,6 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { EmptyStatePanel } from '../../../../components/display/empty-state-panel';
-import { StageViewport } from '../../../stage/components/stage-viewport';
 import { useSlideBrowserView } from '../hooks/use-slide-browser-view';
 import { SlideBrowserPlaylistTabStrip } from './slide-browser-playlist-tab-strip';
 import { SlideBrowserToolbar } from './slide-browser-toolbar';
@@ -38,13 +37,13 @@ function Root({ children }: { children: ReactNode }) {
   );
 }
 
-function TabsHeader() {
+function Header() {
   const { state } = useSlideBrowserLayout();
-  if (state.headerVariant !== 'tabs') return null;
+  if (state.headerVariant === 'hidden') return null;
 
   return (
     <div className="row-start-1 min-h-0">
-      <SlideBrowserPlaylistTabStrip items={state.items} />
+      <SlideBrowserPlaylistTabStrip items={state.items} headerVariant={state.headerVariant} />
     </div>
   );
 }
@@ -61,19 +60,6 @@ function EmptyState() {
         description="Select an item from a playlist or from the content drawer to load slides in the browser."
       />
     </div>
-  );
-}
-
-function FocusContent() {
-  const { state } = useSlideBrowserLayout();
-  if (state.contentVariant !== 'focus') return null;
-
-  return (
-    <section className="row-start-2 min-h-0 overflow-hidden">
-      <section className="h-full min-h-0 overflow-hidden p-2">
-        <StageViewport />
-      </section>
-    </section>
   );
 }
 
@@ -141,20 +127,18 @@ const SlideBrowserLayout = {
   ContinuousGridContent,
   ContinuousListContent,
   EmptyState,
-  FocusContent,
   Footer,
+  Header,
   Root,
   SingleGridContent,
   SingleListContent,
-  TabsHeader
 };
 
 export function SlideBrowser() {
   return (
     <SlideBrowserLayout.Root>
-      <SlideBrowserLayout.TabsHeader />
+      <SlideBrowserLayout.Header />
       <SlideBrowserLayout.EmptyState />
-      <SlideBrowserLayout.FocusContent />
       <SlideBrowserLayout.SingleGridContent />
       <SlideBrowserLayout.SingleListContent />
       <SlideBrowserLayout.ContinuousGridContent />

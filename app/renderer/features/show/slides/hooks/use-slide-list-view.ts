@@ -5,7 +5,6 @@ import type { SlideVisualState } from '../../../../types/ui';
 import { clamp, getSlideVisualState, slideTextDetails } from '../../../../utils/slides';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlides } from '../../../../contexts/slide-context';
-import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { useSlideOutlineTextEditing } from './use-slide-outline-text-editing';
 
 export interface OutlineSlideRow {
@@ -31,7 +30,6 @@ interface OutlineViewModel {
 export function useOutlineView(): OutlineViewModel {
   const { currentContentItem, currentContentItemId, currentOutputContentItemId, isDetachedContentBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
-  const { setSlideBrowserMode } = useSlideBrowser();
   const { updateText } = useSlideOutlineTextEditing();
   const textEditable = isLyricContentItem(currentContentItem);
   const showLiveState = !isDetachedContentBrowser && currentContentItemId === currentOutputContentItemId;
@@ -70,8 +68,7 @@ export function useOutlineView(): OutlineViewModel {
   const openSlide = useCallback((index: number) => {
     if (slides.length === 0) return;
     setCurrentSlideIndex(clamp(index, 0, slides.length - 1));
-    setSlideBrowserMode('focus');
-  }, [setCurrentSlideIndex, setSlideBrowserMode, slides.length]);
+  }, [setCurrentSlideIndex, slides.length]);
 
   const commitText = useCallback((slideId: Id, nextText: string) => {
     const row = rowBySlideId.get(slideId);

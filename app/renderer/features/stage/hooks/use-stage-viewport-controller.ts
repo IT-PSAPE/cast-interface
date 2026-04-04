@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef } from 'react';
 import type { MediaAsset } from '@core/types';
 import { useElements } from '../../../contexts/element/element-context';
 import { useInspector } from '../../inspector/contexts/inspector-context';
-import { useSlideBrowser } from '../../show/slides/contexts/slide-browser-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useRenderScenes } from '../rendering/render-scene-provider';
 import { mapViewportPointToScene, type SceneViewportTransform } from '../rendering/use-scene-stage-viewport';
@@ -35,7 +34,6 @@ function parseDraggedMedia(raw: string): MediaAsset | null {
 
 export function useStageViewportController(): StageViewportController {
   const { state: { workbenchMode } } = useWorkbench();
-  const { setSlideBrowserMode } = useSlideBrowser();
   const { setInspectorTab } = useInspector();
   const { editScene, showScene } = useRenderScenes();
   const { createFromMedia } = useElements();
@@ -75,9 +73,8 @@ export function useStageViewportController(): StageViewportController {
     const rect = event.currentTarget.getBoundingClientRect();
     const point = mapViewportPointToScene(event.clientX, event.clientY, rect, viewportRef.current);
     void createFromMedia(media, point.x, point.y);
-    setSlideBrowserMode('focus');
     setInspectorTab('shape');
-  }, [createFromMedia, editable, setInspectorTab, setSlideBrowserMode]);
+  }, [createFromMedia, editable, setInspectorTab]);
 
   return {
     actions: {

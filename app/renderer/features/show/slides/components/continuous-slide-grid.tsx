@@ -3,7 +3,6 @@ import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useProjectContent } from '../../../../contexts/use-project-content';
 import { useSlides } from '../../../../contexts/slide-context';
-import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { getSlideVisualState } from '../../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../../../stage/rendering/build-render-scene';
@@ -84,7 +83,6 @@ function GridSection({
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
   const { currentContentItemId, currentOutputContentItemId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
-  const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
 
   const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
@@ -93,8 +91,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
 
   const handleEditSlide = useCallback((itemId: Id, slideIndex: number) => {
     focusContentItemSlide(itemId, slideIndex);
-    setSlideBrowserMode('focus');
-  }, [focusContentItemSlide, setSlideBrowserMode]);
+  }, [focusContentItemSlide]);
 
   const renderSection = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (

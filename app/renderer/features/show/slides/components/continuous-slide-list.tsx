@@ -4,7 +4,6 @@ import type { Id, Slide, SlideElement } from '@core/types';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useProjectContent } from '../../../../contexts/use-project-content';
 import { useSlides } from '../../../../contexts/slide-context';
-import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { getSlideVisualState, slideTextDetails } from '../../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { useSlideOutlineTextEditing } from '../hooks/use-slide-outline-text-editing';
@@ -109,7 +108,6 @@ function OutlineSection({
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
   const { currentContentItemId, currentOutputContentItemId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
-  const { setSlideBrowserMode } = useSlideBrowser();
   const { slideElementsBySlideId } = useProjectContent();
 
   const handleSelectSlide = useCallback((itemId: Id, slideIndex: number) => {
@@ -118,8 +116,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
 
   const handleOpenSlide = useCallback((itemId: Id, slideIndex: number) => {
     focusContentItemSlide(itemId, slideIndex);
-    setSlideBrowserMode('focus');
-  }, [focusContentItemSlide, setSlideBrowserMode]);
+  }, [focusContentItemSlide]);
 
   const renderSection = useCallback((item: PlaylistPresentationSequenceItem) => {
     return (

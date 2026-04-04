@@ -3,10 +3,12 @@ import type { Id } from '@core/types';
 import { Tab, TabBar } from '../../../../components/display/tab-bar';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlides } from '../../../../contexts/slide-context';
+import type { SlideBrowserHeaderVariant } from '../hooks/use-slide-browser-view';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 
 interface SlideBrowserPlaylistTabStripProps {
   items: PlaylistPresentationSequenceItem[];
+  headerVariant: SlideBrowserHeaderVariant;
   action?: ReactNode;
 }
 
@@ -33,8 +35,8 @@ function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
   );
 }
 
-export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrowserPlaylistTabStripProps) {
-  const { currentPlaylistContentItemId } = useNavigation();
+export function SlideBrowserPlaylistTabStrip({ items, headerVariant, action = null }: SlideBrowserPlaylistTabStripProps) {
+  const { currentContentItem, currentPlaylistContentItemId } = useNavigation();
   const { slides, selectPlaylistContentItem } = useSlides();
 
   const handleSelectPresentation = useCallback((itemId: Id) => {
@@ -55,11 +57,17 @@ export function SlideBrowserPlaylistTabStrip({ items, action = null }: SlideBrow
   return (
     <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="min-w-max">
-          <TabBar label="Playlist items">
-            {items.map(renderTabItem)}
-          </TabBar>
-        </div>
+        {headerVariant === 'tabs' ? (
+          <div className="min-w-max">
+            <TabBar label="Playlist items">
+              {items.map(renderTabItem)}
+            </TabBar>
+          </div>
+        ) : (
+          <span className="truncate text-sm font-medium text-text-primary" title={currentContentItem?.title}>
+            {currentContentItem?.title ?? 'No item selected'}
+          </span>
+        )}
       </div>
       <span className="shrink-0 text-sm text-text-tertiary tabular-nums">
         {slides.length} slide{slides.length === 1 ? '' : 's'}

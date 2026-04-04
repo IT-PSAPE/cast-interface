@@ -41,12 +41,12 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
       title="Lyric editor"
       onClose={onClose}
       dataUiRegion="lyric-editor-modal"
-      bodyClassName="max-h-[74vh] overflow-auto bg-background-primary/95 px-0 py-0"
+      bodyClassName="max-h-[74vh] overflow-auto bg-background-primary/95 px-0 py-0 h-full"
       footer={footer}
       popupClassName="max-w-4xl"
     >
-      <div className="px-6 py-5">
-        <div className="mx-auto flex max-w-3xl justify-center pl-13">
+      <div className="px-6 py-5 min-h-80">
+        <div className="mx-auto flex max-w-3xl justify-center">
           <DocEditor
             initialBlocks={initialBlocks}
             onChange={handleChange}

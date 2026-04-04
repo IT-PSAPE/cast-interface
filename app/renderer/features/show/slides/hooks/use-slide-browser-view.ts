@@ -8,11 +8,10 @@ export type SlideBrowserContentVariant =
   | 'continuous-grid'
   | 'continuous-list'
   | 'empty'
-  | 'focus'
   | 'single-grid'
   | 'single-list';
 
-export type SlideBrowserHeaderVariant = 'hidden' | 'tabs';
+export type SlideBrowserHeaderVariant = 'hidden' | 'current' | 'tabs' | 'continuous';
 
 interface SlideBrowserView {
   contentVariant: SlideBrowserContentVariant;
@@ -32,22 +31,22 @@ export function useSlideBrowserView(): SlideBrowserView {
       && !isDetachedContentBrowser
       && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
     const hasItems = items.length > 0;
-    const headerVariant: SlideBrowserHeaderVariant = !hasPresentation
+    const headerVariant: SlideBrowserHeaderVariant = !hasPresentation || !showPlaylistBrowserModes || !hasItems
       ? 'hidden'
-      : playlistBrowserMode === 'tabs' && showPlaylistBrowserModes && hasItems
+      : playlistBrowserMode === 'tabs'
         ? 'tabs'
-        : 'hidden';
+        : playlistBrowserMode === 'continuous'
+          ? 'continuous'
+          : 'current';
     const contentVariant: SlideBrowserContentVariant = !hasPresentation
       ? 'empty'
-      : slideBrowserMode === 'focus'
-        ? 'focus'
-        : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'grid'
-          ? 'continuous-grid'
-          : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'list'
-            ? 'continuous-list'
-            : slideBrowserMode === 'grid'
-              ? 'single-grid'
-              : 'single-list';
+      : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'grid'
+        ? 'continuous-grid'
+        : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'list'
+          ? 'continuous-list'
+          : slideBrowserMode === 'grid'
+            ? 'single-grid'
+            : 'single-list';
     return {
       contentVariant,
       headerVariant,

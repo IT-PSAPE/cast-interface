@@ -53,9 +53,9 @@ export function useKeyboardShortcuts(): void {
         return;
       }
 
-      if (event.altKey && /^[1-3]$/.test(event.key)) {
+      if (event.altKey && /^[1-2]$/.test(event.key)) {
         event.preventDefault();
-        const viewModes: SlideBrowserMode[] = ['focus', 'grid', 'list'];
+        const viewModes: SlideBrowserMode[] = ['grid', 'list'];
         const next = viewModes[Number(event.key) - 1];
         setSlideBrowserMode(next);
         setStatusText(`View: ${CANVAS_VIEW_LABELS[next]}`);

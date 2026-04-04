@@ -1,9 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { ArrowDown, ArrowUp, Copy, GripHorizontal, Plus, Trash2 } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { cn } from '@renderer/utils/cn'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableBlock } from './doc-sortable-block'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
@@ -21,236 +19,7 @@ type DocEditorProps = {
     onChange?: (blocks: Block[]) => void
 }
 
-// ─── Block Menu ─────────────────────────────────────────────────────
-
-type BlockMenuProps = {
-    onAction: (action: string) => void
-    onClose: () => void
-}
-
-function BlockMenu({ onAction, onClose }: BlockMenuProps) {
-    const ref = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-        }
-        const t = setTimeout(() => document.addEventListener('mousedown', handler), 50)
-        return () => {
-            clearTimeout(t)
-            document.removeEventListener('mousedown', handler)
-        }
-    }, [onClose])
-
-    const items = [
-        { id: 'delete', icon: <Trash2 size={14} />, label: 'Delete block', danger: true },
-        { id: 'duplicate', icon: <Copy size={14} />, label: 'Duplicate' },
-        { id: 'sep' },
-        { id: 'move-top', icon: <ArrowUp size={14} />, label: 'Move to top' },
-        { id: 'move-bottom', icon: <ArrowDown size={14} />, label: 'Move to bottom' },
-    ]
-
-    return (
-        <div
-            ref={ref}
-            className="absolute left-0 top-full z-50 mt-1.5 flex min-w-48 flex-col overflow-hidden rounded-md border border-secondary bg-primary p-1 shadow-lg"
-        >
-            {items.map(item =>
-                item.id === 'sep' ? (
-                    <div key="sep" className="my-1 h-px bg-secondary" />
-                ) : (
-                    <button
-                        key={item.id}
-                        type="button"
-                        className={cn(
-                            'flex items-center gap-2 rounded-sm px-2 py-1 text-sm hover:bg-secondary',
-                            item.danger ? 'text-error' : 'text-secondary',
-                        )}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => onAction(item.id)}
-                    >
-                        {item.icon}
-                        {item.label}
-                    </button>
-                ),
-            )}
-        </div>
-    )
-}
-
-// ─── Sortable Block ─────────────────────────────────────────────────
-
-type SortableBlockProps = {
-    block: Block
-    isMenuOpen: boolean
-    contentRef: (el: HTMLDivElement | null) => void
-    onUpdate: (content: string) => void
-    onEnter: (afterContent: string) => void
-    onDelete: () => void
-    onMergeWithPrev: (text: string) => void
-    onMenuToggle: () => void
-    onMenuClose: () => void
-    onMenuAction: (action: string) => void
-    onAddBelow: () => void
-    onFocusPrev: () => void
-    onFocusNext: () => void
-}
-
-function SortableBlock({
-    block,
-    isMenuOpen,
-    contentRef,
-    onUpdate,
-    onEnter,
-    onDelete,
-    onMergeWithPrev,
-    onMenuToggle,
-    onMenuClose,
-    onMenuAction,
-    onAddBelow,
-    onFocusPrev,
-    onFocusNext,
-}: SortableBlockProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: block.id })
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    }
-
-    const initialised = useRef(false)
-    const setContentRef = useCallback(
-        (el: HTMLDivElement | null) => {
-            contentRef(el)
-            if (el && !initialised.current) {
-                el.textContent = block.content
-                initialised.current = true
-            }
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [],
-    )
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault()
-            const el = e.currentTarget
-            const sel = window.getSelection()
-            let before = ''
-            let after = ''
-
-            if (sel?.rangeCount) {
-                const range = sel.getRangeAt(0)
-                const preRange = range.cloneRange()
-                preRange.selectNodeContents(el)
-                preRange.setEnd(range.startContainer, range.startOffset)
-                before = preRange.toString()
-                after = (el.textContent || '').slice(before.length)
-            }
-
-            el.textContent = before
-            onUpdate(before)
-            onEnter(after)
-        } else if (e.key === 'Backspace') {
-            const sel = window.getSelection()
-            const atStart = sel?.rangeCount
-                && sel.getRangeAt(0).collapsed
-                && sel.getRangeAt(0).startOffset === 0
-                && sel.getRangeAt(0).startContainer === e.currentTarget
-                || sel?.getRangeAt(0).startContainer === e.currentTarget.firstChild
-                && sel?.getRangeAt(0).startOffset === 0
-
-            if (!atStart) return
-
-            e.preventDefault()
-            const text = e.currentTarget.textContent || ''
-            if (text === '') {
-                onDelete()
-            } else {
-                onMergeWithPrev(text)
-            }
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            onFocusPrev()
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            onFocusNext()
-        }
-    }
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={cn(
-                'group relative flex items-start rounded-md',
-                isDragging ? 'opacity-25' : 'hover:bg-secondary',
-                isMenuOpen && 'bg-secondary',
-            )}
-        >
-            {/* Left handles */}
-            <div className={cn(
-                'absolute -left-13 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity',
-                isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-            )}>
-                <button
-                    type="button"
-                    className="flex size-5.5 items-center justify-center rounded text-quaternary hover:bg-tertiary hover:text-secondary"
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={onAddBelow}
-                >
-                    <Plus size={12} />
-                </button>
-
-                <div className="relative">
-                    <button
-                        type="button"
-                        className="flex size-5.5 cursor-grab items-center justify-center rounded text-quaternary hover:bg-tertiary hover:text-secondary"
-                        onClick={onMenuToggle}
-                        {...listeners}
-                        {...attributes}
-                    >
-                        <GripHorizontal size={12} />
-                    </button>
-                    {isMenuOpen && (
-                        <BlockMenu
-                            onAction={action => {
-                                onMenuClose()
-                                onMenuAction(action)
-                            }}
-                            onClose={onMenuClose}
-                        />
-                    )}
-                </div>
-            </div>
-
-            {/* Content */}
-            <div
-                ref={setContentRef}
-                contentEditable
-                suppressContentEditableWarning
-                className="doc-block min-h-[1.7em] flex-1 break-words px-0.5 py-px text-paragraph-sm text-primary outline-none"
-                data-placeholder="Type something..."
-                onKeyDown={handleKeyDown}
-                onInput={e => onUpdate(e.currentTarget.textContent || '')}
-            />
-        </div>
-    )
-}
-
-// ─── Doc Editor ─────────────────────────────────────────────────────
-
-export default function DocEditor({
-    initialBlocks,
-    onChange,
-}: DocEditorProps) {
+export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
     const [blocks, setBlocks] = useState<Block[]>(
         () => initialBlocks ?? [{ id: uid(), content: '' }],
     )
@@ -348,7 +117,6 @@ export default function DocEditor({
             .map(b => b.id === prevBlock.id ? { ...b, content: b.content + text } : b)
             .filter(b => b.id !== id),
         )
-        // Place cursor at the merge point in the previous block
         requestAnimationFrame(() => {
             const el = contentRefs.current[prevBlock.id]
             if (!el) return
@@ -359,6 +127,51 @@ export default function DocEditor({
                 if (textNode) {
                     const range = document.createRange()
                     range.setStart(textNode, mergePoint)
+                    range.collapse(true)
+                    window.getSelection()?.removeAllRanges()
+                    window.getSelection()?.addRange(range)
+                }
+            } catch { /* empty */ }
+        })
+    }, [])
+
+    const pasteIntoBlock = useCallback((blockId: string, before: string, lines: string[], after: string) => {
+        const firstLine = before + lines[0]
+        const middleLines = lines.slice(1, -1)
+        const lastLine = lines.length > 1 ? (lines[lines.length - 1] + after) : null
+
+        const newBlocks: Block[] = middleLines.map(line => ({ id: uid(), content: line }))
+        const lastId = lastLine !== null ? uid() : null
+        if (lastId !== null && lastLine !== null) {
+            newBlocks.push({ id: lastId, content: lastLine })
+        }
+
+        setBlocks(prev => {
+            const idx = prev.findIndex(b => b.id === blockId)
+            if (idx === -1) return prev
+            const updated = [...prev]
+            updated[idx] = { ...updated[idx], content: firstLine }
+            updated.splice(idx + 1, 0, ...newBlocks)
+            return updated
+        })
+
+        const focusTargetId = lastId ?? blockId
+        requestAnimationFrame(() => {
+            const el = contentRefs.current[blockId]
+            if (el) el.textContent = firstLine
+            for (const newBlock of newBlocks) {
+                const newEl = contentRefs.current[newBlock.id]
+                if (newEl) newEl.textContent = newBlock.content
+            }
+            const focusEl = contentRefs.current[focusTargetId]
+            if (!focusEl) return
+            focusEl.focus()
+            try {
+                const textNode = focusEl.firstChild
+                if (textNode) {
+                    const cursorPos = lastLine !== null ? lastLine.length - after.length : firstLine.length
+                    const range = document.createRange()
+                    range.setStart(textNode, Math.min(cursorPos, textNode.textContent?.length ?? 0))
                     range.collapse(true)
                     window.getSelection()?.removeAllRanges()
                     window.getSelection()?.addRange(range)
@@ -419,6 +232,7 @@ export default function DocEditor({
                                 onMenuClose={() => setOpenMenu(null)}
                                 onMenuAction={action => handleMenuAction(block.id, action)}
                                 onAddBelow={() => addBlockAfter(block.id)}
+                                onPaste={(before, lines, after) => pasteIntoBlock(block.id, before, lines, after)}
                                 onFocusPrev={() => {
                                     const prev = blocks[index - 1]
                                     if (prev) focusEnd(prev.id)
@@ -432,16 +246,6 @@ export default function DocEditor({
                     </SortableContext>
                 </DndContext>
             </div>
-
-            <div
-                className="min-h-20 cursor-text pl-13 pt-1"
-                onClick={() => {
-                    const last = blocks[blocks.length - 1]
-                    if (!last) return
-                    if (!last.content) focusEnd(last.id)
-                    else addBlockAfter(last.id)
-                }}
-            />
         </div>
     )
 }

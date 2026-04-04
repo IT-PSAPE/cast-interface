@@ -54,7 +54,7 @@ function getStoredSlideBrowserPreferences(): {
       playlistBrowserMode?: PlaylistBrowserMode;
     };
     return {
-      slideBrowserMode: parsed.slideBrowserMode === 'focus' || parsed.slideBrowserMode === 'grid' || parsed.slideBrowserMode === 'list'
+      slideBrowserMode: parsed.slideBrowserMode === 'grid' || parsed.slideBrowserMode === 'list'
         ? parsed.slideBrowserMode
         : 'grid',
       playlistBrowserMode: parsed.playlistBrowserMode === 'current' || parsed.playlistBrowserMode === 'tabs' || parsed.playlistBrowserMode === 'continuous'
