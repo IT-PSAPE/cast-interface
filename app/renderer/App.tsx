@@ -9,27 +9,27 @@ import { SlideEditorProvider } from './contexts/slide-editor-context';
 import { ElementProvider } from './contexts/element/element-context';
 import { OverlayEditorProvider } from './contexts/overlay-editor/overlay-editor-context';
 import { TemplateEditorProvider } from './contexts/template-editor-context';
-import { InspectorProvider } from './features/inspector/contexts/inspector-context';
-import { ResourceDrawerProvider } from './features/show/resources/contexts/resource-drawer-context';
-import { SlideBrowserProvider } from './features/show/slides/contexts/slide-browser-context';
+import { InspectorProvider } from './features/inspector/inspector-context';
+import { ResourceDrawerProvider } from './features/show/resource-drawer-context';
+import { SlideBrowserProvider } from './features/show/slide-browser-context';
 import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
 import { WorkbenchProvider, useWorkbench } from './contexts/workbench-context';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
-import { AppToolbar } from './features/workbench/components/app-toolbar';
-import { WindowsInlineMenuBar } from './features/workbench/components/windows-inline-menu-bar';
-import { LibraryPanelProvider } from './features/show/library/contexts/library-panel-context';
-import { ShowModeLayout } from './features/workbench/components/show-mode-layout';
-import { SlideEditorLayout } from './features/workbench/components/slide-editor-layout';
-import { OverlayEditorLayout } from './features/workbench/components/overlay-editor-layout';
-import { TemplateEditorLayout } from './features/workbench/components/template-editor-layout';
-import { PanelRoute, usePanelRoute } from './features/workbench/components/panel-route';
+import { AppToolbar } from './features/workbench/app-toolbar';
+import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
+import { LibraryPanelProvider } from './features/show/library-panel-context';
+import { ShowModeLayout } from './features/workbench/show-mode-layout';
+import { SlideEditorLayout } from './features/workbench/slide-editor-layout';
+import { OverlayEditorLayout } from './features/workbench/overlay-editor-layout';
+import { TemplateEditorLayout } from './features/workbench/template-editor-layout';
+import { PanelRoute, usePanelRoute } from './features/workbench/panel-route';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { OverlayProvider } from './components/overlays/overlay-provider';
-import { RenderSceneProvider } from './features/stage/rendering/render-scene-provider';
+import { RenderSceneProvider } from './features/stage/render-scene-provider';
 import { StatusBar } from './components/display/status-bar';
-import { ProgramOutputProvider } from './features/show/playback/contexts/program-output-context';
-import { ShowAudioProvider } from './features/show/playback/contexts/show-audio-context';
-import { NdiFrameCapture } from './features/show/playback/components/ndi-frame-capture';
+import { ProgramOutputProvider } from './features/show/program-output-context';
+import { ShowAudioProvider } from './features/show/show-audio-context';
+import { NdiFrameCapture } from './features/show/ndi-frame-capture';
 
 // ─── Provider Groups ─────────────────────────────────────────────────
 // Organized by responsibility tier following moc-console patterns:
@@ -145,7 +145,7 @@ function AppLayoutContent() {
 
   if (!snapshot) {
     return (
-      <div className="grid place-items-center h-full text-text-secondary">
+      <div className="grid place-items-center h-full text-secondary">
         Loading Cast Interface…
       </div>
     );

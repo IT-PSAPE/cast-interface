@@ -51,11 +51,11 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
   }
 
   const colorField = (
-    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center gap-1.5 min-h-8 rounded bg-tertiary text-sm text-primary transition-colors focus-within:border-brand">
       <button
         type="button"
         onClick={handleSwatchClick}
-        className="ml-1.5 size-5 shrink-0 rounded border border-border-primary cursor-pointer"
+        className="ml-1.5 size-5 shrink-0 rounded border border-primary cursor-pointer"
         style={{ backgroundColor: toPickerHex(safeValue) }}
       />
       <input
@@ -66,7 +66,7 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
         className="sr-only"
         tabIndex={-1}
       />
-      <span className="text-text-tertiary text-sm select-none">#</span>
+      <span className="text-tertiary text-sm select-none">#</span>
       <input
         type="text"
         value={displayHex(safeValue)}

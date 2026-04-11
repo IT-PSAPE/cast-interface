@@ -16,7 +16,7 @@ export function FieldSelect({ value, onChange, onBlur, options, icon, label, wid
   const select = (
     <div className="flex min-w-0 items-center">
       {icon ? (
-        <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
+        <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">
           {icon}
         </span>
       ) : null}

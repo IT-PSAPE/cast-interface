@@ -6,8 +6,8 @@ const selectableRowStyles = cv({
   base: 'flex h-7 w-full items-center gap-2 rounded px-1.5 text-left transition-colors',
   variants: {
     selected: {
-      true: ['bg-background-active text-text-primary'],
-      false: ['text-text-secondary hover:bg-background-tertiary/55'],
+      true: ['bg-active text-primary'],
+      false: ['text-secondary hover:bg-tertiary/55'],
     },
   },
   defaultVariants: {

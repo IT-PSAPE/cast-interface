@@ -21,11 +21,11 @@ export function StatusBar() {
   return (
     <div
       data-ui-region="status-bar"
-      className="border-t border-border-primary bg-background-primary/60 px-2 py-1 flex items-center gap-3 text-sm"
+      className="border-t border-primary bg-primary/60 px-2 py-1 flex items-center gap-3 text-sm"
     >
-      <span className="text-text-secondary">{statusText}</span>
+      <span className="text-secondary">{statusText}</span>
 
-      <div className="ml-auto flex items-center gap-2 text-text-tertiary">
+      <div className="ml-auto flex items-center gap-2 text-tertiary">
         <span className="flex items-center gap-1">
           <span className={indicatorStyles({ active: outputState.audience })} />
           {audienceStateLabel}

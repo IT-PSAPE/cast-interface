@@ -137,7 +137,7 @@ function Content({ children, className, ...props }: HTMLAttributes<HTMLDivElemen
       aria-modal="true"
       aria-describedby={meta.descriptionId}
       aria-labelledby={meta.titleId}
-      className={cn('pointer-events-auto flex w-full max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-lg border border-border-primary bg-primary shadow-2xl outline-none', className)}
+      className={cn('pointer-events-auto flex w-full max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-lg border border-primary bg-primary shadow-2xl outline-none', className)}
     >
       {children}
     </div>
@@ -146,7 +146,7 @@ function Content({ children, className, ...props }: HTMLAttributes<HTMLDivElemen
 
 function Header({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-center justify-between gap-3 border-b border-border-primary px-4 py-3', className)} {...props}>
+    <div className={cn('flex items-center justify-between gap-3 border-b border-primary px-4 py-3', className)} {...props}>
       {children}
     </div>
   );
@@ -164,7 +164,7 @@ function Title({ children, className, ...props }: HTMLAttributes<HTMLHeadingElem
   }, [generatedId, meta]);
 
   return (
-    <h2 {...props} id={generatedId} className={cn('m-0 text-lg font-semibold text-text-primary', className)}>
+    <h2 {...props} id={generatedId} className={cn('m-0 text-lg font-semibold text-primary', className)}>
       {children}
     </h2>
   );
@@ -182,7 +182,7 @@ function Description({ children, className, ...props }: HTMLAttributes<HTMLParag
   }, [generatedId, meta]);
 
   return (
-    <p {...props} id={generatedId} className={cn('text-sm text-text-secondary', className)}>
+    <p {...props} id={generatedId} className={cn('text-sm text-secondary', className)}>
       {children}
     </p>
   );

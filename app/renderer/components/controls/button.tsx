@@ -10,10 +10,10 @@ const buttonVariants = cv({
   base: 'cursor-pointer transition-colors',
   variants: {
     variant: {
-      default: 'bg-background-tertiary text-text-primary hover:border-focus hover:text-text-primary',
-      take: 'bg-background-success_primary text-text-primary',
-      danger: 'bg-background-error_primary text-text-primary',
-      ghost: 'bg-transparent text-text-secondary hover:text-text-primary',
+      default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
+      take: 'bg-success_primary text-primary',
+      danger: 'bg-error_primary text-primary',
+      ghost: 'bg-transparent text-secondary hover:text-primary',
     },
     size: {
       default: 'rounded px-1.5 py-0.5 text-center text-sm leading-tight',
@@ -36,10 +36,10 @@ const buttonVariants = cv({
     active: false,
   },
   compoundVariants: [
-    { variant: 'default', active: true, className: 'bg-background-quaternary text-text-primary' },
-    { variant: 'take', active: true, className: 'bg-background-success_primary text-text-primary' },
-    { variant: 'danger', active: true, className: 'bg-background-error_primary text-text-primary' },
-    { variant: 'ghost', active: true, className: 'bg-background-active text-text-primary' },
+    { variant: 'default', active: true, className: 'bg-quaternary text-primary' },
+    { variant: 'take', active: true, className: 'bg-success_primary text-primary' },
+    { variant: 'danger', active: true, className: 'bg-error_primary text-primary' },
+    { variant: 'ghost', active: true, className: 'bg-active text-primary' },
   ],
 });
 
@@ -47,10 +47,10 @@ const iconButtonVariants = cv({
   base: 'cursor-pointer transition-colors',
   variants: {
     variant: {
-      default: 'bg-background-tertiary text-text-primary hover:border-focus hover:text-text-primary',
-      take: 'bg-background-success_primary text-text-primary',
-      danger: 'bg-background-error_primary text-text-primary',
-      ghost: 'bg-transparent text-text-secondary hover:text-text-primary',
+      default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
+      take: 'bg-success_primary text-primary',
+      danger: 'bg-error_primary text-primary',
+      ghost: 'bg-transparent text-secondary hover:text-primary',
     },
     size: {
       sm: 'rounded-md h-5 w-5 p-0.5 grid place-items-center',
@@ -73,10 +73,10 @@ const iconButtonVariants = cv({
     active: false,
   },
   compoundVariants: [
-    { variant: 'default', active: true, className: 'bg-background-quaternary text-text-primary' },
-    { variant: 'take', active: true, className: 'bg-background-success_primary text-text-primary' },
-    { variant: 'danger', active: true, className: 'bg-background-error_primary text-text-primary' },
-    { variant: 'ghost', active: true, className: 'bg-background-active text-text-primary' },
+    { variant: 'default', active: true, className: 'bg-quaternary text-primary' },
+    { variant: 'take', active: true, className: 'bg-success_primary text-primary' },
+    { variant: 'danger', active: true, className: 'bg-error_primary text-primary' },
+    { variant: 'ghost', active: true, className: 'bg-active text-primary' },
   ],
 });
 

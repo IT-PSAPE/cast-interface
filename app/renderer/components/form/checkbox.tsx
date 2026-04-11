@@ -18,7 +18,7 @@ function useCheckbox() {
 }
 
 const checkboxRootStyles = cv({
-  base: 'inline-flex items-center gap-2 text-sm text-text-secondary',
+  base: 'inline-flex items-center gap-2 text-sm text-secondary',
   variants: {
     disabled: {
       true: 'opacity-50',
@@ -34,8 +34,8 @@ const checkboxIndicatorStyles = cv({
   base: 'grid h-4 w-4 shrink-0 place-items-center rounded border transition-colors',
   variants: {
     checked: {
-      true: 'border-brand bg-background-brand_primary text-brand-700',
-      false: 'border-border-primary bg-background-primary text-transparent',
+      true: 'border-brand bg-brand_primary text-brand-700',
+      false: 'border-primary bg-primary text-transparent',
     },
     disabled: {
       true: null,

@@ -9,7 +9,7 @@ interface FieldLabelProps {
 
 export function FieldLabel({ label, wide, children }: FieldLabelProps) {
   return (
-    <label className={cn('grid min-w-0 gap-0.5 text-sm text-text-secondary', wide && 'col-span-full')}>
+    <label className={cn('grid min-w-0 gap-0.5 text-sm text-secondary', wide && 'col-span-full')}>
       <span className="truncate">{label}</span>
       {children}
     </label>

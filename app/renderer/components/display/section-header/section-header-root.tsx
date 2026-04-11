@@ -22,8 +22,8 @@ export function SectionHeaderRoot({ children, className, density = 'comfortable'
       <div
         {...divProps}
         className={cn(
-          'flex items-center bg-primary text-text-secondary',
-          bordered ? 'border-b border-border-primary' : null,
+          'flex items-center bg-primary text-secondary',
+          bordered ? 'border-b border-primary' : null,
           className,
         )}
       >

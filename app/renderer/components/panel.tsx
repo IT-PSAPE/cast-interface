@@ -13,8 +13,8 @@ const panelStyles = cv({
   base: 'flex h-full min-h-0 flex-col overflow-hidden',
   variants: {
     bordered: {
-      left: ['border-l border-border-primary bg-primary'],
-      right: ['border-r border-border-primary bg-primary'],
+      left: ['border-l border-primary bg-primary'],
+      right: ['border-r border-primary bg-primary'],
       none: [''],
     },
   },
@@ -37,7 +37,7 @@ function Root({ children, className, as: Component = 'div', bordered = 'none', .
 
 function PanelHeader({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-layer="panel-header" className={cn('flex items-center px-2 py-1.5 border-b border-border-primary', className)} {...rest}>
+    <div data-layer="panel-header" className={cn('flex items-center px-2 py-1.5 border-b border-primary', className)} {...rest}>
       {children}
     </div>
   );
@@ -57,7 +57,7 @@ function PanelBody({ children, className, scroll = true, ...rest }: PanelBodyPro
 
 function PanelFooter({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-layer="panel-footer" className={cn('border-t border-border-primary', className)} {...rest}>
+    <div data-layer="panel-footer" className={cn('border-t border-primary', className)} {...rest}>
       {children}
     </div>
   );
@@ -96,8 +96,8 @@ const itemStyles = cv({
   base: 'flex items-center w-full rounded-sm border-0 px-2 py-1.5 text-left cursor-pointer',
   variants: {
     selected: {
-      true: ['bg-background-active text-text-primary'],
-      false: ['hover:bg-background-quaternary/50 hover:text-text-primary'],
+      true: ['bg-active text-primary'],
+      false: ['hover:bg-quaternary/50 hover:text-primary'],
     },
   },
   defaultVariants: {
@@ -115,7 +115,7 @@ interface PanelItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
 function PanelItem({ children, className, leading, trailing, selected, type = 'button', ...rest }: PanelItemProps) {
   return (
     <button type={type} className={itemStyles({ selected, className })} data-layer="panel-item" {...rest}>
-      {leading ? <span className="shrink-0 text-text-tertiary mr-2">{leading}</span> : null}
+      {leading ? <span className="shrink-0 text-tertiary mr-2">{leading}</span> : null}
       <span className="min-w-0 flex-1">{children}</span>
       {trailing ? <span className="shrink-0 ml-2">{trailing}</span> : null}
     </button>

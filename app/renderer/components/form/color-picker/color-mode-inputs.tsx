@@ -102,9 +102,9 @@ export function ColorModeInputs({ hsb, alpha, mode, showAlpha, onHsbChange, onAl
             onChange={(e) => handleAlphaInput(e.target.value)}
             min={0}
             max={100}
-            className="w-8 min-w-0 bg-transparent py-1 text-center text-sm text-text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-8 min-w-0 bg-transparent py-1 text-center text-sm text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="pr-1 text-sm text-text-tertiary">%</span>
+          <span className="pr-1 text-sm text-tertiary">%</span>
         </div>
       ) : null}
     </div>
@@ -113,7 +113,7 @@ export function ColorModeInputs({ hsb, alpha, mode, showAlpha, onHsbChange, onAl
 
 function SplitInputGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-1 items-stretch bg-tertiary [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-border-primary">
+    <div className="flex min-w-0 flex-1 items-stretch bg-tertiary [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-primary">
       {children}
     </div>
   );
@@ -129,7 +129,7 @@ function SplitInput({ value, onChange }: { value: number; onChange: (v: string) 
       type="number"
       value={value}
       onChange={handleChange}
-      className="w-full min-w-0 bg-transparent px-1 py-1 text-center text-sm text-text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      className="w-full min-w-0 bg-transparent px-1 py-1 text-center text-sm text-primary outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
   );
 }
@@ -171,7 +171,7 @@ function MiniHexInput({ value, onCommit }: { value: string; onCommit: (v: string
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         maxLength={8}
-        className="w-full min-w-0 bg-transparent px-1.5 py-1 text-center font-mono text-sm text-text-primary outline-none"
+        className="w-full min-w-0 bg-transparent px-1.5 py-1 text-center font-mono text-sm text-primary outline-none"
       />
     </div>
   );

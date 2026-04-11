@@ -37,7 +37,7 @@ export function DialogFrame({ title, onClose, children, dataUiRegion, bodyClassN
             <div className={cn('min-h-0', bodyClassName)}>
               {children}
             </div>
-            {footer ? <footer className="flex items-center justify-between border-t border-border-primary px-4 py-3">{footer}</footer> : null}
+            {footer ? <footer className="flex items-center justify-between border-t border-primary px-4 py-3">{footer}</footer> : null}
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Portal>

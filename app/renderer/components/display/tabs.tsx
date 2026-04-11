@@ -47,8 +47,8 @@ const tabStyles = cv({
   base: 'cursor-pointer border-0 text-sm leading-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-brand disabled:pointer-events-none disabled:opacity-50',
   variants: {
     active: {
-      true: 'text-text-primary font-medium',
-      false: 'text-text-tertiary hover:text-text-secondary',
+      true: 'text-primary font-medium',
+      false: 'text-tertiary hover:text-secondary',
     },
     orientation: {
       horizontal: '-mb-px border-b-2 px-2 py-1.5',
@@ -62,7 +62,7 @@ const tabStyles = cv({
   compoundVariants: [
     { active: true, orientation: 'horizontal', className: 'border-b-selected' },
     { active: false, orientation: 'horizontal', className: 'border-b-transparent' },
-    { active: true, orientation: 'vertical', className: 'bg-background-active' },
+    { active: true, orientation: 'vertical', className: 'bg-active' },
   ],
 });
 

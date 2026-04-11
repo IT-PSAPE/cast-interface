@@ -12,8 +12,8 @@ const optionStyles = cv({
       false: [],
     },
     selected: {
-      true: ['text-text-primary'],
-      false: ['text-text-secondary'],
+      true: ['text-primary'],
+      false: ['text-secondary'],
     },
   },
   defaultVariants: {
@@ -167,12 +167,12 @@ export function CustomSelect({ value, onChange, onBlur, options, className = '',
         aria-haspopup="listbox"
         onClick={open ? handleClose : handleOpen}
         onKeyDown={handleKeyDown}
-        className="flex min-w-0 w-full items-center min-h-8 rounded-md bg-tertiary text-sm text-text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
+        className="flex min-w-0 w-full items-center min-h-8 rounded-md bg-tertiary text-sm text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
       >
         <span className="truncate flex-1 px-1.5 text-left" style={selectedOption?.style}>
           {selectedLabel}
         </span>
-        <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-text-tertiary" />
+        <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-tertiary" />
       </button>
 
       <Popover anchor={triggerRef.current} open={open} onClose={handleClose} placement="bottom" offset={2}>
@@ -181,7 +181,7 @@ export function CustomSelect({ value, onChange, onBlur, options, className = '',
           role="listbox"
           aria-activedescendant={highlightedIndex >= 0 ? `option-${highlightedIndex}` : undefined}
           onKeyDown={handleKeyDown}
-          className="rounded-lg border border-border-primary bg-primary shadow-lg max-h-60 overflow-y-auto py-1"
+          className="rounded-lg border border-primary bg-primary shadow-lg max-h-60 overflow-y-auto py-1"
           style={{ minWidth: triggerRef.current?.offsetWidth }}
         >
           {options.map((opt, index) => {

@@ -22,9 +22,9 @@ export function FieldInput({ disabled = false, type = 'text', value, onChange, o
   }
 
   const input = (
-    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-text-primary transition-colors focus-within:border-brand">
+    <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-primary transition-colors focus-within:border-brand">
       {icon ? (
-        <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-text-secondary">
+        <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">
           {icon}
         </span>
       ) : null}

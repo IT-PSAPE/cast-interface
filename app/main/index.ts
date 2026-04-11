@@ -81,7 +81,12 @@ function createRendererWindowOptions(view: RendererView, width: number, height: 
           height: 36,
         },
       }
-      : {}),
+      : process.platform === 'darwin'
+        ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 13, y: 13 },
+        }
+        : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       sandbox: false,

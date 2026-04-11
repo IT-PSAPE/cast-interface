@@ -106,7 +106,7 @@ export function OverlayClose({ children, onClick, onClose, ...props }: OverlayCl
 
 export function OverlayHeader({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-center gap-2 border-b border-border-primary p-3', className)} {...props}>
+    <div className={cn('flex items-center gap-2 border-b border-primary p-3', className)} {...props}>
       {children}
     </div>
   );
@@ -126,7 +126,7 @@ export function OverlayContent({ children, className, ...props }: HTMLAttributes
 
 export function OverlayFooter({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-center gap-2 border-t border-border-primary p-3', className)} {...props}>
+    <div className={cn('flex items-center gap-2 border-t border-primary p-3', className)} {...props}>
       {children}
     </div>
   );

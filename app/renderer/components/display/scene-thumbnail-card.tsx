@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import type { RenderScene } from '../../features/stage/rendering/scene-types';
+import type { RenderScene } from '../../features/stage/scene-types';
 import { SceneFrame } from './scene-frame';
-import { SceneStage } from '../../features/stage/rendering/scene-stage';
+import { SceneStage } from '../../features/stage/scene-stage';
 import { ThumbnailTile } from './thumbnail-tile';
 
 interface SceneThumbnailCardProps {
@@ -29,9 +29,9 @@ export function SceneThumbnailCard({ scene, index, label, selected, onClick, onD
       overlay={badge}
       body={(
         <>
-          <SceneFrame width={scene.width} height={scene.height} className="bg-background-tertiary" stageClassName="absolute inset-0" checkerboard={checkerboard}>
+          <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard={checkerboard}>
             {emptyLabel ? (
-              <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-text-tertiary">
+              <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
                 {emptyLabel}
               </div>
             ) : null}
@@ -46,9 +46,9 @@ export function SceneThumbnailCard({ scene, index, label, selected, onClick, onD
       )}
       caption={(
         <div className="flex items-center gap-2">
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-text-secondary">{index + 1}</span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
           {captionIcon}
-          <span className="truncate text-sm text-text-tertiary">{secondaryText ?? label}</span>
+          <span className="truncate text-sm text-tertiary">{secondaryText ?? label}</span>
         </div>
       )}
     />

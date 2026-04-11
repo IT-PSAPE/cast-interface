@@ -32,7 +32,7 @@ export function FieldTextarea({ disabled = false, value, onChange, onFocus, onKe
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`min-w-0 w-full rounded border border-border-primary bg-primary px-1.5 py-1 text-sm text-text-primary min-h-[60px] ${resizeClassName} focus:border-brand focus:outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`min-w-0 w-full rounded border border-primary bg-primary px-1.5 py-1 text-sm text-primary min-h-[60px] ${resizeClassName} focus:border-brand focus:outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     />
   );
 

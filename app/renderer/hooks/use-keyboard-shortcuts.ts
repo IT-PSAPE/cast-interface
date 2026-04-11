@@ -4,7 +4,7 @@ import { CANVAS_VIEW_LABELS, PLAYLIST_DISPLAY_MODE_LABELS } from '../utils/slide
 import { useCast } from '../contexts/cast-context';
 import { useSlides } from '../contexts/slide-context';
 import { useElements } from '../contexts/element/element-context';
-import { useSlideBrowser } from '../features/show/slides/contexts/slide-browser-context';
+import { useSlideBrowser } from '../features/show/slide-browser-context';
 import { useWorkbench } from '../contexts/workbench-context';
 
 export function useKeyboardShortcuts(): void {
