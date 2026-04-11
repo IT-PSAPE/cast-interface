@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { clamp } from '../../utils/math';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -192,8 +193,4 @@ function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
     right: ['top', 'bottom'],
   };
   return [preferred, opposite[preferred], ...crossAxis[preferred]];
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

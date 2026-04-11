@@ -1,9 +1,9 @@
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { EditableTextArea } from '../../components/form/editable-text-area';
+import { EditableField } from '../../components/form/editable-field';
 import { SceneFrame } from '../../components/display/scene-frame';
-import { ThumbnailLiveBadge } from '../../components/display/thumbnail-live-badge';
 import { Thumbnail } from '../../components/display/thumbnail';
+import { Play } from 'lucide-react';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { SceneStage } from '../stage/scene-stage';
 import type { RenderScene } from '../stage/scene-types';
@@ -44,7 +44,8 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
     }
 
     return (
-      <EditableTextArea
+      <EditableField
+        multiline
         value={row.text}
         onCommit={handleTextCommit}
         trimOnCommit={false}
@@ -61,11 +62,11 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
       className={rowStateClass}
       preview={(
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">
-          {row.elements.length === 0 && (
+          {row.elements.length === 0 ? (
             <div className="absolute inset-0 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
               Empty
             </div>
-          )}
+          ) : null}
           <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
         </SceneFrame>
       )}
@@ -84,7 +85,11 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
         </>
       )}
       bodyClassName={row.textEditable ? 'content-start' : 'content-center'}
-      overlay={row.state === 'live' ? <ThumbnailLiveBadge className="absolute right-2 top-2" /> : null}
+      overlay={row.state === 'live' ? (
+        <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+          <Play size={12} strokeWidth={1.9} />
+        </span>
+      ) : null}
     />
   );
 }

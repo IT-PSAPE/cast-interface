@@ -1,4 +1,3 @@
-import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 import { useCast } from '../../contexts/cast-context';
 import { useNdi } from '../../contexts/ndi-context';

@@ -1,26 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { Label } from '../display/text';
 
-interface EditableTextProps {
+interface EditableFieldProps {
   value: string;
   onCommit: (newValue: string) => void;
   editing?: boolean;
   placeholder?: string;
   className?: string;
   trimOnCommit?: boolean;
+  multiline?: boolean;
 }
 
-export function EditableText({
+export function EditableField({
   value,
   onCommit,
   editing = false,
   placeholder = 'Untitled',
   className = '',
   trimOnCommit = true,
-}: EditableTextProps) {
+  multiline = false,
+}: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(editing);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (editing) {
@@ -45,17 +47,24 @@ export function EditableText({
     }
   }
 
-  function handleDoubleClick(e: React.MouseEvent<HTMLSpanElement>) {
+  function handleDoubleClick(e: React.MouseEvent) {
     e.stopPropagation();
     setDraft(value);
     setIsEditing(true);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: React.KeyboardEvent) {
     e.stopPropagation();
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      commit();
+    if (multiline) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        commit();
+      }
+    } else {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commit();
+      }
     }
     if (e.key === 'Escape') {
       setIsEditing(false);
@@ -63,7 +72,7 @@ export function EditableText({
     }
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setDraft(e.target.value);
   }
 
@@ -71,27 +80,50 @@ export function EditableText({
     commit();
   }
 
-  function handleMouseDownInput(e: React.MouseEvent<HTMLInputElement>) {
+  function handleMouseDownInput(e: React.MouseEvent) {
     e.stopPropagation();
   }
 
-  function handleClickInput(e: React.MouseEvent<HTMLInputElement>) {
+  function handleClickInput(e: React.MouseEvent) {
     e.stopPropagation();
   }
 
   if (isEditing) {
+    const sharedProps = {
+      value: draft,
+      onChange: handleChange,
+      onKeyDown: handleKeyDown,
+      onBlur: handleBlur,
+      onMouseDown: handleMouseDownInput,
+      onClick: handleClickInput,
+      placeholder,
+    };
+
+    if (multiline) {
+      return (
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          {...sharedProps}
+          rows={Math.max(3, draft.split('\n').length || 1)}
+          className={`m-0 w-full resize-y border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
+        />
+      );
+    }
+
     return (
       <input
-        ref={inputRef}
-        value={draft}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onMouseDown={handleMouseDownInput}
-        onClick={handleClickInput}
-        placeholder={placeholder}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
+        {...sharedProps}
         className={`all-unset m-0 border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
       />
+    );
+  }
+
+  if (multiline) {
+    return (
+      <div onDoubleClick={handleDoubleClick} className={`cursor-default select-none whitespace-pre-wrap ${className}`}>
+        {value || placeholder}
+      </div>
     );
   }
 

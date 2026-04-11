@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import type { ContentItem, Id, PlaylistTree } from '@core/types';
 import type { ContextMenuItem } from '../../components/overlays/context-menu';
-import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
+import { ContentItemIcon } from '../../components/display/entity-icon';
 import type { LibraryPanelView } from '../../types/ui';
 import { buildCreateContentMenuItems } from '../../utils/build-create-presentation-menu-items';
 import { buildContentItemMenuItems } from './build-presentation-menu-items';

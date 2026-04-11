@@ -2,13 +2,21 @@ import { useCallback } from 'react';
 import { isLyricContentItem } from '@core/content-items';
 import type { AppSnapshot, ContentItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slides';
-import { createId } from '../../utils/create-id';
 import { useOverlayDefaults } from '../overlay-defaults-context';
 import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
 import { useProjectContent } from '../use-project-content';
 import { useSlideEditor } from '../slide-editor-context';
 import { useTemplateEditor } from '../template-editor-context';
 import { useWorkbench } from '../workbench-context';
+import {
+  newOverlayElement,
+  newShapePayload,
+  newSlideMediaElement,
+  newSlideShapeElement,
+  newSlideTextElement,
+  newTextPayload,
+  nextOverlayZIndex,
+} from './element-factory';
 
 interface CommandsParams {
   currentSlide: Slide | null;
@@ -38,29 +46,24 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
     return castMediaSrc(filePath);
   }
 
+  function addToOverlay(element: SlideElement) {
+    if (!currentOverlay) return;
+    updateOverlayDraft({ id: currentOverlay.id, elements: [...currentOverlay.elements, element] });
+  }
+
+  function addToTemplate(element: SlideElement) {
+    if (!currentTemplate) return;
+    replaceTemplateElements([...currentTemplate.elements, element]);
+  }
+
+  function addToSlideEdit(slideId: Id, element: SlideElement) {
+    replaceSlideElements(slideId, [...getSlideElements(slideId), element]);
+  }
+
   const createText = useCallback(async () => {
     if (isOverlayEdit) {
       if (!currentOverlay) return;
-      const nextElements = [
-        ...currentOverlay.elements,
-        {
-          id: createId(),
-          slideId: currentOverlay.id,
-          type: 'text' as const,
-          x: 210,
-          y: 460,
-          width: 1500,
-          height: 120,
-          rotation: 0,
-          opacity: 1,
-          zIndex: nextOverlayZIndex(currentOverlay.elements, 20),
-          layer: 'content' as const,
-          payload: newTextPayload('New Overlay Text', 72, 'center', '700'),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      updateOverlayDraft({ id: currentOverlay.id, elements: nextElements });
+      addToOverlay(newOverlayElement(currentOverlay.id, 'text', 210, 460, 1500, 120, nextOverlayZIndex(currentOverlay.elements, 20), newTextPayload('New Overlay Text', 72, 'center', '700')));
       setStatusText('Added overlay text');
       return;
     }
@@ -70,10 +73,7 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
         setStatusText('Lyric templates only support the existing lyric text element.');
         return;
       }
-      replaceTemplateElements([
-        ...currentTemplate.elements,
-        newSlideTextElement(currentTemplate.id),
-      ]);
+      addToTemplate(newSlideTextElement(currentTemplate.id));
       setStatusText('Added template text');
       return;
     }
@@ -88,64 +88,33 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
       }
     }
     if (isSlideEdit) {
-      const nextElements = [
-        ...getSlideElements(currentSlide.id),
-        newSlideTextElement(currentSlide.id),
-      ];
-      replaceSlideElements(currentSlide.id, nextElements);
+      addToSlideEdit(currentSlide.id, newSlideTextElement(currentSlide.id));
       setStatusText('Added text element');
       return;
     }
-
     await mutate(() => window.castApi.createElement({
       slideId: currentSlide.id, type: 'text', x: 210, y: 460, width: 1500, height: 120,
       zIndex: 20, layer: 'content', payload: newTextPayload('New Text Element', 72, 'center', '700'),
     }));
     setStatusText('Added text element');
-  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricItem, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId]);
+  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricItem, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId, updateOverlayDraft]);
 
   const createShape = useCallback(async () => {
     if (isOverlayEdit) {
       if (!currentOverlay) return;
-      const nextElements = [
-        ...currentOverlay.elements,
-        {
-          id: createId(),
-          slideId: currentOverlay.id,
-          type: 'shape' as const,
-          x: 260,
-          y: 260,
-          width: 1400,
-          height: 560,
-          rotation: 0,
-          opacity: 1,
-          zIndex: nextOverlayZIndex(currentOverlay.elements, 2),
-          layer: 'content' as const,
-          payload: newShapePayload(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      updateOverlayDraft({ id: currentOverlay.id, elements: nextElements });
+      addToOverlay(newOverlayElement(currentOverlay.id, 'shape', 260, 260, 1400, 560, nextOverlayZIndex(currentOverlay.elements, 2), newShapePayload()));
       setStatusText('Added overlay shape');
       return;
     }
     if (isTemplateEdit) {
       if (!currentTemplate) return;
-      replaceTemplateElements([
-        ...currentTemplate.elements,
-        newSlideShapeElement(currentTemplate.id),
-      ]);
+      addToTemplate(newSlideShapeElement(currentTemplate.id));
       setStatusText('Added template shape');
       return;
     }
     if (!currentSlide) return;
     if (isSlideEdit) {
-      const nextElements = [
-        ...getSlideElements(currentSlide.id),
-        newSlideShapeElement(currentSlide.id),
-      ];
-      replaceSlideElements(currentSlide.id, nextElements);
+      addToSlideEdit(currentSlide.id, newSlideShapeElement(currentSlide.id));
       setStatusText('Added shape element');
       return;
     }
@@ -154,52 +123,30 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
       zIndex: 2, layer: 'background', payload: newShapePayload(),
     }));
     setStatusText('Added shape element');
-  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
 
   const createFromMedia = useCallback(async (asset: MediaAsset, x: number, y: number) => {
     if (isOverlayEdit) {
       if (!currentOverlay) return;
-      const nextElements = [
-        ...currentOverlay.elements,
-        {
-          id: createId(),
-          slideId: currentOverlay.id,
-          type: asset.type === 'video' || asset.type === 'animation' ? 'video' as const : 'image' as const,
-          x,
-          y,
-          width: asset.type === 'image' ? 640 : 960,
-          height: asset.type === 'image' ? 360 : 540,
-          rotation: 0,
-          opacity: 1,
-          zIndex: nextOverlayZIndex(currentOverlay.elements, 10),
-          layer: 'content' as const,
-          payload: asset.type === 'video' || asset.type === 'animation'
-            ? { src: asset.src, autoplay: true, loop: true, muted: true }
-            : { src: asset.src },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      updateOverlayDraft({ id: currentOverlay.id, elements: nextElements });
+      const elementType = asset.type === 'video' || asset.type === 'animation' ? 'video' as const : 'image' as const;
+      const w = asset.type === 'image' ? 640 : 960;
+      const h = asset.type === 'image' ? 360 : 540;
+      const payload = asset.type === 'video' || asset.type === 'animation'
+        ? { src: asset.src, autoplay: true, loop: true, muted: true }
+        : { src: asset.src };
+      addToOverlay(newOverlayElement(currentOverlay.id, elementType, x, y, w, h, nextOverlayZIndex(currentOverlay.elements, 10), payload));
       setStatusText(`Added ${asset.type} overlay`);
       return;
     }
     if (isTemplateEdit) {
       if (!currentTemplate) return;
-      replaceTemplateElements([
-        ...currentTemplate.elements,
-        newSlideMediaElement(currentTemplate.id, asset, x, y),
-      ]);
+      addToTemplate(newSlideMediaElement(currentTemplate.id, asset, x, y));
       setStatusText(`Added ${asset.type} template element`);
       return;
     }
     if (!currentSlide) return;
     if (isSlideEdit) {
-      const nextElements = [
-        ...getSlideElements(currentSlide.id),
-        newSlideMediaElement(currentSlide.id, asset, x, y),
-      ];
-      replaceSlideElements(currentSlide.id, nextElements);
+      addToSlideEdit(currentSlide.id, newSlideMediaElement(currentSlide.id, asset, x, y));
       setStatusText(`Added ${asset.type} element`);
       return;
     }
@@ -223,7 +170,7 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
     }
     await mutate(() => window.castApi.createElement(input));
     setStatusText(`Added ${asset.type} element`);
-  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
 
   const createOverlay = useCallback(async () => {
     await mutate(() => window.castApi.createOverlay(getOverlayDefaults({
@@ -281,139 +228,4 @@ export function useElementCommands({ currentSlide, currentContentItem, currentTe
   }, [mutate, setStatusText]);
 
   return { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc };
-}
-
-function newTextPayload(text: string, fontSize: number, alignment: CanvasTextAlign | 'justify', weight: string) {
-  return {
-    text,
-    fontFamily: 'Avenir Next',
-    fontSize,
-    color: '#FFFFFF',
-    alignment,
-    verticalAlign: 'middle' as const,
-    lineHeight: 1.25,
-    caseTransform: 'none' as const,
-    weight,
-    visible: true,
-    locked: false,
-    fillEnabled: false,
-    fillColor: '#00000000',
-    strokeEnabled: false,
-    shadowEnabled: false,
-  };
-}
-
-function newShapePayload() {
-  return {
-    fillColor: '#172026C8',
-    borderColor: '#FFFFFF44',
-    borderWidth: 3,
-    borderRadius: 24,
-    visible: true,
-    locked: false,
-    fillEnabled: true,
-    strokeEnabled: true,
-    shadowEnabled: false,
-  };
-}
-
-function nextOverlayZIndex(elements: { zIndex: number }[], fallback: number): number {
-  if (elements.length === 0) return fallback;
-  return Math.max(...elements.map((element) => element.zIndex)) + 1;
-}
-
-function newSlideTextElement(slideId: Id) {
-  const timestamp = new Date().toISOString();
-  return {
-    id: createId(),
-    slideId,
-    type: 'text' as const,
-    x: 210,
-    y: 460,
-    width: 1500,
-    height: 120,
-    rotation: 0,
-    opacity: 1,
-    zIndex: 20,
-    layer: 'content' as const,
-    payload: newTextPayload('New Text Element', 72, 'center', '700'),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
-
-function newSlideShapeElement(slideId: Id) {
-  const timestamp = new Date().toISOString();
-  return {
-    id: createId(),
-    slideId,
-    type: 'shape' as const,
-    x: 260,
-    y: 260,
-    width: 1400,
-    height: 560,
-    rotation: 0,
-    opacity: 1,
-    zIndex: 2,
-    layer: 'background' as const,
-    payload: newShapePayload(),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
-
-function newSlideMediaElement(slideId: Id, asset: MediaAsset, x: number, y: number) {
-  const timestamp = new Date().toISOString();
-  if (asset.type === 'image') {
-    return {
-      id: createId(),
-      slideId,
-      type: 'image' as const,
-      x,
-      y,
-      width: 640,
-      height: 360,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 10,
-      layer: 'media' as const,
-      payload: { src: asset.src },
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-  }
-  if (asset.type === 'video' || asset.type === 'animation') {
-    return {
-      id: createId(),
-      slideId,
-      type: 'video' as const,
-      x,
-      y,
-      width: 960,
-      height: 540,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 10,
-      layer: 'media' as const,
-      payload: { src: asset.src, autoplay: true, loop: true, muted: true },
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-  }
-  return {
-    id: createId(),
-    slideId,
-    type: 'text' as const,
-    x,
-    y,
-    width: 800,
-    height: 90,
-    rotation: 0,
-    opacity: 1,
-    zIndex: 12,
-    layer: 'content' as const,
-    payload: newTextPayload(`[AUDIO] ${asset.name}`, 42, 'left', '600'),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
 }

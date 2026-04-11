@@ -10,7 +10,7 @@ interface SettingsSectionProps {
 
 export function SettingsSection({ title, children, action, className }: SettingsSectionProps) {
   return (
-    <section className={cn('grid gap-3 border-b border-primary pb-5 last:border-b-0 last:pb-0', className)}>
+    <section className={cn('flex flex-col gap-3 border-b border-primary pb-5 last:border-b-0 last:pb-0', className)}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-primary">{title}</h3>
         {action}

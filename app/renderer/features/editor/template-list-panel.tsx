@@ -47,6 +47,7 @@ export function TemplateListPanel() {
       objectsPanelId="template-objects"
       onAdd={handleOpenCreateMenu}
       addLabel="Create template"
+      listAriaLabel="Templates"
       contextMenu={menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
     >
       {templates.map((template, index) => (

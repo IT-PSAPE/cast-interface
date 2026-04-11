@@ -1,12 +1,10 @@
 import { useCallback } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
-import { useNavigation } from '../../contexts/navigation-context';
-import { useProjectContent } from '../../contexts/use-project-content';
-import { useSlides } from '../../contexts/slide-context';
 import { getSlideVisualState } from '../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from './use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../stage/build-render-scene';
 import { useSlideBrowser } from './slide-browser-context';
+import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { SlideCard } from './slide-card';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
 
@@ -26,28 +24,13 @@ interface GridSectionProps {
   onEditSlide: (itemId: Id, slideIndex: number) => void;
 }
 
-function GridSection({
-  item,
-  currentContentItemId,
-  currentOutputContentItemId,
-  currentSlideIndex,
-  gridItemSize,
-  liveSlideIndex,
-  slideElementsById,
-  onActivateSlide,
-  onEditSlide,
-}: GridSectionProps) {
+function GridSection({ item, currentContentItemId, currentOutputContentItemId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
   const isCurrentPresentation = item.item.id === currentContentItemId;
   const isLivePresentation = item.item.id === currentOutputContentItemId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
-    const state = getSlideVisualState(
-      index,
-      isLivePresentation ? liveSlideIndex : -1,
-      isCurrentPresentation ? currentSlideIndex : -1,
-      elements,
-    );
+    const state = getSlideVisualState(index, isLivePresentation ? liveSlideIndex : -1, isCurrentPresentation ? currentSlideIndex : -1, elements);
     const scene = buildThumbnailScene(slide, elements);
 
     function handleActivate() {
@@ -59,16 +42,7 @@ function GridSection({
     }
 
     return (
-      <SlideCard
-        key={slide.id}
-        index={index}
-        state={state}
-        scene={scene}
-        elements={elements}
-        isFocused={isCurrentPresentation && index === currentSlideIndex}
-        onActivate={handleActivate}
-        onEdit={handleEdit}
-      />
+      <SlideCard key={slide.id} index={index} state={state} scene={scene} elements={elements} isFocused={isCurrentPresentation && index === currentSlideIndex} onActivate={handleActivate} onEdit={handleEdit} />
     );
   }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
 
@@ -80,35 +54,8 @@ function GridSection({
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { currentContentItemId, currentOutputContentItemId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
-  const { slideElementsBySlideId } = useProjectContent();
+  const { currentContentItemId, currentOutputContentItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
   const { gridItemSize } = useSlideBrowser();
-
-  const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
-    activateContentItemSlide(itemId, slideIndex);
-  }, [activateContentItemSlide]);
-
-  const handleEditSlide = useCallback((itemId: Id, slideIndex: number) => {
-    focusContentItemSlide(itemId, slideIndex);
-  }, [focusContentItemSlide]);
-
-  const renderSection = useCallback((item: PlaylistPresentationSequenceItem) => {
-    return (
-      <GridSection
-        key={item.entryId}
-        item={item}
-        currentContentItemId={currentContentItemId}
-        currentOutputContentItemId={currentOutputContentItemId}
-        currentSlideIndex={currentSlideIndex}
-        gridItemSize={gridItemSize}
-        liveSlideIndex={liveSlideIndex}
-        slideElementsById={slideElementsBySlideId}
-        onActivateSlide={handleActivateSlide}
-        onEditSlide={handleEditSlide}
-      />
-    );
-  }, [currentContentItemId, currentOutputContentItemId, currentSlideIndex, gridItemSize, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (
@@ -121,7 +68,20 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
   return (
     <section className="h-full min-h-0 overflow-y-auto p-2">
       <div className="flex flex-col gap-2" role="list" aria-label="Continuous playlist grid">
-        {items.map(renderSection)}
+        {items.map((item) => (
+          <GridSection
+            key={item.entryId}
+            item={item}
+            currentContentItemId={currentContentItemId}
+            currentOutputContentItemId={currentOutputContentItemId}
+            currentSlideIndex={currentSlideIndex}
+            gridItemSize={gridItemSize}
+            liveSlideIndex={liveSlideIndex}
+            slideElementsById={slideElementsBySlideId}
+            onActivateSlide={handleActivateSlide}
+            onEditSlide={handleEditSlide}
+          />
+        ))}
       </div>
     </section>
   );

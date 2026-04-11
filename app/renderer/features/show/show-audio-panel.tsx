@@ -25,7 +25,7 @@ export function ShowAudioPanel() {
 
   return (
     <Panel.Root>
-      <div className="grid gap-2 border-b border-primary px-2 py-2">
+      <div className="flex flex-col gap-2 border-b border-primary px-2 py-2">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-primary">{currentTrackLabel}</div>
@@ -38,7 +38,7 @@ export function ShowAudioPanel() {
           </FileTrigger.Root>
         </div>
 
-        <div className="grid gap-1">
+        <div className="flex flex-col gap-1">
           <input
             type="range"
             min={0}
@@ -94,7 +94,7 @@ export function ShowAudioPanel() {
             Import audio to build a reusable app-wide audio list.
           </div>
         ) : (
-          <div className="grid content-start gap-1">
+          <div className="flex flex-col gap-1">
             {state.audioAssets.map((asset) => (
               <ShowAudioRow
                 key={asset.id}

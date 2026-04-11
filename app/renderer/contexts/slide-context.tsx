@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { getSlideContentItemId } from '@core/content-items';
 import type { AppSnapshot, Id, Slide, SlideElement } from '@core/types';
 import { clamp, sortSlides } from '../utils/slides';
+import { useIndexedSelection } from '../hooks/use-indexed-selection';
 import { useCast } from './cast-context';
 import { useNavigation } from './navigation-context';
 import { useProjectContent } from './use-project-content';
@@ -45,9 +46,9 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   } = useNavigation();
   const { slidesByContentItemId, slideElementsBySlideId } = useProjectContent();
 
-  const [playlistSelectedSlideIndices, setPlaylistSelectedSlideIndices] = useState<Record<Id, number>>({});
-  const [drawerSelectedSlideIndices, setDrawerSelectedSlideIndices] = useState<Record<Id, number>>({});
-  const [liveSlideIndices, setLiveSlideIndices] = useState<Record<Id, number>>({});
+  const playlistSelection = useIndexedSelection();
+  const drawerSelection = useIndexedSelection();
+  const liveSelection = useIndexedSelection();
 
   const slides = useMemo(() => {
     if (!currentContentItemId) return [];
@@ -61,20 +62,20 @@ export function SlideProvider({ children }: { children: ReactNode }) {
 
   const currentSlideIndex = useMemo(() => {
     const indicesByContentItemId = isDetachedContentBrowser
-      ? drawerSelectedSlideIndices
-      : playlistSelectedSlideIndices;
+      ? drawerSelection.indices
+      : playlistSelection.indices;
     return resolveSlideIndex(currentContentItemId, indicesByContentItemId, slides.length);
   }, [
     currentContentItemId,
-    drawerSelectedSlideIndices,
+    drawerSelection.indices,
     isDetachedContentBrowser,
-    playlistSelectedSlideIndices,
+    playlistSelection.indices,
     slides.length,
   ]);
 
   const liveSlideIndex = useMemo(
-    () => resolveSlideIndex(currentOutputContentItemId, liveSlideIndices, outputSlides.length),
-    [currentOutputContentItemId, liveSlideIndices, outputSlides.length],
+    () => resolveSlideIndex(currentOutputContentItemId, liveSelection.indices, outputSlides.length),
+    [currentOutputContentItemId, liveSelection.indices, outputSlides.length],
   );
 
   const currentSlide = slides[currentSlideIndex] ?? null;
@@ -93,42 +94,21 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     return bySlide;
   }, [slideElementsBySlideId, slides]);
 
-  const updatePlaylistSelectedSlideIndex = useCallback((itemId: Id, nextIndex: number) => {
-    setPlaylistSelectedSlideIndices((current) => ({
-      ...current,
-      [itemId]: nextIndex,
-    }));
-  }, []);
-
-  const updateDrawerSelectedSlideIndex = useCallback((itemId: Id, nextIndex: number) => {
-    setDrawerSelectedSlideIndices((current) => ({
-      ...current,
-      [itemId]: nextIndex,
-    }));
-  }, []);
-
-  const updateLiveSlideIndex = useCallback((itemId: Id, nextIndex: number) => {
-    setLiveSlideIndices((current) => ({
-      ...current,
-      [itemId]: nextIndex,
-    }));
-  }, []);
-
   const updateVisibleSelectedSlideIndex = useCallback((itemId: Id, nextIndex: number) => {
     if (isDetachedContentBrowser) {
-      updateDrawerSelectedSlideIndex(itemId, nextIndex);
+      drawerSelection.update(itemId, nextIndex);
       return;
     }
-    updatePlaylistSelectedSlideIndex(itemId, nextIndex);
-  }, [isDetachedContentBrowser, updateDrawerSelectedSlideIndex, updatePlaylistSelectedSlideIndex]);
+    playlistSelection.update(itemId, nextIndex);
+  }, [isDetachedContentBrowser, drawerSelection, playlistSelection]);
 
   const activatePlaylistContentItem = useCallback((itemId: Id, nextIndex: number | null) => {
     selectPlaylistContentItemInNavigation(itemId);
     if (nextIndex !== null) {
-      updateLiveSlideIndex(itemId, nextIndex);
+      liveSelection.update(itemId, nextIndex);
     }
     armOutputContentItem(itemId);
-  }, [armOutputContentItem, selectPlaylistContentItemInNavigation, updateLiveSlideIndex]);
+  }, [armOutputContentItem, selectPlaylistContentItemInNavigation, liveSelection.update]);
 
   const selectPlaylistContentItem = useCallback((itemId: Id) => {
     selectPlaylistContentItemInNavigation(itemId);
@@ -156,7 +136,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const nextIndex = clamp(index, 0, slides.length - 1);
     updateVisibleSelectedSlideIndex(currentContentItemId, nextIndex);
     if (!canControlOutput || !currentPlaylistContentItemId) return;
-    updateLiveSlideIndex(currentPlaylistContentItemId, nextIndex);
+    liveSelection.update(currentPlaylistContentItemId, nextIndex);
     armOutputContentItem(currentPlaylistContentItemId);
     setStatusText(`Live slide ${nextIndex + 1}`);
   }, [
@@ -166,13 +146,13 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     currentContentItemId,
     setStatusText,
     slides.length,
-    updateLiveSlideIndex,
+    liveSelection.update,
     updateVisibleSelectedSlideIndex,
   ]);
 
   const takeSlide = useCallback(() => {
     if (!canControlOutput || !currentPlaylistContentItemId || slides.length === 0 || currentSlideIndex < 0) return;
-    updateLiveSlideIndex(currentPlaylistContentItemId, currentSlideIndex);
+    liveSelection.update(currentPlaylistContentItemId, currentSlideIndex);
     armOutputContentItem(currentPlaylistContentItemId);
     setStatusText(`Taken slide ${currentSlideIndex + 1}`);
   }, [
@@ -182,18 +162,18 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     currentSlideIndex,
     setStatusText,
     slides.length,
-    updateLiveSlideIndex,
+    liveSelection.update,
   ]);
 
   const armCurrentPlaylistSelection = useCallback(() => {
     if (!currentPlaylistContentItemId) return;
     const contentSlides = slidesByContentItemId.get(currentPlaylistContentItemId) ?? [];
-    const nextIndex = resolveSlideIndex(currentPlaylistContentItemId, playlistSelectedSlideIndices, contentSlides.length);
+    const nextIndex = resolveSlideIndex(currentPlaylistContentItemId, playlistSelection.indices, contentSlides.length);
     if (contentSlides.length > 0) {
-      updateLiveSlideIndex(currentPlaylistContentItemId, nextIndex);
+      liveSelection.update(currentPlaylistContentItemId, nextIndex);
     }
     armOutputContentItem(currentPlaylistContentItemId);
-  }, [armOutputContentItem, currentPlaylistContentItemId, playlistSelectedSlideIndices, slidesByContentItemId, updateLiveSlideIndex]);
+  }, [armOutputContentItem, currentPlaylistContentItemId, playlistSelection.indices, slidesByContentItemId, liveSelection.update]);
 
   const goNext = useCallback(() => {
     if (slides.length === 0) return;
@@ -238,18 +218,18 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const contentSlides = slidesByContentItemId.get(itemId) ?? [];
     if (contentSlides.length === 0) return;
     const nextIndex = clamp(index, 0, contentSlides.length - 1);
-    updatePlaylistSelectedSlideIndex(itemId, nextIndex);
+    playlistSelection.update(itemId, nextIndex);
     selectPlaylistContentItemInNavigation(itemId);
-  }, [selectPlaylistContentItemInNavigation, slidesByContentItemId, updatePlaylistSelectedSlideIndex]);
+  }, [selectPlaylistContentItemInNavigation, slidesByContentItemId, playlistSelection.update]);
 
   const activateContentItemSlide = useCallback((itemId: Id, index: number) => {
     const contentSlides = slidesByContentItemId.get(itemId) ?? [];
     if (contentSlides.length === 0) return;
     const nextIndex = clamp(index, 0, contentSlides.length - 1);
-    updatePlaylistSelectedSlideIndex(itemId, nextIndex);
+    playlistSelection.update(itemId, nextIndex);
     activatePlaylistContentItem(itemId, nextIndex);
     setStatusText(`Live slide ${nextIndex + 1}`);
-  }, [activatePlaylistContentItem, setStatusText, slidesByContentItemId, updatePlaylistSelectedSlideIndex]);
+  }, [activatePlaylistContentItem, setStatusText, slidesByContentItemId, playlistSelection.update]);
 
   const value = useMemo<SlideContextValue>(() => ({
     slides,

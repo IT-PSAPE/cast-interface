@@ -146,7 +146,7 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onEnter
                     >
                         <GripHorizontal size={12} />
                     </button>
-                    {isMenuOpen && (
+                    {isMenuOpen ? (
                         <BlockMenu
                             onAction={action => {
                                 onMenuClose()
@@ -154,7 +154,7 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onEnter
                             }}
                             onClose={onMenuClose}
                         />
-                    )}
+                    ) : null}
                 </div>
             </div>
 

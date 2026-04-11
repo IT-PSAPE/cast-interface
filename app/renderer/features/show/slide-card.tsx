@@ -1,6 +1,6 @@
 import type { SlideElement } from '@core/types';
 import { Thumbnail } from '../../components/display/thumbnail';
-import { ThumbnailLiveBadge } from '../../components/display/thumbnail-live-badge';
+import { Play } from 'lucide-react';
 import type { RenderScene } from '../stage/scene-types';
 import { SceneFrame } from '../../components/display/scene-frame';
 import type { SlideVisualState } from '../../types/ui';
@@ -26,7 +26,11 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
       onClick={onActivate}
       onDoubleClick={onEdit}
       selected={isFocused}
-      overlay={isLive ? <ThumbnailLiveBadge className="absolute left-0.5 top-0.5" /> : null}
+      overlay={isLive ? (
+        <span className="absolute left-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+          <Play size={12} strokeWidth={1.9} />
+        </span>
+      ) : null}
       body={(
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
           {isEmpty ? (

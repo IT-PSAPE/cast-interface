@@ -1,6 +1,6 @@
 import { Button } from '../../components/controls/button';
 import { EllipsisVertical, List, Plus } from 'lucide-react';
-import { EditableText } from '../../components/form/editable-text';
+import { EditableField } from '../../components/form/editable-field';
 import { Panel } from '../../components/panel';
 
 import { SectionHeader } from '../../components/display/section-header';
@@ -56,7 +56,7 @@ export function PlaylistList() {
               >
                 <span className="flex items-center gap-2">
                   <List className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
-                  <EditableText
+                  <EditableField
                     value={tree.playlist.name}
                     onCommit={handleRename}
                     editing={isEditing}

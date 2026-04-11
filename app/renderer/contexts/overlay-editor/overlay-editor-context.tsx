@@ -1,7 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import type { AppSnapshot, Id, Overlay, OverlayCreateInput, OverlayUpdateInput, SlideElement } from '@core/types';
+import { cloneElements } from '../../utils/staged-editor-utils';
 import { getOverlayDefaults } from '../../utils/slides';
 import { createId } from '../../utils/create-id';
+import { useStagedCollection } from '../../hooks/use-staged-collection';
 import { useCast } from '../cast-context';
 import { useOverlayDefaults } from '../overlay-defaults-context';
 import { useProjectContent } from '../use-project-content';
@@ -27,36 +29,20 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
   const { state: { workbenchMode } } = useWorkbench();
   const { overlayDefaults } = useOverlayDefaults();
   const { overlays: persistedOverlays } = useProjectContent();
-  const [currentOverlayId, setCurrentOverlayId] = useState<Id | null>(null);
-  const [stagedOverlays, setStagedOverlays] = useState<Overlay[] | null>(null);
-  const [isPushingChanges, setIsPushingChanges] = useState(false);
-  const previousWorkbenchModeRef = useRef(workbenchMode);
 
-  const overlays = stagedOverlays ?? persistedOverlays;
-  const hasPendingChanges = useMemo(() => {
-    if (!stagedOverlays) return false;
-    return overlayCollectionSignature(stagedOverlays) !== overlayCollectionSignature(persistedOverlays);
-  }, [persistedOverlays, stagedOverlays]);
+  const staged = useStagedCollection<Overlay>({
+    persistedItems: persistedOverlays,
+    signatureOf: overlaySignature,
+    workbenchModeKey: 'overlay-editor',
+    currentWorkbenchMode: workbenchMode,
+  });
 
-  useEffect(() => {
-    if (overlays.length === 0) {
-      setCurrentOverlayId(null);
-      return;
-    }
-    if (!currentOverlayId || !overlays.some((overlay) => overlay.id === currentOverlayId)) {
-      setCurrentOverlayId(overlays[0].id);
-    }
-  }, [currentOverlayId, overlays]);
-
-  const currentOverlay = useMemo(
-    () => overlays.find((overlay) => overlay.id === currentOverlayId) ?? null,
-    [currentOverlayId, overlays],
-  );
+  const overlays = staged.items;
 
   const updateOverlayDraft = useCallback((input: OverlayUpdateInput) => {
-    setStagedOverlays((current) => {
+    staged.setStagedItems((current) => {
       const source = current ?? persistedOverlays;
-      const next = source.map((overlay) => {
+      return source.map((overlay) => {
         if (overlay.id !== input.id) return overlay;
         const nextElements = typeof input.elements === 'undefined' ? overlay.elements : cloneElements(input.elements);
         return {
@@ -67,9 +53,8 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
         };
       });
-      return next;
     });
-  }, [persistedOverlays]);
+  }, [persistedOverlays, staged]);
 
   const createOverlay = useCallback(async () => {
     const now = new Date().toISOString();
@@ -99,30 +84,33 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
         autoClearDurationMs: overlayDefaults.autoClearDurationMs,
       }),
     };
-    setStagedOverlays((current) => [...(current ?? persistedOverlays), draft]);
-    setCurrentOverlayId(draft.id);
+    staged.setStagedItems((current) => [...(current ?? persistedOverlays), draft]);
+    staged.setCurrentItemId(draft.id);
     setStatusText('Created overlay');
-  }, [overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, persistedOverlays, setStatusText]);
+  }, [overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, persistedOverlays, setStatusText, staged]);
 
   const deleteCurrentOverlay = useCallback(async () => {
-    if (!currentOverlayId) return;
-    setStagedOverlays((current) => {
+    if (!staged.currentItemId) return;
+    staged.setStagedItems((current) => {
       const source = current ?? persistedOverlays;
-      return source.filter((overlay) => overlay.id !== currentOverlayId);
+      return source.filter((overlay) => overlay.id !== staged.currentItemId);
     });
     setStatusText('Deleted overlay');
-  }, [currentOverlayId, persistedOverlays, setStatusText]);
+  }, [staged, persistedOverlays, setStatusText]);
 
   const pushChanges = useCallback(async () => {
-    if (!stagedOverlays || isPushingChanges) return;
-    if (overlayCollectionSignature(stagedOverlays) === overlayCollectionSignature(persistedOverlays)) {
-      setStagedOverlays(null);
+    if (!staged.stagedItems || staged.isPushingChanges) return;
+    const stagedOverlays = staged.stagedItems;
+    const stagedSig = stagedOverlays.map(overlaySignature).join();
+    const persistedSig = persistedOverlays.map(overlaySignature).join();
+    if (stagedSig === persistedSig) {
+      staged.setStagedItems(null);
       return;
     }
 
-    setIsPushingChanges(true);
+    staged.setIsPushingChanges(true);
     try {
-      let resolvedCurrentOverlayId = currentOverlayId;
+      let resolvedCurrentOverlayId = staged.currentItemId;
       const next = await mutate(async () => {
         let snapshot: AppSnapshot | null = null;
         let knownOverlays = persistedOverlays;
@@ -163,7 +151,7 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
         return window.castApi.getSnapshot();
       });
 
-      setStagedOverlays(null);
+      staged.setStagedItems(null);
       const nextOverlays = next.overlays;
       const currentOverlayStillExists = resolvedCurrentOverlayId
         ? nextOverlays.some((overlay) => overlay.id === resolvedCurrentOverlayId)
@@ -171,35 +159,31 @@ export function OverlayEditorProvider({ children }: { children: ReactNode }) {
       if (!resolvedCurrentOverlayId || !currentOverlayStillExists) {
         resolvedCurrentOverlayId = nextOverlays[0]?.id ?? null;
       }
-      setCurrentOverlayId(resolvedCurrentOverlayId);
+      staged.setCurrentItemId(resolvedCurrentOverlayId);
       setStatusText('Overlay changes pushed');
     } finally {
-      setIsPushingChanges(false);
+      staged.setIsPushingChanges(false);
     }
-  }, [currentOverlayId, isPushingChanges, mutate, persistedOverlays, setStatusText, stagedOverlays]);
+  }, [staged, mutate, persistedOverlays, setStatusText]);
 
   useEffect(() => {
-    const previousWorkbenchMode = previousWorkbenchModeRef.current;
-    previousWorkbenchModeRef.current = workbenchMode;
-    if (previousWorkbenchMode !== 'overlay-editor' || workbenchMode === 'overlay-editor') return;
-    if (!hasPendingChanges || isPushingChanges) return;
-    void pushChanges();
-  }, [hasPendingChanges, isPushingChanges, pushChanges, workbenchMode]);
+    staged.registerAutoPush(() => void pushChanges());
+  }, [staged, pushChanges]);
 
   const value = useMemo<OverlayEditorContextValue>(
     () => ({
       overlays,
-      currentOverlayId,
-      currentOverlay,
-      hasPendingChanges,
-      isPushingChanges,
-      setCurrentOverlayId,
+      currentOverlayId: staged.currentItemId,
+      currentOverlay: staged.currentItem,
+      hasPendingChanges: staged.hasPendingChanges,
+      isPushingChanges: staged.isPushingChanges,
+      setCurrentOverlayId: staged.setCurrentItemId,
       updateOverlayDraft,
       createOverlay,
       deleteCurrentOverlay,
       pushChanges,
     }),
-    [createOverlay, currentOverlay, currentOverlayId, deleteCurrentOverlay, hasPendingChanges, isPushingChanges, overlays, pushChanges, updateOverlayDraft],
+    [createOverlay, staged.currentItem, staged.currentItemId, deleteCurrentOverlay, staged.hasPendingChanges, staged.isPushingChanges, overlays, pushChanges, staged.setCurrentItemId, updateOverlayDraft],
   );
 
   return <OverlayEditorContext.Provider value={value}>{children}</OverlayEditorContext.Provider>;
@@ -217,14 +201,6 @@ function toOverlayCreateInput(overlay: Overlay): OverlayCreateInput {
     elements: cloneElements(overlay.elements),
     animation: overlay.animation,
   };
-}
-
-function cloneElements(elements: SlideElement[]): SlideElement[] {
-  return JSON.parse(JSON.stringify(elements)) as SlideElement[];
-}
-
-function overlayCollectionSignature(overlays: Overlay[]): string {
-  return JSON.stringify(overlays.map(overlaySignature));
 }
 
 function overlaySignature(overlay: Overlay): string {

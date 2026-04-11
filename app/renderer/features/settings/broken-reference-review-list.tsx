@@ -42,8 +42,8 @@ function BrokenReferenceRow({
   }
 
   return (
-    <div className="grid gap-3 rounded border border-primary bg-tertiary/25 p-3">
-      <div className="grid gap-1">
+    <div className="flex flex-col gap-3 rounded border border-primary bg-tertiary/25 p-3">
+      <div className="flex flex-col gap-1">
         <div className="text-sm font-medium text-primary">{reference.source}</div>
         <div className="text-xs text-tertiary">
           {reference.occurrenceCount} use{reference.occurrenceCount === 1 ? '' : 's'} in {ownerSummary || 'imported content'}
@@ -93,5 +93,5 @@ export function BrokenReferenceReviewList({
     );
   });
 
-  return <div className="grid gap-3">{rows}</div>;
+  return <div className="flex flex-col gap-3">{rows}</div>;
 }

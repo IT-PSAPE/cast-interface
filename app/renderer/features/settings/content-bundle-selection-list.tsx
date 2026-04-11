@@ -1,5 +1,5 @@
 import type { ContentItem, Id } from '@core/types';
-import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
+import { ContentItemIcon } from '../../components/display/entity-icon';
 import { SelectableRow } from '../../components/display/selectable-row';
 
 interface ContentBundleSelectionListProps {
@@ -45,5 +45,5 @@ export function ContentBundleSelectionList({ items, selectedIds, onToggle }: Con
     return <div className="rounded border border-primary bg-tertiary/30 px-3 py-4 text-sm text-tertiary">No matching items.</div>;
   }
 
-  return <div className="grid gap-1">{rows}</div>;
+  return <div className="flex flex-col gap-1">{rows}</div>;
 }

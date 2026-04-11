@@ -3,7 +3,7 @@ import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { Button } from '../controls/button';
 import { DialogFrame } from './dialog-frame';
-import { MediaAssetIcon } from '../display/media-asset-icon';
+import { MediaAssetIcon } from '../display/entity-icon';
 
 interface MediaPickerDialogProps {
   assets: MediaAsset[];

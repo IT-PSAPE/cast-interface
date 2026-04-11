@@ -129,7 +129,7 @@ export function ObjectListPanel() {
   }
 
   return (
-    <div data-ui-region="object-list-panel" className="grid content-start gap-1.5">
+    <div data-ui-region="object-list-panel" className="flex flex-col gap-1.5">
       {orderedElements.map(renderRow)}
     </div>
   );

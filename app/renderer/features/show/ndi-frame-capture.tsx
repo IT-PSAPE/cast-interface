@@ -156,7 +156,7 @@ export function NdiFrameCapture() {
     >
       <Stage ref={stageRef} width={NDI_OUTPUT_WIDTH} height={NDI_OUTPUT_HEIGHT}>
         <Layer>
-          {!withAlpha && (
+          {!withAlpha ? (
             <Group>
               <SceneNodeShape node={{
                 id: '__ndi-bg',
@@ -196,7 +196,7 @@ export function NdiFrameCapture() {
                 isVideo: false,
               }} />
             </Group>
-          )}
+          ) : null}
           <Group>
             {programScene.nodes.map((node) => {
               if (node.visual.visible === false) return null;

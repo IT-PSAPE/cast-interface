@@ -20,7 +20,7 @@ export function SettingsSidebar({ activeTab, onSelectTab }: SettingsSidebarProps
 
   return (
     <Panel.Root as="aside" bordered="right" className="bg-primary/35 p-3">
-      <div className="grid gap-1">{tabRows}</div>
+      <div className="flex flex-col gap-1">{tabRows}</div>
     </Panel.Root>
   );
 }

@@ -1,5 +1,5 @@
 import { Button } from '../../components/controls/button';
-import { FieldTextarea } from '../../components/form/field-textarea';
+import { FieldTextarea } from '../../components/form/field';
 import { useSlideNotesPanel } from './use-slide-notes-panel';
 
 export function SlideNotesPanel() {

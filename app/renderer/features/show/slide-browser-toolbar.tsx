@@ -40,9 +40,9 @@ export function SlideBrowserToolbar() {
         </Button.Icon>
 
         <div className="ml-auto flex items-center gap-2">
-          {showPlaylistModes && <PlaylistBrowserModeControl />}
+          {showPlaylistModes ? <PlaylistBrowserModeControl /> : null}
           <SlideBrowserModeControl />
-          {isGridMode && <GridSizeSlider value={gridItemSize} min={gridSizeMin} max={gridSizeMax} step={gridSizeStep} onChange={setGridItemSize} />}
+          {isGridMode ? <GridSizeSlider value={gridItemSize} min={gridSizeMin} max={gridSizeMax} step={gridSizeStep} onChange={setGridItemSize} /> : null}
         </div>
       </footer>
 

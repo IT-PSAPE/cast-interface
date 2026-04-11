@@ -17,9 +17,9 @@ export function AppearanceSettingsPanel() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="flex flex-col gap-6">
       <SettingsSection title="Theme">
-        <div className="grid gap-2">
+        <div className="flex flex-col gap-2">
           <SegmentedControl value={themeMode} onValueChange={handleThemeModeChange} aria-label="Theme mode">
             {themeOptions}
           </SegmentedControl>

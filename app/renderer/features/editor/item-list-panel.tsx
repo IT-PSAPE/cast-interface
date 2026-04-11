@@ -6,7 +6,7 @@ import { PanelRoute } from '../workbench/panel-route';
 import { ObjectListPanel } from './object-list-panel';
 
 interface ItemListPanelProps {
-  title: string;
+  title: ReactNode;
   splitId: string;
   listPanelId: string;
   objectsPanelId: string;
@@ -23,7 +23,7 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
       <PanelRoute.Split splitId={splitId} orientation="vertical" className="h-full">
         <PanelRoute.Panel id={listPanelId} defaultSize={440} minSize={180}>
           <Panel.Section
-            title={<span className="truncate text-sm font-medium text-primary">{title}</span>}
+            title={typeof title === 'string' ? <span className="truncate text-sm font-medium text-primary">{title}</span> : title}
             action={(
               <Button.Icon label={addLabel} onClick={onAdd}>
                 <Plus/>
@@ -32,7 +32,7 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
             headerClassName="border-b border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
-            <div className="grid content-start gap-1" role="grid" aria-label={listAriaLabel ?? title}>
+            <div className="grid content-start gap-1" role="grid" aria-label={listAriaLabel}>
               {children}
             </div>
           </Panel.Section>

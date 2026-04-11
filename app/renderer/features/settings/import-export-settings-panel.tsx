@@ -33,7 +33,7 @@ export function ImportExportSettingsPanel() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="flex flex-col gap-6">
       <SettingsSection
         title="Export Content"
         action={(
@@ -46,7 +46,7 @@ export function ImportExportSettingsPanel() {
           </div>
         )}
       >
-        <div className="grid gap-3">
+        <div className="flex flex-col gap-3">
           <SearchField value={state.filterText} onChange={actions.setFilterText} placeholder="Search decks and lyrics" className="max-w-sm" />
           <ContentBundleSelectionList items={state.contentItems} selectedIds={state.selectedIds} onToggle={actions.toggleSelectedId} />
         </div>
@@ -110,8 +110,8 @@ function renderInspectionContent({
   const blockedReasonRows = blockedImportReasons.map(renderBlockedReasonRow);
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-1 rounded border border-primary bg-tertiary/25 p-3">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1 rounded border border-primary bg-tertiary/25 p-3">
         <div className="text-sm font-medium text-primary">{importPath}</div>
         <div className="text-xs text-tertiary">
           {renderSummaryLabel(inspection.itemCount, 'item', 'items')}, {renderSummaryLabel(inspection.templateCount, 'template', 'templates')}, {renderSummaryLabel(inspection.mediaReferenceCount, 'media reference', 'media references')}
@@ -119,7 +119,7 @@ function renderInspectionContent({
       </div>
 
       {inspection.items.length > 0 ? (
-        <div className="grid gap-1 rounded border border-primary bg-tertiary/25 p-3">{inspectionItemRows}</div>
+        <div className="flex flex-col gap-1 rounded border border-primary bg-tertiary/25 p-3">{inspectionItemRows}</div>
       ) : null}
 
       {inspection.brokenReferences.length > 0 ? (
@@ -136,7 +136,7 @@ function renderInspectionContent({
       )}
 
       {blockedImportReasons.length > 0 ? (
-        <div className="grid gap-1 rounded border border-primary bg-tertiary/25 p-3 text-xs text-tertiary">{blockedReasonRows}</div>
+        <div className="flex flex-col gap-1 rounded border border-primary bg-tertiary/25 p-3 text-xs text-tertiary">{blockedReasonRows}</div>
       ) : null}
     </div>
   );

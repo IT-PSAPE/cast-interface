@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import type { ContextMenuItem } from '../components/overlays/context-menu';
 import { buildCreateContentMenuItems } from '../utils/build-create-presentation-menu-items';
-import { useContextMenuState } from './use-context-menu-state';
+import { useCreateMenu } from './use-create-menu';
 
 interface UseCreatePresentationMenuOptions {
   createDeck: () => void | Promise<void>;
@@ -10,30 +8,9 @@ interface UseCreatePresentationMenuOptions {
   lyricLabel?: string;
 }
 
-export function useCreateContentMenu({
-  createDeck,
-  createLyric,
-  deckLabel,
-  lyricLabel
-}: UseCreatePresentationMenuOptions) {
-  const { menuState, openFromButton, close } = useContextMenuState();
-
-  const menuItems = useMemo<ContextMenuItem[]>(() => buildCreateContentMenuItems({
-    createDeck,
-    createLyric,
-    deckLabel,
-    lyricLabel
-  }), [createDeck, createLyric, deckLabel, lyricLabel]);
-
-  function openMenuFromButton(button: HTMLElement) {
-    const rect = button.getBoundingClientRect();
-    openFromButton(button, undefined as void);
-  }
-
-  return {
-    menuItems,
-    menuState,
-    openMenuFromButton,
-    closeMenu: close,
-  };
+export function useCreateContentMenu({ createDeck, createLyric, deckLabel, lyricLabel }: UseCreatePresentationMenuOptions) {
+  return useCreateMenu(
+    () => buildCreateContentMenuItems({ createDeck, createLyric, deckLabel, lyricLabel }),
+    [createDeck, createLyric, deckLabel, lyricLabel],
+  );
 }

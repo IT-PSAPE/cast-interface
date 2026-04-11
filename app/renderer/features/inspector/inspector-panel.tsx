@@ -9,13 +9,11 @@ export function InspectorPanel() {
   return (
     <Panel.Root as="aside" bordered="left" data-ui-region="inspector-panel">
       <InspectorTabsPanel className="flex-1" />
-      {state.isVisible ? (
-        <Panel.Footer className="p-3">
-          <Button onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
-            {state.isPushingChanges ? 'Pushing…' : state.pushLabel}
-          </Button>
-        </Panel.Footer>
-      ) : null}
+      {state.isVisible && <Panel.Footer className="p-3">
+        <Button onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
+          {state.isPushingChanges ? 'Pushing…' : state.pushLabel}
+        </Button>
+      </Panel.Footer>}
     </Panel.Root>
   );
 }

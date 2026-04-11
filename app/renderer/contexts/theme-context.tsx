@@ -1,7 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ThemeMode } from '../types/ui';
+import { useLocalStorage } from '../hooks/use-local-storage';
 
 const STORAGE_KEY = 'cast-theme-mode';
+const VALID_MODES = new Set<ThemeMode>(['light', 'dark', 'system']);
 
 type ThemeContextValue = {
   state: {
@@ -15,10 +17,8 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getStoredThemeMode(): ThemeMode {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-  return 'dark';
+function parseThemeMode(raw: string): ThemeMode | null {
+  return VALID_MODES.has(raw as ThemeMode) ? (raw as ThemeMode) : null;
 }
 
 function getSystemPreference(): 'light' | 'dark' {
@@ -26,7 +26,7 @@ function getSystemPreference(): 'light' | 'dark' {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeRaw] = useState<ThemeMode>(getStoredThemeMode);
+  const [themeMode, setThemeMode] = useLocalStorage<ThemeMode>(STORAGE_KEY, 'dark', parseThemeMode);
   const [systemPref, setSystemPref] = useState<'light' | 'dark'>(getSystemPreference);
 
   const resolvedTheme = themeMode === 'system' ? systemPref : themeMode;
@@ -43,11 +43,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', resolvedTheme);
   }, [resolvedTheme]);
-
-  const setThemeMode = useCallback((mode: ThemeMode) => {
-    setThemeModeRaw(mode);
-    localStorage.setItem(STORAGE_KEY, mode);
-  }, []);
 
   const state = useMemo<ThemeContextValue['state']>(() => ({
     themeMode,

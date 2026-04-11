@@ -1,25 +1,18 @@
-import { useCallback, useState } from 'react';
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-function getStoredSize(key: string, defaultValue: number, min: number, max: number): number {
-  const stored = window.localStorage.getItem(key);
-  if (!stored) return defaultValue;
-  const parsed = Number(stored);
-  if (Number.isNaN(parsed)) return defaultValue;
-  return clamp(parsed, min, max);
-}
+import { useCallback } from 'react';
+import { clamp } from '../utils/math';
+import { useLocalStorage } from './use-local-storage';
 
 export function useGridSize(storageKey: string, defaultValue: number, min: number, max: number, step: number = 1) {
-  const [gridSize, setGridSizeRaw] = useState(() => getStoredSize(storageKey, defaultValue, min, max));
+  function parseSize(raw: string): number | null {
+    const parsed = Number(raw);
+    return Number.isNaN(parsed) ? null : clamp(parsed, min, max);
+  }
+
+  const [gridSize, setGridSizeRaw] = useLocalStorage<number>(storageKey, defaultValue, parseSize, String);
 
   const setGridSize = useCallback((size: number) => {
-    const clamped = clamp(size, min, max);
-    setGridSizeRaw(clamped);
-    window.localStorage.setItem(storageKey, String(clamped));
-  }, [storageKey, min, max]);
+    setGridSizeRaw(clamp(size, min, max));
+  }, [setGridSizeRaw, min, max]);
 
   return { gridSize, setGridSize, min, max, step } as const;
 }

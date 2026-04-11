@@ -1,87 +1,37 @@
-import { applyVisualPayload, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
 import { cn } from '@renderer/utils/cn';
-import { parseNumber } from '../../utils/slides';
-import { useElements } from '../../contexts/element/element-context';
 import { ColorPicker } from '../../components/form/color-picker';
-import { FieldInput } from '../../components/form/field-input';
+import { FieldInput } from '../../components/form/field';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
   AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
   CornerUpRight, Eye, FlipHorizontal2, MoveHorizontal, MoveVertical,
   RotateCcw, Square,
 } from 'lucide-react';
-import type { ElementInspectorDraft } from '../../types/ui';
 import { IconGroup } from '@renderer/components/icon-group';
-import { useRenderScenes } from '../stage/render-scene-provider';
-import { alignElementDraft } from './align-element-draft';
+import { useShapeInspector } from './use-shape-inspector';
 import { Section } from './inspector-section';
-import { StrokeSectionFields } from './stroke-section-fields';
-import { ShadowSectionFields } from './shadow-section-fields';
+import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
 
 export function ShapeElementInspector() {
-  const {
-    selectedElement,
-    elementDraft,
-    elementPayloadDraft,
-    lockAspectRatio,
-    setElementDraft,
-    setElementPayloadDraft,
-  } = useElements();
-  const { editScene } = useRenderScenes();
+  const result = useShapeInspector();
 
-  if (!selectedElement || !elementDraft || !elementPayloadDraft) {
+  if (!result) {
     return <div className="text-sm text-tertiary">Select an object to edit shape properties.</div>;
   }
 
-  const activeElement = selectedElement;
-  const activePayload = elementPayloadDraft;
-  const visual = readVisualPayload(activeElement.type, activePayload);
-  const styleLabelPrefix = activeElement.type === 'text' ? 'Box ' : '';
-
-  function updateDraft(transform: (current: ElementInspectorDraft) => ElementInspectorDraft) {
-    setElementDraft((current) => (current ? transform(current) : current));
-  }
-
-  function updateVisual(patch: Partial<VisualPayloadState>) {
-    const nextVisual = { ...readVisualPayload(activeElement.type, activePayload), ...patch };
-    setElementPayloadDraft(applyVisualPayload(activeElement.type, activePayload, nextVisual));
-  }
-
-  function handleXChange(value: string) { updateDraft((current) => ({ ...current, x: parseNumber(value, current.x) })); }
-  function handleYChange(value: string) { updateDraft((current) => ({ ...current, y: parseNumber(value, current.y) })); }
-  function handleWChange(value: string) {
-    updateDraft((current) => {
-      const nextWidth = Math.max(1, parseNumber(value, current.width));
-      if (!lockAspectRatio || current.height <= 0) return { ...current, width: nextWidth };
-      const ratio = current.width / current.height || 1;
-      return { ...current, width: nextWidth, height: Math.max(1, nextWidth / ratio) };
-    });
-  }
-  function handleHChange(value: string) {
-    updateDraft((current) => {
-      const nextHeight = Math.max(1, parseNumber(value, current.height));
-      if (!lockAspectRatio || current.width <= 0) return { ...current, height: nextHeight };
-      const ratio = current.width / current.height || 1;
-      return { ...current, height: nextHeight, width: Math.max(1, nextHeight * ratio) };
-    });
-  }
-  function handleRotationChange(value: string) { updateDraft((current) => ({ ...current, rotation: parseNumber(value, current.rotation) })); }
-  function handleOpacityChange(value: string) {
-    updateDraft((current) => ({ ...current, opacity: Math.max(0, Math.min(1, parseNumber(value, current.opacity * 100) / 100)) }));
-  }
-  function handleAlignLeft() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'left')); }
-  function handleAlignCenter() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'center')); }
-  function handleAlignRight() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'right')); }
-  function handleAlignTop() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'top')); }
-  function handleAlignMiddle() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'middle')); }
-  function handleAlignBottom() { updateDraft((current) => alignElementDraft(current, editScene.width, editScene.height, 'bottom')); }
-  function handleFlipX() { updateVisual({ flipX: !visual.flipX }); }
-  function handleFlipY() { updateVisual({ flipY: !visual.flipY }); }
-  function handleFillToggle(enabled: boolean) { updateVisual({ fillEnabled: enabled }); }
-  function handleFillColorChange(value: string) { updateVisual({ fillColor: value }); }
+  const { state, actions } = result;
+  const { elementDraft, visual, styleLabelPrefix, locked } = state;
+  const {
+    handleXChange, handleYChange, handleWChange, handleHChange,
+    handleRotationChange, handleOpacityChange,
+    handleAlignLeft, handleAlignCenter, handleAlignRight,
+    handleAlignTop, handleAlignMiddle, handleAlignBottom,
+    handleFlipX, handleFlipY, handleFillToggle, handleFillColorChange,
+    updateVisual,
+  } = actions;
 
   return (
-    <fieldset className={cn('m-0 min-w-0 border-0 p-0', visual.locked && 'opacity-50')} disabled={visual.locked}>
+    <fieldset className={cn('m-0 min-w-0 border-0 p-0', locked && 'opacity-50')} disabled={locked}>
       <Section.Root>
         <Section.Header>
           <span>Position</span>

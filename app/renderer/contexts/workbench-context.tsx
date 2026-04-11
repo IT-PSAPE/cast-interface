@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { WorkbenchMode } from '../types/ui';
+import { useLocalStorage } from '../hooks/use-local-storage';
 
 type WorkbenchContextValue = {
   state: {
@@ -12,14 +13,14 @@ type WorkbenchContextValue = {
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
 const STORAGE_KEY = 'cast-interface.workbench-mode.v1';
+const VALID_MODES = new Set<WorkbenchMode>(['show', 'slide-editor', 'overlay-editor', 'template-editor']);
+
+function parseWorkbenchMode(raw: string): WorkbenchMode | null {
+  return VALID_MODES.has(raw as WorkbenchMode) ? (raw as WorkbenchMode) : null;
+}
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
-  const [workbenchMode, setWorkbenchModeRaw] = useState<WorkbenchMode>(getStoredWorkbenchMode);
-
-  const setWorkbenchMode = useCallback((mode: WorkbenchMode) => {
-    setWorkbenchModeRaw(mode);
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  }, []);
+  const [workbenchMode, setWorkbenchMode] = useLocalStorage<WorkbenchMode>(STORAGE_KEY, 'show', parseWorkbenchMode);
 
   const state = useMemo<WorkbenchContextValue['state']>(() => ({
     workbenchMode,
@@ -41,12 +42,4 @@ export function useWorkbench(): WorkbenchContextValue {
   const context = useContext(WorkbenchContext);
   if (!context) throw new Error('useWorkbench must be used within WorkbenchProvider');
   return context;
-}
-
-function getStoredWorkbenchMode(): WorkbenchMode {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === 'show' || stored === 'slide-editor' || stored === 'overlay-editor' || stored === 'template-editor') {
-    return stored;
-  }
-  return 'show';
 }

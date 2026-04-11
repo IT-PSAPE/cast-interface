@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/controls/button';
-import { FieldInput } from '../../components/form/field-input';
+import { FieldInput } from '../../components/form/field';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
@@ -65,7 +65,7 @@ export function ContentItemInspector() {
           <span>Details</span>
         </Section.Header>
         <Section.Body>
-          <div className="grid gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-sm text-tertiary uppercase tracking-wider">Created</span>
             <p className="m-0 text-sm text-secondary">
               {new Date(currentContentItem.createdAt).toLocaleDateString()}
@@ -81,7 +81,7 @@ export function ContentItemInspector() {
         <Section.Body>
           {currentContentItem.templateId ? (
             <>
-              <div className="grid gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-sm text-tertiary uppercase tracking-wider">Assigned Template</span>
                 <p className="m-0 text-sm text-secondary">
                   {assignedTemplate?.name ?? 'Assigned template unavailable'}

@@ -1,6 +1,6 @@
 import type { Id, MediaAsset } from '@core/types';
 import { CirclePause, CirclePlay } from 'lucide-react';
-import { MediaAssetIcon } from '../../components/display/media-asset-icon';
+import { MediaAssetIcon } from '../../components/display/entity-icon';
 import { SelectableRow } from '../../components/display/selectable-row';
 
 interface ShowAudioRowProps {

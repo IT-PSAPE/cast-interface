@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Button } from '../../components/controls/button';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
-import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react';
-import { Panel } from '../../components/panel';
-import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
+import { ChevronsUpDown, Trash2 } from 'lucide-react';
+import { ContentItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useElements } from '../../contexts/element/element-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -11,16 +10,12 @@ import { useSlideEditor } from '../../contexts/slide-editor-context';
 import { useSlides } from '../../contexts/slide-context';
 import { getSlideVisualState } from '../../utils/slides';
 import { useRenderScenes } from '../stage/render-scene-provider';
-import { PanelRoute } from '../workbench/panel-route';
-import { ObjectListPanel } from './object-list-panel';
 import { SlideCard } from '../show/slide-card';
+import { ItemListPanel } from './item-list-panel';
 
-interface MenuState {
+interface SlideMenuState {
   x: number;
   y: number;
-}
-
-interface SlideMenuState extends MenuState {
   slideId: string;
 }
 
@@ -31,9 +26,8 @@ export function SlideListPanel() {
   const { getSlideElements } = useSlideEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
-  const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const [presMenuPos, setPresMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [slideMenuState, setSlideMenuState] = useState<SlideMenuState | null>(null);
-  const itemLabel = currentContentItem?.type === 'lyric' ? 'Lyrics' : 'Slides';
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
     return contentItems.map((item) => ({
@@ -50,20 +44,7 @@ export function SlideListPanel() {
 
   function handleOpenPresentationMenu(event: React.MouseEvent<HTMLButtonElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    setMenuState({ x: rect.left, y: rect.bottom + 4 });
-  }
-
-  function handleClosePresentationMenu() {
-    setMenuState(null);
-  }
-
-  function handleSlideContextMenu(event: React.MouseEvent, slideId: string) {
-    event.preventDefault();
-    setSlideMenuState({ x: event.clientX, y: event.clientY, slideId });
-  }
-
-  function handleCloseSlideMenu() {
-    setSlideMenuState(null);
+    setPresMenuPos({ x: rect.left, y: rect.bottom + 4 });
   }
 
   function handleDeleteSlide(slideId: string) {
@@ -74,88 +55,69 @@ export function SlideListPanel() {
   const slideMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!slideMenuState) return [];
     return [
-      {
-        id: 'delete',
-        label: 'Delete',
-        icon: <Trash2 size={14} />,
-        danger: true,
-        onSelect: () => handleDeleteSlide(slideMenuState.slideId),
-      },
+      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteSlide(slideMenuState.slideId) },
     ];
   }, [slideMenuState]);
 
-  function renderSlide(slide: (typeof slides)[number], index: number) {
-    const elements = currentSlide?.id === slide.id
-      ? effectiveElements
-      : getSlideElements(slide.id);
-    const scene = getThumbnailScene(slide.id, 'slide-editor');
-    if (!scene) return null;
-    const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+  const titleElement = (
+    <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+      <span className="flex min-w-0 items-center gap-2">
+        {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-tertiary" /> : null}
+        <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title ?? 'No item selected'}>
+          {currentContentItem?.title ?? 'No item selected'}
+        </span>
+      </span>
+      <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
+    </Button>
+  );
 
-    function handleSelect() {
-      setCurrentSlideIndex(index);
-    }
-
-    function handleContextMenu(event: React.MouseEvent) {
-      handleSlideContextMenu(event, slide.id);
-    }
-
-    return (
-      <div key={slide.id} onContextMenu={handleContextMenu}>
-        <SlideCard
-          index={index}
-          state={state}
-          scene={scene}
-          elements={elements}
-          isFocused={index === currentSlideIndex}
-          onActivate={handleSelect}
-          onEdit={handleSelect}
-        />
-      </div>
-    );
-  }
+  const contextMenus = (
+    <>
+      {presMenuPos ? <ContextMenu x={presMenuPos.x} y={presMenuPos.y} items={presentationMenuItems} onClose={() => setPresMenuPos(null)} /> : null}
+      {slideMenuState ? <ContextMenu x={slideMenuState.x} y={slideMenuState.y} items={slideMenuItems} onClose={() => setSlideMenuState(null)} /> : null}
+    </>
+  );
 
   return (
-    <Panel.Root as="aside" bordered="right" data-ui-region="slide-list-panel">
-      <PanelRoute.Split splitId="slide-list-panel" orientation="vertical" className="h-full">
-        <PanelRoute.Panel id="slide-list" defaultSize={440} minSize={180}>
-          <Panel.Section
-            title={(
-              <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
-                <span className="flex min-w-0 items-center gap-2">
-                  {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-tertiary" /> : null}
-                  <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title ?? 'No item selected'}>
-                    {currentContentItem?.title ?? 'No item selected'}
-                  </span>
-                </span>
-                <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
-              </Button>
-            )}
-            action={(
-              <Button.Icon label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
-                <Plus />
-              </Button.Icon>
-            )}
-            headerClassName="border-b border-primary"
-            bodyClassName="overflow-y-auto p-2"
-          >
-            <div className="grid content-start gap-1" role="grid" aria-label={`Current ${itemLabel.toLowerCase()}`}>
-              {slides.map(renderSlide)}
-            </div>
-          </Panel.Section>
-        </PanelRoute.Panel>
-        <PanelRoute.Panel id="slide-objects" defaultSize={220} minSize={160}>
-          <Panel.Section
-            title={<span className="text-sm font-medium text-primary">Objects</span>}
-            headerClassName="border-b border-t border-primary"
-            bodyClassName="overflow-y-auto p-2"
-          >
-            <ObjectListPanel />
-          </Panel.Section>
-        </PanelRoute.Panel>
-      </PanelRoute.Split>
-      {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={presentationMenuItems} onClose={handleClosePresentationMenu} /> : null}
-      {slideMenuState ? <ContextMenu x={slideMenuState.x} y={slideMenuState.y} items={slideMenuItems} onClose={handleCloseSlideMenu} /> : null}
-    </Panel.Root>
+    <ItemListPanel
+      title={titleElement}
+      splitId="slide-list-panel"
+      listPanelId="slide-list"
+      objectsPanelId="slide-objects"
+      onAdd={handleAddSlide}
+      addLabel={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`}
+      listAriaLabel={`Current ${currentContentItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}
+      contextMenu={contextMenus}
+    >
+      {slides.map((slide, index) => {
+        const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
+        const scene = getThumbnailScene(slide.id, 'slide-editor');
+        if (!scene) return null;
+        const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+
+        function handleSelect() {
+          setCurrentSlideIndex(index);
+        }
+
+        function handleContextMenu(event: React.MouseEvent) {
+          event.preventDefault();
+          setSlideMenuState({ x: event.clientX, y: event.clientY, slideId: slide.id });
+        }
+
+        return (
+          <div key={slide.id} onContextMenu={handleContextMenu}>
+            <SlideCard
+              index={index}
+              state={state}
+              scene={scene}
+              elements={elements}
+              isFocused={index === currentSlideIndex}
+              onActivate={handleSelect}
+              onEdit={handleSelect}
+            />
+          </div>
+        );
+      })}
+    </ItemListPanel>
   );
 }

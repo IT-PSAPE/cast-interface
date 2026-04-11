@@ -1,3 +1,4 @@
+import type { Id, Overlay } from '@core/types';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
 import { usePresentationLayers } from '../../contexts/presentation-layer-context';
@@ -5,9 +6,8 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { overlayToLayerElements } from '@core/presentation-layers';
 import { buildRenderScene } from '../stage/build-render-scene';
 import { SceneThumbnailCard } from '../../components/display/scene-thumbnail-card';
-import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
+import { BinPanelLayout } from './bin-panel-layout';
 import { filterByText } from '../../utils/filter-by-text';
-import type { Id, Overlay } from '@core/types';
 
 interface OverlayBinPanelProps {
   filterText: string;
@@ -23,7 +23,7 @@ export function OverlayBinPanel({ filterText, gridItemSize }: OverlayBinPanelPro
   const overlays = filterByText(allOverlays, filterText, (overlay) => [overlay.name, overlay.type]);
 
   return (
-    <ThumbnailGrid columns={gridItemSize}>
+    <BinPanelLayout gridItemSize={gridItemSize} menuState={null} menuItems={[]} onCloseMenu={() => {}}>
       {overlays.map((overlay, index) => (
         <OverlayCard
           key={overlay.id}
@@ -35,7 +35,7 @@ export function OverlayBinPanel({ filterText, gridItemSize }: OverlayBinPanelPro
           setWorkbenchMode={setWorkbenchMode}
         />
       ))}
-    </ThumbnailGrid>
+    </BinPanelLayout>
   );
 }
 

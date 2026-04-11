@@ -31,8 +31,8 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="grid place-items-center h-full p-8 text-center">
-        <div className="grid gap-4 max-w-md">
+      <div className="flex items-center justify-center h-full p-8 text-center">
+        <div className="flex flex-col gap-4 max-w-md">
           <h2 className="text-lg font-semibold text-primary">Something went wrong</h2>
           <p className="text-sm text-secondary">
             {this.state.error?.message ?? 'An unexpected error occurred.'}

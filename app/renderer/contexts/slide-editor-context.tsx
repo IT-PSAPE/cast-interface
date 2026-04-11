@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AppSnapshot, Id, SlideElement } from '@core/types';
+import { cloneElements, slideElementsSignature } from '../utils/staged-editor-utils';
 import { buildSnapshotDiff } from './element/element-history-utils';
 import { useCast } from './cast-context';
 import { useSlides } from './slide-context';
@@ -67,7 +68,7 @@ export function SlideEditorProvider({ children }: { children: ReactNode }) {
 
     setIsPushingChanges(true);
     try {
-      const next = await mutate(async () => {
+      await mutate(async () => {
         let snapshot: AppSnapshot | null = null;
         for (const slideId of pendingSlideIds) {
           const persisted = persistedElementsBySlideId.get(slideId) ?? [];
@@ -90,15 +91,11 @@ export function SlideEditorProvider({ children }: { children: ReactNode }) {
       });
 
       setStagedSlides({});
-      if (currentSlide && !next.slides.some((slide) => slide.id === currentSlide.id)) {
-        setStatusText('Slide changes pushed');
-        return;
-      }
       setStatusText('Slide changes pushed');
     } finally {
       setIsPushingChanges(false);
     }
-  }, [currentSlide, isPushingChanges, mutate, persistedElementsBySlideId, setStatusText, stagedSlides]);
+  }, [isPushingChanges, mutate, persistedElementsBySlideId, setStatusText, stagedSlides]);
 
   useEffect(() => {
     const previousWorkbenchMode = previousWorkbenchModeRef.current;
@@ -123,12 +120,4 @@ export function useSlideEditor(): SlideEditorContextValue {
   const context = useContext(SlideEditorContext);
   if (!context) throw new Error('useSlideEditor must be used within SlideEditorProvider');
   return context;
-}
-
-function cloneElements(elements: SlideElement[]): SlideElement[] {
-  return JSON.parse(JSON.stringify(elements)) as SlideElement[];
-}
-
-function slideElementsSignature(elements: SlideElement[]): string {
-  return JSON.stringify(elements);
 }

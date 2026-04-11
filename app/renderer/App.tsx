@@ -20,13 +20,14 @@ import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-b
 import { LibraryPanelProvider } from './features/show/library-panel-context';
 import { ShowModeLayout } from './features/workbench/show-mode-layout';
 import { SlideEditorLayout } from './features/workbench/slide-editor-layout';
-import { OverlayEditorLayout } from './features/workbench/overlay-editor-layout';
-import { TemplateEditorLayout } from './features/workbench/template-editor-layout';
+import { EditorLayout } from './features/workbench/editor-layout';
+import { OverlayListPanel } from './features/editor/overlay-list-panel';
+import { TemplateListPanel } from './features/editor/template-list-panel';
 import { PanelRoute, usePanelRoute } from './features/workbench/panel-route';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { OverlayProvider } from './components/overlays/overlay-provider';
 import { RenderSceneProvider } from './features/stage/render-scene-provider';
-import { StatusBar } from './components/display/status-bar';
+import { StatusBar } from './features/workbench/status-bar';
 import { ProgramOutputProvider } from './features/show/program-output-context';
 import { ShowAudioProvider } from './features/show/show-audio-context';
 import { NdiFrameCapture } from './features/show/ndi-frame-capture';
@@ -145,7 +146,7 @@ function AppLayoutContent() {
 
   if (!snapshot) {
     return (
-      <div className="grid place-items-center h-full text-secondary">
+      <div className="flex items-center justify-center h-full text-secondary">
         Loading Cast Interface…
       </div>
     );
@@ -213,10 +214,10 @@ function AppLayoutContent() {
       <WindowsInlineMenuBar />
       <AppToolbar audienceOutputActive={outputState.audience} onToggleAudienceOutput={toggleAudienceOutput} panelToggles={panelToggles} />
       <main className='flex-1 min-h-0'>
-        {workbenchMode === 'show' && <ShowModeLayout />}
-        {workbenchMode === 'slide-editor' && <SlideEditorLayout />}
-        {workbenchMode === 'overlay-editor' && <OverlayEditorLayout />}
-        {workbenchMode === 'template-editor' && <TemplateEditorLayout />}
+        {workbenchMode === 'show' ? <ShowModeLayout /> : null}
+        {workbenchMode === 'slide-editor' ? <SlideEditorLayout /> : null}
+        {workbenchMode === 'overlay-editor' ? <EditorLayout leftPanel={<OverlayListPanel />} /> : null}
+        {workbenchMode === 'template-editor' ? <EditorLayout leftPanel={<TemplateListPanel />} /> : null}
       </main>
       <StatusBar />
     </div>

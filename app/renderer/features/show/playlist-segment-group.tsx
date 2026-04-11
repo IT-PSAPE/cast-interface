@@ -1,9 +1,9 @@
 import type { PlaylistTree } from '@core/types';
 import { ChevronDown, ChevronRight, EllipsisVertical } from 'lucide-react';
 import { Button } from '../../components/controls/button';
-import { EditableText } from '../../components/form/editable-text';
+import { EditableField } from '../../components/form/editable-field';
 
-import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
+import { ContentItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useLibraryBrowser } from './library-browser-context';
@@ -40,7 +40,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
   }
 
   return (
-    <div className="group/segment grid gap-0.5">
+    <div className="group/segment flex flex-col gap-0.5">
       <div
         className="group/segment-header flex items-center justify-between gap-2 rounded-sm px-1.5 py-1"
         style={{
@@ -59,7 +59,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
           >
             {collapsed ? <ChevronRight /> : <ChevronDown />}
           </Button.Icon>
-          <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
+          <EditableField value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
         </div>
 
         <Button.Icon
@@ -98,7 +98,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
               className="flex w-full items-center gap-2 rounded-sm border-0 px-2 py-1 pl-7 pr-8 text-left text-md cursor-pointer hover:bg-quaternary/50 hover:text-primary"
             >
               <ContentItemIcon entity={entry.item} className="shrink-0 text-tertiary" />
-              <EditableText value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
+              <EditableField value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
             </Button>
 
             <Button.Icon

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
-import { CheckboxField } from '../../components/form/checkbox-field';
-import { FieldInput } from '../../components/form/field-input';
+import { FieldCheckbox as CheckboxField, FieldInput } from '../../components/form/field';
 import { useNdi } from '../../contexts/ndi-context';
 import { SettingsSection } from './settings-section';
 
@@ -24,7 +23,7 @@ export function OutputSettingsPanel() {
   }, [updateOutputConfig]);
 
   return (
-    <div className="grid gap-6">
+    <div className="flex flex-col gap-6">
       <SettingsSection title="Audience screen">
         <p className="text-sm text-tertiary">System display output is not wired yet.</p>
       </SettingsSection>
@@ -35,7 +34,7 @@ export function OutputSettingsPanel() {
           onChange={handleSetOutputEnabled}
         />
 
-        <div className="grid gap-3">
+        <div className="flex flex-col gap-3">
           <FieldInput
             label="Sender name"
             value={senderNameDraft}
@@ -58,15 +57,15 @@ export function OutputSettingsPanel() {
 
       <SettingsSection title="NDI diagnostics">
         {diagnostics ? (
-          <div className="grid gap-1 text-sm text-secondary">
+          <div className="flex flex-col gap-1 text-sm text-secondary">
             <div>Runtime: {diagnostics.runtimeLoaded ? (diagnostics.runtimePath ?? 'Loaded') : 'Not loaded'}</div>
             <div>Status: {diagnostics.sourceStatus}</div>
-            {diagnostics.activeSender && (
+            {diagnostics.activeSender ? (
               <div>Sender: {diagnostics.activeSender.senderName} ({diagnostics.activeSender.width}x{diagnostics.activeSender.height})</div>
-            )}
-            {diagnostics.lastError && (
+            ) : null}
+            {diagnostics.lastError ? (
               <div className="text-red-400">Error: {diagnostics.lastError}</div>
-            )}
+            ) : null}
           </div>
         ) : (
           <p className="text-sm text-tertiary">Waiting for NDI diagnostics.</p>

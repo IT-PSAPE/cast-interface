@@ -1,3 +1,4 @@
+import { clamp } from '../../utils/math';
 import type { PaneId, PaneLayoutState, SplitDefinition, SplitLayoutState } from './workbench-panel-layout';
 
 interface WorkingPane {
@@ -378,10 +379,4 @@ export function requirePaneState(layout: SplitLayoutState, paneId: PaneId): Pane
     throw new Error(`Missing split state for pane: ${paneId}`);
   }
   return pane;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
 }

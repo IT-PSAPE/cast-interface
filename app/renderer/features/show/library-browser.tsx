@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Button } from '../../components/controls/button';
-import { EditableText } from '../../components/form/editable-text';
+import { EditableField } from '../../components/form/editable-field';
 import { Folder, Plus } from 'lucide-react';
 
 import { SectionHeader } from '../../components/display/section-header';
@@ -64,7 +64,7 @@ export function LibraryBrowser() {
               onContextMenu={handleContextMenu}
               leading={<Folder size={14} strokeWidth={1.75} />}
             >
-              <EditableText
+              <EditableField
                 value={bundle.library.name}
                 onCommit={handleRename}
                 editing={isEditing}

@@ -10,14 +10,7 @@ import type {
   TextElementPayload,
   VideoElementPayload,
 } from './types';
-
-function cloneElements(elements: SlideElement[]): SlideElement[] {
-  return JSON.parse(JSON.stringify(elements)) as SlideElement[];
-}
-
-function cloneElement(element: SlideElement): SlideElement {
-  return JSON.parse(JSON.stringify(element)) as SlideElement;
-}
+import { cloneElement, cloneElements } from './clone';
 
 function mergeTemplatePayload(templateElement: SlideElement, contentElement: SlideElement | null): SlideElement['payload'] {
   if (!contentElement || templateElement.type !== contentElement.type) {

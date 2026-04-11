@@ -1,22 +1,15 @@
-import { useMemo } from 'react';
 import type { ContentItem, Id, Slide } from '@core/types';
-import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { Ellipsis } from 'lucide-react';
-import { EditableText } from '../../components/form/editable-text';
+import { EditableField } from '../../components/form/editable-field';
 import { Button } from '../../components/controls/button';
-import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
+import { ContentItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
-import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
-import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { buildContentItemMenuItems } from './build-presentation-menu-items';
-import { useLibraryPanelManagement } from './use-library-panel-management';
 import { buildThumbnailScene } from '../stage/build-render-scene';
 import { SceneStage } from '../stage/scene-stage';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { filterByText } from '../../utils/filter-by-text';
-import { useState } from 'react';
+import { BinPanelLayout } from './bin-panel-layout';
+import { useContentBin } from './use-content-bin';
 
 interface ContentBinPanelProps {
   filterText: string;
@@ -25,78 +18,38 @@ interface ContentBinPanelProps {
 
 export function ContentBinPanel({ filterText, gridItemSize }: ContentBinPanelProps) {
   const {
-    currentDrawerContentItemId,
-    currentPlaylistId,
-    currentLibraryBundle,
+    filteredPresentations,
+    menu,
+    menuItems,
+    editingPresentationId,
     browseContentItem,
     isDetachedContentBrowser,
-  } = useNavigation();
-  const { contentItems, slidesByContentItemId } = useProjectContent();
-  const {
-    renameContentItem,
-    deleteContentItem,
-    moveContentItem,
-    moveContentItemToSegment,
-  } = useLibraryPanelManagement();
-  const menu = useContextMenuState<Id>();
-  const [editingPresentationId, setEditingPresentationId] = useState<Id | null>(null);
-
-  const filteredPresentations = useMemo(() => {
-    return filterByText(contentItems, filterText, (item) => {
-      const slides = slidesByContentItemId.get(item.id) ?? [];
-      const slideLabels = slides.map((slide) => `slide ${slide.order + 1}`);
-      return [item.title, item.type, ...slideLabels];
-    });
-  }, [contentItems, filterText, slidesByContentItemId]);
-
-  const menuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!menu.menuState) return [];
-    return buildContentItemMenuItems({
-      itemId: menu.menuState.data,
-      scope: 'library',
-      currentPlaylistId,
-      selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
-      itemIds: contentItems.map((item) => item.id),
-      selectContentItem: browseContentItem,
-      moveContentItem,
-      moveContentItemToSegment,
-      beginRenameContentItem: setEditingPresentationId,
-      deleteContentItem,
-    });
-  }, [browseContentItem, contentItems, currentLibraryBundle, currentPlaylistId, deleteContentItem, menu.menuState, moveContentItem, moveContentItemToSegment]);
-
-  function handleRename(itemId: Id, title: string) {
-    void renameContentItem(itemId, title);
-    setEditingPresentationId(null);
-  }
+    currentDrawerContentItemId,
+    handleRename,
+    slidesByContentItemId,
+  } = useContentBin(filterText);
 
   return (
-    <>
-      <ThumbnailGrid columns={gridItemSize}>
-        {filteredPresentations.map((presentation) => (
-          <ContentCard
-            key={presentation.id}
-            item={presentation}
-            slides={slidesByContentItemId.get(presentation.id) ?? []}
-            isSelected={isDetachedContentBrowser && currentDrawerContentItemId === presentation.id}
-            isEditing={editingPresentationId === presentation.id}
-            onOpen={browseContentItem}
-            onOpenMenu={menu.openFromButton}
-            onContextMenu={menu.openFromEvent}
-            onRename={handleRename}
-          />
-        ))}
-      </ThumbnailGrid>
-
-      {menu.menuState ? (
-        <ContextMenu
-          x={menu.menuState.x}
-          y={menu.menuState.y}
-          items={menuItems}
-          onClose={menu.close}
+    <BinPanelLayout
+      gridItemSize={gridItemSize}
+      menuState={menu.menuState}
+      menuItems={menuItems}
+      onCloseMenu={menu.close}
+    >
+      {filteredPresentations.map((presentation) => (
+        <ContentCard
+          key={presentation.id}
+          item={presentation}
+          slides={slidesByContentItemId.get(presentation.id) ?? []}
+          isSelected={isDetachedContentBrowser && currentDrawerContentItemId === presentation.id}
+          isEditing={editingPresentationId === presentation.id}
+          onOpen={browseContentItem}
+          onOpenMenu={menu.openFromButton}
+          onContextMenu={menu.openFromEvent}
+          onRename={handleRename}
         />
-      ) : null}
-    </>
+      ))}
+    </BinPanelLayout>
   );
 }
 
@@ -162,7 +115,7 @@ function ContentCard({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
         caption={(
           <div className="flex items-center gap-2">
             <ContentItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
-            <EditableText
+            <EditableField
               value={item.title}
               onCommit={handleRename}
               editing={isEditing}
