@@ -1,5 +1,19 @@
 import type { ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
+import { cv } from '@renderer/utils/cv';
+
+const rowStyles = cv({
+  base: 'group relative grid w-full grid-cols-[200px_1fr] overflow-hidden rounded-md border bg-background-primary text-left transition-colors',
+  variants: {
+    selected: {
+      true: ['border-brand-400/70 ring-1 ring-brand-400/35'],
+      false: ['border-border-primary hover:border-border-secondary'],
+    },
+  },
+  defaultVariants: {
+    selected: false,
+  },
+});
 
 interface ThumbnailRowProps {
   preview: ReactNode;
@@ -13,13 +27,9 @@ interface ThumbnailRowProps {
   selected?: boolean;
 }
 
-export function ThumbnailRow({ preview, body, className = '', previewClassName = '', bodyClassName = '', overlay, onClick, onDoubleClick, selected = false }: ThumbnailRowProps) {
-  const selectionClass = selected
-    ? 'border-brand-400/70 ring-1 ring-brand-400/35'
-    : 'border-border-primary hover:border-border-secondary';
-
+export function ThumbnailRow({ preview, body, className, previewClassName, bodyClassName, overlay, onClick, onDoubleClick, selected = false }: ThumbnailRowProps) {
   return (
-    <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={cn('group relative grid w-full grid-cols-[200px_1fr] overflow-hidden rounded-md border bg-background-primary text-left transition-colors', selectionClass, className)} >
+    <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={cn(rowStyles({ selected }), className)}>
       <div className={cn('relative overflow-hidden border-r border-border-primary bg-background-tertiary', previewClassName)}>
         {preview}
       </div>

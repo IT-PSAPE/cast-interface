@@ -20,8 +20,8 @@ const segmentedControlItemStyles = cv({
     },
   },
   defaultVariants: {
-    active: 'false',
-    fill: 'false',
+    active: false,
+    fill: false,
     variant: 'label',
   },
 });
@@ -54,8 +54,8 @@ export function SegmentedControlItemBase({ children, value, variant, fill, onCli
       aria-pressed={isActive}
       className={cn(
         segmentedControlItemStyles({
-          active: isActive ? 'true' : 'false',
-          fill: shouldFill ? 'true' : 'false',
+          active: isActive,
+          fill: shouldFill,
           variant,
         }),
         className,

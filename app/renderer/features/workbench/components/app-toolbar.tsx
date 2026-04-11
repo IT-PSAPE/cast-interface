@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
-import { SettingsDialog } from '../../../components/overlays/settings-dialog';
+import { SettingsDialog } from '../../settings/components/settings-dialog';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { OutputToggle } from '../../show/playback/components/output-toggle';
 import type { WorkbenchMode } from '../../../types/ui';
@@ -77,9 +77,9 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
             {panelToggles.map(renderPanelToggleItem)}
           </SegmentedControl.Root>
 
-          <Button type="button" onClick={handleOpenSettings} title="Settings" aria-label="Settings" size="icon-md">
+          <Button.Icon label="Settings" onClick={handleOpenSettings} size="md">
             <Settings className="size-4" />
-          </Button>
+          </Button.Icon>
         </div>
       </div>
       {showSettings ? <SettingsDialog onClose={handleCloseSettings} /> : null}

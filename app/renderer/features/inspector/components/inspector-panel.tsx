@@ -1,4 +1,5 @@
 import { Button } from '../../../components/controls/button';
+import { Panel } from '../../../components/panel';
 import { useInspectorPanelPushAction } from '../hooks/use-inspector-panel-push-action';
 import { InspectorTabsPanel } from './inspector-tabs-panel';
 
@@ -6,15 +7,15 @@ export function InspectorPanel() {
   const { state, handlePushChanges } = useInspectorPanelPushAction();
 
   return (
-    <aside data-ui-region="inspector-panel" className="flex flex-col h-full min-h-0 overflow-hidden border-l border-border-primary bg-primary" >
+    <Panel.Root as="aside" bordered="left" data-ui-region="inspector-panel">
       <InspectorTabsPanel className="flex-1" />
       {state.isVisible ? (
-        <div className="mt-auto border-t border-border-primary p-3">
-          <Button onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
+        <Panel.Footer className="p-3">
+          <Button.Root onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
             {state.isPushingChanges ? 'Pushing…' : state.pushLabel}
-          </Button>
-        </div>
+          </Button.Root>
+        </Panel.Footer>
       ) : null}
-    </aside>
+    </Panel.Root>
   );
 }

@@ -86,12 +86,12 @@ export function ObjectListRow({
       title={title}
       trailing={
         <span className="ml-auto flex items-center gap-1">
-          <Button size="icon-sm" variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-text-primary' : 'text-text-tertiary'}>
+          <Button.Icon size="sm" variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-text-primary' : 'text-text-tertiary'}>
             <LockIcon closed={locked} />
-          </Button>
-          <Button size="icon-sm" variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-text-primary' : 'text-text-tertiary'}>
+          </Button.Icon>
+          <Button.Icon size="sm" variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-text-primary' : 'text-text-tertiary'}>
             <VisibilityIcon visible={visible} />
-          </Button>
+          </Button.Icon>
         </span>
       }
     />

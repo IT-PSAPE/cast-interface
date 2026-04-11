@@ -31,8 +31,8 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
 
   const footer = (
     <div className="ml-auto flex items-center gap-2">
-      <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
-      <Button variant="take" onClick={handleSave} disabled={isSaving}>Save</Button>
+      <Button.Root variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button.Root>
+      <Button.Root variant="take" onClick={handleSave} disabled={isSaving}>Save</Button.Root>
     </div>
   );
 

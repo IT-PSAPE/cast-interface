@@ -17,16 +17,16 @@ interface ToolbarButtonProps {
 
 function ToolbarButton({ label, onClick, disabled = false, children }: ToolbarButtonProps) {
   return (
-    <Button
+    <Button.Icon
       label={label}
       onClick={onClick}
       disabled={disabled}
-      size="icon-lg"
+      size="lg"
       variant="ghost"
       className="text-text-primary hover:bg-white/10"
     >
       {children}
-    </Button>
+    </Button.Icon>
   );
 }
 

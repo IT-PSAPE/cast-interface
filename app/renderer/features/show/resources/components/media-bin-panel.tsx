@@ -1,39 +1,37 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { Id, MediaAsset } from '@core/types';
+import { cn } from '@renderer/utils/cn';
 import { Ellipsis } from 'lucide-react';
 import { ContextMenu } from '../../../../components/overlays/context-menu';
 import type { ContextMenuItem } from '../../../../components/overlays/context-menu';
 import { Button } from '../../../../components/controls/button';
 import { MediaAssetIcon } from '../../../../components/display/media-asset-icon';
+import { FileTrigger } from '../../../../components/form/file-trigger';
+import { ThumbnailGrid } from '../../../../components/layout/thumbnail-grid';
 import { useElements } from '../../../../contexts/element/element-context';
 import { usePresentationLayers } from '../../../../contexts/presentation-layer-context';
 import { useProjectContent } from '../../../../contexts/use-project-content';
-
-interface MenuState { x: number; y: number; assetId: Id }
+import { useContextMenuState } from '../../../../hooks/use-context-menu-state';
+import { filterByText } from '../../../../utils/filter-by-text';
 
 interface MediaBinPanelProps {
   filterText: string;
+  gridItemSize: number;
 }
 
-export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
+export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) {
   const { mediaAssets: allMediaAssets } = useProjectContent();
   const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationLayers();
   const { deleteMedia, changeMediaSrc } = useElements();
-  const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const menu = useContextMenuState<Id>();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const changeSrcTargetRef = useRef<Id | null>(null);
 
-  const normalizedFilter = filterText.trim().toLowerCase();
-  const mediaAssets = allMediaAssets.filter((asset) => {
-    if (asset.type === 'audio') return false;
-    if (!normalizedFilter) return true;
-    return asset.name.toLowerCase().includes(normalizedFilter) || asset.type.toLowerCase().includes(normalizedFilter);
-  });
-
-  function openMenu(assetId: Id, button: HTMLButtonElement) {
-    const rect = button.getBoundingClientRect();
-    setMenuState({ x: rect.left, y: rect.bottom + 4, assetId });
-  }
+  const mediaAssets = filterByText(
+    allMediaAssets.filter((asset) => asset.type !== 'audio'),
+    filterText,
+    (asset) => [asset.name, asset.type],
+  );
 
   function handleApply(assetId: Id) {
     setMediaLayerAsset(assetId);
@@ -64,67 +62,82 @@ export function MediaBinPanel({ filterText }: MediaBinPanelProps) {
     ];
   }
 
+  function handleChangeSourceSelect(_files: FileList, event: React.ChangeEvent<HTMLInputElement>) {
+    handleFileChange(event);
+  }
+
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
-        {mediaAssets.map((asset) => {
-          function handleDragStart(e: React.DragEvent) { e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset)); }
-          function handleAssignLayer() { setMediaLayerAsset(asset.id); }
-          function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
-            e.stopPropagation();
-            openMenu(asset.id, e.currentTarget);
-          }
+      <ThumbnailGrid itemSize={gridItemSize}>
+        {mediaAssets.map((asset) => (
+          <MediaCard
+            key={asset.id}
+            asset={asset}
+            isActive={mediaLayerAssetId === asset.id}
+            onAssignLayer={setMediaLayerAsset}
+            onOpenMenu={menu.openFromButton}
+          />
+        ))}
+      </ThumbnailGrid>
 
-          return (
-            <div
-              key={asset.id}
-              className="group grid gap-1.5 cursor-grab"
-              draggable
-              onDragStart={handleDragStart}
-            >
-              <button
-                type="button"
-                onClick={handleAssignLayer}
-                className={`relative aspect-video overflow-hidden rounded-md border bg-background-primary text-left transition-colors ${
-                  mediaLayerAssetId === asset.id
-                    ? 'border-brand-400/70 ring-1 ring-brand-400/35'
-                    : 'border-border-primary hover:border-border-secondary'
-                }`}
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
-                <MediaThumbnail asset={asset} />
-                <div className="absolute right-1 top-1 hidden group-hover:block">
-                  <Button label="Media options" onClick={handleMenuClick} size="icon-sm" className="border-border-primary bg-background-tertiary/80">
-                    <Ellipsis size={14} strokeWidth={2} />
-                  </Button>
-                </div>
-              </button>
-              <div className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm text-text-secondary">
-                <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-text-tertiary" />
-                <span className="truncate">{asset.name}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <FileTrigger.Root hidden inputRef={fileInputRef} accept="image/*,video/*" onSelect={handleChangeSourceSelect} />
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*"
-        onChange={handleFileChange}
-        className="hidden"
-      />
-
-      {menuState ? (
+      {menu.menuState ? (
         <ContextMenu
-          x={menuState.x}
-          y={menuState.y}
-          items={buildMenuItems(menuState.assetId)}
-          onClose={() => setMenuState(null)}
+          x={menu.menuState.x}
+          y={menu.menuState.y}
+          items={buildMenuItems(menu.menuState.data)}
+          onClose={menu.close}
         />
       ) : null}
     </>
+  );
+}
+
+interface MediaCardProps {
+  asset: MediaAsset;
+  isActive: boolean;
+  onAssignLayer: (id: Id) => void;
+  onOpenMenu: (button: HTMLElement, data: Id) => void;
+}
+
+function MediaCard({ asset, isActive, onAssignLayer, onOpenMenu }: MediaCardProps) {
+  function handleDragStart(e: React.DragEvent) {
+    e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
+  }
+
+  function handleAssignLayer() {
+    onAssignLayer(asset.id);
+  }
+
+  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onOpenMenu(e.currentTarget, asset.id);
+  }
+
+  return (
+    <div className="group grid gap-1.5 cursor-grab" draggable onDragStart={handleDragStart}>
+      <button
+        type="button"
+        onClick={handleAssignLayer}
+        className={cn(
+          'relative aspect-video overflow-hidden rounded-md border bg-background-primary text-left transition-colors',
+          isActive ? 'border-brand-400/70 ring-1 ring-brand-400/35' : 'border-border-primary hover:border-border-secondary',
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
+        <MediaThumbnail asset={asset} />
+        <div className="absolute right-1 top-1 hidden group-hover:block">
+          <Button.Icon label="Media options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
+            <Ellipsis size={14} strokeWidth={2} />
+          </Button.Icon>
+        </div>
+      </button>
+      <div className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm text-text-secondary">
+        <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-text-tertiary" />
+        <span className="truncate">{asset.name}</span>
+      </div>
+    </div>
   );
 }
 

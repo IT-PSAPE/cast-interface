@@ -11,7 +11,7 @@ const iconGroupRootStyles = cv({
     },
   },
   defaultVariants: {
-    fill: 'false',
+    fill: false,
   },
 });
 
@@ -25,7 +25,7 @@ export function IconGroupRoot({ children, className, fill = false, ...divProps }
   return (
     <div
       {...divProps}
-      className={cn(iconGroupRootStyles({ fill: fill ? 'true' : 'false' }), className)}
+      className={cn(iconGroupRootStyles({ fill }), className)}
     >
       {children}
     </div>

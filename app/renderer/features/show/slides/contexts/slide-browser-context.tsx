@@ -1,8 +1,13 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { PlaylistBrowserMode, SlideBrowserMode } from '../../../../types/ui';
+import { useGridSize } from '../../../../hooks/use-grid-size';
 
 interface SlideBrowserContextValue {
+  gridItemSize: number;
+  gridSizeMax: number;
+  gridSizeMin: number;
   playlistBrowserMode: PlaylistBrowserMode;
+  setGridItemSize: (size: number) => void;
   setPlaylistBrowserMode: (mode: PlaylistBrowserMode) => void;
   slideBrowserMode: SlideBrowserMode;
   setSlideBrowserMode: (mode: SlideBrowserMode) => void;
@@ -13,6 +18,7 @@ const STORAGE_KEY = 'cast-interface.slide-browser-preferences.v1';
 
 export function SlideBrowserProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState(getStoredSlideBrowserPreferences);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax } = useGridSize('cast-interface.grid-size.slide-browser', 240, 160, 400);
   const setSlideBrowserMode = (mode: SlideBrowserMode) => {
     const next = { ...preferences, slideBrowserMode: mode };
     setPreferences(next);
@@ -25,12 +31,16 @@ export function SlideBrowserProvider({ children }: { children: ReactNode }) {
   };
   const value = useMemo(
     () => ({
+      gridItemSize: gridSize,
+      gridSizeMax,
+      gridSizeMin,
       playlistBrowserMode: preferences.playlistBrowserMode,
+      setGridItemSize: setGridSize,
       setPlaylistBrowserMode,
       slideBrowserMode: preferences.slideBrowserMode,
       setSlideBrowserMode,
     }),
-    [preferences],
+    [gridSize, gridSizeMax, gridSizeMin, preferences, setGridSize],
   );
 
   return <SlideBrowserContext.Provider value={value}>{children}</SlideBrowserContext.Provider>;

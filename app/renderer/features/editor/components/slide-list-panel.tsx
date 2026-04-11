@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../../components/controls/button';
 import { ContextMenu, type ContextMenuItem } from '../../../components/overlays/context-menu';
 import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react';
-import { PanelSection } from '../../../components/display/panel-section';
+import { Panel } from '../../../components/panel';
 import { ContentItemIcon } from '../../../components/display/presentation-entity-icon';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useElements } from '../../../contexts/element/element-context';
@@ -116,15 +116,12 @@ export function SlideListPanel() {
   }
 
   return (
-    <aside
-      data-ui-region="slide-list-panel"
-      className="h-full min-h-0 overflow-hidden border-r border-border-primary bg-primary"
-    >
+    <Panel.Root as="aside" bordered="right" data-ui-region="slide-list-panel">
       <PanelRoute.Split splitId="slide-list-panel" orientation="vertical" className="h-full">
         <PanelRoute.Panel id="slide-list" defaultSize={440} minSize={180}>
-          <PanelSection
+          <Panel.Section
             title={(
-              <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+              <Button.Root variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
                 <span className="flex min-w-0 items-center gap-2">
                   {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-text-tertiary" /> : null}
                   <span className="truncate text-sm font-medium text-text-primary" title={currentContentItem?.title ?? 'No item selected'}>
@@ -132,12 +129,12 @@ export function SlideListPanel() {
                   </span>
                 </span>
                 <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-text-tertiary" />
-              </Button>
+              </Button.Root>
             )}
             action={(
-              <Button label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="icon-sm" onClick={handleAddSlide}>
+              <Button.Icon label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="sm" onClick={handleAddSlide}>
                 <Plus size={14} strokeWidth={2} />
-              </Button>
+              </Button.Icon>
             )}
             headerClassName="border-b border-border-primary"
             bodyClassName="overflow-y-auto p-2"
@@ -145,20 +142,20 @@ export function SlideListPanel() {
             <div className="grid content-start gap-2" role="grid" aria-label={`Current ${itemLabel.toLowerCase()}`}>
               {slides.map(renderSlide)}
             </div>
-          </PanelSection>
+          </Panel.Section>
         </PanelRoute.Panel>
         <PanelRoute.Panel id="slide-objects" defaultSize={220} minSize={160}>
-          <PanelSection
+          <Panel.Section
             title={<span className="text-sm font-medium text-text-primary">Objects</span>}
             headerClassName="border-b border-t border-border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
             <ObjectListPanel />
-          </PanelSection>
+          </Panel.Section>
         </PanelRoute.Panel>
       </PanelRoute.Split>
       {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={presentationMenuItems} onClose={handleClosePresentationMenu} /> : null}
       {slideMenuState ? <ContextMenu x={slideMenuState.x} y={slideMenuState.y} items={slideMenuItems} onClose={handleCloseSlideMenu} /> : null}
-    </aside>
+    </Panel.Root>
   );
 }

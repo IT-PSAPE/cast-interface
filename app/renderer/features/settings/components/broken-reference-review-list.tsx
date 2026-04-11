@@ -58,9 +58,9 @@ function BrokenReferenceRow({
         </SegmentedControl.Root>
 
         {action === 'replace' ? (
-          <Button variant="ghost" onClick={handleChooseReplacement}>
+          <Button.Root variant="ghost" onClick={handleChooseReplacement}>
             {replacementPath ? 'Change File' : 'Choose File'}
-          </Button>
+          </Button.Root>
         ) : null}
       </div>
 

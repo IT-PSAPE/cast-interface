@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { InlineWindowMenuItem } from '@core/ipc';
+import { cn } from '@renderer/utils/cn';
 
 export function WindowsInlineMenuBar() {
   const [items, setItems] = useState<InlineWindowMenuItem[]>([]);
@@ -48,7 +49,7 @@ export function WindowsInlineMenuBar() {
             key={item.id}
             type="button"
             onClick={(event) => { void handleOpenMenu(item, event.currentTarget); }}
-            className={`rounded-md px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary ${activeMenuId === item.id ? 'bg-background-tertiary text-text-primary' : ''}`}
+            className={cn('rounded-md px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary', activeMenuId === item.id && 'bg-background-tertiary text-text-primary')}
             style={{ WebkitAppRegion: 'no-drag' } as CSSProperties}
           >
             {item.label}

@@ -6,7 +6,9 @@ import { useSlides } from '../../../../contexts/slide-context';
 import { getSlideVisualState } from '../../../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from '../hooks/use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../../../stage/rendering/build-render-scene';
+import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { SlideCard } from './slide-card';
+import { ThumbnailGrid } from '../../../../components/layout/thumbnail-grid';
 
 interface ContinuousSlideGridProps {
   items: PlaylistPresentationSequenceItem[];
@@ -17,6 +19,7 @@ interface GridSectionProps {
   currentContentItemId: Id | null;
   currentOutputContentItemId: Id | null;
   currentSlideIndex: number;
+  gridItemSize: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
   onActivateSlide: (itemId: Id, slideIndex: number) => void;
@@ -28,6 +31,7 @@ function GridSection({
   currentContentItemId,
   currentOutputContentItemId,
   currentSlideIndex,
+  gridItemSize,
   liveSlideIndex,
   slideElementsById,
   onActivateSlide,
@@ -73,9 +77,9 @@ function GridSection({
       <header className="px-1">
         <h3 className="m-0 text-sm font-semibold text-text-primary">{item.item.title}</h3>
       </header>
-      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
+      <ThumbnailGrid itemSize={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
         {item.slides.map(renderSlideCard)}
-      </div>
+      </ThumbnailGrid>
     </section>
   );
 }
@@ -84,6 +88,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
   const { currentContentItemId, currentOutputContentItemId } = useNavigation();
   const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
+  const { gridItemSize } = useSlideBrowser();
 
   const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
     activateContentItemSlide(itemId, slideIndex);
@@ -101,13 +106,14 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
         currentContentItemId={currentContentItemId}
         currentOutputContentItemId={currentOutputContentItemId}
         currentSlideIndex={currentSlideIndex}
+        gridItemSize={gridItemSize}
         liveSlideIndex={liveSlideIndex}
         slideElementsById={slideElementsBySlideId}
         onActivateSlide={handleActivateSlide}
         onEditSlide={handleEditSlide}
       />
     );
-  }, [currentContentItemId, currentOutputContentItemId, currentSlideIndex, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
+  }, [currentContentItemId, currentOutputContentItemId, currentSlideIndex, gridItemSize, handleActivateSlide, handleEditSlide, liveSlideIndex, slideElementsBySlideId]);
 
   if (items.length === 0) {
     return (

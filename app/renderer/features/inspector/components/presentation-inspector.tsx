@@ -87,9 +87,9 @@ export function ContentItemInspector() {
                   {assignedTemplate?.name ?? 'Assigned template unavailable'}
                 </p>
               </div>
-              <Button onClick={handleResetToTemplate} disabled={!assignedTemplate} className="w-full">
+              <Button.Root onClick={handleResetToTemplate} disabled={!assignedTemplate} className="w-full">
                 Reset To Template
-              </Button>
+              </Button.Root>
             </>
           ) : (
             <p className="m-0 text-sm text-text-tertiary">

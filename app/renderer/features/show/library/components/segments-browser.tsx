@@ -1,6 +1,7 @@
 import { FolderPlus } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
 import { SectionHeader } from '../../../../components/display/section-header';
+import { Panel } from '../../../../components/panel';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useLibraryBrowser } from '../contexts/library-browser-context';
 import { useLibraryPanelState } from '../contexts/library-panel-context';
@@ -19,21 +20,21 @@ export function SegmentsBrowser() {
   }
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+    <Panel.Root as="section">
       <SectionHeader.Root>
         <SectionHeader.Body>
           <span className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">Segments</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <Button label="New segment" onClick={handleNewSegment} size="icon-md">
+          <Button.Icon label="New segment" onClick={handleNewSegment} size="md">
             <FolderPlus size={14} strokeWidth={1.75} />
-          </Button>
+          </Button.Icon>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1">
+      <Panel.Body className="px-1.5 py-1.5 space-y-1">
         {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
-      </div>
-    </section>
+      </Panel.Body>
+    </Panel.Root>
   );
 }

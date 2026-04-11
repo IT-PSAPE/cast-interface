@@ -21,12 +21,12 @@ export function SlideNotesPanel() {
     >
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
         <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-border-primary bg-primary/95 p-1 shadow-sm backdrop-blur-sm">
-          <Button onClick={handleResetNotes} disabled={!hasSlide || !isDirty} variant="ghost">
+          <Button.Root onClick={handleResetNotes} disabled={!hasSlide || !isDirty} variant="ghost">
             Reset
-          </Button>
-          <Button onClick={handleSaveNotes} disabled={!canEdit || !isDirty}>
+          </Button.Root>
+          <Button.Root onClick={handleSaveNotes} disabled={!canEdit || !isDirty}>
             Save
-          </Button>
+          </Button.Root>
         </div>
       </div>
       <FieldTextarea

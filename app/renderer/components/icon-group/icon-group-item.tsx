@@ -11,7 +11,7 @@ const iconGroupItemStyles = cv({
     },
   },
   defaultVariants: {
-    active: 'false',
+    active: false,
   },
 });
 
@@ -26,7 +26,7 @@ export function IconGroupItem({ children, className, active = false, disabled = 
       type={type}
       disabled={disabled}
       {...buttonProps}
-      className={cn(iconGroupItemStyles({ active: active ? 'true' : 'false' }), className)}
+      className={cn(iconGroupItemStyles({ active }), className)}
     >
       {children}
     </button>

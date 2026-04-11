@@ -1,5 +1,17 @@
+import { cn } from '@renderer/utils/cn';
+import { cv } from '@renderer/utils/cv';
 import { useCast } from '../../contexts/cast-context';
 import { useNdi } from '../../contexts/ndi-context';
+
+const indicatorStyles = cv({
+  base: 'inline-block size-1.5 rounded-full',
+  variants: {
+    active: {
+      true: ['bg-green-500'],
+      false: ['bg-red-500'],
+    },
+  },
+});
 
 export function StatusBar() {
   const { statusText } = useCast();
@@ -15,7 +27,7 @@ export function StatusBar() {
 
       <div className="ml-auto flex items-center gap-2 text-text-tertiary">
         <span className="flex items-center gap-1">
-          <span className={`inline-block size-1.5 rounded-full ${outputState.audience ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className={indicatorStyles({ active: outputState.audience })} />
           {audienceStateLabel}
         </span>
       </div>

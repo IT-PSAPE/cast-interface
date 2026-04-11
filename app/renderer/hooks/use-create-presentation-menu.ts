@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ContextMenuItem } from '../components/overlays/context-menu';
 import { buildCreateContentMenuItems } from '../utils/build-create-presentation-menu-items';
-import { useButtonContextMenu } from './use-button-context-menu';
+import { useContextMenuState } from './use-context-menu-state';
 
 interface UseCreatePresentationMenuOptions {
   createDeck: () => void | Promise<void>;
@@ -16,7 +16,7 @@ export function useCreateContentMenu({
   deckLabel,
   lyricLabel
 }: UseCreatePresentationMenuOptions) {
-  const { menuState, openMenuFromButton, closeMenu } = useButtonContextMenu();
+  const { menuState, openFromButton, close } = useContextMenuState();
 
   const menuItems = useMemo<ContextMenuItem[]>(() => buildCreateContentMenuItems({
     createDeck,
@@ -25,10 +25,15 @@ export function useCreateContentMenu({
     lyricLabel
   }), [createDeck, createLyric, deckLabel, lyricLabel]);
 
+  function openMenuFromButton(button: HTMLElement) {
+    const rect = button.getBoundingClientRect();
+    openFromButton(button, undefined as void);
+  }
+
   return {
     menuItems,
     menuState,
     openMenuFromButton,
-    closeMenu
+    closeMenu: close,
   };
 }

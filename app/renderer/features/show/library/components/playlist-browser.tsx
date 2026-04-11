@@ -24,9 +24,9 @@ export function PlaylistBrowser() {
     <>
       <SectionHeader.Root>
         <SectionHeader.Leading>
-          <Button label="Back to libraries" onClick={handleBack} size="icon-sm" variant="ghost">
+          <Button.Icon label="Back to libraries" onClick={handleBack} size="sm" variant="ghost">
             <ChevronLeft size={14} strokeWidth={2} />
-          </Button>
+          </Button.Icon>
         </SectionHeader.Leading>
         <SectionHeader.Body>
           <span className="text-sm font-semibold uppercase tracking-wider text-text-secondary">{currentLibraryBundle.library.name}</span>

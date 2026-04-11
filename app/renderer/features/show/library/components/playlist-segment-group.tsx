@@ -20,7 +20,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
   const { state, actions } = useLibraryBrowser();
   const { isSegmentCollapsed, toggleSegmentCollapsed } = useLibraryPanelState();
   const collapsed = isSegmentCollapsed(segment.segment.id);
-  const isSegmentEditing = segment.segment.id === state.editingSegmentId;
+  const isSegmentEditing = actions.isEditing('segment', segment.segment.id);
   const segmentHeaderColors = getSegmentHeaderColors(segment.segment.id, segment.segment.colorKey);
 
   function handleSegmentContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentContextMenu(event, segment.segment.id); }
@@ -36,7 +36,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
 
   function handleSegmentRename(name: string) {
     actions.renameSegment(segment.segment.id, name);
-    actions.clearEditingSegment();
+    actions.clearEditing();
   }
 
   return (
@@ -50,33 +50,33 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
         onContextMenu={handleSegmentContextMenu}
       >
         <div className="flex min-w-0 items-center gap-1.5">
-          <Button
+          <Button.Icon
             label={collapsed ? `Expand ${segment.segment.name}` : `Collapse ${segment.segment.name}`}
             onClick={handleCollapseToggle}
             aria-expanded={!collapsed}
-            size="icon-sm"
+            size="sm"
             variant="ghost"
             className="shrink-0 border-transparent text-current hover:border-border-primary"
           >
             {collapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
-          </Button>
+          </Button.Icon>
           <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
         </div>
 
-        <Button
+        <Button.Icon
           label={`Open ${segment.segment.name} menu`}
           onClick={handleSegmentMenuButtonClick}
-          size="icon-sm"
+          size="sm"
           variant="ghost"
           className="border-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-border-primary"
         >
           <EllipsisVertical size={14} strokeWidth={2} />
-        </Button>
+        </Button.Icon>
       </div>
 
       {!collapsed ? segment.entries.map((entry) => {
         const isSelected = entry.item.id === currentPlaylistContentItemId;
-        const isPresentationEditing = entry.item.id === state.editingPresentationId;
+        const isPresentationEditing = actions.isEditing('presentation', entry.item.id);
 
         function handleSelect() { selectPlaylistContentItem(entry.item.id); }
         function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentPresentationContextMenu(event, entry.item.id); }
@@ -87,12 +87,12 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
 
         function handleRename(title: string) {
           actions.renameContentItem(entry.item.id, title);
-          actions.clearEditingPresentation();
+          actions.clearEditing();
         }
 
         return (
           <div key={entry.entry.id} className="group relative">
-            <Button
+            <Button.Root
               variant="ghost"
               active={isSelected}
               onClick={handleSelect}
@@ -101,17 +101,17 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
             >
               <ContentItemIcon entity={entry.item} className="shrink-0 text-text-tertiary" />
               <EditableText value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
-            </Button>
+            </Button.Root>
 
-            <Button
+            <Button.Icon
               label={`Open ${entry.item.title} menu`}
               onClick={handleMenuButtonClick}
-              size="icon-sm"
+              size="sm"
               variant="ghost"
               className="absolute right-1 top-1/2 -translate-y-1/2 rounded border border-transparent text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-border-primary hover:text-text-primary"
             >
               <EllipsisVertical size={14} strokeWidth={2} />
-            </Button>
+            </Button.Icon>
           </div>
         );
       }) : null}

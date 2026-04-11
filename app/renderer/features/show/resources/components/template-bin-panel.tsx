@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { Id, Template } from '@core/types';
 import { ContextMenu, type ContextMenuItem } from '../../../../components/overlays/context-menu';
 import { useNavigation } from '../../../../contexts/navigation-context';
@@ -8,20 +8,18 @@ import { useProjectContent } from '../../../../contexts/use-project-content';
 import { useWorkbench } from '../../../../contexts/workbench-context';
 import { Ellipsis } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
+import { ThumbnailGrid } from '../../../../components/layout/thumbnail-grid';
 import { buildRenderScene } from '../../../stage/rendering/build-render-scene';
 import { SceneThumbnailCard } from '../../../../components/display/scene-thumbnail-card';
+import { useContextMenuState } from '../../../../hooks/use-context-menu-state';
+import { filterByText } from '../../../../utils/filter-by-text';
 
 interface TemplateBinPanelProps {
   filterText: string;
+  gridItemSize: number;
 }
 
-interface MenuState {
-  templateId: Id;
-  x: number;
-  y: number;
-}
-
-export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
+export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelProps) {
   const { templates } = useProjectContent();
   const { currentPlaylistContentItem, currentContentItem } = useNavigation();
   const { currentOverlay } = useOverlayEditor();
@@ -34,16 +32,9 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
     openTemplateEditor,
     renameTemplate,
   } = useTemplateEditor();
-  const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const menu = useContextMenuState<Id>();
 
-  const normalizedFilter = filterText.trim().toLowerCase();
-  const filteredTemplates = useMemo(() => {
-    return templates.filter((template) => {
-      if (!normalizedFilter) return true;
-      return template.name.toLowerCase().includes(normalizedFilter) || template.kind.toLowerCase().includes(normalizedFilter);
-    });
-  }, [normalizedFilter, templates]);
-
+  const filteredTemplates = filterByText(templates, filterText, (t) => [t.name, t.kind]);
   const activeContentItem = currentPlaylistContentItem ?? currentContentItem;
 
   function resolvePreviewTarget(template: Template) {
@@ -60,49 +51,20 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
     return null;
   }
 
-  function openMenu(templateId: Id, button: HTMLButtonElement) {
-    const rect = button.getBoundingClientRect();
-    setMenuState({ templateId, x: rect.left, y: rect.bottom + 4 });
-  }
-
-  function closeMenu() {
-    setMenuState(null);
-  }
-
   function handleOpenTemplate(template: Template) {
     openTemplateEditor(template.id);
     setWorkbenchMode('template-editor');
   }
 
-  function handleEditTemplate(template: Template) {
-    openTemplateEditor(template.id);
-    setWorkbenchMode('template-editor');
-  }
-
   function handleApplyTemplate(template: Template) {
-    const nextPreviewTarget = resolvePreviewTarget(template);
-    if (!nextPreviewTarget) return;
-    void applyTemplateToTarget(template.id, nextPreviewTarget);
-  }
-
-  function handleRenameTemplate(template: Template) {
-    const nextName = window.prompt('Rename template', template.name)?.trim();
-    if (!nextName) return;
-    renameTemplate(template.id, nextName);
-  }
-
-  function handleDuplicateTemplate(template: Template) {
-    duplicateTemplate(template.id);
-  }
-
-  function handleDeleteTemplate(template: Template) {
-    if (!window.confirm('Delete this template?')) return;
-    deleteTemplate(template.id);
+    const target = resolvePreviewTarget(template);
+    if (!target) return;
+    void applyTemplateToTarget(template.id, target);
   }
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!menuState) return [];
-    const template = templates.find((item) => item.id === menuState.templateId) ?? null;
+    if (!menu.menuState) return [];
+    const template = templates.find((item) => item.id === menu.menuState!.data) ?? null;
     if (!template) return [];
     const previewTarget = resolvePreviewTarget(template);
     return [
@@ -114,50 +76,77 @@ export function TemplateBinPanel({ filterText }: TemplateBinPanelProps) {
         disabled: !previewTarget,
         onSelect: () => handleApplyTemplate(template),
       },
-      { id: 'edit-template', label: 'Edit Template', onSelect: () => handleEditTemplate(template) },
-      { id: 'rename-template', label: 'Rename', onSelect: () => handleRenameTemplate(template) },
-      { id: 'duplicate-template', label: 'Duplicate', onSelect: () => handleDuplicateTemplate(template) },
-      { id: 'delete-template', label: 'Delete', danger: true, onSelect: () => handleDeleteTemplate(template) },
+      { id: 'edit-template', label: 'Edit Template', onSelect: () => handleOpenTemplate(template) },
+      {
+        id: 'rename-template', label: 'Rename', onSelect: () => {
+          const nextName = window.prompt('Rename template', template.name)?.trim();
+          if (!nextName) return;
+          renameTemplate(template.id, nextName);
+        }
+      },
+      { id: 'duplicate-template', label: 'Duplicate', onSelect: () => duplicateTemplate(template.id) },
+      {
+        id: 'delete-template', label: 'Delete', danger: true, onSelect: () => {
+          if (!window.confirm('Delete this template?')) return;
+          deleteTemplate(template.id);
+        }
+      },
     ];
-  }, [menuState, templates]);
-
-  function renderTemplateCard(template: Template) {
-    function handleOpen() {
-      handleOpenTemplate(template);
-    }
-
-    function handleEdit() {
-      handleEditTemplate(template);
-    }
-
-    function handleOpenMenu(button: HTMLButtonElement) {
-      openMenu(template.id, button);
-    }
-
-    const scene = buildRenderScene(null, template.elements);
-    return (
-      <SceneThumbnailCard
-        key={template.id}
-        scene={scene}
-        index={filteredTemplates.indexOf(template)}
-        label={template.name}
-        secondaryText={template.name}
-        selected={template.id === currentTemplateId}
-        onClick={handleOpen}
-        onDoubleClick={handleEdit}
-        menuButton={(
-          <Button label="Template options" onClick={(e) => { e.stopPropagation(); handleOpenMenu(e.currentTarget as HTMLButtonElement); }} size="icon-sm" className="border-border-primary bg-background-tertiary/80">
-            <Ellipsis size={14} strokeWidth={2} />
-          </Button>
-        )}
-      />
-    );
-  }
+  }, [menu.menuState, templates]);
 
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">{filteredTemplates.map(renderTemplateCard)}</div>
-      {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
+      <ThumbnailGrid itemSize={gridItemSize}>
+        {filteredTemplates.map((template) => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            index={filteredTemplates.indexOf(template)}
+            isSelected={template.id === currentTemplateId}
+            onOpen={handleOpenTemplate}
+            onOpenMenu={menu.openFromButton}
+          />
+        ))}
+      </ThumbnailGrid>
+      {menu.menuState ? <ContextMenu x={menu.menuState.x} y={menu.menuState.y} items={menuItems} onClose={menu.close} /> : null}
     </>
+  );
+}
+
+interface TemplateCardProps {
+  template: Template;
+  index: number;
+  isSelected: boolean;
+  onOpen: (template: Template) => void;
+  onOpenMenu: (button: HTMLElement, data: Id) => void;
+}
+
+function TemplateCard({ template, index, isSelected, onOpen, onOpenMenu }: TemplateCardProps) {
+  const scene = buildRenderScene(null, template.elements);
+
+  function handleOpen() {
+    onOpen(template);
+  }
+
+  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onOpenMenu(e.currentTarget, template.id);
+  }
+
+  return (
+    <SceneThumbnailCard
+      scene={scene}
+      index={index}
+      label={template.name}
+      secondaryText={template.name}
+      selected={isSelected}
+      onClick={handleOpen}
+      onDoubleClick={handleOpen}
+      menuButton={(
+        <Button.Icon label="Template options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
+          <Ellipsis size={14} strokeWidth={2} />
+        </Button.Icon>
+      )}
+    />
   );
 }

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Id, Template } from '@core/types';
 import { Ellipsis, Layers, Music, Presentation, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/controls/button';
@@ -8,12 +7,7 @@ import { useTemplateEditor } from '../../../contexts/template-editor-context';
 import { buildRenderScene } from '../../stage/rendering/build-render-scene';
 import { SceneThumbnailCard } from '../../../components/display/scene-thumbnail-card';
 import { ItemListPanel } from './item-list-panel';
-
-interface TemplateMenuState {
-  x: number;
-  y: number;
-  templateId: Id;
-}
+import { useContextMenuState } from '../../../hooks/use-context-menu-state';
 
 function TemplateKindIcon({ kind }: { kind: Template['kind'] }) {
   if (kind === 'lyrics') {
@@ -28,19 +22,10 @@ function TemplateKindIcon({ kind }: { kind: Template['kind'] }) {
 export function TemplateListPanel() {
   const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate } = useTemplateEditor();
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateTemplateMenu({ createTemplate });
-  const [templateMenuState, setTemplateMenuState] = useState<TemplateMenuState | null>(null);
+  const templateMenu = useContextMenuState<Id>();
 
   function handleOpenCreateMenu(event: React.MouseEvent<HTMLButtonElement>) {
     openMenuFromButton(event.currentTarget);
-  }
-
-  function handleOpenTemplateMenu(button: HTMLButtonElement, templateId: Id) {
-    const rect = button.getBoundingClientRect();
-    setTemplateMenuState({ x: rect.left, y: rect.bottom + 4, templateId });
-  }
-
-  function handleCloseTemplateMenu() {
-    setTemplateMenuState(null);
   }
 
   function handleDeleteTemplate(templateId: Id) {
@@ -50,13 +35,7 @@ export function TemplateListPanel() {
 
   function buildTemplateMenuItems(templateId: Id): ContextMenuItem[] {
     return [
-      {
-        id: 'delete',
-        label: 'Delete',
-        icon: <Trash2 size={14} />,
-        danger: true,
-        onSelect: () => handleDeleteTemplate(templateId),
-      },
+      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteTemplate(templateId) },
     ];
   }
 
@@ -70,37 +49,55 @@ export function TemplateListPanel() {
       addLabel="Create template"
       contextMenu={menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
     >
-      {templates.map((template) => {
-        const scene = buildRenderScene(null, template.elements);
-
-        function handleSelect() {
-          openTemplateEditor(template.id);
-        }
-
-        function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-          event.stopPropagation();
-          handleOpenTemplateMenu(event.currentTarget as HTMLButtonElement, template.id);
-        }
-
-        return (
-          <SceneThumbnailCard
-            key={template.id}
-            scene={scene}
-            index={templates.indexOf(template)}
-            label={template.name}
-            secondaryText={template.name}
-            selected={template.id === currentTemplateId}
-            onClick={handleSelect}
-            captionIcon={<TemplateKindIcon kind={template.kind} />}
-            menuButton={(
-              <Button label="Template options" onClick={handleMenuClick} size="icon-sm" className="border-border-primary bg-background-tertiary/80">
-                <Ellipsis size={14} strokeWidth={2} />
-              </Button>
-            )}
-          />
-        );
-      })}
-      {templateMenuState ? <ContextMenu x={templateMenuState.x} y={templateMenuState.y} items={buildTemplateMenuItems(templateMenuState.templateId)} onClose={handleCloseTemplateMenu} /> : null}
+      {templates.map((template, index) => (
+        <TemplateListCard
+          key={template.id}
+          template={template}
+          index={index}
+          isSelected={template.id === currentTemplateId}
+          onSelect={openTemplateEditor}
+          onOpenMenu={templateMenu.openFromButton}
+        />
+      ))}
+      {templateMenu.menuState ? <ContextMenu x={templateMenu.menuState.x} y={templateMenu.menuState.y} items={buildTemplateMenuItems(templateMenu.menuState.data)} onClose={templateMenu.close} /> : null}
     </ItemListPanel>
+  );
+}
+
+interface TemplateListCardProps {
+  template: Template;
+  index: number;
+  isSelected: boolean;
+  onSelect: (id: Id) => void;
+  onOpenMenu: (button: HTMLElement, data: Id) => void;
+}
+
+function TemplateListCard({ template, index, isSelected, onSelect, onOpenMenu }: TemplateListCardProps) {
+  const scene = buildRenderScene(null, template.elements);
+
+  function handleSelect() {
+    onSelect(template.id);
+  }
+
+  function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    onOpenMenu(event.currentTarget, template.id);
+  }
+
+  return (
+    <SceneThumbnailCard
+      scene={scene}
+      index={index}
+      label={template.name}
+      secondaryText={template.name}
+      selected={isSelected}
+      onClick={handleSelect}
+      captionIcon={<TemplateKindIcon kind={template.kind} />}
+      menuButton={(
+        <Button.Icon label="Template options" onClick={handleMenuClick} size="sm" className="border-border-primary bg-background-tertiary/80">
+          <Ellipsis size={14} strokeWidth={2} />
+        </Button.Icon>
+      )}
+    />
   );
 }

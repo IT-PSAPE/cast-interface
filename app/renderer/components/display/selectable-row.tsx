@@ -1,4 +1,19 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cn } from '@renderer/utils/cn';
+import { cv } from '@renderer/utils/cv';
+
+const selectableRowStyles = cv({
+  base: 'flex h-7 w-full items-center gap-2 rounded px-1.5 text-left transition-colors',
+  variants: {
+    selected: {
+      true: ['bg-background-active text-text-primary'],
+      false: ['text-text-secondary hover:bg-background-tertiary/55'],
+    },
+  },
+  defaultVariants: {
+    selected: false,
+  },
+});
 
 interface SelectableRowProps extends Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'draggable' | 'onDragEnd' | 'onDragOver' | 'onDragStart' | 'onDrop'> {
   selected: boolean;
@@ -15,22 +30,18 @@ export function SelectableRow({
   title,
   onClick,
   trailing,
-  className = '',
+  className,
   draggable,
   onDragEnd,
   onDragOver,
   onDragStart,
   onDrop,
 }: SelectableRowProps) {
-  const rowClasses = selected
-    ? 'bg-background-active text-text-primary'
-    : 'text-text-secondary hover:bg-background-tertiary/55';
-
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-7 w-full items-center gap-2 rounded px-1.5 text-left transition-colors ${rowClasses} ${className}`}
+      className={cn(selectableRowStyles({ selected }), className)}
       draggable={draggable}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}

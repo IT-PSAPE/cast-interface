@@ -1,78 +1,84 @@
-// utils/createVariants.ts
+import { cn } from './cn';
 
-import { cn } from "./cn";
+type ClassValue = string | string[] | null | false | undefined;
+type VariantKey = string | boolean | number;
+type VariantDefinitions = Record<string, Record<string, ClassValue>>;
 
-/**
- * A map of variant-names to a map of variant-values → arrays of class strings
- * e.g. { size: { small: ['px-2'], large: ['px-6'] } }
- */
-type VariantDefinitions = {
-    [key: string]: Record<string, string[]>;
-};
+type InferVariantProp<V extends Record<string, ClassValue>> =
+  keyof V extends 'true' | 'false'
+    ? boolean
+    : keyof V extends `${number}`
+      ? number | (keyof V & string)
+      : keyof V extends string
+        ? keyof V
+        : never;
 
-/** Props your consumer will pass: one key per variant, plus optional className */
 type VariantProps<V extends VariantDefinitions> = {
-    [K in keyof V]?: keyof V[K] extends string ? keyof V[K] : never;
+  [K in keyof V]?: InferVariantProp<V[K]>;
 } & {
-    className?: string;
+  className?: string;
 };
 
-/** The config you pass once, to build your "styler" */
+type CompoundVariant<V extends VariantDefinitions> = {
+  class?: ClassValue;
+  className?: ClassValue;
+} & {
+  [K in keyof V]?: VariantKey | VariantKey[];
+};
+
 type VariantConfig<V extends VariantDefinitions> = {
-    base?: string | string[];
-    /** Your variants map */
-    variants?: V;
-    /** Which variants to pick when consumer leaves one undefined */
-    defaultVariants?: { [K in keyof V]?: keyof V[K] };
+  base?: ClassValue;
+  variants?: V;
+  defaultVariants?: { [K in keyof V]?: VariantKey };
+  compoundVariants?: Array<CompoundVariant<V>>;
 };
 
-/**
- * Returns a function which, given a subset of variant props,
- * spits back a single clsx-ready string.
- */
-export function cv<V extends VariantDefinitions>(
-    config: VariantConfig<V>,
-) {
-    return (props: VariantProps<V> = {}): string => {
-        const { className, ...selected } = props as VariantProps<V> & {
-            [key: string]: unknown;
-        };
-        const classes: string[] = [];
+function normalizeClasses(value: ClassValue): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value.filter(Boolean) as string[] : [value];
+}
 
-        // 1) base
-        if (config.base) {
-            classes.push(
-                ...(Array.isArray(config.base) ? config.base : [config.base]),
-            );
-        }
+function resolveVariantKey(value: unknown): string | undefined {
+  return value == null ? undefined : String(value);
+}
 
-        // 2) variants
-        const variants = config.variants ?? ({} as V);
-        const defaultVariants =
-            config.defaultVariants ?? ({} as Partial<Record<keyof V, string[]>>);
+function matchesCompoundCondition(expected: VariantKey | VariantKey[], actual: unknown): boolean {
+  if (Array.isArray(expected)) {
+    return expected.some((item) => String(item) === String(actual));
+  }
+  return String(expected) === String(actual);
+}
 
-        for (const variantName in variants) {
-            if (Object.prototype.hasOwnProperty.call(variants, variantName)) {
-                const typedVariantName = variantName as keyof V;
-                const selectedValue = (selected as Record<keyof V, string | undefined>)[
-                    typedVariantName
-                ];
-                const variantValue = selectedValue ?? defaultVariants[typedVariantName];
-                const variantClasses = variantValue
-                    ? variants[typedVariantName]?.[variantValue as string]
-                    : undefined;
+export function cv<V extends VariantDefinitions>(config: VariantConfig<V>) {
+  return (props: VariantProps<V> = {}): string => {
+    const { className, ...selected } = props as VariantProps<V> & Record<string, unknown>;
+    const variants = config.variants ?? ({} as V);
+    const defaultVariants = config.defaultVariants ?? ({} as Partial<Record<keyof V, VariantKey>>);
+    const classes = [...normalizeClasses(config.base)];
+    const resolved = {} as Record<keyof V, VariantKey | undefined>;
 
-                if (variantClasses) {
-                    classes.push(...variantClasses);
-                }
-            }
-        }
+    for (const variantName in variants) {
+      if (!Object.prototype.hasOwnProperty.call(variants, variantName)) continue;
+      const typedVariantName = variantName as keyof V;
+      const variantValue = selected[variantName] ?? defaultVariants[typedVariantName];
+      resolved[typedVariantName] = variantValue as VariantKey | undefined;
 
-        // 3) extra override
-        if (className) {
-            classes.push(className);
-        }
+      const lookupKey = resolveVariantKey(variantValue);
+      if (!lookupKey) continue;
+      classes.push(...normalizeClasses(variants[typedVariantName]?.[lookupKey]));
+    }
 
-        return cn(...classes);
-    };
+    for (const compoundVariant of config.compoundVariants ?? []) {
+      const { class: compoundClass, className: compoundClassName, ...conditions } = compoundVariant;
+      const matches = Object.entries(conditions).every(([variantName, expectedValue]) => {
+        return matchesCompoundCondition(expectedValue as VariantKey | VariantKey[], resolved[variantName as keyof V]);
+      });
+      if (!matches) continue;
+      classes.push(...normalizeClasses(compoundClass));
+      classes.push(...normalizeClasses(compoundClassName));
+    }
+
+    classes.push(...normalizeClasses(className));
+    return cn(...classes);
+  };
 }

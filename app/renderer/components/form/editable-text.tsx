@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { Label } from '../display/text';
 
 interface EditableTextProps {
   value: string;
   onCommit: (newValue: string) => void;
   editing?: boolean;
-  multiline?: boolean;
   placeholder?: string;
   className?: string;
   trimOnCommit?: boolean;
@@ -14,18 +14,13 @@ export function EditableText({
   value,
   onCommit,
   editing = false,
-  multiline = false,
   placeholder = 'Untitled',
   className = '',
   trimOnCommit = true,
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(editing);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
-
-  function setInputRef(node: HTMLInputElement | HTMLTextAreaElement | null) {
-    inputRef.current = node;
-  }
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (editing) {
@@ -50,19 +45,15 @@ export function EditableText({
     }
   }
 
-  function handleDoubleClick() {
+  function handleDoubleClick(e: React.MouseEvent<HTMLSpanElement>) {
+    e.stopPropagation();
     setDraft(value);
     setIsEditing(true);
   }
 
-  function handleDoubleClickSpan(e: React.MouseEvent<HTMLSpanElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     e.stopPropagation();
-    handleDoubleClick();
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    e.stopPropagation();
-    if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter') {
       e.preventDefault();
       commit();
     }
@@ -72,7 +63,7 @@ export function EditableText({
     }
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setDraft(e.target.value);
   }
 
@@ -80,35 +71,18 @@ export function EditableText({
     commit();
   }
 
-  function handleMouseDownInput(e: React.MouseEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleMouseDownInput(e: React.MouseEvent<HTMLInputElement>) {
     e.stopPropagation();
   }
 
-  function handleClickInput(e: React.MouseEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleClickInput(e: React.MouseEvent<HTMLInputElement>) {
     e.stopPropagation();
   }
 
   if (isEditing) {
-    if (multiline) {
-      return (
-        <textarea
-          ref={setInputRef}
-          value={draft}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
-          onMouseDown={handleMouseDownInput}
-          onClick={handleClickInput}
-          placeholder={placeholder}
-          rows={Math.max(3, draft.split('\n').length || 1)}
-          className={`m-0 w-full resize-y border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
-        />
-      );
-    }
-
     return (
       <input
-        ref={setInputRef}
+        ref={inputRef}
         value={draft}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -116,22 +90,14 @@ export function EditableText({
         onMouseDown={handleMouseDownInput}
         onClick={handleClickInput}
         placeholder={placeholder}
-        className={`m-0 border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
+        className={`all-unset m-0 border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
       />
     );
   }
 
-  if (multiline) {
-    return (
-      <div onDoubleClick={handleDoubleClickSpan} className={`cursor-default select-none whitespace-pre-wrap ${className}`}>
-        {value || placeholder}
-      </div>
-    );
-  }
-
   return (
-    <span onDoubleClick={handleDoubleClickSpan} className={`cursor-default select-none truncate ${className}`}>
+    <Label.sm onDoubleClick={handleDoubleClick} className={`cursor-default select-none truncate ${className}`}>
       {value || placeholder}
-    </span>
+    </Label.sm>
   );
 }

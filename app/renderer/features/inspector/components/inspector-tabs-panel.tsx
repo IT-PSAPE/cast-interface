@@ -1,11 +1,12 @@
 import { useInspector } from '../contexts/inspector-context';
-import { Inspector } from './inspector';
+import { Tabs } from '../../../components/display/tabs';
 import { ContentItemInspector } from './presentation-inspector';
 import { ShapeElementInspector } from './shape-element-inspector';
 import { SlideInspector } from './slide-inspector';
 import { TextElementInspector } from './text-element-inspector';
 import { useInspectorAutoTab } from '../hooks/use-inspector-auto-tab';
 import { useAvailableInspectorTabs } from '../hooks/use-available-inspector-tabs';
+import type { InspectorTab } from '../../../types/ui';
 
 interface InspectorTabsPanelProps {
   className?: string;
@@ -17,20 +18,28 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
   const availableTabs = useAvailableInspectorTabs();
   useInspectorAutoTab();
 
-  return (
-    <Inspector.Root activeTab={inspectorTab} onTabChange={setInspectorTab} className={className}>
-      <Inspector.TabList>
-        {availableTabs.map((tab) => (
-          <Inspector.Trigger key={tab.name} name={tab.name}>{tab.label}</Inspector.Trigger>
-        ))}
-      </Inspector.TabList>
+  function handleTabChange(value: string) {
+    setInspectorTab(value as InspectorTab);
+  }
 
-      <Inspector.Body className={bodyClassName}>
-        <Inspector.Panel name="presentation"><ContentItemInspector /></Inspector.Panel>
-        <Inspector.Panel name="slide"><SlideInspector /></Inspector.Panel>
-        <Inspector.Panel name="shape"><ShapeElementInspector /></Inspector.Panel>
-        <Inspector.Panel name="text"><TextElementInspector /></Inspector.Panel>
-      </Inspector.Body>
-    </Inspector.Root>
+  return (
+    <Tabs.Root value={inspectorTab} onValueChange={handleTabChange}>
+      <section className={className}>
+        <div className="border-b border-border-primary">
+          <Tabs.List label="Inspector">
+            {availableTabs.map((tab) => (
+              <Tabs.Trigger key={tab.name} value={tab.name}>{tab.label}</Tabs.Trigger>
+            ))}
+          </Tabs.List>
+        </div>
+
+        <div className={`min-h-0 overflow-auto ${bodyClassName}`}>
+          <Tabs.Panel value="presentation"><ContentItemInspector /></Tabs.Panel>
+          <Tabs.Panel value="slide"><SlideInspector /></Tabs.Panel>
+          <Tabs.Panel value="shape"><ShapeElementInspector /></Tabs.Panel>
+          <Tabs.Panel value="text"><TextElementInspector /></Tabs.Panel>
+        </div>
+      </section>
+    </Tabs.Root>
   );
 }

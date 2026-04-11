@@ -1,25 +1,19 @@
-import { useRef } from 'react';
 import { IconGroup } from '@renderer/components/icon-group';
+import { Panel } from '@renderer/components/panel';
 import { CirclePause, CirclePlay, Plus, Repeat, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
+import { FileTrigger } from '../../../../components/form/file-trigger';
 import { useElements } from '../../../../contexts/element/element-context';
 import { useShowAudio } from '../contexts/show-audio-context';
 import { formatAudioTime } from '../utils/format-audio-time';
 import { ShowAudioRow } from './show-audio-row';
 
 export function ShowAudioPanel() {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { importMedia } = useElements();
   const { actions, state } = useShowAudio();
 
-  function handleImportClick() {
-    fileInputRef.current?.click();
-  }
-
-  function handleImportChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!event.target.files || event.target.files.length === 0) return;
-    void importMedia(event.target.files);
-    event.target.value = '';
+  function handleImportSelect(files: FileList) {
+    void importMedia(files);
   }
 
   const currentTrackLabel = state.currentAudioAsset?.name ?? 'No audio selected';
@@ -30,16 +24,18 @@ export function ShowAudioPanel() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <Panel.Root>
       <div className="grid gap-2 border-b border-border-primary px-2 py-2">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-text-primary">{currentTrackLabel}</div>
             <div className="text-xs text-text-tertiary">Now playing</div>
           </div>
-          <Button label="Import audio" size="icon-sm" variant="ghost" onClick={handleImportClick}>
-            <Plus size={14} strokeWidth={1.75} />
-          </Button>
+          <FileTrigger.Root accept="audio/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
+            <Button.Icon label="Import audio" size="sm" variant="ghost">
+              <Plus size={14} strokeWidth={1.75} />
+            </Button.Icon>
+          </FileTrigger.Root>
         </div>
 
         <div className="grid gap-1">
@@ -90,17 +86,9 @@ export function ShowAudioPanel() {
             </IconGroup.Item>
           </IconGroup.Root>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="audio/*"
-          multiple
-          onChange={handleImportChange}
-          className="hidden"
-        />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-2">
+      <Panel.Body className="p-2">
         {state.audioAssets.length === 0 ? (
           <div className="grid h-full place-items-center rounded border border-border-primary bg-background-primary/40 px-4 text-center text-sm text-text-tertiary">
             Import audio to build a reusable app-wide audio list.
@@ -118,7 +106,7 @@ export function ShowAudioPanel() {
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </Panel.Body>
+    </Panel.Root>
   );
 }

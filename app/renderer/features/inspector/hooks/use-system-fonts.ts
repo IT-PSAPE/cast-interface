@@ -8,17 +8,30 @@ interface FontOption {
 }
 
 const FALLBACK_FAMILIES = [
+  // macOS
   'Avenir Next',
   'Helvetica Neue',
   'Helvetica',
+  'SF Pro Display',
+  'Menlo',
+  // Windows
+  'Segoe UI',
+  'Calibri',
+  'Cambria',
+  'Consolas',
+  'Tahoma',
+  // Cross-platform
   'Arial',
   'Verdana',
   'Trebuchet MS',
   'Georgia',
   'Times New Roman',
   'Courier New',
-  'Menlo',
-  'SF Pro Display',
+  // Linux
+  'DejaVu Sans',
+  'Noto Sans',
+  'Ubuntu',
+  'Liberation Sans',
 ];
 
 export function useSystemFonts(activeFont: string): FontOption[] {
@@ -28,7 +41,10 @@ export function useSystemFonts(activeFont: string): FontOption[] {
     let cancelled = false;
 
     async function loadSystemFonts() {
-      if (!('queryLocalFonts' in window) || typeof window.queryLocalFonts !== 'function') return;
+      if (!('queryLocalFonts' in window) || typeof window.queryLocalFonts !== 'function') {
+        console.warn('[useSystemFonts] queryLocalFonts API not available, using fallback list');
+        return;
+      }
       try {
         const localFonts = await window.queryLocalFonts();
         if (cancelled) return;
@@ -37,8 +53,8 @@ export function useSystemFonts(activeFont: string): FontOption[] {
           uniqueFamilies.sort((a, b) => a.localeCompare(b));
           setFamilies(uniqueFamilies);
         }
-      } catch {
-        return;
+      } catch (error) {
+        console.warn('[useSystemFonts] queryLocalFonts failed:', error);
       }
     }
 

@@ -12,7 +12,7 @@ const segmentedControlRootStyles = cv({
     },
   },
   defaultVariants: {
-    fill: 'false',
+    fill: false,
   },
 });
 
@@ -70,7 +70,7 @@ export function SegmentedControl({ children, value, defaultValue, onValueChange,
         {...divProps}
         role="group"
         aria-label={label}
-        className={cn(segmentedControlRootStyles({ fill: fill ? 'true' : 'false' }), className)}
+        className={cn(segmentedControlRootStyles({ fill }), className)}
       >
         {children}
       </div>

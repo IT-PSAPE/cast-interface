@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@renderer/utils/cn';
 import { FieldLabel } from './field-label';
 
 interface FieldInputProps {
@@ -36,7 +37,7 @@ export function FieldInput({ disabled = false, type = 'text', value, onChange, o
         min={min}
         max={max}
         step={step}
-        className={`min-w-0 w-full bg-transparent py-1 pr-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${icon ? 'pl-1' : 'pl-2'}`}
+        className={cn('min-w-0 w-full bg-transparent py-1 pr-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none', icon ? 'pl-1' : 'pl-2')}
       />
     </div>
   );

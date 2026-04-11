@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
+import { cn } from '@renderer/utils/cn';
 import { Button } from '../controls/button';
 import { DialogFrame } from './dialog-frame';
 import { MediaAssetIcon } from '../display/media-asset-icon';
@@ -48,10 +49,10 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
         {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select media to add'}
       </span>
       <div className="flex gap-2">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={handleConfirm} disabled={selectedIds.size === 0}>
+        <Button.Root variant="ghost" onClick={onClose}>Cancel</Button.Root>
+        <Button.Root onClick={handleConfirm} disabled={selectedIds.size === 0}>
           Add{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-        </Button>
+        </Button.Root>
       </div>
     </>
   );
@@ -74,7 +75,6 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
           <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
             {mediaAssets.map((asset) => {
               const isSelected = selectedIds.has(asset.id);
-              const borderClass = isSelected ? 'border-brand ring-1 ring-brand-400' : 'border-border-primary';
 
               function handleClick() {
                 toggleAsset(asset.id);
@@ -85,7 +85,7 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
                   key={asset.id}
                   type="button"
                   onClick={handleClick}
-                  className={`group cursor-pointer rounded border bg-background-primary p-0 text-left transition-colors ${borderClass}`}
+                  className={cn('group cursor-pointer rounded border bg-background-primary p-0 text-left transition-colors', isSelected ? 'border-brand ring-1 ring-brand-400' : 'border-border-primary')}
                 >
                   <div className="grid aspect-square place-items-center overflow-hidden rounded-t">
                     <MediaThumbnail asset={asset} />

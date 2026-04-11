@@ -20,14 +20,12 @@ interface SceneThumbnailCardProps {
 }
 
 export function SceneThumbnailCard({ scene, index, label, selected, onClick, onDoubleClick, badge, menuButton, captionIcon, secondaryText, emptyLabel, checkerboard = true }: SceneThumbnailCardProps) {
-  const outlineClass = selected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : '';
-
   return (
     <ThumbnailTile
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       selected={selected}
-      className={outlineClass}
+      className={selected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : undefined}
       overlay={badge}
       body={(
         <>

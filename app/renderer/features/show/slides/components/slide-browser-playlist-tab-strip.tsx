@@ -1,6 +1,5 @@
-import { useCallback, type ReactNode } from 'react';
-import type { Id } from '@core/types';
-import { Tab, TabBar } from '../../../../components/display/tab-bar';
+import type { ReactNode } from 'react';
+import { Tabs } from '../../../../components/display/tabs';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlides } from '../../../../contexts/slide-context';
 import type { SlideBrowserHeaderVariant } from '../hooks/use-slide-browser-view';
@@ -12,26 +11,16 @@ interface SlideBrowserPlaylistTabStripProps {
   action?: ReactNode;
 }
 
-interface PlaylistTabItemProps {
-  item: PlaylistPresentationSequenceItem;
-  active: boolean;
-  onSelect: (itemId: Id) => void;
-}
-
-function PlaylistTabItem({ item, active, onSelect }: PlaylistTabItemProps) {
-  const handleSelect = useCallback(() => {
-    onSelect(item.item.id);
-  }, [item.item.id, onSelect]);
-
+function PlaylistTabItem({ item }: { item: PlaylistPresentationSequenceItem }) {
   const duplicateSuffix = item.occurrenceIndex > 1 ? ` (${item.occurrenceIndex})` : '';
   const tabLabel = `${item.item.title}${duplicateSuffix}`;
 
   return (
-    <Tab active={active} onClick={handleSelect}>
+    <Tabs.Trigger value={item.item.id}>
       <span className="max-w-[180px] truncate" title={tabLabel}>
         {tabLabel}
       </span>
-    </Tab>
+    </Tabs.Trigger>
   );
 }
 
@@ -39,30 +28,17 @@ export function SlideBrowserPlaylistTabStrip({ items, headerVariant, action = nu
   const { currentContentItem, currentPlaylistContentItemId } = useNavigation();
   const { slides, selectPlaylistContentItem } = useSlides();
 
-  const handleSelectPresentation = useCallback((itemId: Id) => {
-    selectPlaylistContentItem(itemId);
-  }, [selectPlaylistContentItem]);
-
-  const renderTabItem = useCallback((item: PlaylistPresentationSequenceItem) => {
-    return (
-        <PlaylistTabItem
-          key={item.entryId}
-          item={item}
-          active={item.item.id === currentPlaylistContentItemId}
-          onSelect={handleSelectPresentation}
-        />
-      );
-  }, [currentPlaylistContentItemId, handleSelectPresentation]);
-
   return (
     <header className="flex h-8 items-center gap-3 border-b border-border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         {headerVariant === 'tabs' ? (
-          <div className="min-w-max">
-            <TabBar label="Playlist items">
-              {items.map(renderTabItem)}
-            </TabBar>
-          </div>
+          <Tabs.Root value={currentPlaylistContentItemId ?? undefined} onValueChange={selectPlaylistContentItem}>
+            <div className="min-w-max">
+              <Tabs.List label="Playlist items">
+                {items.map((item) => <PlaylistTabItem key={item.entryId} item={item} />)}
+              </Tabs.List>
+            </div>
+          </Tabs.Root>
         ) : (
           <span className="truncate text-sm font-medium text-text-primary" title={currentContentItem?.title}>
             {currentContentItem?.title ?? 'No item selected'}

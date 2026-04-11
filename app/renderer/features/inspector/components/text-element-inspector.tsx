@@ -1,5 +1,6 @@
-import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVerticalAlign, StrokePosition } from '@core/types';
+import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVerticalAlign } from '@core/types';
 import { applyTextVisualPayload, readTextFormatting, readTextVisualPayload, type TextVisualState } from '@core/element-payload';
+import { cn } from '@renderer/utils/cn';
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element/element-context';
 import { ColorPicker } from '../../../components/form/color-picker';
@@ -11,21 +12,17 @@ import { SegmentedControl } from '../../../components/controls/segmented-control
 import {
   AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
   AlignLeft, AlignRight, AlignStartVertical,
-  Baseline, Bold, Italic, MoveHorizontal, MoveVertical,
-  RulerDimensionLine, Strikethrough, Sun, Type, Underline,
+  Baseline, Bold, Italic,
+  Strikethrough, Type, Underline,
 } from 'lucide-react';
 import { Section } from './inspector-section';
+import { StrokeSectionFields } from './stroke-section-fields';
+import { ShadowSectionFields } from './shadow-section-fields';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
   { value: 'uppercase', label: 'Uppercase' },
   { value: 'sentence', label: 'Sentence' },
-];
-
-const STROKE_POSITION_OPTIONS = [
-  { value: 'inside', label: 'Inside (uses center)' },
-  { value: 'center', label: 'Center' },
-  { value: 'outside', label: 'Outside' },
 ];
 
 export function TextElementInspector() {
@@ -63,15 +60,6 @@ export function TextElementInspector() {
   function handleItalicToggle() { updateText({ italic: !formatting.italic }); }
   function handleUnderlineToggle() { updateText({ underline: !formatting.underline }); }
   function handleStrikeToggle() { updateText({ strikethrough: !formatting.strikethrough }); }
-  function handleStrokeToggle(enabled: boolean) { updateTextVisual({ strokeEnabled: enabled }); }
-  function handleStrokeColorChange(value: string) { updateTextVisual({ strokeColor: value }); }
-  function handleStrokeWidthChange(value: string) { updateTextVisual({ strokeWidth: Math.max(0, parseNumber(value, textVisual.strokeWidth)) }); }
-  function handleStrokePositionChange(value: string) { updateTextVisual({ strokePosition: value as StrokePosition }); }
-  function handleShadowToggle(enabled: boolean) { updateTextVisual({ shadowEnabled: enabled }); }
-  function handleShadowColorChange(value: string) { updateTextVisual({ shadowColor: value }); }
-  function handleShadowBlurChange(value: string) { updateTextVisual({ shadowBlur: Math.max(0, parseNumber(value, textVisual.shadowBlur)) }); }
-  function handleShadowOffsetXChange(value: string) { updateTextVisual({ shadowOffsetX: parseNumber(value, textVisual.shadowOffsetX) }); }
-  function handleShadowOffsetYChange(value: string) { updateTextVisual({ shadowOffsetY: parseNumber(value, textVisual.shadowOffsetY) }); }
   function handleVerticalAlighmentChange(value: string | string[]) {
     if (Array.isArray(value)) return;
     updateText({ verticalAlign: value as TextVerticalAlign });
@@ -108,7 +96,7 @@ export function TextElementInspector() {
   }
 
   return (
-    <fieldset className={`m-0 min-w-0 border-0 p-0 ${textPayload.locked ? 'opacity-50' : ''}`} disabled={textPayload.locked}>
+    <fieldset className={cn('m-0 min-w-0 border-0 p-0', textPayload.locked && 'opacity-50')} disabled={textPayload.locked}>
       <Section.Root>
         <Section.Header>
           <span>Content</span>
@@ -196,44 +184,26 @@ export function TextElementInspector() {
         </Section.Body>
       </Section.Root>
 
-      <Section.Root>
-        <Section.Header>
-          <Section.Checkbox checked={textVisual.strokeEnabled} onChange={handleStrokeToggle} />
-          <span className="font-medium ml-2">Text Stroke</span>
-        </Section.Header>
-        {textVisual.strokeEnabled ? (
-          <Section.Body>
-            <Section.Row lead>
-              <ColorPicker value={textVisual.strokeColor} onChange={handleStrokeColorChange} />
-            </Section.Row>
-            <Section.Row>
-              <FieldSelect value={textVisual.strokePosition} onChange={handleStrokePositionChange} options={STROKE_POSITION_OPTIONS} />
-              <FieldInput icon={<RulerDimensionLine size={14} />} type="number" value={textVisual.strokeWidth} onChange={handleStrokeWidthChange} />
-            </Section.Row>
-          </Section.Body>
-        ) : null}
-      </Section.Root>
+      <StrokeSectionFields
+        label="Text Stroke"
+        enabled={textVisual.strokeEnabled}
+        color={textVisual.strokeColor}
+        width={textVisual.strokeWidth}
+        position={textVisual.strokePosition}
+        onToggle={(enabled) => updateTextVisual({ strokeEnabled: enabled })}
+        onUpdate={updateTextVisual}
+      />
 
-      <Section.Root>
-        <Section.Header>
-          <Section.Checkbox checked={textVisual.shadowEnabled} onChange={handleShadowToggle} />
-          <span className="font-medium ml-2">Text Shadow</span>
-        </Section.Header>
-        {textVisual.shadowEnabled ? (
-          <Section.Body>
-            <Section.Row>
-              <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={textVisual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
-              <FieldInput icon={<MoveVertical size={14} />} type="number" value={textVisual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
-            </Section.Row>
-            <Section.Row>
-              <FieldInput icon={<Sun size={14} />} type="number" value={textVisual.shadowBlur} onChange={handleShadowBlurChange} />
-            </Section.Row>
-            <Section.Row lead>
-              <ColorPicker value={textVisual.shadowColor} onChange={handleShadowColorChange} />
-            </Section.Row>
-          </Section.Body>
-        ) : null}
-      </Section.Root>
+      <ShadowSectionFields
+        label="Text Shadow"
+        enabled={textVisual.shadowEnabled}
+        color={textVisual.shadowColor}
+        blur={textVisual.shadowBlur}
+        offsetX={textVisual.shadowOffsetX}
+        offsetY={textVisual.shadowOffsetY}
+        onToggle={(enabled) => updateTextVisual({ shadowEnabled: enabled })}
+        onUpdate={updateTextVisual}
+      />
     </fieldset>
   );
 }

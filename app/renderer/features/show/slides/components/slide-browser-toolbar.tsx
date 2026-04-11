@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Plus } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
+import { GridSizeSlider } from '../../../../components/form/grid-size-slider';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useSlideBrowser } from '../contexts/slide-browser-context';
 import { useSlides } from '../../../../contexts/slide-context';
@@ -12,8 +13,9 @@ export function SlideBrowserToolbar() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
   const { currentContentItem, isDetachedContentBrowser } = useNavigation();
-  const { slideBrowserMode } = useSlideBrowser();
-  const showPlaylistModes = !isDetachedContentBrowser && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
+  const { slideBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, setGridItemSize } = useSlideBrowser();
+  const isGridMode = slideBrowserMode === 'grid';
+  const showPlaylistModes = !isDetachedContentBrowser && (isGridMode || slideBrowserMode === 'list');
 
   function handleAddSlide() {
     if (!currentContentItem) return;
@@ -29,20 +31,23 @@ export function SlideBrowserToolbar() {
   return (
     <>
       <footer className="flex items-center gap-2 border-t border-border-primary bg-primary/80 px-2 py-1">
-        <Button label="Add slide" size="icon-md" disabled={!currentContentItem} onClick={handleAddSlide}>
+        <Button.Icon label="Add slide" size="md" disabled={!currentContentItem} onClick={handleAddSlide}>
           <Plus className="size-4" />
-        </Button>
+        </Button.Icon>
 
-        <Button
+        <Button.Icon
           label="Open lyric editor"
-          size="icon-md"
+          size="md"
           disabled={!currentContentItem || currentContentItem.type !== 'lyric'}
           onClick={handleOpenEditor}
         >
           <Pencil className="size-4" />
-        </Button>
+        </Button.Icon>
 
         <div className="ml-auto flex items-center gap-2">
+          {isGridMode ? (
+            <GridSizeSlider value={gridItemSize} min={gridSizeMin} max={gridSizeMax} onChange={setGridItemSize} />
+          ) : null}
           {showPlaylistModes ? (
             <>
               <PlaylistBrowserModeControl />

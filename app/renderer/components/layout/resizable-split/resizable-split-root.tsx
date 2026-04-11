@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
+import { cn } from '@renderer/utils/cn';
 import { ResizableSplitHandle } from './resizable-split-handle';
 import { ResizableSplitPane } from './resizable-split-pane';
 
@@ -231,10 +232,8 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onResiz
 
   const paneNodes = panes.map(renderPane);
   const handleNodes = handleDescriptors.map(renderHandle);
-  const orientationClass = orientation === 'horizontal' ? 'flex-row' : 'flex-col';
-
   return (
-    <div ref={containerRef} className={`relative flex min-h-0 min-w-0 overflow-hidden ${orientationClass} ${className}`.trim()}>
+    <div ref={containerRef} className={cn('relative flex min-h-0 min-w-0 overflow-hidden', orientation === 'horizontal' ? 'flex-row' : 'flex-col', className)}>
       {paneNodes}
       {handleNodes}
     </div>

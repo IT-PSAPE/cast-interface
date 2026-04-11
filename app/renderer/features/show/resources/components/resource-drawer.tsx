@@ -2,12 +2,15 @@ import { createContext, useContext, useState, type ChangeEvent, type ReactNode }
 import { ContextMenu } from '../../../../components/overlays/context-menu';
 import { Plus } from 'lucide-react';
 import { Button } from '../../../../components/controls/button';
-import { Tab, TabBar } from '../../../../components/display/tab-bar';
+import { Tabs } from '../../../../components/display/tabs';
+import { FileTrigger } from '../../../../components/form/file-trigger';
+import { GridSizeSlider } from '../../../../components/form/grid-size-slider';
 import { useElements } from '../../../../contexts/element/element-context';
 import { useNavigation } from '../../../../contexts/navigation-context';
 import { useResourceDrawer } from '../contexts/resource-drawer-context';
 import { useCreateContentMenu } from '../../../../hooks/use-create-presentation-menu';
 import { useCreateTemplateMenu } from '../../../../hooks/use-create-template-menu';
+import { useGridSize } from '../../../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../../../contexts/template-editor-context';
 import { useWorkbench } from '../../../../contexts/workbench-context';
 import type { DrawerTab } from '../../../../types/ui';
@@ -26,9 +29,13 @@ interface ResourceDrawerContextValue {
     handleDrop: (event: React.DragEvent<HTMLElement>) => void;
     handleImport: (event: ChangeEvent<HTMLInputElement>) => void;
     setDrawerTab: (tab: DrawerTab) => void;
+    setGridSize: (size: number) => void;
   };
   meta: {
     footerClass: string;
+    gridSize: number;
+    gridSizeMax: number;
+    gridSizeMin: number;
     showCreateAction: boolean;
     showImportAction: boolean;
   };
@@ -59,6 +66,7 @@ function Root({ children }: { children: ReactNode }) {
   const { createDeck, createLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax } = useGridSize('cast-interface.grid-size.resource-drawer', 160, 100, 280);
   const [isDragOver, setIsDragOver] = useState(false);
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
     createDeck,
@@ -123,12 +131,16 @@ function Root({ children }: { children: ReactNode }) {
       handleDrop,
       handleImport,
       setDrawerTab,
+      setGridSize,
     },
     meta: {
       footerClass: [
         'h-full border-t border-border-primary bg-primary grid min-h-0 grid-rows-[auto_1fr]',
         isDragOver ? 'border-t-focus' : ''
       ].join(' '),
+      gridSize,
+      gridSizeMax,
+      gridSizeMin,
       showCreateAction: drawerTab === 'content' || drawerTab === 'templates',
       showImportAction: drawerTab === 'media'
     },
@@ -175,59 +187,57 @@ function Root({ children }: { children: ReactNode }) {
 function ResourceDrawerActions() {
   const { actions, meta } = useDrawer();
 
+  function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
+    actions.handleImport(event);
+  }
+
   return (
     <>
+      <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} onChange={actions.setGridSize} />
       {meta.showImportAction ? (
-        <Button label="Import media" size="icon-sm" variant="ghost" className="relative">
-          <Plus size={14} strokeWidth={1.5} />
-          <input type="file" multiple accept="image/*,video/*" onChange={actions.handleImport} className="absolute inset-0 cursor-pointer opacity-0" />
-        </Button>
+        <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
+          <Button.Icon label="Import media" size="sm" variant="ghost">
+            <Plus size={14} strokeWidth={1.5} />
+          </Button.Icon>
+        </FileTrigger.Root>
       ) : null}
       {meta.showCreateAction ? (
-        <Button label="Create item" size="icon-sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
+        <Button.Icon label="Create item" size="sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
           <Plus size={14} strokeWidth={1.5} />
-        </Button>
+        </Button.Icon>
       ) : null}
     </>
   );
 }
 
 function ResourceDrawerContent() {
-  const { actions, state } = useDrawer();
+  const { actions, meta, state } = useDrawer();
 
-  function handleSelectContent() {
-    actions.setDrawerTab('content');
-  }
-
-  function handleSelectMedia() {
-    actions.setDrawerTab('media');
-  }
-
-  function handleSelectTemplates() {
-    actions.setDrawerTab('templates');
+  function handleTabChange(value: string) {
+    actions.setDrawerTab(value as DrawerTab);
   }
 
   return (
-    <>
+    <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
       <div className="border-b border-border-primary px-1 py-0.5">
-        <TabBar
+        <Tabs.List
           label="Resource tabs"
           className="min-w-0 flex-1"
           actionsClassName="gap-0.5"
           tabsClassName="gap-0.5"
           actions={<ResourceDrawerActions />}
         >
-          <Tab active={state.drawerTab === 'content'} onClick={handleSelectContent} className="px-1 py-0.5 text-[11px]">Content</Tab>
-          <Tab active={state.drawerTab === 'media'} onClick={handleSelectMedia} className="px-1 py-0.5 text-[11px]">Media</Tab>
-          <Tab active={state.drawerTab === 'templates'} onClick={handleSelectTemplates} className="px-1 py-0.5 text-[11px]">Templates</Tab>
-        </TabBar>
+          <Tabs.Trigger value="content" className="px-1 py-0.5 text-[11px]">Content</Tabs.Trigger>
+          <Tabs.Trigger value="media" className="px-1 py-0.5 text-[11px]">Media</Tabs.Trigger>
+          <Tabs.Trigger value="templates" className="px-1 py-0.5 text-[11px]">Templates</Tabs.Trigger>
+        </Tabs.List>
       </div>
-      <div className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
-        {state.drawerTab === 'media' ? <MediaBinPanel filterText="" /> : null}
-        {state.drawerTab === 'content' ? <ContentBinPanel filterText="" /> : null}
-        {state.drawerTab === 'templates' ? <TemplateBinPanel filterText="" /> : null}
-      </div>
-    </>
+      <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
+        <Tabs.Panel value="media"><MediaBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="content"><ContentBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="templates"><TemplateBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+      </Tabs.Panels>
+    </Tabs.Root>
   );
 }
 

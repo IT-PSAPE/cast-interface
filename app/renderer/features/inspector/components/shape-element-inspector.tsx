@@ -1,27 +1,22 @@
 import { applyVisualPayload, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
+import { cn } from '@renderer/utils/cn';
 import { parseNumber } from '../../../utils/slides';
 import { useElements } from '../../../contexts/element/element-context';
-import type { StrokePosition } from '@core/types';
 import { ColorPicker } from '../../../components/form/color-picker';
 import { FieldInput } from '../../../components/form/field-input';
-import { FieldSelect } from '../../../components/form/field-select';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
   AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
   CornerUpRight, Eye, FlipHorizontal2, MoveHorizontal, MoveVertical,
-  RotateCcw, RulerDimensionLine, Square, Sun,
+  RotateCcw, Square,
 } from 'lucide-react';
 import type { ElementInspectorDraft } from '../../../types/ui';
 import { IconGroup } from '@renderer/components/icon-group';
 import { useRenderScenes } from '../../stage/rendering/render-scene-provider';
 import { alignElementDraft } from '../utils/align-element-draft';
 import { Section } from './inspector-section';
-
-const STROKE_POSITION_OPTIONS = [
-  { value: 'inside', label: 'Inside' },
-  { value: 'center', label: 'Center' },
-  { value: 'outside', label: 'Outside' },
-];
+import { StrokeSectionFields } from './stroke-section-fields';
+import { ShadowSectionFields } from './shadow-section-fields';
 
 export function ShapeElementInspector() {
   const {
@@ -84,18 +79,9 @@ export function ShapeElementInspector() {
   function handleFlipY() { updateVisual({ flipY: !visual.flipY }); }
   function handleFillToggle(enabled: boolean) { updateVisual({ fillEnabled: enabled }); }
   function handleFillColorChange(value: string) { updateVisual({ fillColor: value }); }
-  function handleStrokeToggle(enabled: boolean) { updateVisual({ strokeEnabled: enabled }); }
-  function handleStrokeColorChange(value: string) { updateVisual({ strokeColor: value }); }
-  function handleStrokeWidthChange(value: string) { updateVisual({ strokeWidth: Math.max(0, parseNumber(value, visual.strokeWidth)) }); }
-  function handleStrokePositionChange(value: string) { updateVisual({ strokePosition: value as StrokePosition }); }
-  function handleShadowToggle(enabled: boolean) { updateVisual({ shadowEnabled: enabled }); }
-  function handleShadowColorChange(value: string) { updateVisual({ shadowColor: value }); }
-  function handleShadowBlurChange(value: string) { updateVisual({ shadowBlur: Math.max(0, parseNumber(value, visual.shadowBlur)) }); }
-  function handleShadowOffsetXChange(value: string) { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetX) }); }
-  function handleShadowOffsetYChange(value: string) { updateVisual({ shadowOffsetY: parseNumber(value, visual.shadowOffsetY) }); }
 
   return (
-    <fieldset className={`m-0 min-w-0 border-0 p-0 ${visual.locked ? 'opacity-50' : ''}`} disabled={visual.locked}>
+    <fieldset className={cn('m-0 min-w-0 border-0 p-0', visual.locked && 'opacity-50')} disabled={visual.locked}>
       <Section.Root>
         <Section.Header>
           <span>Position</span>
@@ -184,44 +170,26 @@ export function ShapeElementInspector() {
         ) : null}
       </Section.Root>
 
-      <Section.Root>
-        <Section.Header>
-          <Section.Checkbox checked={visual.strokeEnabled} onChange={handleStrokeToggle} />
-          <span className='font-medium ml-2'>{`${styleLabelPrefix}Stroke`}</span>
-        </Section.Header>
-        {visual.strokeEnabled ? (
-          <Section.Body>
-            <Section.Row lead>
-              <ColorPicker value={visual.strokeColor} onChange={handleStrokeColorChange} />
-            </Section.Row>
-            <Section.Row>
-              <FieldSelect value={visual.strokePosition} onChange={handleStrokePositionChange} options={STROKE_POSITION_OPTIONS} />
-              <FieldInput icon={<RulerDimensionLine size={14} />} type="number" value={visual.strokeWidth} onChange={handleStrokeWidthChange} />
-            </Section.Row>
-          </Section.Body>
-        ) : null}
-      </Section.Root>
+      <StrokeSectionFields
+        label={`${styleLabelPrefix}Stroke`}
+        enabled={visual.strokeEnabled}
+        color={visual.strokeColor}
+        width={visual.strokeWidth}
+        position={visual.strokePosition}
+        onToggle={(enabled) => updateVisual({ strokeEnabled: enabled })}
+        onUpdate={updateVisual}
+      />
 
-      <Section.Root>
-        <Section.Header>
-          <Section.Checkbox checked={visual.shadowEnabled} onChange={handleShadowToggle} />
-          <span className='font-medium ml-2'>{`${styleLabelPrefix}Shadow`}</span>
-        </Section.Header>
-        {visual.shadowEnabled ? (
-          <Section.Body>
-            <Section.Row>
-              <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={visual.shadowOffsetX} onChange={handleShadowOffsetXChange} />
-              <FieldInput icon={<MoveVertical size={14} />} type="number" value={visual.shadowOffsetY} onChange={handleShadowOffsetYChange} />
-            </Section.Row>
-            <Section.Row>
-              <FieldInput icon={<Sun size={14} />} type="number" value={visual.shadowBlur} onChange={handleShadowBlurChange} />
-            </Section.Row>
-            <Section.Row lead>
-              <ColorPicker value={visual.shadowColor} onChange={handleShadowColorChange} />
-            </Section.Row>
-          </Section.Body>
-        ) : null}
-      </Section.Root>
+      <ShadowSectionFields
+        label={`${styleLabelPrefix}Shadow`}
+        enabled={visual.shadowEnabled}
+        color={visual.shadowColor}
+        blur={visual.shadowBlur}
+        offsetX={visual.shadowOffsetX}
+        offsetY={visual.shadowOffsetY}
+        onToggle={(enabled) => updateVisual({ shadowEnabled: enabled })}
+        onUpdate={updateVisual}
+      />
 
     </fieldset>
   );

@@ -1,5 +1,6 @@
 import type { Id } from '@core/types';
-import { EditableText } from '../../../../components/form/editable-text';
+import { cn } from '@renderer/utils/cn';
+import { EditableTextArea } from '../../../../components/form/editable-text-area';
 import { SceneFrame } from '../../../../components/display/scene-frame';
 import { ThumbnailLiveBadge } from '../../../../components/display/thumbnail-live-badge';
 import { ThumbnailRow } from '../../../../components/display/thumbnail-row';
@@ -43,10 +44,9 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
     }
 
     return (
-      <EditableText
+      <EditableTextArea
         value={row.text}
         onCommit={handleTextCommit}
-        multiline
         trimOnCommit={false}
         placeholder="Lyric text"
         className="w-full text-md font-medium leading-6 text-text-secondary"
@@ -71,7 +71,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
       )}
       body={(
         <>
-          <div className={`flex gap-2 ${row.textEditable ? 'items-start' : 'items-center'}`}>
+          <div className={cn('flex gap-2', row.textEditable ? 'items-start' : 'items-center')}>
             <span className="shrink-0 text-sm font-semibold tabular-nums text-text-secondary">{row.index + 1}.</span>
             {renderRowText()}
           </div>

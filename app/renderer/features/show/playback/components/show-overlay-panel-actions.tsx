@@ -23,12 +23,12 @@ export function ShowOverlayPanelActions() {
 
   return (
     <>
-      <Button label={modeLabel} size="icon-sm" variant="ghost" onClick={handleModeToggle}>
+      <Button.Icon label={modeLabel} size="sm" variant="ghost" onClick={handleModeToggle}>
         {overlayMode === 'single' ? <Layers size={14} /> : <Layers2 size={14} />}
-      </Button>
-      <Button label="Add overlay" size="icon-sm" onClick={handleCreateOverlay}>
+      </Button.Icon>
+      <Button.Icon label="Add overlay" size="sm" onClick={handleCreateOverlay}>
         <Plus size={14} strokeWidth={2} />
-      </Button>
+      </Button.Icon>
     </>
   );
 }

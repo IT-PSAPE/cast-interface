@@ -1,7 +1,14 @@
 import { useRef } from 'react';
 import { FieldLabel } from './field-label';
+import { CustomSelect } from './custom-select';
 
 type ColorMode = 'solid' | 'gradient' | 'image';
+
+const FILL_MODE_OPTIONS = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'gradient', label: 'Gradient' },
+  { value: 'image', label: 'Image' },
+];
 
 interface FieldColorProps {
   value: string | null | undefined;
@@ -39,8 +46,8 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
     pickerRef.current?.click();
   }
 
-  function handleModeChange(event: React.ChangeEvent<HTMLSelectElement>) {
-    onModeChange?.(event.target.value as ColorMode);
+  function handleModeChange(value: string) {
+    onModeChange?.(value as ColorMode);
   }
 
   const colorField = (
@@ -68,15 +75,12 @@ export function FieldColor({ value, onChange, label, wide, mode = 'solid', onMod
         className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-sm"
       />
       {onModeChange ? (
-        <select
+        <CustomSelect
           value={mode}
           onChange={handleModeChange}
-          className="shrink-0 bg-transparent text-sm text-text-tertiary outline-none pr-1 cursor-pointer"
-        >
-          <option value="solid">Solid</option>
-          <option value="gradient">Gradient</option>
-          <option value="image">Image</option>
-        </select>
+          options={FILL_MODE_OPTIONS}
+          className="shrink-0"
+        />
       ) : null}
     </div>
   );
