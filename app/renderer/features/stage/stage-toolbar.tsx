@@ -21,7 +21,6 @@ function ToolbarButton({ label, onClick, disabled = false, children }: ToolbarBu
       label={label}
       onClick={onClick}
       disabled={disabled}
-      size="lg"
       variant="ghost"
       className="text-primary hover:bg-white/10"
     >

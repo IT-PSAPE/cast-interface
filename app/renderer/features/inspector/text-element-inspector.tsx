@@ -8,7 +8,6 @@ import { FieldInput } from '../../components/form/field-input';
 import { FieldSelect } from '../../components/form/field-select';
 import { useSystemFonts } from './use-system-fonts';
 
-import { SegmentedControl } from '../../components/controls/segmented-controls';
 import {
   AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
   AlignLeft, AlignRight, AlignStartVertical,
@@ -18,6 +17,7 @@ import {
 import { Section } from './inspector-section';
 import { StrokeSectionFields } from './stroke-section-fields';
 import { ShadowSectionFields } from './shadow-section-fields';
+import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
@@ -127,7 +127,7 @@ export function TextElementInspector() {
           <span>Formatting</span>
         </Section.Header>
         <Section.Body>
-          <SegmentedControl.Root label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
+          <SegmentedControl label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
             <SegmentedControl.Icon value="bold" title="Bold" fill>
               <Bold className="size-4" />
             </SegmentedControl.Icon>
@@ -140,7 +140,7 @@ export function TextElementInspector() {
             <SegmentedControl.Icon value="strikethrough" title="Strikethrough" fill>
               <Strikethrough className="size-4" />
             </SegmentedControl.Icon>
-          </SegmentedControl.Root>
+          </SegmentedControl>
           <Section.Row>
             <FieldSelect value={formatting.caseTransform} onChange={handleCaseChange} options={CASE_OPTIONS} />
             <ColorPicker value={textVisual.color} onChange={handleTextColorChange} />
@@ -154,7 +154,7 @@ export function TextElementInspector() {
         </Section.Header>
         <Section.Body>
           <div className="flex gap-2">
-            <SegmentedControl.Root fill className="w-full" value={formatting.alignment} onValueChange={handleHorizontalAlighmentChange} aria-label="Horizontal text alignment">
+            <SegmentedControl fill className="w-full" value={formatting.alignment} onValueChange={handleHorizontalAlighmentChange} aria-label="Horizontal text alignment">
               <SegmentedControl.Icon fill value="left" title="Align left" aria-label="Align left">
                 <AlignLeft className="size-4" />
               </SegmentedControl.Icon>
@@ -167,9 +167,9 @@ export function TextElementInspector() {
               <SegmentedControl.Icon fill value="justify" title="Justify text" aria-label="Justify text">
                 <AlignJustify className="size-4" />
               </SegmentedControl.Icon>
-            </SegmentedControl.Root>
+            </SegmentedControl>
 
-            <SegmentedControl.Root fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
+            <SegmentedControl fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
               <SegmentedControl.Icon fill value="top" title="Align top" aria-label="Align top">
                 <AlignStartVertical className="size-4" />
               </SegmentedControl.Icon>
@@ -179,7 +179,7 @@ export function TextElementInspector() {
               <SegmentedControl.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
                 <AlignEndVertical className="size-4" />
               </SegmentedControl.Icon>
-            </SegmentedControl.Root>
+            </SegmentedControl>
           </div>
         </Section.Body>
       </Section.Root>

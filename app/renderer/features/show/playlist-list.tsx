@@ -22,8 +22,8 @@ export function PlaylistList() {
           <span className="text-sm font-semibold text-tertiary uppercase tracking-wider">Playlist</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <Button.Icon label="New playlist" onClick={handleCreate} size="md">
-            <Plus size={14} strokeWidth={1.75} />
+          <Button.Icon label="New playlist" onClick={handleCreate}>
+            <Plus/>
           </Button.Icon>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
@@ -47,7 +47,7 @@ export function PlaylistList() {
 
           return (
             <div key={tree.playlist.id} role="listitem" className="group relative">
-              <Button.Root
+              <Button
                 variant="ghost"
                 active={isSelected}
                 onClick={handleSelect}
@@ -63,10 +63,10 @@ export function PlaylistList() {
                     className="text-md"
                   />
                 </span>
-              </Button.Root>
+              </Button>
 
-              <Button.Icon label={`Open ${tree.playlist.name} menu`} onClick={handleMenuButtonClick} size="sm" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" >
-                <EllipsisVertical size={14} strokeWidth={2} />
+              <Button.Icon label={`Open ${tree.playlist.name} menu`} onClick={handleMenuButtonClick} variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" >
+                <EllipsisVertical />
               </Button.Icon>
             </div>
           );

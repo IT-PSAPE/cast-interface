@@ -94,8 +94,8 @@ function TemplateListCard({ template, index, isSelected, onSelect, onOpenMenu }:
       onClick={handleSelect}
       captionIcon={<TemplateKindIcon kind={template.kind} />}
       menuButton={(
-        <Button.Icon label="Template options" onClick={handleMenuClick} size="sm" className="border-primary bg-tertiary/80">
-          <Ellipsis size={14} strokeWidth={2} />
+        <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+          <Ellipsis />
         </Button.Icon>
       )}
     />

@@ -192,8 +192,8 @@ function CloseButton({ className, label = 'Close', ...props }: Omit<ComponentPro
   const { actions } = useDialog();
 
   return (
-    <Button.Icon {...props} label={label} variant="ghost" size="sm" onClick={actions.close} className={cn('shrink-0', className)}>
-      <X size={14} strokeWidth={2} />
+    <Button.Icon {...props} label={label} variant="ghost" onClick={actions.close} className={cn('shrink-0', className)}>
+      <X/>
     </Button.Icon>
   );
 }

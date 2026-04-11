@@ -20,9 +20,9 @@ export function AppearanceSettingsPanel() {
     <div className="grid gap-6">
       <SettingsSection title="Theme">
         <div className="grid gap-2">
-          <SegmentedControl.Root value={themeMode} onValueChange={handleThemeModeChange} aria-label="Theme mode">
+          <SegmentedControl value={themeMode} onValueChange={handleThemeModeChange} aria-label="Theme mode">
             {themeOptions}
-          </SegmentedControl.Root>
+          </SegmentedControl>
         </div>
       </SettingsSection>
     </div>

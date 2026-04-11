@@ -49,10 +49,10 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
         {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select media to add'}
       </span>
       <div className="flex gap-2">
-        <Button.Root variant="ghost" onClick={onClose}>Cancel</Button.Root>
-        <Button.Root onClick={handleConfirm} disabled={selectedIds.size === 0}>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button onClick={handleConfirm} disabled={selectedIds.size === 0}>
           Add{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-        </Button.Root>
+        </Button>
       </div>
     </>
   );

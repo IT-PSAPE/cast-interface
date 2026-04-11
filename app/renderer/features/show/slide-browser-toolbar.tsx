@@ -13,7 +13,7 @@ export function SlideBrowserToolbar() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
   const { currentContentItem, isDetachedContentBrowser } = useNavigation();
-  const { slideBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, setGridItemSize } = useSlideBrowser();
+  const { slideBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useSlideBrowser();
   const isGridMode = slideBrowserMode === 'grid';
   const showPlaylistModes = !isDetachedContentBrowser && (isGridMode || slideBrowserMode === 'list');
 
@@ -31,30 +31,18 @@ export function SlideBrowserToolbar() {
   return (
     <>
       <footer className="flex items-center gap-2 border-t border-primary bg-primary/80 px-2 py-1">
-        <Button.Icon label="Add slide" size="md" disabled={!currentContentItem} onClick={handleAddSlide}>
-          <Plus className="size-4" />
+        <Button.Icon label="Add slide" disabled={!currentContentItem} onClick={handleAddSlide}>
+          <Plus/>
         </Button.Icon>
 
-        <Button.Icon
-          label="Open lyric editor"
-          size="md"
-          disabled={!currentContentItem || currentContentItem.type !== 'lyric'}
-          onClick={handleOpenEditor}
-        >
-          <Pencil className="size-4" />
+        <Button.Icon label="Open lyric editor" disabled={!currentContentItem || currentContentItem.type !== 'lyric'} onClick={handleOpenEditor}>
+          <Pencil/>
         </Button.Icon>
 
         <div className="ml-auto flex items-center gap-2">
-          {isGridMode ? (
-            <GridSizeSlider value={gridItemSize} min={gridSizeMin} max={gridSizeMax} onChange={setGridItemSize} />
-          ) : null}
-          {showPlaylistModes ? (
-            <>
-              <PlaylistBrowserModeControl />
-              <div className="h-5 w-px bg-border-primary" aria-hidden="true" />
-            </>
-          ) : null}
+          {showPlaylistModes && <PlaylistBrowserModeControl />}
           <SlideBrowserModeControl />
+          {isGridMode && <GridSizeSlider value={gridItemSize} min={gridSizeMin} max={gridSizeMax} step={gridSizeStep} onChange={setGridItemSize} />}
         </div>
       </footer>
 

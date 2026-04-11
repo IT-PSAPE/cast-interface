@@ -96,7 +96,7 @@ export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelP
 
   return (
     <>
-      <ThumbnailGrid itemSize={gridItemSize}>
+      <ThumbnailGrid columns={gridItemSize}>
         {filteredTemplates.map((template) => (
           <TemplateCard
             key={template.id}
@@ -143,8 +143,8 @@ function TemplateCard({ template, index, isSelected, onOpen, onOpenMenu }: Templ
       onClick={handleOpen}
       onDoubleClick={handleOpen}
       menuButton={(
-        <Button.Icon label="Template options" onClick={handleMenuClick} size="sm" className="border-primary bg-tertiary/80">
-          <Ellipsis size={14} strokeWidth={2} />
+        <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+          <Ellipsis/>
         </Button.Icon>
       )}
     />

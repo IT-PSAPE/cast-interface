@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Grid2x2, List } from 'lucide-react';
-import { SegmentedControl } from '../../components/controls/segmented-controls';
+import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { useSlideBrowser } from './slide-browser-context';
 
 interface ViewOption {
@@ -32,9 +32,9 @@ export function SlideBrowserModeControl() {
   }
 
   return (
-    <SegmentedControl.Root value={slideBrowserMode} onValueChange={handleValueChange} aria-label="Slide browser mode">
+    <SegmentedControl value={slideBrowserMode} onValueChange={handleValueChange} aria-label="Slide browser mode">
       {viewOptions.map(renderViewItem)}
-    </SegmentedControl.Root>
+    </SegmentedControl>
   );
 }
 

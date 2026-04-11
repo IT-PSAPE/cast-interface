@@ -23,7 +23,7 @@ export function OverlayBinPanel({ filterText, gridItemSize }: OverlayBinPanelPro
   const overlays = filterByText(allOverlays, filterText, (overlay) => [overlay.name, overlay.type]);
 
   return (
-    <ThumbnailGrid itemSize={gridItemSize}>
+    <ThumbnailGrid columns={gridItemSize}>
       {overlays.map((overlay, index) => (
         <OverlayCard
           key={overlay.id}

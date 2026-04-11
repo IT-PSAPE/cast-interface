@@ -31,7 +31,7 @@ interface OutputToggleProps {
 
 export function OutputToggle({ label, active, onClick }: OutputToggleProps) {
   return (
-    <Button.Root
+    <Button
       variant="ghost"
       onClick={onClick}
       type="button"
@@ -40,6 +40,6 @@ export function OutputToggle({ label, active, onClick }: OutputToggleProps) {
     >
       <span className={dotStyles({ active })} aria-hidden="true" />
       <span className="text-primary">{label}</span>
-    </Button.Root>
+    </Button>
   );
 }

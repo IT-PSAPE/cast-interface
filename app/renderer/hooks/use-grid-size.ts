@@ -12,7 +12,7 @@ function getStoredSize(key: string, defaultValue: number, min: number, max: numb
   return clamp(parsed, min, max);
 }
 
-export function useGridSize(storageKey: string, defaultValue: number, min: number, max: number) {
+export function useGridSize(storageKey: string, defaultValue: number, min: number, max: number, step: number = 1) {
   const [gridSize, setGridSizeRaw] = useState(() => getStoredSize(storageKey, defaultValue, min, max));
 
   const setGridSize = useCallback((size: number) => {
@@ -21,5 +21,5 @@ export function useGridSize(storageKey: string, defaultValue: number, min: numbe
     window.localStorage.setItem(storageKey, String(clamped));
   }, [storageKey, min, max]);
 
-  return { gridSize, setGridSize, min, max } as const;
+  return { gridSize, setGridSize, min, max, step } as const;
 }

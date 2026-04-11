@@ -25,14 +25,14 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
           <Panel.Section
             title={<span className="truncate text-sm font-medium text-primary">{title}</span>}
             action={(
-              <Button.Icon label={addLabel} size="sm" onClick={onAdd}>
-                <Plus size={14} strokeWidth={2} />
+              <Button.Icon label={addLabel} onClick={onAdd}>
+                <Plus/>
               </Button.Icon>
             )}
             headerClassName="border-b border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
-            <div className="grid content-start gap-2" role="grid" aria-label={listAriaLabel ?? title}>
+            <div className="grid content-start gap-1" role="grid" aria-label={listAriaLabel ?? title}>
               {children}
             </div>
           </Panel.Section>

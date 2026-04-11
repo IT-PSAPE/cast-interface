@@ -36,6 +36,7 @@ interface ResourceDrawerContextValue {
     gridSize: number;
     gridSizeMax: number;
     gridSizeMin: number;
+    gridSizeStep: number;
     showCreateAction: boolean;
     showImportAction: boolean;
   };
@@ -66,7 +67,7 @@ function Root({ children }: { children: ReactNode }) {
   const { createDeck, createLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax } = useGridSize('cast-interface.grid-size.resource-drawer', 160, 100, 280);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('cast-interface.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
     createDeck,
@@ -141,6 +142,7 @@ function Root({ children }: { children: ReactNode }) {
       gridSize,
       gridSizeMax,
       gridSizeMin,
+      gridSizeStep,
       showCreateAction: drawerTab === 'content' || drawerTab === 'templates',
       showImportAction: drawerTab === 'media'
     },
@@ -193,17 +195,17 @@ function ResourceDrawerActions() {
 
   return (
     <>
-      <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} onChange={actions.setGridSize} />
+      <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} />
       {meta.showImportAction ? (
         <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
-          <Button.Icon label="Import media" size="sm" variant="ghost">
-            <Plus size={14} strokeWidth={1.5} />
+          <Button.Icon label="Import media" variant="ghost">
+            <Plus />
           </Button.Icon>
         </FileTrigger.Root>
       ) : null}
       {meta.showCreateAction ? (
-        <Button.Icon label="Create item" size="sm" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
-          <Plus size={14} strokeWidth={1.5} />
+        <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
+          <Plus />
         </Button.Icon>
       ) : null}
     </>

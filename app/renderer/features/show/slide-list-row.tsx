@@ -3,7 +3,7 @@ import { cn } from '@renderer/utils/cn';
 import { EditableTextArea } from '../../components/form/editable-text-area';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { ThumbnailLiveBadge } from '../../components/display/thumbnail-live-badge';
-import { ThumbnailRow } from '../../components/display/thumbnail-row';
+import { Thumbnail } from '../../components/display/thumbnail';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { SceneStage } from '../stage/scene-stage';
 import type { RenderScene } from '../stage/scene-types';
@@ -55,7 +55,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
   }
 
   return (
-    <ThumbnailRow
+    <Thumbnail.Row
       onClick={handleSelect}
       onDoubleClick={row.textEditable ? undefined : handleOpen}
       className={rowStateClass}

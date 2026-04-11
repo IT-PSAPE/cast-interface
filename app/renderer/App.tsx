@@ -212,7 +212,7 @@ function AppLayoutContent() {
     <div className="relative flex flex-col h-screen">
       <WindowsInlineMenuBar />
       <AppToolbar audienceOutputActive={outputState.audience} onToggleAudienceOutput={toggleAudienceOutput} panelToggles={panelToggles} />
-      <main className='flex-1'>
+      <main className='flex-1 min-h-0'>
         {workbenchMode === 'show' && <ShowModeLayout />}
         {workbenchMode === 'slide-editor' && <SlideEditorLayout />}
         {workbenchMode === 'overlay-editor' && <OverlayEditorLayout />}

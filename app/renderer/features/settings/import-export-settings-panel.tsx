@@ -38,11 +38,11 @@ export function ImportExportSettingsPanel() {
         title="Export Content"
         action={(
           <div className="flex items-center gap-2">
-            <Button.Root variant="ghost" onClick={actions.selectAllVisible} disabled={state.contentItems.length === 0}>Select Visible</Button.Root>
-            <Button.Root variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button.Root>
-            <Button.Root onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
+            <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.contentItems.length === 0}>Select Visible</Button>
+            <Button variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button>
+            <Button onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
               {state.exportInFlight ? 'Exporting...' : `Export Selected${hasSelection ? ` (${state.selectedCount})` : ''}`}
-            </Button.Root>
+            </Button>
           </div>
         )}
       >
@@ -56,13 +56,13 @@ export function ImportExportSettingsPanel() {
         title="Import Bundle"
         action={(
           <div className="flex items-center gap-2">
-            <Button.Root variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</Button.Root>
-            <Button.Root variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
+            <Button variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</Button>
+            <Button variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
               {state.importInFlight && !hasInspection ? 'Loading...' : 'Choose Bundle'}
-            </Button.Root>
-            <Button.Root onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
+            </Button>
+            <Button onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
               {state.importInFlight && hasInspection ? 'Importing...' : 'Import'}
-            </Button.Root>
+            </Button>
           </div>
         )}
       >

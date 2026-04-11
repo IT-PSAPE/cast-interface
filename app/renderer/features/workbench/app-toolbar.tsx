@@ -52,14 +52,17 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
     setShowSettings(false);
   }
 
+  const dragRegionStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
+  const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
+
   return (
     <header
       data-ui-region="app-toolbar"
       className="border-b border-primary bg-primary px-3 py-1.5"
-      style={isMac ? { WebkitAppRegion: 'drag', paddingLeft: '78px' } as CSSProperties : undefined}
+      style={isMac ? { ...dragRegionStyle, paddingLeft: '78px' } : dragRegionStyle}
     >
-      <div className="flex items-center gap-3" style={isMac ? { WebkitAppRegion: 'no-drag' } as CSSProperties : undefined}>
-        <div className="flex items-center">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center" style={noDragStyle}>
           <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
             <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
             <SegmentedControl.Label value="slide-editor">Edit</SegmentedControl.Label>
@@ -68,7 +71,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
           </SegmentedControl>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2" style={noDragStyle}>
           <OutputToggle label="Audience" active={audienceOutputActive} onClick={onToggleAudienceOutput} />
 
           <SegmentedControl
@@ -80,8 +83,8 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
             {panelToggles.map(renderPanelToggleItem)}
           </SegmentedControl>
 
-          <Button.Icon label="Settings" onClick={handleOpenSettings} size="md">
-            <Settings className="size-4" />
+          <Button.Icon label="Settings" onClick={handleOpenSettings}>
+            <Settings/>
           </Button.Icon>
         </div>
       </div>

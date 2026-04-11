@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { RenderScene } from '../../features/stage/scene-types';
 import { SceneFrame } from './scene-frame';
 import { SceneStage } from '../../features/stage/scene-stage';
-import { ThumbnailTile } from './thumbnail-tile';
+import { Thumbnail } from './thumbnail';
 
 interface SceneThumbnailCardProps {
   scene: RenderScene;
@@ -21,7 +21,7 @@ interface SceneThumbnailCardProps {
 
 export function SceneThumbnailCard({ scene, index, label, selected, onClick, onDoubleClick, badge, menuButton, captionIcon, secondaryText, emptyLabel, checkerboard = true }: SceneThumbnailCardProps) {
   return (
-    <ThumbnailTile
+    <Thumbnail.Tile
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       selected={selected}

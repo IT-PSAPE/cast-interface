@@ -121,7 +121,7 @@ export function SlideListPanel() {
         <PanelRoute.Panel id="slide-list" defaultSize={440} minSize={180}>
           <Panel.Section
             title={(
-              <Button.Root variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+              <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
                 <span className="flex min-w-0 items-center gap-2">
                   {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-tertiary" /> : null}
                   <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title ?? 'No item selected'}>
@@ -129,17 +129,17 @@ export function SlideListPanel() {
                   </span>
                 </span>
                 <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
-              </Button.Root>
+              </Button>
             )}
             action={(
-              <Button.Icon label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} size="sm" onClick={handleAddSlide}>
-                <Plus size={14} strokeWidth={2} />
+              <Button.Icon label={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
+                <Plus />
               </Button.Icon>
             )}
             headerClassName="border-b border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
-            <div className="grid content-start gap-2" role="grid" aria-label={`Current ${itemLabel.toLowerCase()}`}>
+            <div className="grid content-start gap-1" role="grid" aria-label={`Current ${itemLabel.toLowerCase()}`}>
               {slides.map(renderSlide)}
             </div>
           </Panel.Section>

@@ -6,7 +6,7 @@ import { EditableText } from '../../components/form/editable-text';
 import { Button } from '../../components/controls/button';
 import { ContentItemIcon } from '../../components/display/presentation-entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
-import { ThumbnailTile } from '../../components/display/thumbnail-tile';
+import { Thumbnail } from '../../components/display/thumbnail';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -72,7 +72,7 @@ export function ContentBinPanel({ filterText, gridItemSize }: ContentBinPanelPro
 
   return (
     <>
-      <ThumbnailGrid itemSize={gridItemSize}>
+      <ThumbnailGrid columns={gridItemSize}>
         {filteredPresentations.map((presentation) => (
           <ContentCard
             key={presentation.id}
@@ -136,7 +136,7 @@ function ContentCard({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
 
   return (
     <div className="group cursor-pointer" onContextMenu={handleContextMenu}>
-      <ThumbnailTile
+      <Thumbnail.Tile
         onClick={handleOpen}
         selected={isSelected}
         className={isSelected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : ''}
@@ -153,8 +153,8 @@ function ContentCard({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
             )}
 
             <div className="absolute right-1 top-1 hidden group-hover:block">
-              <Button.Icon label="Content item options" onClick={handleMenuClick} size="sm" className="border-primary bg-tertiary/80">
-                <Ellipsis size={14} strokeWidth={2} />
+              <Button.Icon label="Content item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+                <Ellipsis />
               </Button.Icon>
             </div>
           </>

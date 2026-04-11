@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SegmentedControl } from '../../components/controls/segmented-controls';
+import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { useSlideBrowser } from './slide-browser-context';
 
 interface PlaylistViewOption {
@@ -62,9 +62,9 @@ export function PlaylistBrowserModeControl() {
   }
 
   return (
-    <SegmentedControl.Root value={playlistBrowserMode} onValueChange={handleValueChange} aria-label="Playlist browser mode">
+    <SegmentedControl value={playlistBrowserMode} onValueChange={handleValueChange} aria-label="Playlist browser mode">
       {playlistViewOptions.map(renderPlaylistViewItem)}
-    </SegmentedControl.Root>
+    </SegmentedControl>
   );
 }
 

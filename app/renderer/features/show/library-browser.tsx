@@ -27,8 +27,8 @@ export function LibraryBrowser() {
     <Panel.Root>
       <Panel.Header>
         <Label.sm className='pl-1 mr-auto'>Library</Label.sm>
-        <Button.Icon label="New library" onClick={handleCreate} variant="ghost" size="md">
-          <Plus size={14} strokeWidth={1.75} />
+        <Button.Icon label="New library" onClick={handleCreate} variant="ghost">
+          <Plus />
         </Button.Icon>
       </Panel.Header>
       <Panel.Section className='px-1.5 py-2 space-y-1'>

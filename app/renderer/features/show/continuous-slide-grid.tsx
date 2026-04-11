@@ -73,14 +73,9 @@ function GridSection({
   }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
 
   return (
-    <section className="grid gap-2">
-      <header className="px-1">
-        <h3 className="m-0 text-sm font-semibold text-primary">{item.item.title}</h3>
-      </header>
-      <ThumbnailGrid itemSize={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
-        {item.slides.map(renderSlideCard)}
-      </ThumbnailGrid>
-    </section>
+    <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
+      {item.slides.map(renderSlideCard)}
+    </ThumbnailGrid>
   );
 }
 
@@ -125,7 +120,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
 
   return (
     <section className="h-full min-h-0 overflow-y-auto p-2">
-      <div className="grid content-start gap-5" role="list" aria-label="Continuous playlist grid">
+      <div className="flex flex-col gap-2" role="list" aria-label="Continuous playlist grid">
         {items.map(renderSection)}
       </div>
     </section>

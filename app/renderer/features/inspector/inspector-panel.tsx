@@ -11,9 +11,9 @@ export function InspectorPanel() {
       <InspectorTabsPanel className="flex-1" />
       {state.isVisible ? (
         <Panel.Footer className="p-3">
-          <Button.Root onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
+          <Button onClick={handlePushChanges} disabled={state.isPushingChanges} className='w-full'>
             {state.isPushingChanges ? 'Pushing…' : state.pushLabel}
-          </Button.Root>
+          </Button>
         </Panel.Footer>
       ) : null}
     </Panel.Root>

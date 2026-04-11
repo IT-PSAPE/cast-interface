@@ -83,8 +83,8 @@ function OverlayListCard({ overlay, index, isSelected, onSelect, onOpenMenu }: O
       selected={isSelected}
       onClick={handleSelect}
       menuButton={(
-        <Button.Icon label="Overlay options" onClick={handleMenuClick} size="sm" className="border-primary bg-tertiary/80">
-          <Ellipsis size={14} strokeWidth={2} />
+        <Button.Icon label="Overlay options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+          <Ellipsis />
         </Button.Icon>
       )}
     />

@@ -32,8 +32,8 @@ export function ShowAudioPanel() {
             <div className="text-xs text-tertiary">Now playing</div>
           </div>
           <FileTrigger.Root accept="audio/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
-            <Button.Icon label="Import audio" size="sm" variant="ghost">
-              <Plus size={14} strokeWidth={1.75} />
+            <Button.Icon label="Import audio" variant="ghost">
+              <Plus/>
             </Button.Icon>
           </FileTrigger.Root>
         </div>

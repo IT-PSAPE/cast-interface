@@ -40,7 +40,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
   }
 
   return (
-    <div className="group/segment grid gap-1">
+    <div className="group/segment grid gap-0.5">
       <div
         className="group/segment-header flex items-center justify-between gap-2 rounded-sm px-1.5 py-1"
         style={{
@@ -54,11 +54,10 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
             label={collapsed ? `Expand ${segment.segment.name}` : `Collapse ${segment.segment.name}`}
             onClick={handleCollapseToggle}
             aria-expanded={!collapsed}
-            size="sm"
             variant="ghost"
             className="shrink-0 border-transparent text-current hover:border-primary"
           >
-            {collapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
+            {collapsed ? <ChevronRight /> : <ChevronDown />}
           </Button.Icon>
           <EditableText value={segment.segment.name} onCommit={handleSegmentRename} editing={isSegmentEditing} className="min-w-0 text-sm font-semibold uppercase tracking-wider text-current" />
         </div>
@@ -66,11 +65,10 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
         <Button.Icon
           label={`Open ${segment.segment.name} menu`}
           onClick={handleSegmentMenuButtonClick}
-          size="sm"
           variant="ghost"
           className="border-transparent text-current opacity-0 transition-opacity group-hover/segment-header:opacity-100 group-focus-within/segment-header:opacity-100 hover:border-primary"
         >
-          <EllipsisVertical size={14} strokeWidth={2} />
+          <EllipsisVertical />
         </Button.Icon>
       </div>
 
@@ -92,7 +90,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
 
         return (
           <div key={entry.entry.id} className="group relative">
-            <Button.Root
+            <Button
               variant="ghost"
               active={isSelected}
               onClick={handleSelect}
@@ -101,12 +99,11 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
             >
               <ContentItemIcon entity={entry.item} className="shrink-0 text-tertiary" />
               <EditableText value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
-            </Button.Root>
+            </Button>
 
             <Button.Icon
               label={`Open ${entry.item.title} menu`}
               onClick={handleMenuButtonClick}
-              size="sm"
               variant="ghost"
               className="absolute right-1 top-1/2 -translate-y-1/2 rounded border border-transparent text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:border-primary hover:text-primary"
             >

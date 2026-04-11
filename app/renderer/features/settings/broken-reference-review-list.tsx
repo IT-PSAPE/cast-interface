@@ -3,7 +3,7 @@ import type {
   ContentBundleBrokenReferenceAction,
   ContentBundleInspection,
 } from '@core/types';
-import { SegmentedControl } from '../../components/controls/segmented-controls';
+import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { Button } from '../../components/controls/button';
 
 interface BrokenReferenceReviewListProps {
@@ -51,16 +51,16 @@ function BrokenReferenceRow({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <SegmentedControl.Root label={`Broken reference action for ${reference.source}`} value={action ?? ''} onValueChange={handleValueChange}>
+        <SegmentedControl label={`Broken reference action for ${reference.source}`} value={action ?? ''} onValueChange={handleValueChange}>
           <SegmentedControl.Label value="replace">Replace</SegmentedControl.Label>
           <SegmentedControl.Label value="remove">Remove</SegmentedControl.Label>
           <SegmentedControl.Label value="leave">Leave Broken</SegmentedControl.Label>
-        </SegmentedControl.Root>
+        </SegmentedControl>
 
         {action === 'replace' ? (
-          <Button.Root variant="ghost" onClick={handleChooseReplacement}>
+          <Button variant="ghost" onClick={handleChooseReplacement}>
             {replacementPath ? 'Change File' : 'Choose File'}
-          </Button.Root>
+          </Button>
         ) : null}
       </div>
 

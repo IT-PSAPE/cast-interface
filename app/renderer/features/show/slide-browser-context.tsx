@@ -6,6 +6,7 @@ interface SlideBrowserContextValue {
   gridItemSize: number;
   gridSizeMax: number;
   gridSizeMin: number;
+  gridSizeStep: number;
   playlistBrowserMode: PlaylistBrowserMode;
   setGridItemSize: (size: number) => void;
   setPlaylistBrowserMode: (mode: PlaylistBrowserMode) => void;
@@ -18,7 +19,7 @@ const STORAGE_KEY = 'cast-interface.slide-browser-preferences.v1';
 
 export function SlideBrowserProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState(getStoredSlideBrowserPreferences);
-  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax } = useGridSize('cast-interface.grid-size.slide-browser', 240, 160, 400);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('cast-interface.grid-size.slide-browser', 6, 4, 8);
   const setSlideBrowserMode = (mode: SlideBrowserMode) => {
     const next = { ...preferences, slideBrowserMode: mode };
     setPreferences(next);
@@ -34,13 +35,14 @@ export function SlideBrowserProvider({ children }: { children: ReactNode }) {
       gridItemSize: gridSize,
       gridSizeMax,
       gridSizeMin,
+      gridSizeStep,
       playlistBrowserMode: preferences.playlistBrowserMode,
       setGridItemSize: setGridSize,
       setPlaylistBrowserMode,
       slideBrowserMode: preferences.slideBrowserMode,
       setSlideBrowserMode,
     }),
-    [gridSize, gridSizeMax, gridSizeMin, preferences, setGridSize],
+    [gridSize, gridSizeMax, gridSizeMin, gridSizeStep, preferences, setGridSize],
   );
 
   return <SlideBrowserContext.Provider value={value}>{children}</SlideBrowserContext.Provider>;

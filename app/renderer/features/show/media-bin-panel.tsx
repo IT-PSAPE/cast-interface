@@ -13,6 +13,7 @@ import { usePresentationLayers } from '../../contexts/presentation-layer-context
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { filterByText } from '../../utils/filter-by-text';
+import { Paragraph } from '@renderer/components/display/text';
 
 interface MediaBinPanelProps {
   filterText: string;
@@ -68,7 +69,7 @@ export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) 
 
   return (
     <>
-      <ThumbnailGrid itemSize={gridItemSize}>
+      <ThumbnailGrid columns={gridItemSize}>
         {mediaAssets.map((asset) => (
           <MediaCard
             key={asset.id}
@@ -116,26 +117,26 @@ function MediaCard({ asset, isActive, onAssignLayer, onOpenMenu }: MediaCardProp
   }
 
   return (
-    <div className="group grid gap-1.5 cursor-grab" draggable onDragStart={handleDragStart}>
+    <div className="group grid gap-1 cursor-grab" draggable onDragStart={handleDragStart}>
       <button
         type="button"
         onClick={handleAssignLayer}
         className={cn(
-          'relative aspect-video overflow-hidden rounded-md border bg-primary text-left transition-colors',
+          'relative aspect-video overflow-hidden rounded-xs border bg-primary text-left transition-colors',
           isActive ? 'border-brand-400/70 ring-1 ring-brand-400/35' : 'border-primary hover:border-secondary',
         )}
       >
         <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
         <MediaThumbnail asset={asset} />
         <div className="absolute right-1 top-1 hidden group-hover:block">
-          <Button.Icon label="Media options" onClick={handleMenuClick} size="sm" className="border-primary bg-tertiary/80">
-            <Ellipsis size={14} strokeWidth={2} />
+          <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+            <Ellipsis />
           </Button.Icon>
         </div>
       </button>
-      <div className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm text-secondary">
+      <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
         <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-        <span className="truncate">{asset.name}</span>
+        <Paragraph.xs className='truncate'>{asset.name}</Paragraph.xs>
       </div>
     </div>
   );

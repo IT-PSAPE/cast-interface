@@ -26,8 +26,8 @@ export function SegmentsBrowser() {
           <span className="text-sm font-semibold uppercase tracking-wider text-tertiary">Segments</span>
         </SectionHeader.Body>
         <SectionHeader.Trailing>
-          <Button.Icon label="New segment" onClick={handleNewSegment} size="md">
-            <FolderPlus size={14} strokeWidth={1.75} />
+          <Button.Icon label="New segment" onClick={handleNewSegment}>
+            <FolderPlus />
           </Button.Icon>
         </SectionHeader.Trailing>
       </SectionHeader.Root>
