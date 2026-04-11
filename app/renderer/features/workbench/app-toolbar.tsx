@@ -5,7 +5,7 @@ import { useWorkbench } from '../../contexts/workbench-context';
 import { OutputToggle } from '../show/output-toggle';
 import type { WorkbenchMode } from '../../types/ui';
 import { Button } from '@renderer/components/controls/button';
-import { SegmentedControl } from '@renderer/components/controls/segmented-controls/segmented-control';
+import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 
 const isMac = window.castApi.platform === 'darwin';
 

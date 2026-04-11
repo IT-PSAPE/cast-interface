@@ -1,7 +1,8 @@
 import { ButtonHTMLAttributes, useCallback, useMemo, useState, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
-import { SegmentContext, useSegment, type SegmentSelectionMode } from './segment-context';
+import { createContext, useContext } from 'react';
+// import { SegmentContext, useSegment, type SegmentSelectionMode } from './segment-context';
 
 const segmentedControlRootStyles = cv({
   base: 'flex items-center gap-px rounded-md bg-tertiary/40 p-0.5',
@@ -68,6 +69,27 @@ interface SegmentItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
   fill?: boolean;
   onClick?: () => void;
 }
+
+export type SegmentSelectionMode = 'single' | 'multiple';
+
+interface SegmentContextValue {
+  fill: boolean;
+  selectionMode: SegmentSelectionMode;
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+}
+
+const SegmentContext = createContext<SegmentContextValue | null>(null);
+
+export function useSegment() {
+  const context = useContext(SegmentContext);
+  if (!context) {
+    throw new Error('useSegment must be used within SegmentedControl.Root');
+  }
+  return context;
+}
+
+export { SegmentContext };
 
 function normalizeToArray(value: SegmentedControlValue | undefined): string[] {
   if (value === undefined) return [];
