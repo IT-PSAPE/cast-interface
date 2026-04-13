@@ -5,6 +5,7 @@
   "private": true,
   "description": "Cross-platform presentation tool with reusable content hierarchy, slide rendering, and NDI output",
   "author": "IT-PSAPE",
+  "packageManager": "npm@11.6.2",
   "homepage": "https://github.com/IT-PSAPE/cast-interface#readme",
   "repository": {
     "type": "git",
