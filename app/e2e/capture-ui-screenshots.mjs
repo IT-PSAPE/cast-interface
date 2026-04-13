@@ -250,19 +250,19 @@ async function seedScenario(page) {
 
     async function ensureDeck(ids, title, slideSpecs) {
       let snapshot = await getSnapshot();
-      let deck = snapshot.decks.find((item) => item.title === title) ?? null;
+      let deck = snapshot.presentations.find((item) => item.title === title) ?? null;
 
       if (!deck) {
-        await window.castApi.createDeck(title);
+        await window.castApi.createPresentation(title);
         snapshot = await getSnapshot();
-        deck = snapshot.decks.find((item) => item.title === title) ?? null;
+        deck = snapshot.presentations.find((item) => item.title === title) ?? null;
       }
 
-      let slides = sortByOrder(snapshot.slides.filter((slide) => slide.deckId === deck.id));
+      let slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === deck.id));
       while (slides.length < slideSpecs.length) {
-        await window.castApi.createSlide({ deckId: deck.id });
+        await window.castApi.createSlide({ presentationId: deck.id });
         snapshot = await getSnapshot();
-        slides = sortByOrder(snapshot.slides.filter((slide) => slide.deckId === deck.id));
+        slides = sortByOrder(snapshot.slides.filter((slide) => slide.presentationId === deck.id));
       }
 
       for (let index = 0; index < slideSpecs.length; index += 1) {
@@ -291,7 +291,7 @@ async function seedScenario(page) {
       const playlistTree = bundle?.playlists.find((tree) => tree.playlist.id === ids.playlistId) ?? null;
       const alreadyInSegment = playlistTree?.segments.some((entry) => entry.entries.some((item) => item.item.id === deck.id)) ?? false;
       if (!alreadyInSegment) {
-        await window.castApi.addContentItemToSegment(ids.segmentId, deck.id);
+        await window.castApi.addDeckItemToSegment(ids.segmentId, deck.id);
       }
     }
 

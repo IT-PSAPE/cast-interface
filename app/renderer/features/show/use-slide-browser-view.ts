@@ -20,15 +20,15 @@ interface SlideBrowserView {
 }
 
 export function useSlideBrowserView(): SlideBrowserView {
-  const { currentContentItem, isDetachedContentBrowser } = useNavigation();
+  const { currentDeckItem, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, playlistBrowserMode } = useSlideBrowser();
   const { state: { workbenchMode } } = useWorkbench();
   const { items } = usePlaylistPresentationSequence();
 
   return useMemo(() => {
-    const hasPresentation = Boolean(currentContentItem);
+    const hasPresentation = Boolean(currentDeckItem);
     const showPlaylistBrowserModes = workbenchMode === 'show'
-      && !isDetachedContentBrowser
+      && !isDetachedDeckBrowser
       && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
     const hasItems = items.length > 0;
     const headerVariant: SlideBrowserHeaderVariant = !hasPresentation || !showPlaylistBrowserModes || !hasItems
@@ -52,5 +52,5 @@ export function useSlideBrowserView(): SlideBrowserView {
       headerVariant,
       items,
     };
-  }, [currentContentItem, slideBrowserMode, playlistBrowserMode, workbenchMode, isDetachedContentBrowser, items]);
+  }, [currentDeckItem, slideBrowserMode, playlistBrowserMode, workbenchMode, isDetachedDeckBrowser, items]);
 }

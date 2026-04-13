@@ -1,23 +1,23 @@
 import type {
-  BrokenContentBundleReference,
-  ContentBundleBrokenReferenceAction,
-  ContentBundleInspection,
+  BrokenDeckBundleReference,
+  DeckBundleBrokenReferenceAction,
+  DeckBundleInspection,
 } from '@core/types';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { Button } from '../../components/controls/button';
 
 interface BrokenReferenceReviewListProps {
-  inspection: ContentBundleInspection;
-  decisionMap: ReadonlyMap<string, { action: ContentBundleBrokenReferenceAction; replacementPath: string | null }>;
-  onActionChange: (source: string, action: ContentBundleBrokenReferenceAction) => void;
+  inspection: DeckBundleInspection;
+  decisionMap: ReadonlyMap<string, { action: DeckBundleBrokenReferenceAction; replacementPath: string | null }>;
+  onActionChange: (source: string, action: DeckBundleBrokenReferenceAction) => void;
   onChooseReplacement: (source: string) => Promise<void>;
 }
 
 interface BrokenReferenceRowProps {
-  reference: BrokenContentBundleReference;
-  action: ContentBundleBrokenReferenceAction | null;
+  reference: BrokenDeckBundleReference;
+  action: DeckBundleBrokenReferenceAction | null;
   replacementPath: string | null;
-  onActionChange: (source: string, action: ContentBundleBrokenReferenceAction) => void;
+  onActionChange: (source: string, action: DeckBundleBrokenReferenceAction) => void;
   onChooseReplacement: (source: string) => Promise<void>;
 }
 
@@ -46,7 +46,7 @@ function BrokenReferenceRow({
       <div className="flex flex-col gap-1">
         <div className="text-sm font-medium text-primary">{reference.source}</div>
         <div className="text-xs text-tertiary">
-          {reference.occurrenceCount} use{reference.occurrenceCount === 1 ? '' : 's'} in {ownerSummary || 'imported content'}
+          {reference.occurrenceCount} use{reference.occurrenceCount === 1 ? '' : 's'} in {ownerSummary || 'imported deck'}
         </div>
       </div>
 

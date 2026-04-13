@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { AppSnapshot, ContentItemType, Id } from '@core/types';
+import type { AppSnapshot, DeckItemType, Id } from '@core/types';
 import { useCast } from '../../contexts/cast-context';
 
 function findCreatedId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
@@ -12,12 +12,12 @@ function findCreatedId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
 export function useLibraryPanelManagement() {
   const { snapshot, mutate, setStatusText } = useCast();
 
-  function getContentItems(nextSnapshot: AppSnapshot | null | undefined) {
-    return [...(nextSnapshot?.decks ?? []), ...(nextSnapshot?.lyrics ?? [])];
+  function getDeckItems(nextSnapshot: AppSnapshot | null | undefined) {
+    return [...(nextSnapshot?.presentations ?? []), ...(nextSnapshot?.lyrics ?? [])];
   }
 
-  function resolveContentItemType(itemId: Id): ContentItemType | null {
-    if (snapshot?.decks.some((item) => item.id === itemId)) return 'deck';
+  function resolveDeckItemType(itemId: Id): DeckItemType | null {
+    if (snapshot?.presentations.some((item) => item.id === itemId)) return 'presentation';
     if (snapshot?.lyrics.some((item) => item.id === itemId)) return 'lyric';
     return null;
   }
@@ -52,11 +52,11 @@ export function useLibraryPanelManagement() {
     }
   }, [mutate, setStatusText]);
 
-  const renameContentItem = useCallback(async (id: Id, title: string) => {
-    const itemType = resolveContentItemType(id);
+  const renameDeckItem = useCallback(async (id: Id, title: string) => {
+    const itemType = resolveDeckItemType(id);
     if (!itemType) return;
-    await mutate(() => itemType === 'deck'
-      ? window.castApi.renameDeck(id, title)
+    await mutate(() => itemType === 'presentation'
+      ? window.castApi.renamePresentation(id, title)
       : window.castApi.renameLyric(id, title));
     setStatusText(`Renamed item: ${title}`);
   }, [mutate, setStatusText, snapshot]);
@@ -76,17 +76,17 @@ export function useLibraryPanelManagement() {
     setStatusText('Deleted segment');
   }, [mutate, setStatusText]);
 
-  const deleteContentItem = useCallback(async (id: Id) => {
-    const itemType = resolveContentItemType(id);
+  const deleteDeckItem = useCallback(async (id: Id) => {
+    const itemType = resolveDeckItemType(id);
     if (!itemType) return;
-    await mutate(() => itemType === 'deck'
-      ? window.castApi.deleteDeck(id)
+    await mutate(() => itemType === 'presentation'
+      ? window.castApi.deletePresentation(id)
       : window.castApi.deleteLyric(id));
     setStatusText('Deleted item');
   }, [mutate, setStatusText, snapshot]);
 
-  const moveContentItemToSegment = useCallback(async (playlistId: Id, itemId: Id, segmentId: Id | null) => {
-    await mutate(() => window.castApi.moveContentItemToSegment(playlistId, itemId, segmentId));
+  const moveDeckItemToSegment = useCallback(async (playlistId: Id, itemId: Id, segmentId: Id | null) => {
+    await mutate(() => window.castApi.moveDeckItemToSegment(playlistId, itemId, segmentId));
     setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
   }, [mutate, setStatusText]);
 
@@ -95,69 +95,69 @@ export function useLibraryPanelManagement() {
     setStatusText(direction === 'up' ? 'Moved playlist up' : 'Moved playlist down');
   }, [mutate, setStatusText]);
 
-  const moveContentItem = useCallback(async (id: Id, direction: 'up' | 'down') => {
-    await mutate(() => window.castApi.moveContentItem(id, direction));
+  const moveDeckItem = useCallback(async (id: Id, direction: 'up' | 'down') => {
+    await mutate(() => window.castApi.moveDeckItem(id, direction));
     setStatusText(direction === 'up' ? 'Moved item up' : 'Moved item down');
   }, [mutate, setStatusText]);
 
-  const addContentItemToSegment = useCallback(async (segmentId: Id, itemId: Id) => {
-    await mutate(() => window.castApi.addContentItemToSegment(segmentId, itemId));
+  const addDeckItemToSegment = useCallback(async (segmentId: Id, itemId: Id) => {
+    await mutate(() => window.castApi.addDeckItemToSegment(segmentId, itemId));
     setStatusText('Added item to segment');
   }, [mutate, setStatusText]);
 
-  const createContentItemEntryInSegment = useCallback(async (
+  const createDeckItemEntryInSegment = useCallback(async (
     segmentId: Id,
     createEntry: () => Promise<AppSnapshot>,
     createSlide: (itemId: Id) => Promise<AppSnapshot>,
     statusText: string,
   ) => {
-    const previousItemIds = new Set(getContentItems(snapshot).map((item) => item.id));
+    const previousItemIds = new Set(getDeckItems(snapshot).map((item) => item.id));
     const next = await mutate(createEntry);
-    const nextItems = getContentItems(next);
+    const nextItems = getDeckItems(next);
     const createdItemId = findCreatedId(previousItemIds, nextItems.map((item) => item.id))
       ?? nextItems.at(-1)?.id
       ?? null;
     if (!createdItemId) return null;
 
     await mutate(() => createSlide(createdItemId));
-    await mutate(() => window.castApi.addContentItemToSegment(segmentId, createdItemId));
+    await mutate(() => window.castApi.addDeckItemToSegment(segmentId, createdItemId));
     setStatusText(statusText);
     return createdItemId;
   }, [snapshot, mutate, setStatusText]);
 
-  const createDeckInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
-    return createContentItemEntryInSegment(
+  const createPresentationInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
+    return createDeckItemEntryInSegment(
       segmentId,
-      () => window.castApi.createDeck('New Deck'),
-      (itemId) => window.castApi.createSlide({ deckId: itemId }),
+      () => window.castApi.createPresentation('New Presentation'),
+      (itemId) => window.castApi.createSlide({ presentationId: itemId }),
       'Created deck and added to segment'
     );
-  }, [createContentItemEntryInSegment]);
+  }, [createDeckItemEntryInSegment]);
 
   const createLyricInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
-    return createContentItemEntryInSegment(
+    return createDeckItemEntryInSegment(
       segmentId,
       () => window.castApi.createLyric('New Lyric'),
       (itemId) => window.castApi.createSlide({ lyricId: itemId }),
       'Created lyric and added to segment'
     );
-  }, [createContentItemEntryInSegment]);
+  }, [createDeckItemEntryInSegment]);
 
   return {
     renameLibrary,
     renamePlaylist,
     renameSegment,
     setSegmentColor,
-    renameContentItem,
+    renameDeckItem,
     deleteLibrary,
     deletePlaylist,
     deleteSegment,
-    deleteContentItem,
-    moveContentItemToSegment,
+    deleteDeckItem,
+    moveDeckItemToSegment,
     movePlaylist,
-    moveContentItem,
-    addContentItemToSegment,
-    createDeckInSegment,
+    moveDeckItem,
+    addDeckItemToSegment,
+    createPresentationInSegment,
     createLyricInSegment
   };
 }

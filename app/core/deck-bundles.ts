@@ -1,8 +1,8 @@
 import type {
-  ContentBundleItem,
-  ContentBundleManifest,
-  ContentBundleMediaReference,
-  ContentBundleTemplate,
+  DeckBundleItem,
+  DeckBundleManifest,
+  DeckBundleMediaReference,
+  DeckBundleTemplate,
   SlideElement,
 } from './types';
 
@@ -11,8 +11,8 @@ interface MediaReferenceAccumulator {
   occurrenceCount: number;
 }
 
-export function cloneContentBundleManifest(manifest: ContentBundleManifest): ContentBundleManifest {
-  return JSON.parse(JSON.stringify(manifest)) as ContentBundleManifest;
+export function cloneDeckBundleManifest(manifest: DeckBundleManifest): DeckBundleManifest {
+  return JSON.parse(JSON.stringify(manifest)) as DeckBundleManifest;
 }
 
 export function readElementMediaReference(element: SlideElement): { source: string; elementType: 'image' | 'video' } | null {
@@ -24,10 +24,10 @@ export function readElementMediaReference(element: SlideElement): { source: stri
   return { source, elementType: element.type };
 }
 
-export function collectContentBundleMediaReferences(
-  items: ContentBundleItem[],
-  templates: ContentBundleTemplate[],
-): ContentBundleMediaReference[] {
+export function collectDeckBundleMediaReferences(
+  items: DeckBundleItem[],
+  templates: DeckBundleTemplate[],
+): DeckBundleMediaReference[] {
   const references = new Map<string, MediaReferenceAccumulator>();
 
   function collect(elements: SlideElement[]) {
@@ -63,9 +63,9 @@ export function collectContentBundleMediaReferences(
     .sort((left, right) => left.source.localeCompare(right.source));
 }
 
-export function normalizeContentBundleManifest(manifest: ContentBundleManifest): ContentBundleManifest {
+export function normalizeDeckBundleManifest(manifest: DeckBundleManifest): DeckBundleManifest {
   return {
     ...manifest,
-    mediaReferences: collectContentBundleMediaReferences(manifest.items, manifest.templates),
+    mediaReferences: collectDeckBundleMediaReferences(manifest.items, manifest.templates),
   };
 }

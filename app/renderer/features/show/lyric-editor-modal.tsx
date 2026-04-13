@@ -11,7 +11,7 @@ interface LyricEditorModalProps {
 }
 
 export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
-  const { currentContentItem } = useNavigation();
+  const { currentDeckItem } = useNavigation();
   const { initialBlocks, saveBlocks, isSaving } = useLyricEditorSave({ isOpen, onClose });
   const blocksRef = useRef<Block[]>(initialBlocks);
 
@@ -27,7 +27,7 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
     void saveBlocks(blocksRef.current);
   }
 
-  if (!isOpen || !currentContentItem || currentContentItem.type !== 'lyric') return null;
+  if (!isOpen || !currentDeckItem || currentDeckItem.type !== 'lyric') return null;
 
   const footer = (
     <div className="ml-auto flex items-center gap-2">
@@ -41,9 +41,9 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
       title="Lyric editor"
       onClose={onClose}
       dataUiRegion="lyric-editor-modal"
-      bodyClassName="max-h-[74vh] overflow-auto bg-primary/95 px-0 py-0 h-full"
+      bodyClassName="h-full overflow-auto bg-primary/95 px-0 py-0"
       footer={footer}
-      popupClassName="max-w-4xl"
+      popupClassName="h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)]"
     >
       <div className="px-6 py-5 min-h-80">
         <div className="mx-auto flex max-w-3xl justify-center">

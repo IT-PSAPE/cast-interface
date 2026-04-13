@@ -7,51 +7,51 @@ interface BuildPresentationMenuItemsOptions {
   currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
   itemIds: Id[];
-  selectContentItem: (id: Id) => void;
-  moveContentItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
-  beginRenameContentItem: (id: Id) => void;
-  deleteContentItem: (id: Id) => Promise<void>;
+  selectDeckItem: (id: Id) => void;
+  moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
+  moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
+  beginRenameDeckItem: (id: Id) => void;
+  deleteDeckItem: (id: Id) => Promise<void>;
 }
 
-export function buildContentItemMenuItems({
+export function buildDeckItemMenuItems({
   itemId,
   scope,
   currentPlaylistId,
   selectedTree,
   itemIds,
-  selectContentItem,
-  moveContentItem,
-  moveContentItemToSegment,
-  beginRenameContentItem,
-  deleteContentItem
+  selectDeckItem,
+  moveDeckItem,
+  moveDeckItemToSegment,
+  beginRenameDeckItem,
+  deleteDeckItem
 }: BuildPresentationMenuItemsOptions): ContextMenuItem[] {
   const itemIndex = itemIds.indexOf(itemId);
   const moveUpItem: ContextMenuItem = {
-    id: 'content-item-up',
+    id: 'deck-item-up',
     label: 'Move Up',
     disabled: itemIndex <= 0,
-    onSelect: () => { void moveContentItem(itemId, 'up'); }
+    onSelect: () => { void moveDeckItem(itemId, 'up'); }
   };
   const moveDownItem: ContextMenuItem = {
-    id: 'content-item-down',
+    id: 'deck-item-down',
     label: 'Move Down',
     disabled: itemIndex < 0 || itemIndex >= itemIds.length - 1,
-    onSelect: () => { void moveContentItem(itemId, 'down'); }
+    onSelect: () => { void moveDeckItem(itemId, 'down'); }
   };
   const deleteItem: ContextMenuItem = {
-    id: 'delete-content-item',
+    id: 'delete-deck-item',
     label: 'Delete',
     danger: true,
     onSelect: () => {
       if (!window.confirm('Delete this item?')) return;
-      void deleteContentItem(itemId);
+      void deleteDeckItem(itemId);
     }
   };
 
   if (scope === 'library') {
     return [
-      { id: 'rename-content-item', label: 'Rename', onSelect: () => beginRenameContentItem(itemId) },
+      { id: 'rename-deck-item', label: 'Rename', onSelect: () => beginRenameDeckItem(itemId) },
       moveUpItem,
       moveDownItem,
       deleteItem
@@ -66,17 +66,17 @@ export function buildContentItemMenuItems({
     label: segment.segment.name,
     onSelect: () => {
       if (!currentPlaylistId) return;
-      void moveContentItemToSegment(currentPlaylistId, itemId, segment.segment.id);
-      selectContentItem(itemId);
+      void moveDeckItemToSegment(currentPlaylistId, itemId, segment.segment.id);
+      selectDeckItem(itemId);
     }
   }));
 
   return [
-    { id: 'rename-content-item', label: 'Rename', onSelect: () => beginRenameContentItem(itemId) },
+    { id: 'rename-deck-item', label: 'Rename', onSelect: () => beginRenameDeckItem(itemId) },
     moveUpItem,
     moveDownItem,
     {
-      id: 'move-content-item',
+      id: 'move-deck-item',
       label: 'Move',
       disabled: !currentPlaylistId,
       children: [
@@ -86,8 +86,8 @@ export function buildContentItemMenuItems({
           label: 'Not in selected playlist',
           onSelect: () => {
             if (!currentPlaylistId) return;
-            void moveContentItemToSegment(currentPlaylistId, itemId, null);
-            selectContentItem(itemId);
+            void moveDeckItemToSegment(currentPlaylistId, itemId, null);
+            selectDeckItem(itemId);
           }
         }
       ]
@@ -98,8 +98,8 @@ export function buildContentItemMenuItems({
       disabled: !currentPlaylistId || !assignedSegmentId,
       onSelect: () => {
         if (!currentPlaylistId) return;
-        void moveContentItemToSegment(currentPlaylistId, itemId, null);
-        selectContentItem(itemId);
+        void moveDeckItemToSegment(currentPlaylistId, itemId, null);
+        selectDeckItem(itemId);
       }
     },
     deleteItem

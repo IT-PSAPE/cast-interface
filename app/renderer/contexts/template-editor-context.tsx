@@ -9,7 +9,7 @@ import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
 export type TemplateApplyTarget =
-  | { type: 'content-item'; itemId: Id }
+  | { type: 'deck-item'; itemId: Id }
   | { type: 'overlay'; overlayId: Id };
 
 interface TemplateEditorContextValue {
@@ -24,7 +24,7 @@ interface TemplateEditorContextValue {
   replaceTemplateElements: (elements: SlideElement[]) => void;
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
-  resetContentItemToAssignedTemplate: (itemId: Id) => Promise<void>;
+  resetDeckItemToAssignedTemplate: (itemId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -36,7 +36,7 @@ const TemplateEditorContext = createContext<TemplateEditorContextValue | null>(n
 export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
   const { state: { workbenchMode } } = useWorkbench();
-  const { contentItemsById, templates: persistedTemplates } = useProjectContent();
+  const { deckItemsById, templates: persistedTemplates } = useProjectContent();
 
   const staged = useStagedCollection<Template>({
     persistedItems: persistedTemplates,
@@ -208,8 +208,8 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const applyTemplateToTarget = useCallback(async (templateId: Id, target: TemplateApplyTarget) => {
     const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
-    if (target.type === 'content-item') {
-      await mutate(() => window.castApi.applyTemplateToContentItem(resolvedTemplateId, target.itemId));
+    if (target.type === 'deck-item') {
+      await mutate(() => window.castApi.applyTemplateToDeckItem(resolvedTemplateId, target.itemId));
       setStatusText('Applied template to item');
       return;
     }
@@ -217,15 +217,15 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     setStatusText('Applied template to overlay');
   }, [mutate, resolveTemplateIdForMutation, setStatusText]);
 
-  const resetContentItemToAssignedTemplate = useCallback(async (itemId: Id) => {
-    const contentItem = contentItemsById.get(itemId) ?? null;
-    const templateId = contentItem?.templateId ?? null;
+  const resetDeckItemToAssignedTemplate = useCallback(async (itemId: Id) => {
+    const deckItem = deckItemsById.get(itemId) ?? null;
+    const templateId = deckItem?.templateId ?? null;
     if (!templateId) return;
     const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
-    await mutate(() => window.castApi.resetContentItemToTemplate(itemId));
+    await mutate(() => window.castApi.resetDeckItemToTemplate(itemId));
     setStatusText('Reset item to template');
-  }, [contentItemsById, mutate, resolveTemplateIdForMutation, setStatusText]);
+  }, [deckItemsById, mutate, resolveTemplateIdForMutation, setStatusText]);
 
   useEffect(() => {
     staged.registerAutoPush(() => void pushChanges());
@@ -243,7 +243,7 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     replaceTemplateElements,
     createTemplate,
     applyTemplateToTarget,
-    resetContentItemToAssignedTemplate,
+    resetDeckItemToAssignedTemplate,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
@@ -260,7 +260,7 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     openTemplateEditor,
     pushChanges,
     renameTemplate,
-    resetContentItemToAssignedTemplate,
+    resetDeckItemToAssignedTemplate,
     replaceTemplateElements,
     staged.setCurrentItemId,
     templates,

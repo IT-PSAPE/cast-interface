@@ -25,14 +25,14 @@ function PlaylistTabItem({ item }: { item: PlaylistPresentationSequenceItem }) {
 }
 
 export function SlideBrowserPlaylistTabStrip({ items, headerVariant, action = null }: SlideBrowserPlaylistTabStripProps) {
-  const { currentContentItem, currentPlaylistContentItemId } = useNavigation();
-  const { slides, selectPlaylistContentItem } = useSlides();
+  const { currentDeckItem, currentPlaylistDeckItemId } = useNavigation();
+  const { slides, selectPlaylistDeckItem } = useSlides();
 
   return (
     <header className="flex h-8 items-center gap-3 border-b border-primary bg-primary/70 px-3">
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
         {headerVariant === 'tabs' ? (
-          <Tabs.Root value={currentPlaylistContentItemId ?? undefined} onValueChange={selectPlaylistContentItem}>
+          <Tabs.Root value={currentPlaylistDeckItemId ?? undefined} onValueChange={selectPlaylistDeckItem}>
             <div className="min-w-max">
               <Tabs.List label="Playlist items">
                 {items.map((item) => <PlaylistTabItem key={item.entryId} item={item} />)}
@@ -40,8 +40,8 @@ export function SlideBrowserPlaylistTabStrip({ items, headerVariant, action = nu
             </div>
           </Tabs.Root>
         ) : (
-          <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title}>
-            {currentContentItem?.title ?? 'No item selected'}
+          <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title}>
+            {currentDeckItem?.title ?? 'No item selected'}
           </span>
         )}
       </div>

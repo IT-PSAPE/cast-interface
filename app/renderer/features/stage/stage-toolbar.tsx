@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { isLyricContentItem } from '@core/content-items';
+import { isLyricDeckItem } from '@core/deck-items';
 import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { useCast } from '../../contexts/cast-context';
@@ -36,11 +36,11 @@ interface StageToolbarProps {
 export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   const { createText, createShape } = useElements();
   const { setStatusText } = useCast();
-  const { currentContentItem } = useNavigation();
+  const { currentDeckItem } = useNavigation();
   const { currentTemplate } = useTemplateEditor();
   const { state: { workbenchMode } } = useWorkbench();
   const hideAddText = workbenchMode === 'slide-editor'
-    ? isLyricContentItem(currentContentItem)
+    ? isLyricDeckItem(currentDeckItem)
     : workbenchMode === 'template-editor'
       ? currentTemplate?.kind === 'lyrics'
       : false;

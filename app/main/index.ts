@@ -19,7 +19,10 @@ interface CliOptions {
 
 type RendererView = CliOptions['rendererView'];
 
+const APP_NAME = 'Recast';
+const APP_ID = 'com.recast.app';
 const cliOptions = resolveCliOptions(process.argv);
+app.setName(APP_NAME);
 if (cliOptions.userDataDir) {
   app.setPath('userData', path.resolve(cliOptions.userDataDir));
 }
@@ -81,6 +84,7 @@ function getAppIcon(): string {
 
 function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
   return {
+    title: APP_NAME,
     width,
     height,
     minWidth: WORKBENCH_MIN_WIDTH,
@@ -134,6 +138,7 @@ function loadRendererView(window: BrowserWindow, view: RendererView): void {
 function createMainWindow(): void {
   const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
   mainWindow = window;
+  window.setTitle(APP_NAME);
   if (process.platform === 'win32') {
     window.setMenuBarVisibility(false);
   }
@@ -149,6 +154,10 @@ function createMainWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(APP_ID);
+  }
+
   protocol.handle('cast-media', (request) => {
     const filePath = decodeURIComponent(request.url.slice('cast-media://'.length));
     return net.fetch(pathToFileURL(filePath).toString());
@@ -164,7 +173,7 @@ app.whenReady().then(() => {
   }
 
   app.setAboutPanelOptions({
-    applicationName: 'Recast',
+    applicationName: APP_NAME,
     applicationVersion: app.getVersion(),
     ...(process.platform === 'linux' ? { iconPath: iconPngPath } : {}),
   });

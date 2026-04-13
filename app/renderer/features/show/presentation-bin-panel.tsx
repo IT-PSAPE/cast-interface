@@ -1,9 +1,9 @@
-import type { ContentItem, Id, Slide } from '@core/types';
+import type { DeckItem, Id, Slide } from '@core/types';
 import { Ellipsis } from 'lucide-react';
 import { Paragraph } from '@renderer/components/display/text';
 import { EditableField } from '../../components/form/editable-field';
 import { Button } from '../../components/controls/button';
-import { ContentItemIcon } from '../../components/display/entity-icon';
+import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -25,11 +25,11 @@ export function ContentBinPanel({ filterText, gridItemSize }: ContentBinPanelPro
     menu,
     menuItems,
     editingPresentationId,
-    browseContentItem,
-    isDetachedContentBrowser,
-    currentDrawerContentItemId,
+    browseDeckItem,
+    isDetachedDeckBrowser,
+    currentDrawerDeckItemId,
     handleRename,
-    slidesByContentItemId,
+    slidesByDeckItemId,
   } = useContentBin(filterText);
 
   return (
@@ -41,14 +41,14 @@ export function ContentBinPanel({ filterText, gridItemSize }: ContentBinPanelPro
       onCloseMenu={menu.close}
     >
       {filteredPresentations.map((presentation) => (
-        <ContentItemCard
+        <DeckItemCard
           key={presentation.id}
           item={presentation}
-          slides={slidesByContentItemId.get(presentation.id) ?? []}
-          isSelected={isDetachedContentBrowser && currentDrawerContentItemId === presentation.id}
+          slides={slidesByDeckItemId.get(presentation.id) ?? []}
+          isSelected={isDetachedDeckBrowser && currentDrawerDeckItemId === presentation.id}
           isEditing={editingPresentationId === presentation.id}
           mode={drawerViewMode}
-          onOpen={browseContentItem}
+          onOpen={browseDeckItem}
           onOpenMenu={menu.openFromButton}
           onContextMenu={menu.openFromEvent}
           onRename={handleRename}
@@ -59,7 +59,7 @@ export function ContentBinPanel({ filterText, gridItemSize }: ContentBinPanelPro
 }
 
 interface ContentCardProps {
-  item: ContentItem;
+  item: DeckItem;
   slides: Slide[];
   isSelected: boolean;
   isEditing: boolean;
@@ -70,7 +70,7 @@ interface ContentCardProps {
   onRename: (itemId: Id, title: string) => void;
 }
 
-function ContentItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpenMenu, onContextMenu, onRename }: ContentCardProps) {
+function DeckItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpenMenu, onContextMenu, onRename }: ContentCardProps) {
   const { slideElementsBySlideId } = useProjectContent();
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
@@ -104,7 +104,7 @@ function ContentItemCard({ item, slides, isSelected, isEditing, mode, onOpen, on
           body={(
             <>
               <div className="flex items-center gap-2">
-                <ContentItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
+                <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
                 <EditableField
                   value={item.title}
                   onCommit={handleRename}
@@ -119,7 +119,7 @@ function ContentItemCard({ item, slides, isSelected, isEditing, mode, onOpen, on
           )}
           overlay={(
             <div className="absolute right-2 top-2 hidden group-hover:block">
-              <Button.Icon label="Content item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+              <Button.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
                 <Ellipsis />
               </Button.Icon>
             </div>
@@ -138,7 +138,7 @@ function ContentItemCard({ item, slides, isSelected, isEditing, mode, onOpen, on
         body={renderCardBody(scene, handleMenuClick)}
         caption={(
           <div className="flex items-center gap-2">
-            <ContentItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
+            <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
             <EditableField
               value={item.title}
               onCommit={handleRename}
@@ -157,7 +157,7 @@ function renderCardBody(scene: ReturnType<typeof buildThumbnailScene> | null, on
     <>
       {renderScenePreview(scene)}
       <div className="absolute right-1 top-1 hidden group-hover:block">
-        <Button.Icon label="Content item options" onClick={onMenuClick} className="border-primary bg-tertiary/80">
+        <Button.Icon label="Deck item options" onClick={onMenuClick} className="border-primary bg-tertiary/80">
           <Ellipsis />
         </Button.Icon>
       </div>

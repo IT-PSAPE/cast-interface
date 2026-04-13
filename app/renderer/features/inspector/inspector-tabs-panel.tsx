@@ -1,6 +1,6 @@
 import { useInspector } from './inspector-context';
 import { Tabs } from '../../components/display/tabs';
-import { ContentItemInspector } from './presentation-inspector';
+import { DeckItemInspector } from './presentation-inspector';
 import { ShapeElementInspector } from './shape-element-inspector';
 import { SlideInspector } from './slide-inspector';
 import { TextElementInspector } from './text-element-inspector';
@@ -34,7 +34,7 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
         </div>
 
         <div className={`min-h-0 overflow-auto ${bodyClassName}`}>
-          <Tabs.Panel value="presentation"><ContentItemInspector /></Tabs.Panel>
+          <Tabs.Panel value="presentation"><DeckItemInspector /></Tabs.Panel>
           <Tabs.Panel value="slide"><SlideInspector /></Tabs.Panel>
           <Tabs.Panel value="shape"><ShapeElementInspector /></Tabs.Panel>
           <Tabs.Panel value="text"><TextElementInspector /></Tabs.Panel>

@@ -2,8 +2,8 @@ import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'ele
 import { IPC, NDI_EVENTS } from '@core/ipc';
 import type {
   AppSnapshot,
-  ContentBundleBrokenReferenceDecision,
-  ContentBundleInspection,
+  DeckBundleBrokenReferenceDecision,
+  DeckBundleInspection,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -28,12 +28,12 @@ const api = {
   getInlineWindowMenuItems: () => ipcRenderer.invoke(IPC.getInlineWindowMenuItems) as Promise<import('@core/ipc').InlineWindowMenuItem[]>,
   popupInlineWindowMenu: (menuId: string, x: number, y: number) => ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, x, y) as Promise<void>,
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
-  chooseContentBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseContentBundleExportPath, suggestedName) as Promise<string | null>,
-  chooseContentBundleImportPath: () => ipcRenderer.invoke(IPC.chooseContentBundleImportPath) as Promise<string | null>,
+  chooseDeckBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseDeckBundleExportPath, suggestedName) as Promise<string | null>,
+  chooseDeckBundleImportPath: () => ipcRenderer.invoke(IPC.chooseDeckBundleImportPath) as Promise<string | null>,
   chooseImportReplacementMediaPath: () => ipcRenderer.invoke(IPC.chooseImportReplacementMediaPath) as Promise<string | null>,
-  exportContentBundle: (itemIds: Id[], filePath: string) => ipcRenderer.invoke(IPC.exportContentBundle, itemIds, filePath) as Promise<{ filePath: string; itemCount: number }>,
-  inspectImportBundle: (filePath: string) => ipcRenderer.invoke(IPC.inspectImportBundle, filePath) as Promise<ContentBundleInspection>,
-  finalizeImportBundle: (filePath: string, decisions: ContentBundleBrokenReferenceDecision[]) =>
+  exportDeckBundle: (itemIds: Id[], filePath: string) => ipcRenderer.invoke(IPC.exportDeckBundle, itemIds, filePath) as Promise<{ filePath: string; itemCount: number }>,
+  inspectImportBundle: (filePath: string) => ipcRenderer.invoke(IPC.inspectImportBundle, filePath) as Promise<DeckBundleInspection>,
+  finalizeImportBundle: (filePath: string, decisions: DeckBundleBrokenReferenceDecision[]) =>
     ipcRenderer.invoke(IPC.finalizeImportBundle, filePath, decisions) as Promise<AppSnapshot>,
   createLibrary: (name: string) => ipcRenderer.invoke(IPC.createLibrary, name),
   createPlaylist: (libraryId: Id, name: string) => ipcRenderer.invoke(IPC.createPlaylist, libraryId, name),
@@ -41,12 +41,12 @@ const api = {
   renamePlaylistSegment: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylistSegment, id, name),
   setPlaylistSegmentColor: (id: Id, colorKey: string | null) => ipcRenderer.invoke(IPC.setPlaylistSegmentColor, id, colorKey),
   movePlaylist: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.movePlaylist, id, direction),
-  addContentItemToSegment: (segmentId: Id, itemId: Id) =>
-    ipcRenderer.invoke(IPC.addContentItemToSegment, segmentId, itemId),
-  moveContentItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) =>
-    ipcRenderer.invoke(IPC.moveContentItemToSegment, playlistId, itemId, segmentId),
-  moveContentItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveContentItem, id, direction),
-  createDeck: (title: string) => ipcRenderer.invoke(IPC.createDeck, title),
+  addDeckItemToSegment: (segmentId: Id, itemId: Id) =>
+    ipcRenderer.invoke(IPC.addDeckItemToSegment, segmentId, itemId),
+  moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) =>
+    ipcRenderer.invoke(IPC.moveDeckItemToSegment, playlistId, itemId, segmentId),
+  moveDeckItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveDeckItem, id, direction),
+  createPresentation: (title: string) => ipcRenderer.invoke(IPC.createPresentation, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
   deleteSlide: (slideId: Id) => ipcRenderer.invoke(IPC.deleteSlide, slideId),
@@ -68,20 +68,20 @@ const api = {
   createTemplate: (input: TemplateCreateInput) => ipcRenderer.invoke(IPC.createTemplate, input),
   updateTemplate: (input: TemplateUpdateInput) => ipcRenderer.invoke(IPC.updateTemplate, input),
   deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
-  applyTemplateToContentItem: (templateId: Id, itemId: Id) =>
-    ipcRenderer.invoke(IPC.applyTemplateToContentItem, templateId, itemId),
-  resetContentItemToTemplate: (itemId: Id) =>
-    ipcRenderer.invoke(IPC.resetContentItemToTemplate, itemId),
+  applyTemplateToDeckItem: (templateId: Id, itemId: Id) =>
+    ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
+  resetDeckItemToTemplate: (itemId: Id) =>
+    ipcRenderer.invoke(IPC.resetDeckItemToTemplate, itemId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
-  renameDeck: (id: Id, title: string) => ipcRenderer.invoke(IPC.renameDeck, id, title),
+  renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
   renameLyric: (id: Id, title: string) => ipcRenderer.invoke(IPC.renameLyric, id, title),
   deleteLibrary: (id: Id) => ipcRenderer.invoke(IPC.deleteLibrary, id),
   deletePlaylist: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylist, id),
   deletePlaylistSegment: (id: Id) => ipcRenderer.invoke(IPC.deletePlaylistSegment, id),
-  deleteDeck: (id: Id) => ipcRenderer.invoke(IPC.deleteDeck, id),
+  deletePresentation: (id: Id) => ipcRenderer.invoke(IPC.deletePresentation, id),
   deleteLyric: (id: Id) => ipcRenderer.invoke(IPC.deleteLyric, id),
   setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) =>
     ipcRenderer.invoke(IPC.setNdiOutputEnabled, name, enabled),

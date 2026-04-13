@@ -26,7 +26,7 @@ export function ShowModeLayout() {
               <main data-ui-region="slide-browser" className="flex flex-col h-full min-h-0 overflow-hidden" >
                 <SlideBrowserToolbar items={state.items} headerVariant={state.headerVariant} />
                 <section className="min-h-0 flex-1 overflow-hidden">
-                  {(state.contentVariant === 'empty') && <EmptyStatePanel glyph={<LayoutTemplate />} title="No item selected" description="Select an item from a playlist or from the content drawer to load slides in the browser." />}
+                  {(state.contentVariant === 'empty') && <EmptyStatePanel glyph={<LayoutTemplate />} title="No item selected" description="Select an item from a playlist or from the deck drawer to load slides in the browser." />}
                   {(state.contentVariant === 'single-grid') && <SlideGrid />}
                   {(state.contentVariant === 'single-list') && <SlideList />}
                   {(state.contentVariant === 'continuous-grid') && <ContinuousSlideGrid items={state.items} />}

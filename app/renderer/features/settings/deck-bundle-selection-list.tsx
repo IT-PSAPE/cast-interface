@@ -1,20 +1,20 @@
-import type { ContentItem, Id } from '@core/types';
-import { ContentItemIcon } from '../../components/display/entity-icon';
+import type { DeckItem, Id } from '@core/types';
+import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SelectableRow } from '../../components/display/selectable-row';
 
-interface ContentBundleSelectionListProps {
-  items: ContentItem[];
+interface DeckBundleSelectionListProps {
+  items: DeckItem[];
   selectedIds: Set<Id>;
   onToggle: (id: Id) => void;
 }
 
-interface ContentBundleSelectionRowProps {
-  item: ContentItem;
+interface DeckBundleSelectionRowProps {
+  item: DeckItem;
   selected: boolean;
   onToggle: (id: Id) => void;
 }
 
-function ContentBundleSelectionRow({ item, selected, onToggle }: ContentBundleSelectionRowProps) {
+function DeckBundleSelectionRow({ item, selected, onToggle }: DeckBundleSelectionRowProps) {
   function handleClick() {
     onToggle(item.id);
   }
@@ -23,7 +23,7 @@ function ContentBundleSelectionRow({ item, selected, onToggle }: ContentBundleSe
     <SelectableRow
       selected={selected}
       onClick={handleClick}
-      leading={<ContentItemIcon entity={item} size={14} strokeWidth={1.75} className="text-tertiary" />}
+      leading={<DeckItemIcon entity={item} size={14} strokeWidth={1.75} className="text-tertiary" />}
       title={item.title}
       trailing={<span className="shrink-0 text-xs uppercase tracking-wide text-tertiary">{item.type}</span>}
       className="h-9"
@@ -31,9 +31,9 @@ function ContentBundleSelectionRow({ item, selected, onToggle }: ContentBundleSe
   );
 }
 
-export function ContentBundleSelectionList({ items, selectedIds, onToggle }: ContentBundleSelectionListProps) {
+export function DeckBundleSelectionList({ items, selectedIds, onToggle }: DeckBundleSelectionListProps) {
   const rows = items.map((item) => (
-    <ContentBundleSelectionRow
+    <DeckBundleSelectionRow
       key={item.id}
       item={item}
       selected={selectedIds.has(item.id)}

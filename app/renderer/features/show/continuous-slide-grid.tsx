@@ -14,8 +14,8 @@ interface ContinuousSlideGridProps {
 
 interface GridSectionProps {
   item: PlaylistPresentationSequenceItem;
-  currentContentItemId: Id | null;
-  currentOutputContentItemId: Id | null;
+  currentDeckItemId: Id | null;
+  currentOutputDeckItemId: Id | null;
   currentSlideIndex: number;
   gridItemSize: number;
   liveSlideIndex: number;
@@ -24,9 +24,9 @@ interface GridSectionProps {
   onEditSlide: (itemId: Id, slideIndex: number) => void;
 }
 
-function GridSection({ item, currentContentItemId, currentOutputContentItemId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
-  const isCurrentPresentation = item.item.id === currentContentItemId;
-  const isLivePresentation = item.item.id === currentOutputContentItemId;
+function GridSection({ item, currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
+  const isCurrentPresentation = item.item.id === currentDeckItemId;
+  const isLivePresentation = item.item.id === currentOutputDeckItemId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -54,7 +54,7 @@ function GridSection({ item, currentContentItemId, currentOutputContentItemId, c
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { currentContentItemId, currentOutputContentItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
+  const { currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
   const { gridItemSize } = useSlideBrowser();
 
   if (items.length === 0) {
@@ -72,8 +72,8 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
           <GridSection
             key={item.entryId}
             item={item}
-            currentContentItemId={currentContentItemId}
-            currentOutputContentItemId={currentOutputContentItemId}
+            currentDeckItemId={currentDeckItemId}
+            currentOutputDeckItemId={currentOutputDeckItemId}
             currentSlideIndex={currentSlideIndex}
             gridItemSize={gridItemSize}
             liveSlideIndex={liveSlideIndex}

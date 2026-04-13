@@ -1,36 +1,36 @@
-import { isLyricContentItem } from '@core/content-items';
-import type { ContentItem, Id, PlaylistTree } from '@core/types';
+import { isLyricDeckItem } from '@core/deck-items';
+import type { DeckItem, Id, PlaylistTree } from '@core/types';
 
-export function resolveCurrentContentItemId(currentContentItemId: Id | null, itemIds: Iterable<Id>): Id | null {
-  if (!currentContentItemId) return null;
+export function resolveCurrentDeckItemId(currentDeckItemId: Id | null, itemIds: Iterable<Id>): Id | null {
+  if (!currentDeckItemId) return null;
 
   for (const itemId of itemIds) {
-    if (itemId === currentContentItemId) return currentContentItemId;
+    if (itemId === currentDeckItemId) return currentDeckItemId;
   }
 
   return null;
 }
 
-export function resolveCurrentPlaylistContentItemId(currentContentItemId: Id | null, selectedTree: PlaylistTree | null): Id | null {
-  const itemIds = extractPlaylistContentItemIds(selectedTree);
-  if (!currentContentItemId) return null;
-  if (itemIds.includes(currentContentItemId)) return currentContentItemId;
+export function resolveCurrentPlaylistDeckItemId(currentDeckItemId: Id | null, selectedTree: PlaylistTree | null): Id | null {
+  const itemIds = extractPlaylistDeckItemIds(selectedTree);
+  if (!currentDeckItemId) return null;
+  if (itemIds.includes(currentDeckItemId)) return currentDeckItemId;
   return null;
 }
 
-export function resolvePinnedLyricContentItemId(
-  currentContentItemId: Id | null,
+export function resolvePinnedLyricDeckItemId(
+  currentDeckItemId: Id | null,
   selectedTree: PlaylistTree | null,
-  contentItemsById: ReadonlyMap<Id, ContentItem>,
+  deckItemsById: ReadonlyMap<Id, DeckItem>,
 ): Id | null {
-  if (currentContentItemId && isLyricContentItem(contentItemsById.get(currentContentItemId) ?? null)) {
-    return resolveCurrentContentItemId(currentContentItemId, contentItemsById.keys());
+  if (currentDeckItemId && isLyricDeckItem(deckItemsById.get(currentDeckItemId) ?? null)) {
+    return resolveCurrentDeckItemId(currentDeckItemId, deckItemsById.keys());
   }
 
-  return resolveCurrentPlaylistContentItemId(currentContentItemId, selectedTree);
+  return resolveCurrentPlaylistDeckItemId(currentDeckItemId, selectedTree);
 }
 
-export function extractPlaylistContentItemIds(selectedTree: PlaylistTree | null): Id[] {
+export function extractPlaylistDeckItemIds(selectedTree: PlaylistTree | null): Id[] {
   if (!selectedTree) return [];
 
   const itemIds: Id[] = [];

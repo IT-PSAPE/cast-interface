@@ -3,29 +3,32 @@ import { ContextMenu } from '../../components/overlays/context-menu';
 import { Plus } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { Tabs } from '../../components/display/tabs';
+import { DeckItemIcon } from '../../components/display/entity-icon';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
+import { useCreateMenu } from '../../hooks/use-create-menu';
 import { useElements } from '../../contexts/element/element-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useResourceDrawer } from './resource-drawer-context';
-import { useCreateContentMenu } from '../../hooks/use-create-presentation-menu';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useGridSize } from '../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { DrawerTab } from '../../types/ui';
-import { CreateLyricFromTextDialog } from './create-lyric-from-text-dialog';
+import { CreateLyricDialog } from './create-lyric-dialog';
+import { LyricEditorModal } from './lyric-editor-modal';
 import { MediaBinPanel } from './media-bin-panel';
 import { ContentBinPanel } from './presentation-bin-panel';
 import { ResourceDrawerModeControl } from './resource-drawer-mode-control';
 import { TemplateBinPanel } from './template-bin-panel';
+import { cn } from '@renderer/utils/cn';
 
 const ACCEPTED_TYPES = ['image/', 'video/'];
 
 interface ResourceDrawerContextValue {
   actions: {
-    closeMenu: () => void;
-    handleCreatePresentationMenu: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    closeTemplateMenu: () => void;
+    handleCreateActionClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
     handleDragLeave: (event: React.DragEvent<HTMLElement>) => void;
     handleDragOver: (event: React.DragEvent<HTMLElement>) => void;
     handleDrop: (event: React.DragEvent<HTMLElement>) => void;
@@ -45,14 +48,15 @@ interface ResourceDrawerContextValue {
   };
   state: {
     drawerTab: DrawerTab;
-    menuItems: ReturnType<typeof useCreateContentMenu>['menuItems'];
-    menuState: ReturnType<typeof useCreateContentMenu>['menuState'];
+    createMenuItems: ReturnType<typeof useCreateMenu>['menuItems'];
+    createMenuState: ReturnType<typeof useCreateMenu>['menuState'];
     templateMenuItems: ReturnType<typeof useCreateTemplateMenu>['menuItems'];
     templateMenuState: ReturnType<typeof useCreateTemplateMenu>['menuState'];
   };
 }
 
 const ResourceDrawerContext = createContext<ResourceDrawerContextValue | null>(null);
+type ContentCreateAction = 'presentation' | 'lyric-edit' | 'lyric-empty';
 
 function hasMediaFiles(transfer: DataTransfer): boolean {
   return Array.from(transfer.items).some((item) => item.kind === 'file' && ACCEPTED_TYPES.some((type) => item.type.startsWith(type)));
@@ -67,18 +71,36 @@ function useDrawer() {
 function Root({ children }: { children: ReactNode }) {
   const { drawerTab, drawerViewMode, setDrawerTab } = useResourceDrawer();
   const { importMedia } = useElements();
-  const { createDeck, createEmptyLyric, createLyricFromText } = useNavigation();
+  const { createPresentation, createEmptyLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
   const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [activeCreateAction, setActiveCreateAction] = useState<ContentCreateAction | null>(null);
   const [isCreateLyricDialogOpen, setIsCreateLyricDialogOpen] = useState(false);
-  const [isCreatingLyricFromText, setIsCreatingLyricFromText] = useState(false);
-  const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
-    createDeck,
-    createEmptyLyric,
-    createLyricFromText: handleOpenCreateLyricDialog,
-  });
+  const [isLyricEditorOpen, setIsLyricEditorOpen] = useState(false);
+  const {
+    menuItems: createMenuItems,
+    menuState: createMenuState,
+    openMenuFromButton: openCreateMenuFromButton,
+    closeMenu: closeCreateMenu,
+  } = useCreateMenu(
+    () => [
+      {
+        id: 'create-presentation',
+        label: 'Presentation',
+        icon: <DeckItemIcon entity="presentation" size={14} strokeWidth={1.75} />,
+        onSelect: () => { void handleCreatePresentation(); },
+      },
+      {
+        id: 'create-lyric',
+        label: 'Lyric',
+        icon: <DeckItemIcon entity="lyric" size={14} strokeWidth={1.75} />,
+        onSelect: handleOpenCreateLyricDialog,
+      },
+    ],
+    [createPresentation],
+  );
   const {
     menuItems: templateMenuItems,
     menuState: templateMenuState,
@@ -116,23 +138,71 @@ function Root({ children }: { children: ReactNode }) {
     void importMedia(event.dataTransfer.files);
   }
 
-  function handleCreatePresentationMenu(event: React.MouseEvent<HTMLButtonElement>) {
+  function handleCreateActionClick(event: React.MouseEvent<HTMLButtonElement>) {
     if (drawerTab === 'templates') {
       openTemplateMenuFromButton(event.currentTarget);
       return;
     }
-    openMenuFromButton(event.currentTarget);
+    openCreateMenuFromButton(event.currentTarget);
   }
 
-  function handleCloseMenus() {
-    closeMenu();
+  function handleCloseTemplateMenu() {
     closeTemplateMenu();
+  }
+
+  function handleCloseCreateLyricDialog() {
+    if (activeCreateAction) return;
+    setIsCreateLyricDialogOpen(false);
+  }
+
+  function handleCloseLyricEditor() {
+    setIsLyricEditorOpen(false);
+  }
+
+  function handleOpenCreateLyricDialog() {
+    closeCreateMenu();
+    setIsCreateLyricDialogOpen(true);
+  }
+
+  async function handleCreatePresentation() {
+    setActiveCreateAction('presentation');
+
+    try {
+      await createPresentation();
+      setWorkbenchMode('slide-editor');
+    } finally {
+      setActiveCreateAction(null);
+    }
+  }
+
+  async function handleCreateEmptyLyricFromDialog() {
+    setActiveCreateAction('lyric-empty');
+
+    try {
+      await createEmptyLyric();
+      setIsCreateLyricDialogOpen(false);
+      setWorkbenchMode('slide-editor');
+    } finally {
+      setActiveCreateAction(null);
+    }
+  }
+
+  async function handleCreateEditableLyricFromDialog() {
+    setActiveCreateAction('lyric-edit');
+
+    try {
+      await createEmptyLyric();
+      setIsCreateLyricDialogOpen(false);
+      setIsLyricEditorOpen(true);
+    } finally {
+      setActiveCreateAction(null);
+    }
   }
 
   const value: ResourceDrawerContextValue = {
     actions: {
-      closeMenu: handleCloseMenus,
-      handleCreatePresentationMenu,
+      closeTemplateMenu: handleCloseTemplateMenu,
+      handleCreateActionClick,
       handleDragLeave,
       handleDragOver,
       handleDrop,
@@ -149,38 +219,18 @@ function Root({ children }: { children: ReactNode }) {
       gridSizeMax,
       gridSizeMin,
       gridSizeStep,
-      showCreateAction: drawerTab === 'content' || drawerTab === 'templates',
+      showCreateAction: drawerTab === 'deck' || drawerTab === 'templates',
       showImportAction: drawerTab === 'media',
       showGridSizeControl: drawerViewMode === 'grid',
     },
     state: {
       drawerTab,
-      menuItems,
-      menuState,
+      createMenuItems,
+      createMenuState,
       templateMenuItems,
       templateMenuState
     }
   };
-
-  function handleOpenCreateLyricDialog() {
-    setIsCreateLyricDialogOpen(true);
-  }
-
-  function handleCloseCreateLyricDialog() {
-    if (isCreatingLyricFromText) return;
-    setIsCreateLyricDialogOpen(false);
-  }
-
-  async function handleCreateLyricFromText(text: string) {
-    setIsCreatingLyricFromText(true);
-
-    try {
-      await createLyricFromText(text);
-      setIsCreateLyricDialogOpen(false);
-    } finally {
-      setIsCreatingLyricFromText(false);
-    }
-  }
 
   return (
     <ResourceDrawerContext.Provider value={value}>
@@ -192,12 +242,12 @@ function Root({ children }: { children: ReactNode }) {
         onDrop={value.actions.handleDrop}
       >
         {children}
-        {value.state.menuState && value.state.drawerTab === 'content' ? (
+        {value.state.createMenuState && value.state.drawerTab === 'deck' ? (
           <ContextMenu
-            x={value.state.menuState.x}
-            y={value.state.menuState.y}
-            items={value.state.menuItems}
-            onClose={value.actions.closeMenu}
+            x={value.state.createMenuState.x}
+            y={value.state.createMenuState.y}
+            items={value.state.createMenuItems}
+            onClose={closeCreateMenu}
           />
         ) : null}
         {value.state.templateMenuState && value.state.drawerTab === 'templates' ? (
@@ -205,49 +255,28 @@ function Root({ children }: { children: ReactNode }) {
             x={value.state.templateMenuState.x}
             y={value.state.templateMenuState.y}
             items={value.state.templateMenuItems}
-            onClose={closeTemplateMenu}
+            onClose={value.actions.closeTemplateMenu}
           />
         ) : null}
-        <CreateLyricFromTextDialog
+        <CreateLyricDialog
           isOpen={isCreateLyricDialogOpen}
-          isSubmitting={isCreatingLyricFromText}
+          isBusy={activeCreateAction !== null}
           onClose={handleCloseCreateLyricDialog}
-          onSubmit={handleCreateLyricFromText}
+          onCreateEmptyLyric={handleCreateEmptyLyricFromDialog}
+          onCreateEditableLyric={handleCreateEditableLyricFromDialog}
         />
+        <LyricEditorModal isOpen={isLyricEditorOpen} onClose={handleCloseLyricEditor} />
       </footer>
     </ResourceDrawerContext.Provider>
   );
 }
 
-function ResourceDrawerActions() {
-  const { actions, meta } = useDrawer();
+function ResourceDrawerContent() {
+  const { actions, meta, state } = useDrawer();
 
   function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     actions.handleImport(event);
   }
-
-  return (
-    <>
-      <ResourceDrawerModeControl />
-      {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
-      {meta.showImportAction ? (
-        <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
-          <Button.Icon label="Import media" variant="ghost">
-            <Plus />
-          </Button.Icon>
-        </FileTrigger.Root>
-      ) : null}
-      {meta.showCreateAction ? (
-        <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreatePresentationMenu}>
-          <Plus />
-        </Button.Icon>
-      ) : null}
-    </>
-  );
-}
-
-function ResourceDrawerContent() {
-  const { actions, meta, state } = useDrawer();
 
   function handleTabChange(value: string) {
     actions.setDrawerTab(value as DrawerTab);
@@ -255,22 +284,27 @@ function ResourceDrawerContent() {
 
   return (
     <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
-      <div className="border-b border-primary px-1 py-0.5">
-        <Tabs.List
-          label="Resource tabs"
-          className="min-w-0 flex-1"
-          actionsClassName="gap-0.5"
-          tabsClassName="gap-0.5"
-          actions={<ResourceDrawerActions />}
-        >
-          <Tabs.Trigger value="content" className="px-1 py-0.5 text-[11px]">Content</Tabs.Trigger>
+      <div className="flex border-b border-primary px-1 py-0.5">
+        <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5" >
+          <Tabs.Trigger value="deck" className="px-1 py-0.5 text-[11px]">Deck</Tabs.Trigger>
           <Tabs.Trigger value="media" className="px-1 py-0.5 text-[11px]">Media</Tabs.Trigger>
           <Tabs.Trigger value="templates" className="px-1 py-0.5 text-[11px]">Templates</Tabs.Trigger>
         </Tabs.List>
+
+        <div className={cn('flex shrink-0 items-center gap-0.5')}>
+          {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
+          {meta.showImportAction &&
+            <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
+              <Button.Icon label="Import media" variant="ghost"><Plus /></Button.Icon>
+            </FileTrigger.Root>
+          }
+          {meta.showCreateAction && <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </Button.Icon>}
+          <ResourceDrawerModeControl />
+        </div>
       </div>
       <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
         <Tabs.Panel value="media"><MediaBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
-        <Tabs.Panel value="content"><ContentBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="deck"><ContentBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
         <Tabs.Panel value="templates"><TemplateBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
       </Tabs.Panels>
     </Tabs.Root>

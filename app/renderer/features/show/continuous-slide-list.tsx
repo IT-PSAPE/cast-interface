@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { isLyricContentItem } from '@core/content-items';
+import { isLyricDeckItem } from '@core/deck-items';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { getSlideVisualState, slideTextDetails } from '../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from './use-playlist-presentation-sequence';
@@ -15,8 +15,8 @@ interface ContinuousSlideListProps {
 
 interface OutlineSectionProps {
   item: PlaylistPresentationSequenceItem;
-  currentContentItemId: Id | null;
-  currentOutputContentItemId: Id | null;
+  currentDeckItemId: Id | null;
+  currentOutputDeckItemId: Id | null;
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
@@ -24,11 +24,11 @@ interface OutlineSectionProps {
   onOpenSlide: (itemId: Id, slideIndex: number) => void;
 }
 
-function OutlineSection({ item, currentContentItemId, currentOutputContentItemId, currentSlideIndex, liveSlideIndex, slideElementsById, onSelectSlide, onOpenSlide }: OutlineSectionProps) {
+function OutlineSection({ item, currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, liveSlideIndex, slideElementsById, onSelectSlide, onOpenSlide }: OutlineSectionProps) {
   const { updateText } = useSlideOutlineTextEditing();
-  const isCurrentPresentation = item.item.id === currentContentItemId;
-  const isLivePresentation = item.item.id === currentOutputContentItemId;
-  const textEditable = isLyricContentItem(item.item);
+  const isCurrentPresentation = item.item.id === currentDeckItemId;
+  const isLivePresentation = item.item.id === currentOutputDeckItemId;
+  const textEditable = isLyricDeckItem(item.item);
 
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -76,7 +76,7 @@ function OutlineSection({ item, currentContentItemId, currentOutputContentItemId
 }
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
-  const { currentContentItemId, currentOutputContentItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
+  const { currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
 
   if (items.length === 0) {
     return (
@@ -93,8 +93,8 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
           <OutlineSection
             key={item.entryId}
             item={item}
-            currentContentItemId={currentContentItemId}
-            currentOutputContentItemId={currentOutputContentItemId}
+            currentDeckItemId={currentDeckItemId}
+            currentOutputDeckItemId={currentOutputDeckItemId}
             currentSlideIndex={currentSlideIndex}
             liveSlideIndex={liveSlideIndex}
             slideElementsById={slideElementsBySlideId}

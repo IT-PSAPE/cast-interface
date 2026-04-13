@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electro
 import { CastRepository } from '@database/store';
 import { IPC, NDI_EVENTS, type InlineWindowMenuItem } from '@core/ipc';
 import type {
-  ContentBundleBrokenReferenceDecision,
+  DeckBundleBrokenReferenceDecision,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -19,7 +19,7 @@ import type {
   SlideOrderUpdateInput
 } from '@core/types';
 import { getInlineWindowMenuItems, popupInlineWindowMenu } from './application-menu';
-import { readContentBundleArchive, writeContentBundleArchive } from './content-bundle-archive';
+import { readDeckBundleArchive, writeDeckBundleArchive } from './deck-bundle-archive';
 import { NdiService } from './ndi/ndi-service';
 
 function safeHandle<Args extends unknown[], R>(
@@ -48,7 +48,7 @@ export const registerIpcHandlers = (
 
   function sanitizeSuggestedBundleName(name: string): string {
     const sanitized = name.trim().replace(/[<>:"/\\|?*\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ');
-    return sanitized || 'cast-content';
+    return sanitized || 'cast-deck';
   }
 
   function ensureBundleExtension(filePath: string): string {
@@ -79,9 +79,9 @@ export const registerIpcHandlers = (
     await popupInlineWindowMenu(menuId, browserWindow, x, y);
   });
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
-  safeHandle(IPC.chooseContentBundleExportPath, async (event, suggestedName: string) => {
+  safeHandle(IPC.chooseDeckBundleExportPath, async (event, suggestedName: string) => {
     const result = await showSaveDialogForEvent(event, {
-      title: 'Export Content Bundle',
+      title: 'Export Deck Bundle',
       defaultPath: `${sanitizeSuggestedBundleName(suggestedName)}.cst`,
       filters: [{ name: 'CST Bundle', extensions: ['cst'] }],
       properties: ['createDirectory', 'showOverwriteConfirmation'],
@@ -89,9 +89,9 @@ export const registerIpcHandlers = (
     if (result.canceled || !result.filePath) return null;
     return ensureBundleExtension(result.filePath);
   });
-  safeHandle(IPC.chooseContentBundleImportPath, async (event) => {
+  safeHandle(IPC.chooseDeckBundleImportPath, async (event) => {
     const result = await showOpenDialogForEvent(event, {
-      title: 'Import Content Bundle',
+      title: 'Import Deck Bundle',
       filters: [{ name: 'CST Bundle', extensions: ['cst'] }],
       properties: ['openFile'],
     });
@@ -105,18 +105,18 @@ export const registerIpcHandlers = (
     });
     return result.canceled ? null : (result.filePaths[0] ?? null);
   });
-  safeHandle(IPC.exportContentBundle, async (_event, itemIds: Id[], filePath: string) => {
-    const bundle = repo.exportContentBundle(itemIds);
+  safeHandle(IPC.exportDeckBundle, async (_event, itemIds: Id[], filePath: string) => {
+    const bundle = repo.exportDeckBundle(itemIds);
     const normalizedPath = ensureBundleExtension(filePath);
-    await writeContentBundleArchive(normalizedPath, bundle);
+    await writeDeckBundleArchive(normalizedPath, bundle);
     return { filePath: normalizedPath, itemCount: bundle.items.length };
   });
   safeHandle(IPC.inspectImportBundle, async (_event, filePath: string) => {
-    const bundle = await readContentBundleArchive(filePath);
+    const bundle = await readDeckBundleArchive(filePath);
     return repo.inspectImportBundle(bundle);
   });
-  safeHandle(IPC.finalizeImportBundle, async (_event, filePath: string, decisions: ContentBundleBrokenReferenceDecision[]) => {
-    const bundle = await readContentBundleArchive(filePath);
+  safeHandle(IPC.finalizeImportBundle, async (_event, filePath: string, decisions: DeckBundleBrokenReferenceDecision[]) => {
+    const bundle = await readDeckBundleArchive(filePath);
     return repo.finalizeImportBundle(bundle, decisions);
   });
   safeHandle(IPC.createLibrary, (_event, name: string) => repo.createLibrary(name));
@@ -133,16 +133,16 @@ export const registerIpcHandlers = (
   safeHandle(IPC.movePlaylist, (_event, id: Id, direction: 'up' | 'down') =>
     repo.movePlaylist(id, direction)
   );
-  safeHandle(IPC.addContentItemToSegment, (_event, segmentId: Id, itemId: Id) =>
-    repo.addContentItemToSegment(segmentId, itemId)
+  safeHandle(IPC.addDeckItemToSegment, (_event, segmentId: Id, itemId: Id) =>
+    repo.addDeckItemToSegment(segmentId, itemId)
   );
-  safeHandle(IPC.moveContentItemToSegment, (_event, playlistId: Id, itemId: Id, segmentId: Id | null) =>
-    repo.moveContentItemToSegment(playlistId, itemId, segmentId)
+  safeHandle(IPC.moveDeckItemToSegment, (_event, playlistId: Id, itemId: Id, segmentId: Id | null) =>
+    repo.moveDeckItemToSegment(playlistId, itemId, segmentId)
   );
-  safeHandle(IPC.moveContentItem, (_event, id: Id, direction: 'up' | 'down') =>
-    repo.moveContentItem(id, direction)
+  safeHandle(IPC.moveDeckItem, (_event, id: Id, direction: 'up' | 'down') =>
+    repo.moveDeckItem(id, direction)
   );
-  safeHandle(IPC.createDeck, (_event, title: string) => repo.createDeck(title));
+  safeHandle(IPC.createPresentation, (_event, title: string) => repo.createPresentation(title));
   safeHandle(IPC.createLyric, (_event, title: string) =>
     repo.createLyric(title)
   );
@@ -168,23 +168,23 @@ export const registerIpcHandlers = (
   safeHandle(IPC.createTemplate, (_event, input: TemplateCreateInput) => repo.createTemplate(input));
   safeHandle(IPC.updateTemplate, (_event, input: TemplateUpdateInput) => repo.updateTemplate(input));
   safeHandle(IPC.deleteTemplate, (_event, templateId: Id) => repo.deleteTemplate(templateId));
-  safeHandle(IPC.applyTemplateToContentItem, (_event, templateId: Id, itemId: Id) =>
-    repo.applyTemplateToContentItem(templateId, itemId)
+  safeHandle(IPC.applyTemplateToDeckItem, (_event, templateId: Id, itemId: Id) =>
+    repo.applyTemplateToDeckItem(templateId, itemId)
   );
-  safeHandle(IPC.resetContentItemToTemplate, (_event, itemId: Id) =>
-    repo.resetContentItemToTemplate(itemId)
+  safeHandle(IPC.resetDeckItemToTemplate, (_event, itemId: Id) =>
+    repo.resetDeckItemToTemplate(itemId)
   );
   safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
     repo.applyTemplateToOverlay(templateId, overlayId)
   );
   safeHandle(IPC.renameLibrary, (_event, id: Id, name: string) => repo.renameLibrary(id, name));
   safeHandle(IPC.renamePlaylist, (_event, id: Id, name: string) => repo.renamePlaylist(id, name));
-  safeHandle(IPC.renameDeck, (_event, id: Id, title: string) => repo.renameDeck(id, title));
+  safeHandle(IPC.renamePresentation, (_event, id: Id, title: string) => repo.renamePresentation(id, title));
   safeHandle(IPC.renameLyric, (_event, id: Id, title: string) => repo.renameLyric(id, title));
   safeHandle(IPC.deleteLibrary, (_event, id: Id) => repo.deleteLibrary(id));
   safeHandle(IPC.deletePlaylist, (_event, id: Id) => repo.deletePlaylist(id));
   safeHandle(IPC.deletePlaylistSegment, (_event, id: Id) => repo.deletePlaylistSegment(id));
-  safeHandle(IPC.deleteDeck, (_event, id: Id) => repo.deleteDeck(id));
+  safeHandle(IPC.deletePresentation, (_event, id: Id) => repo.deletePresentation(id));
   safeHandle(IPC.deleteLyric, (_event, id: Id) => repo.deleteLyric(id));
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
     return ndiService.setOutputEnabled(name, enabled);

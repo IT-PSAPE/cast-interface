@@ -28,17 +28,17 @@ export interface PlaylistSegment {
 export interface PlaylistEntry {
   id: Id;
   segmentId: Id;
-  deckId: Id | null;
+  presentationId: Id | null;
   lyricId: Id | null;
   order: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type ContentItemType = 'deck' | 'lyric';
+export type DeckItemType = 'presentation' | 'lyric';
 export type TemplateKind = 'slides' | 'lyrics' | 'overlays';
 
-interface ContentItemBase {
+interface DeckItemBase {
   id: Id;
   title: string;
   templateId?: Id | null;
@@ -47,19 +47,19 @@ interface ContentItemBase {
   updatedAt: string;
 }
 
-export interface Deck extends ContentItemBase {
-  type: 'deck';
+export interface Presentation extends DeckItemBase {
+  type: 'presentation';
 }
 
-export interface Lyric extends ContentItemBase {
+export interface Lyric extends DeckItemBase {
   type: 'lyric';
 }
 
-export type ContentItem = Deck | Lyric;
+export type DeckItem = Presentation | Lyric;
 
 export interface Slide {
   id: Id;
-  deckId: Id | null;
+  presentationId: Id | null;
   lyricId: Id | null;
   width: number;
   height: number;
@@ -216,7 +216,7 @@ export interface Template {
   updatedAt: string;
 }
 
-export interface ContentBundleTemplate {
+export interface DeckBundleTemplate {
   id: Id;
   name: string;
   kind: TemplateKind;
@@ -226,7 +226,7 @@ export interface ContentBundleTemplate {
   elements: SlideElement[];
 }
 
-export interface ContentBundleSlide {
+export interface DeckBundleSlide {
   id: Id;
   width: number;
   height: number;
@@ -235,45 +235,45 @@ export interface ContentBundleSlide {
   elements: SlideElement[];
 }
 
-export interface ContentBundleItem {
+export interface DeckBundleItem {
   id: Id;
-  type: ContentItemType;
+  type: DeckItemType;
   title: string;
   templateId: Id | null;
   order: number;
-  slides: ContentBundleSlide[];
+  slides: DeckBundleSlide[];
 }
 
-export interface ContentBundleMediaReference {
+export interface DeckBundleMediaReference {
   source: string;
   elementTypes: Array<'image' | 'video'>;
   occurrenceCount: number;
 }
 
-export interface ContentBundleManifest {
-  format: 'cast-content-bundle';
+export interface DeckBundleManifest {
+  format: 'cast-deck-bundle';
   version: 1;
   exportedAt: string;
-  items: ContentBundleItem[];
-  templates: ContentBundleTemplate[];
-  mediaReferences: ContentBundleMediaReference[];
+  items: DeckBundleItem[];
+  templates: DeckBundleTemplate[];
+  mediaReferences: DeckBundleMediaReference[];
 }
 
-export interface ContentBundleInspectionItem {
+export interface DeckBundleInspectionItem {
   id: Id;
   title: string;
-  type: ContentItemType;
+  type: DeckItemType;
   slideCount: number;
   templateId: Id | null;
 }
 
-export interface ContentBundleInspectionTemplate {
+export interface DeckBundleInspectionTemplate {
   id: Id;
   name: string;
   kind: TemplateKind;
 }
 
-export interface BrokenContentBundleReference {
+export interface BrokenDeckBundleReference {
   source: string;
   elementTypes: Array<'image' | 'video'>;
   occurrenceCount: number;
@@ -281,22 +281,22 @@ export interface BrokenContentBundleReference {
   templateNames: string[];
 }
 
-export interface ContentBundleInspection {
+export interface DeckBundleInspection {
   exportedAt: string;
   itemCount: number;
   templateCount: number;
   mediaReferenceCount: number;
-  items: ContentBundleInspectionItem[];
-  templates: ContentBundleInspectionTemplate[];
-  mediaReferences: ContentBundleMediaReference[];
-  brokenReferences: BrokenContentBundleReference[];
+  items: DeckBundleInspectionItem[];
+  templates: DeckBundleInspectionTemplate[];
+  mediaReferences: DeckBundleMediaReference[];
+  brokenReferences: BrokenDeckBundleReference[];
 }
 
-export type ContentBundleBrokenReferenceAction = 'replace' | 'remove' | 'leave';
+export type DeckBundleBrokenReferenceAction = 'replace' | 'remove' | 'leave';
 
-export interface ContentBundleBrokenReferenceDecision {
+export interface DeckBundleBrokenReferenceDecision {
   source: string;
-  action: ContentBundleBrokenReferenceAction;
+  action: DeckBundleBrokenReferenceAction;
   replacementPath?: string;
 }
 
@@ -306,7 +306,7 @@ export interface PlaylistTree {
     segment: PlaylistSegment;
     entries: Array<{
       entry: PlaylistEntry;
-      item: ContentItem;
+      item: DeckItem;
     }>;
   }>;
 }
@@ -319,7 +319,7 @@ export interface LibraryPlaylistBundle {
 export interface AppSnapshot {
   libraries: Library[];
   libraryBundles: LibraryPlaylistBundle[];
-  decks: Deck[];
+  presentations: Presentation[];
   lyrics: Lyric[];
   slides: Slide[];
   slideElements: SlideElement[];
@@ -330,14 +330,14 @@ export interface AppSnapshot {
 
 export interface PlaybackState {
   playlistId: Id | null;
-  contentItemId: Id | null;
+  deckItemId: Id | null;
   slideIndex: number;
 }
 
-export type SlideBrowserMode = 'library' | 'playlist' | 'content' | 'slide-editor';
+export type SlideBrowserMode = 'library' | 'playlist' | 'deck' | 'slide-editor';
 
 export interface SlideCreateInput {
-  deckId?: Id | null;
+  presentationId?: Id | null;
   lyricId?: Id | null;
   width?: number;
   height?: number;

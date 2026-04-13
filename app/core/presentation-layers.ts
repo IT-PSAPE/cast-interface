@@ -5,7 +5,7 @@ export const OUTPUT_FRAME_HEIGHT = 1080;
 
 export const LAYER_PREVIEW_SLIDE: Slide = {
   id: '__layer_preview__',
-  deckId: null,
+  presentationId: null,
   lyricId: null,
   width: OUTPUT_FRAME_WIDTH,
   height: OUTPUT_FRAME_HEIGHT,

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, EllipsisVertical } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { EditableField } from '../../components/form/editable-field';
 
-import { ContentItemIcon } from '../../components/display/entity-icon';
+import { DeckItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useLibraryBrowser } from './library-browser-context';
@@ -15,8 +15,8 @@ interface PlaylistSegmentGroupProps {
 }
 
 export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
-  const { currentPlaylistContentItemId } = useNavigation();
-  const { selectPlaylistContentItem } = useSlides();
+  const { currentPlaylistDeckItemId } = useNavigation();
+  const { selectPlaylistDeckItem } = useSlides();
   const { state, actions } = useLibraryBrowser();
   const { isSegmentCollapsed, toggleSegmentCollapsed } = useLibraryPanelState();
   const collapsed = isSegmentCollapsed(segment.segment.id);
@@ -73,10 +73,10 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
       </div>
 
       {!collapsed ? segment.entries.map((entry) => {
-        const isSelected = entry.item.id === currentPlaylistContentItemId;
+        const isSelected = entry.item.id === currentPlaylistDeckItemId;
         const isPresentationEditing = actions.isEditing('presentation', entry.item.id);
 
-        function handleSelect() { selectPlaylistContentItem(entry.item.id); }
+        function handleSelect() { selectPlaylistDeckItem(entry.item.id); }
         function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentPresentationContextMenu(event, entry.item.id); }
         function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
           event.stopPropagation();
@@ -84,7 +84,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
         }
 
         function handleRename(title: string) {
-          actions.renameContentItem(entry.item.id, title);
+          actions.renameDeckItem(entry.item.id, title);
           actions.clearEditing();
         }
 
@@ -97,7 +97,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
               onContextMenu={handleContextMenu}
               className="flex w-full items-center gap-2 rounded-sm border-0 px-2 py-1 pl-7 pr-8 text-left text-md cursor-pointer hover:bg-quaternary/50 hover:text-primary"
             >
-              <ContentItemIcon entity={entry.item} className="shrink-0 text-tertiary" />
+              <DeckItemIcon entity={entry.item} className="shrink-0 text-tertiary" />
               <EditableField value={entry.item.title} onCommit={handleRename} editing={isPresentationEditing} className="flex-1 text-md" />
             </Button>
 

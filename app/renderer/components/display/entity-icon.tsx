@@ -1,4 +1,4 @@
-import type { MediaAsset, MediaAssetType, ContentItem, ContentItemType } from '@core/types';
+import type { MediaAsset, MediaAssetType, DeckItem, DeckItemType } from '@core/types';
 import { Film, Image, Mic, Music, Presentation } from 'lucide-react';
 
 // ─── Media Asset Icon ────────────────────────────────
@@ -26,14 +26,14 @@ export function MediaAssetIcon({ asset, size = 14, strokeWidth = 1.75, className
 
 // ─── Content Item Icon ───────────────────────────────
 
-interface ContentItemIconProps {
-  entity: Pick<ContentItem, 'type'> | ContentItemType;
+interface DeckItemIconProps {
+  entity: Pick<DeckItem, 'type'> | DeckItemType;
   size?: number;
   strokeWidth?: number;
   className?: string;
 }
 
-export function ContentItemIcon({ entity, size = 14, strokeWidth = 1.75, className = '' }: ContentItemIconProps) {
+export function DeckItemIcon({ entity, size = 14, strokeWidth = 1.75, className = '' }: DeckItemIconProps) {
   const entityType = typeof entity === 'string' ? entity : entity.type;
 
   if (entityType === 'lyric') {

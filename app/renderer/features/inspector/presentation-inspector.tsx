@@ -6,48 +6,48 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { Section } from './inspector-section';
 
-export function ContentItemInspector() {
+export function DeckItemInspector() {
   const {
-    currentContentItem,
-    renameContentItem,
+    currentDeckItem,
+    renameDeckItem,
   } = useNavigation();
   const { templatesById } = useProjectContent();
-  const { resetContentItemToAssignedTemplate } = useTemplateEditor();
+  const { resetDeckItemToAssignedTemplate } = useTemplateEditor();
   const [titleDraft, setTitleDraft] = useState('');
 
-  const assignedTemplate = currentContentItem?.templateId
-    ? templatesById.get(currentContentItem.templateId) ?? null
+  const assignedTemplate = currentDeckItem?.templateId
+    ? templatesById.get(currentDeckItem.templateId) ?? null
     : null;
 
   useEffect(() => {
-    if (!currentContentItem) {
+    if (!currentDeckItem) {
       setTitleDraft('');
       return;
     }
-    setTitleDraft(currentContentItem.title);
-  }, [currentContentItem]);
+    setTitleDraft(currentDeckItem.title);
+  }, [currentDeckItem]);
 
   function handleTitleChange(value: string) {
     setTitleDraft(value);
   }
 
   function handleTitleBlur() {
-    if (!currentContentItem) return;
+    if (!currentDeckItem) return;
     const trimmed = titleDraft.trim();
-    if (!trimmed || trimmed === currentContentItem.title) return;
-    void renameContentItem(currentContentItem.id, trimmed);
+    if (!trimmed || trimmed === currentDeckItem.title) return;
+    void renameDeckItem(currentDeckItem.id, trimmed);
   }
 
   function handleResetToTemplate() {
-    if (!currentContentItem?.templateId) return;
-    void resetContentItemToAssignedTemplate(currentContentItem.id);
+    if (!currentDeckItem?.templateId) return;
+    void resetDeckItemToAssignedTemplate(currentDeckItem.id);
   }
 
-  if (!currentContentItem) {
+  if (!currentDeckItem) {
     return <div className="text-sm text-tertiary">No item selected.</div>;
   }
 
-  const itemLabel = currentContentItem.type === 'lyric' ? 'Lyric' : 'Deck';
+  const itemLabel = currentDeckItem.type === 'lyric' ? 'Lyric' : 'Presentation';
 
   return (
     <>
@@ -68,7 +68,7 @@ export function ContentItemInspector() {
           <div className="flex flex-col gap-1">
             <span className="text-sm text-tertiary uppercase tracking-wider">Created</span>
             <p className="m-0 text-sm text-secondary">
-              {new Date(currentContentItem.createdAt).toLocaleDateString()}
+              {new Date(currentDeckItem.createdAt).toLocaleDateString()}
             </p>
           </div>
         </Section.Body>
@@ -79,7 +79,7 @@ export function ContentItemInspector() {
           <span>Template</span>
         </Section.Header>
         <Section.Body>
-          {currentContentItem.templateId ? (
+          {currentDeckItem.templateId ? (
             <>
               <div className="flex flex-col gap-1">
                 <span className="text-sm text-tertiary uppercase tracking-wider">Assigned Template</span>

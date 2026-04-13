@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../components/controls/button';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { ChevronsUpDown, Trash2 } from 'lucide-react';
-import { ContentItemIcon } from '../../components/display/entity-icon';
+import { DeckItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useElements } from '../../contexts/element/element-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -20,9 +20,9 @@ interface SlideMenuState {
 }
 
 export function SlideListPanel() {
-  const { browseContentItem, currentContentItem } = useNavigation();
+  const { browseDeckItem, currentDeckItem } = useNavigation();
   const { effectiveElements } = useElements();
-  const { contentItems } = useProjectContent();
+  const { deckItems } = useProjectContent();
   const { getSlideElements } = useSlideEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
@@ -30,13 +30,13 @@ export function SlideListPanel() {
   const [slideMenuState, setSlideMenuState] = useState<SlideMenuState | null>(null);
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
-    return contentItems.map((item) => ({
+    return deckItems.map((item) => ({
       id: item.id,
       label: item.title,
-      icon: <ContentItemIcon entity={item} className="text-tertiary" />,
-      onSelect: () => browseContentItem(item.id),
+      icon: <DeckItemIcon entity={item} className="text-tertiary" />,
+      onSelect: () => browseDeckItem(item.id),
     }));
-  }, [browseContentItem, contentItems]);
+  }, [browseDeckItem, deckItems]);
 
   function handleAddSlide() {
     void createSlide();
@@ -62,9 +62,9 @@ export function SlideListPanel() {
   const titleElement = (
     <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
       <span className="flex min-w-0 items-center gap-2">
-        {currentContentItem ? <ContentItemIcon entity={currentContentItem} className="shrink-0 text-tertiary" /> : null}
-        <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title ?? 'No item selected'}>
-          {currentContentItem?.title ?? 'No item selected'}
+        {currentDeckItem ? <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" /> : null}
+        <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
+          {currentDeckItem?.title ?? 'No item selected'}
         </span>
       </span>
       <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
@@ -85,8 +85,8 @@ export function SlideListPanel() {
       listPanelId="slide-list"
       objectsPanelId="slide-objects"
       onAdd={handleAddSlide}
-      addLabel={`Add ${currentContentItem?.type === 'lyric' ? 'lyric' : 'slide'}`}
-      listAriaLabel={`Current ${currentContentItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}
+      addLabel={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`}
+      listAriaLabel={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}
       contextMenu={contextMenus}
     >
       {slides.map((slide, index) => {

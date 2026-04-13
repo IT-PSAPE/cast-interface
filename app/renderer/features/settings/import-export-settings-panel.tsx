@@ -2,7 +2,7 @@ import { Button } from '../../components/controls/button';
 import { SearchField } from '../../components/form/search-field';
 import { SettingsSection } from './settings-section';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';
-import { ContentBundleSelectionList } from './content-bundle-selection-list';
+import { DeckBundleSelectionList } from './deck-bundle-selection-list';
 import { useImportExportSettings } from './use-import-export-settings';
 
 function renderSummaryLabel(count: number, singular: string, plural: string): string {
@@ -35,10 +35,10 @@ export function ImportExportSettingsPanel() {
   return (
     <div className="flex flex-col gap-6">
       <SettingsSection
-        title="Export Content"
+        title="Export Deck"
         action={(
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.contentItems.length === 0}>Select Visible</Button>
+            <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.deckItems.length === 0}>Select Visible</Button>
             <Button variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button>
             <Button onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
               {state.exportInFlight ? 'Exporting...' : `Export Selected${hasSelection ? ` (${state.selectedCount})` : ''}`}
@@ -47,8 +47,8 @@ export function ImportExportSettingsPanel() {
         )}
       >
         <div className="flex flex-col gap-3">
-          <SearchField value={state.filterText} onChange={actions.setFilterText} placeholder="Search decks and lyrics" className="max-w-sm" />
-          <ContentBundleSelectionList items={state.contentItems} selectedIds={state.selectedIds} onToggle={actions.toggleSelectedId} />
+          <SearchField value={state.filterText} onChange={actions.setFilterText} placeholder="Search presentations and lyrics" className="max-w-sm" />
+          <DeckBundleSelectionList items={state.deckItems} selectedIds={state.selectedIds} onToggle={actions.toggleSelectedId} />
         </div>
       </SettingsSection>
 

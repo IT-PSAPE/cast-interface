@@ -35,20 +35,20 @@ const PLAYLIST_MODE_LABELS: Record<PlaylistBrowserMode, string> = { current: 'Cu
 export function SlideBrowserToolbar({ items, headerVariant }: SlideBrowserToolbarProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
-  const { slides, selectPlaylistContentItem } = useSlides();
-  const { currentContentItem, currentPlaylistContentItemId, isDetachedContentBrowser } = useNavigation();
+  const { slides, selectPlaylistDeckItem } = useSlides();
+  const { currentDeckItem, currentPlaylistDeckItemId, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, setSlideBrowserMode, playlistBrowserMode, setPlaylistBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useSlideBrowser();
 
   const isGridMode = slideBrowserMode === 'grid';
-  const showPlaylistModes = !isDetachedContentBrowser && (isGridMode || slideBrowserMode === 'list');
+  const showPlaylistModes = !isDetachedDeckBrowser && (isGridMode || slideBrowserMode === 'list');
   const showContentInfo = headerVariant !== 'hidden';
 
   function handleAddSlide() {
-    if (currentContentItem) void createSlide();
+    if (currentDeckItem) void createSlide();
   }
 
   function handleOpenEditor() {
-    if (currentContentItem?.type === 'lyric') setIsEditorOpen(true);
+    if (currentDeckItem?.type === 'lyric') setIsEditorOpen(true);
   }
 
   function ViewIcon(){
@@ -82,7 +82,7 @@ export function SlideBrowserToolbar({ items, headerVariant }: SlideBrowserToolba
         {showContentInfo && (
           <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
             {headerVariant === 'tabs' ? (
-              <Tabs.Root value={currentPlaylistContentItemId ?? undefined} onValueChange={selectPlaylistContentItem}>
+              <Tabs.Root value={currentPlaylistDeckItemId ?? undefined} onValueChange={selectPlaylistDeckItem}>
                 <div className="min-w-max">
                   <Tabs.List label="Playlist items">
                     {items.map((item) => <PlaylistTabItem key={item.entryId} item={item} />)}
@@ -90,8 +90,8 @@ export function SlideBrowserToolbar({ items, headerVariant }: SlideBrowserToolba
                 </div>
               </Tabs.Root>
             ) : (
-              <span className="truncate text-sm font-medium text-primary" title={currentContentItem?.title}>
-                {currentContentItem?.title ?? 'No item selected'}
+              <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title}>
+                {currentDeckItem?.title ?? 'No item selected'}
               </span>
             )}
           </div>

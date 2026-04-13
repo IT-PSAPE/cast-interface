@@ -1,13 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { crc32 } from 'node:zlib';
-import type { ContentBundleManifest } from '@core/types';
+import type { DeckBundleManifest } from '@core/types';
 
 const END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
 const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50;
 const LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50;
 const MANIFEST_ENTRY_NAME = 'manifest.json';
 
-export async function writeContentBundleArchive(filePath: string, manifest: ContentBundleManifest): Promise<void> {
+export async function writeDeckBundleArchive(filePath: string, manifest: DeckBundleManifest): Promise<void> {
   const entryName = Buffer.from(MANIFEST_ENTRY_NAME, 'utf8');
   const data = Buffer.from(JSON.stringify(manifest, null, 2), 'utf8');
   const localHeader = Buffer.alloc(30);
@@ -57,7 +57,7 @@ export async function writeContentBundleArchive(filePath: string, manifest: Cont
   await writeFile(filePath, Buffer.concat([localSection, centralSection, endOfCentralDirectory]));
 }
 
-export async function readContentBundleArchive(filePath: string): Promise<ContentBundleManifest> {
+export async function readDeckBundleArchive(filePath: string): Promise<DeckBundleManifest> {
   const archive = await readFile(filePath);
   const endOffset = archive.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (endOffset < 0) {
@@ -92,7 +92,7 @@ export async function readContentBundleArchive(filePath: string): Promise<Conten
   const data = archive.subarray(dataOffset, dataOffset + dataLength);
 
   try {
-    return JSON.parse(data.toString('utf8')) as ContentBundleManifest;
+    return JSON.parse(data.toString('utf8')) as DeckBundleManifest;
   } catch (error) {
     throw new Error(`Invalid bundle manifest: ${(error as Error).message}`);
   }

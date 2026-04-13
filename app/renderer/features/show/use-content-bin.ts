@@ -5,53 +5,53 @@ import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { filterByText } from '../../utils/filter-by-text';
-import { buildContentItemMenuItems } from './build-presentation-menu-items';
+import { buildDeckItemMenuItems } from './build-presentation-menu-items';
 import { useLibraryPanelManagement } from './use-library-panel-management';
 
 export function useContentBin(filterText: string) {
   const {
-    currentDrawerContentItemId,
+    currentDrawerDeckItemId,
     currentPlaylistId,
     currentLibraryBundle,
-    browseContentItem,
-    isDetachedContentBrowser,
+    browseDeckItem,
+    isDetachedDeckBrowser,
   } = useNavigation();
-  const { contentItems, slidesByContentItemId } = useProjectContent();
+  const { deckItems, slidesByDeckItemId } = useProjectContent();
   const {
-    renameContentItem,
-    deleteContentItem,
-    moveContentItem,
-    moveContentItemToSegment,
+    renameDeckItem,
+    deleteDeckItem,
+    moveDeckItem,
+    moveDeckItemToSegment,
   } = useLibraryPanelManagement();
   const menu = useContextMenuState<Id>();
   const [editingPresentationId, setEditingPresentationId] = useState<Id | null>(null);
 
   const filteredPresentations = useMemo(() => {
-    return filterByText(contentItems, filterText, (item) => {
-      const slides = slidesByContentItemId.get(item.id) ?? [];
+    return filterByText(deckItems, filterText, (item) => {
+      const slides = slidesByDeckItemId.get(item.id) ?? [];
       const slideLabels = slides.map((slide) => `slide ${slide.order + 1}`);
       return [item.title, item.type, ...slideLabels];
     });
-  }, [contentItems, filterText, slidesByContentItemId]);
+  }, [deckItems, filterText, slidesByDeckItemId]);
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!menu.menuState) return [];
-    return buildContentItemMenuItems({
+    return buildDeckItemMenuItems({
       itemId: menu.menuState.data,
       scope: 'library',
       currentPlaylistId,
       selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
-      itemIds: contentItems.map((item) => item.id),
-      selectContentItem: browseContentItem,
-      moveContentItem,
-      moveContentItemToSegment,
-      beginRenameContentItem: setEditingPresentationId,
-      deleteContentItem,
+      itemIds: deckItems.map((item) => item.id),
+      selectDeckItem: browseDeckItem,
+      moveDeckItem,
+      moveDeckItemToSegment,
+      beginRenameDeckItem: setEditingPresentationId,
+      deleteDeckItem,
     });
-  }, [browseContentItem, contentItems, currentLibraryBundle, currentPlaylistId, deleteContentItem, menu.menuState, moveContentItem, moveContentItemToSegment]);
+  }, [browseDeckItem, deckItems, currentLibraryBundle, currentPlaylistId, deleteDeckItem, menu.menuState, moveDeckItem, moveDeckItemToSegment]);
 
   function handleRename(itemId: Id, title: string) {
-    void renameContentItem(itemId, title);
+    void renameDeckItem(itemId, title);
     setEditingPresentationId(null);
   }
 
@@ -60,10 +60,10 @@ export function useContentBin(filterText: string) {
     menu,
     menuItems,
     editingPresentationId,
-    browseContentItem,
-    isDetachedContentBrowser,
-    currentDrawerContentItemId,
+    browseDeckItem,
+    isDetachedDeckBrowser,
+    currentDrawerDeckItemId,
     handleRename,
-    slidesByContentItemId,
+    slidesByDeckItemId,
   };
 }

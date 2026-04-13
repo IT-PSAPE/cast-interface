@@ -16,11 +16,11 @@ const ProgramOutputContext = createContext<ProgramOutput | null>(null);
 
 export function ProgramOutputProvider({ children }: { children: ReactNode }) {
   const { state: { outputConfigs } } = useNdi();
-  const { currentOutputContentItemId } = useNavigation();
+  const { currentOutputDeckItemId } = useNavigation();
   const { liveSlide } = useSlides();
   const { programScene } = useRenderScenes();
   const outputConfig = outputConfigs.audience;
-  const status: NdiSourceStatus = currentOutputContentItemId && liveSlide ? 'live' : 'idle';
+  const status: NdiSourceStatus = currentOutputDeckItemId && liveSlide ? 'live' : 'idle';
   const background = outputConfig.withAlpha ? 'transparent' : 'black';
 
   const value = useMemo<ProgramOutput>(() => ({

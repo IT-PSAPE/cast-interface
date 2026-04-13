@@ -5,21 +5,21 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { useSlides } from '../../contexts/slide-context';
 
 export function useContinuousSlideSections() {
-  const { currentContentItemId, currentOutputContentItemId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, activateContentItemSlide, focusContentItemSlide } = useSlides();
+  const { currentDeckItemId, currentOutputDeckItemId } = useNavigation();
+  const { currentSlideIndex, liveSlideIndex, activateDeckItemSlide, focusDeckItemSlide } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
 
   const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
-    activateContentItemSlide(itemId, slideIndex);
-  }, [activateContentItemSlide]);
+    activateDeckItemSlide(itemId, slideIndex);
+  }, [activateDeckItemSlide]);
 
   const handleEditSlide = useCallback((itemId: Id, slideIndex: number) => {
-    focusContentItemSlide(itemId, slideIndex);
-  }, [focusContentItemSlide]);
+    focusDeckItemSlide(itemId, slideIndex);
+  }, [focusDeckItemSlide]);
 
   return {
-    currentContentItemId,
-    currentOutputContentItemId,
+    currentDeckItemId,
+    currentOutputDeckItemId,
     currentSlideIndex,
     liveSlideIndex,
     slideElementsBySlideId,

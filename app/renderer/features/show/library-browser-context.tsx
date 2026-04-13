@@ -16,7 +16,7 @@ interface LibraryBrowserContextValue {
     setLibrariesView: () => void;
     setPlaylistView: () => void;
     renameSegment: (segmentId: string, name: string) => void;
-    renameContentItem: (itemId: string, title: string) => void;
+    renameDeckItem: (itemId: string, title: string) => void;
     isEditing: (type: NonNullable<EditingTarget>['type'], id: string) => boolean;
     clearEditing: () => void;
     handleLibraryContextMenu: ReturnType<typeof useLibraryPanelContextMenu>['handleLibraryContextMenu'];
@@ -35,7 +35,7 @@ const LibraryBrowserContext = createContext<LibraryBrowserContextValue | null>(n
 export function LibraryBrowserProvider({ children }: { children: ReactNode }) {
   const { currentLibraryBundle, currentPlaylistId, clearRecentlyCreated } = useNavigation();
   const { libraryPanelView, setLibraryPanelView } = useLibraryPanelState();
-  const { renameSegment, renameContentItem } = useLibraryPanelManagement();
+  const { renameSegment, renameDeckItem } = useLibraryPanelManagement();
   const contextMenu = useLibraryPanelContextMenu();
   const { clearEditing } = contextMenu;
 
@@ -58,7 +58,7 @@ export function LibraryBrowserProvider({ children }: { children: ReactNode }) {
       setLibrariesView: () => { setLibraryPanelView('libraries'); },
       setPlaylistView: () => { setLibraryPanelView('playlist'); },
       renameSegment: (segmentId: string, name: string) => { void renameSegment(segmentId, name); },
-      renameContentItem: (itemId: string, title: string) => { void renameContentItem(itemId, title); },
+      renameDeckItem: (itemId: string, title: string) => { void renameDeckItem(itemId, title); },
       isEditing: contextMenu.isEditing,
       clearEditing: contextMenu.clearEditing,
       handleLibraryContextMenu: contextMenu.handleLibraryContextMenu,
@@ -70,7 +70,7 @@ export function LibraryBrowserProvider({ children }: { children: ReactNode }) {
       openSegmentPresentationMenuFromButton: contextMenu.openSegmentPresentationMenuFromButton,
       closeMenu: contextMenu.closeMenu,
     },
-  }), [contextMenu, renameContentItem, renameSegment, selectedTree, setLibraryPanelView]);
+  }), [contextMenu, renameDeckItem, renameSegment, selectedTree, setLibraryPanelView]);
 
   return <LibraryBrowserContext.Provider value={value}>{children}</LibraryBrowserContext.Provider>;
 }

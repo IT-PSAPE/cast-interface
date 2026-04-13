@@ -1,51 +1,32 @@
 import { createElement } from 'react';
 import type { ContextMenuItem } from '../components/overlays/context-menu';
-import { ContentItemIcon } from '../components/display/entity-icon';
+import { DeckItemIcon } from '../components/display/entity-icon';
 
 interface BuildCreatePresentationMenuItemsOptions {
-  createDeck: () => void | Promise<void>;
+  createPresentation: () => void | Promise<void>;
   createEmptyLyric: () => void | Promise<void>;
-  createLyricFromText?: () => void | Promise<void>;
   deckLabel?: string;
   lyricLabel?: string;
 }
 
 export function buildCreateContentMenuItems({
-  createDeck,
+  createPresentation,
   createEmptyLyric,
-  createLyricFromText,
-  deckLabel = 'Deck',
+  deckLabel = 'Presentation',
   lyricLabel = 'Lyric'
 }: BuildCreatePresentationMenuItemsOptions): ContextMenuItem[] {
-  const lyricItem: ContextMenuItem = {
-    id: 'create-lyric',
-    label: lyricLabel,
-    icon: createElement(ContentItemIcon, { entity: 'lyric', size: 14, strokeWidth: 1.75 }),
-    onSelect: () => { void createEmptyLyric(); }
-  };
-
-  if (createLyricFromText) {
-    lyricItem.children = [
-      {
-        id: 'create-lyric-empty',
-        label: 'Empty',
-        onSelect: () => { void createEmptyLyric(); }
-      },
-      {
-        id: 'create-lyric-text',
-        label: 'Text',
-        onSelect: () => { void createLyricFromText(); }
-      }
-    ];
-  }
-
   return [
     {
       id: 'create-deck',
       label: deckLabel,
-      icon: createElement(ContentItemIcon, { entity: 'deck', size: 14, strokeWidth: 1.75 }),
-      onSelect: () => { void createDeck(); }
+      icon: createElement(DeckItemIcon, { entity: 'presentation', size: 14, strokeWidth: 1.75 }),
+      onSelect: () => { void createPresentation(); }
     },
-    lyricItem
+    {
+      id: 'create-lyric',
+      label: lyricLabel,
+      icon: createElement(DeckItemIcon, { entity: 'lyric', size: 14, strokeWidth: 1.75 }),
+      onSelect: () => { void createEmptyLyric(); }
+    }
   ];
 }

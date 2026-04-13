@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { isLyricContentItem } from '@core/content-items';
-import type { AppSnapshot, ContentItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
+import { isLyricDeckItem } from '@core/deck-items';
+import type { AppSnapshot, DeckItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slides';
 import { useOverlayDefaults } from '../overlay-defaults-context';
 import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
@@ -20,15 +20,15 @@ import {
 
 interface CommandsParams {
   currentSlide: Slide | null;
-  currentContentItem: ContentItem | null;
+  currentDeckItem: DeckItem | null;
   currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentContentItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
   const { overlayDefaults } = useOverlayDefaults();
-  const isLyricItem = isLyricContentItem(currentContentItem);
+  const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useSlideEditor();
   const { replaceTemplateElements } = useTemplateEditor();

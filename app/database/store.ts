@@ -1,27 +1,27 @@
 import path from 'node:path';
 import { app } from 'electron';
 import {
-  cloneContentBundleManifest,
-  collectContentBundleMediaReferences,
+  cloneDeckBundleManifest,
+  collectDeckBundleMediaReferences,
   readElementMediaReference,
-} from '@core/content-bundles';
-import { buildContentItem } from '@core/content-items';
-import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithContentItem } from '@core/templates';
+} from '@core/deck-bundles';
+import { buildDeckItem } from '@core/deck-items';
+import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithDeckItem } from '@core/templates';
 import { createId, nowIso } from '@core/utils';
 import { SqliteDatabase } from './sqlite';
 import type {
   AppSnapshot,
-  BrokenContentBundleReference,
-  ContentBundleBrokenReferenceDecision,
-  ContentBundleInspection,
-  ContentBundleInspectionTemplate,
-  ContentBundleItem,
-  ContentBundleManifest,
-  ContentBundleSlide,
-  ContentBundleTemplate,
-  ContentItem,
-  ContentItemType,
-  Deck,
+  BrokenDeckBundleReference,
+  DeckBundleBrokenReferenceDecision,
+  DeckBundleInspection,
+  DeckBundleInspectionTemplate,
+  DeckBundleItem,
+  DeckBundleManifest,
+  DeckBundleSlide,
+  DeckBundleTemplate,
+  DeckItem,
+  DeckItemType,
+  Presentation,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -51,15 +51,15 @@ import { isBrokenMediaSource, toCastMediaSource } from './media-source-utils';
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
 const TEMPLATES_SCHEMA_VERSION = 4;
-const CONTENT_ITEMS_SCHEMA_VERSION = 6;
-const LATEST_SCHEMA_VERSION = CONTENT_ITEMS_SCHEMA_VERSION;
+const DECK_ITEMS_SCHEMA_VERSION = 6;
+const LATEST_SCHEMA_VERSION = DECK_ITEMS_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
 
-type ContentRecordName = 'deck' | 'lyric';
+type DeckRecordName = 'presentation' | 'lyric';
 
-interface ContentOwnerRow {
-  type: ContentItemType;
+interface DeckOwnerRow {
+  type: DeckItemType;
   templateId: string | null;
 }
 
@@ -210,8 +210,8 @@ export class CastRepository {
       this.setUserVersion(5);
     }
 
-    if (this.getUserVersion() < CONTENT_ITEMS_SCHEMA_VERSION) {
-      this.migratePresentationSchemaToContentItems();
+    if (this.getUserVersion() < DECK_ITEMS_SCHEMA_VERSION) {
+      this.migratePresentationSchemaToDeckItems();
       this.setUserVersion(LATEST_SCHEMA_VERSION);
     }
   }
@@ -378,7 +378,7 @@ export class CastRepository {
         updated_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS decks (
+      CREATE TABLE IF NOT EXISTS presentations (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         template_id TEXT,
@@ -398,7 +398,7 @@ export class CastRepository {
 
       CREATE TABLE IF NOT EXISTS slides (
         id TEXT PRIMARY KEY,
-        deck_id TEXT,
+        presentation_id TEXT,
         lyric_id TEXT,
         width INTEGER NOT NULL,
         height INTEGER NOT NULL,
@@ -406,7 +406,7 @@ export class CastRepository {
         order_index INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY(deck_id) REFERENCES decks(id),
+        FOREIGN KEY(presentation_id) REFERENCES presentations(id),
         FOREIGN KEY(lyric_id) REFERENCES lyrics(id)
       );
 
@@ -452,13 +452,13 @@ export class CastRepository {
       CREATE TABLE IF NOT EXISTS playlist_entries (
         id TEXT PRIMARY KEY,
         segment_id TEXT NOT NULL,
-        deck_id TEXT,
+        presentation_id TEXT,
         lyric_id TEXT,
         order_index INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY(segment_id) REFERENCES playlist_segments(id),
-        FOREIGN KEY(deck_id) REFERENCES decks(id),
+        FOREIGN KEY(presentation_id) REFERENCES presentations(id),
         FOREIGN KEY(lyric_id) REFERENCES lyrics(id)
       );
 
@@ -508,21 +508,21 @@ export class CastRepository {
 
   private createCommonIndexes(): void {
     this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
+      CREATE INDEX IF NOT EXISTS idx_slides_presentation_id ON slides(presentation_id);
       CREATE INDEX IF NOT EXISTS idx_slides_lyric_id ON slides(lyric_id);
       CREATE INDEX IF NOT EXISTS idx_slide_elements_slide_id ON slide_elements(slide_id);
       CREATE INDEX IF NOT EXISTS idx_playlists_library_id ON playlists(library_id);
       CREATE INDEX IF NOT EXISTS idx_playlist_segments_playlist_id ON playlist_segments(playlist_id);
       CREATE INDEX IF NOT EXISTS idx_playlist_entries_segment_id ON playlist_entries(segment_id);
-      CREATE INDEX IF NOT EXISTS idx_playlist_entries_deck_id ON playlist_entries(deck_id);
+      CREATE INDEX IF NOT EXISTS idx_playlist_entries_presentation_id ON playlist_entries(presentation_id);
       CREATE INDEX IF NOT EXISTS idx_playlist_entries_lyric_id ON playlist_entries(lyric_id);
     `);
   }
 
   private createGlobalContentIndexes(): void {
     this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_decks_order_index ON decks(order_index);
-      CREATE INDEX IF NOT EXISTS idx_decks_template_id ON decks(template_id);
+      CREATE INDEX IF NOT EXISTS idx_decks_order_index ON presentations(order_index);
+      CREATE INDEX IF NOT EXISTS idx_decks_template_id ON presentations(template_id);
       CREATE INDEX IF NOT EXISTS idx_lyrics_order_index ON lyrics(order_index);
       CREATE INDEX IF NOT EXISTS idx_lyrics_template_id ON lyrics(template_id);
       CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at);
@@ -668,7 +668,7 @@ export class CastRepository {
     }
   }
 
-  private migratePresentationSchemaToContentItems(): void {
+  private migratePresentationSchemaToDeckItems(): void {
     const previousForeignKeys = this.db.pragma('foreign_keys', { simple: true }) as number;
     this.db.pragma('foreign_keys = OFF');
 
@@ -695,7 +695,7 @@ export class CastRepository {
 
           CREATE TABLE slides_v6 (
             id TEXT PRIMARY KEY,
-            deck_id TEXT,
+            presentation_id TEXT,
             lyric_id TEXT,
             width INTEGER NOT NULL,
             height INTEGER NOT NULL,
@@ -708,7 +708,7 @@ export class CastRepository {
           CREATE TABLE playlist_entries_v6 (
             id TEXT PRIMARY KEY,
             segment_id TEXT NOT NULL,
-            deck_id TEXT,
+            presentation_id TEXT,
             lyric_id TEXT,
             order_index INTEGER NOT NULL,
             created_at TEXT NOT NULL,
@@ -729,7 +729,7 @@ export class CastRepository {
           WHERE kind = 'lyrics'
           ORDER BY order_index ASC, created_at ASC, id ASC;
 
-          INSERT INTO slides_v6 (id, deck_id, lyric_id, width, height, notes, order_index, created_at, updated_at)
+          INSERT INTO slides_v6 (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at)
           SELECT
             s.id,
             CASE WHEN p.kind = 'lyrics' THEN NULL ELSE s.presentation_id END,
@@ -744,7 +744,7 @@ export class CastRepository {
           JOIN presentations p ON p.id = s.presentation_id
           ORDER BY s.created_at ASC, s.id ASC;
 
-          INSERT INTO playlist_entries_v6 (id, segment_id, deck_id, lyric_id, order_index, created_at, updated_at)
+          INSERT INTO playlist_entries_v6 (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at)
           SELECT
             pe.id,
             pe.segment_id,
@@ -768,7 +768,7 @@ export class CastRepository {
           DROP TABLE slides;
           DROP TABLE presentations;
 
-          ALTER TABLE decks_v6 RENAME TO decks;
+          ALTER TABLE decks_v6 RENAME TO presentations;
           ALTER TABLE lyrics_v6 RENAME TO lyrics;
           ALTER TABLE slides_v6 RENAME TO slides;
           ALTER TABLE playlist_entries_v6 RENAME TO playlist_entries;
@@ -789,7 +789,7 @@ export class CastRepository {
     if (count.count > 0) return;
 
     const libraryId = createId();
-    const deckId = createId();
+    const presentationId = createId();
     const slideId = createId();
     const playlistId = createId();
     const segmentId = createId();
@@ -801,14 +801,14 @@ export class CastRepository {
         .run(libraryId, 'Church Library', now, now);
 
       this.db
-        .prepare('INSERT INTO decks (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(deckId, 'Welcome Slides', null, 0, now, now);
+        .prepare('INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(presentationId, 'Welcome Slides', null, 0, now, now);
 
       this.db
         .prepare(
-          'INSERT INTO slides (id, deck_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )
-        .run(slideId, deckId, null, DEFAULT_W, DEFAULT_H, '', 0, now, now);
+        .run(slideId, presentationId, null, DEFAULT_W, DEFAULT_H, '', 0, now, now);
 
       const titlePayload = JSON.stringify({
         text: 'Welcome to Recast',
@@ -852,9 +852,9 @@ export class CastRepository {
 
       this.db
         .prepare(
-          'INSERT INTO playlist_entries (id, segment_id, deck_id, lyric_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
         )
-        .run(createId(), segmentId, deckId, null, 0, now, now);
+        .run(createId(), segmentId, presentationId, null, 0, now, now);
 
       this.db
         .prepare(
@@ -1037,10 +1037,10 @@ export class CastRepository {
 
   getSnapshot(): AppSnapshot {
     const libraries = this.getLibraries();
-    const decks = this.getDecks();
+    const presentations = this.getPresentations();
     const lyrics = this.getLyrics();
-    const itemsById = new Map<Id, ContentItem>([
-      ...decks.map((deck) => [deck.id, deck] as const),
+    const itemsById = new Map<Id, DeckItem>([
+      ...presentations.map((deck) => [deck.id, deck] as const),
       ...lyrics.map((lyric) => [lyric.id, lyric] as const),
     ]);
     const libraryBundles = libraries.map((library) => ({
@@ -1051,7 +1051,7 @@ export class CastRepository {
     return {
       libraries,
       libraryBundles,
-      decks,
+      presentations,
       lyrics,
       slides: this.getSlides(),
       slideElements: this.getSlideElements(),
@@ -1061,32 +1061,32 @@ export class CastRepository {
     };
   }
 
-  exportContentBundle(itemIds: Id[]): ContentBundleManifest {
+  exportDeckBundle(itemIds: Id[]): DeckBundleManifest {
     const uniqueIds = Array.from(new Set(itemIds));
     const items = uniqueIds
-      .map((itemId) => this.getContentBundleItemById(itemId))
-      .filter((item): item is ContentBundleItem => item !== null)
+      .map((itemId) => this.getDeckBundleItemById(itemId))
+      .filter((item): item is DeckBundleItem => item !== null)
       .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
     const templateIds = Array.from(new Set(items.map((item) => item.templateId).filter((templateId): templateId is Id => Boolean(templateId))));
     const templates = templateIds
-      .map((templateId) => this.getContentBundleTemplateById(templateId))
-      .filter((template): template is ContentBundleTemplate => template !== null)
+      .map((templateId) => this.getDeckBundleTemplateById(templateId))
+      .filter((template): template is DeckBundleTemplate => template !== null)
       .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
 
     return {
-      format: 'cast-content-bundle',
+      format: 'cast-deck-bundle',
       version: 1,
       exportedAt: nowIso(),
       items,
       templates,
-      mediaReferences: collectContentBundleMediaReferences(items, templates),
+      mediaReferences: collectDeckBundleMediaReferences(items, templates),
     };
   }
 
-  inspectImportBundle(manifest: ContentBundleManifest): ContentBundleInspection {
-    this.assertValidContentBundleManifest(manifest);
-    const normalizedManifest = cloneContentBundleManifest(manifest);
-    const mediaReferences = collectContentBundleMediaReferences(normalizedManifest.items, normalizedManifest.templates);
+  inspectImportBundle(manifest: DeckBundleManifest): DeckBundleInspection {
+    this.assertValidDeckBundleManifest(manifest);
+    const normalizedManifest = cloneDeckBundleManifest(manifest);
+    const mediaReferences = collectDeckBundleMediaReferences(normalizedManifest.items, normalizedManifest.templates);
     const brokenReferences = this.collectBrokenBundleReferences(normalizedManifest);
 
     return {
@@ -1104,7 +1104,7 @@ export class CastRepository {
         }))
         .sort((left, right) => left.title.localeCompare(right.title)),
       templates: normalizedManifest.templates
-        .map((template): ContentBundleInspectionTemplate => ({
+        .map((template): DeckBundleInspectionTemplate => ({
           id: template.id,
           name: template.name,
           kind: template.kind,
@@ -1115,9 +1115,9 @@ export class CastRepository {
     };
   }
 
-  finalizeImportBundle(manifest: ContentBundleManifest, decisions: ContentBundleBrokenReferenceDecision[]): AppSnapshot {
-    this.assertValidContentBundleManifest(manifest);
-    const workingManifest = cloneContentBundleManifest(manifest);
+  finalizeImportBundle(manifest: DeckBundleManifest, decisions: DeckBundleBrokenReferenceDecision[]): AppSnapshot {
+    this.assertValidDeckBundleManifest(manifest);
+    const workingManifest = cloneDeckBundleManifest(manifest);
     const brokenReferences = this.collectBrokenBundleReferences(workingManifest);
     const decisionMap = new Map(decisions.map((decision) => [decision.source, decision]));
 
@@ -1135,7 +1135,7 @@ export class CastRepository {
 
     const now = nowIso();
     const nextTemplateOrder = this.getNextTemplateOrderIndex();
-    const nextContentOrder = this.getMaxContentOrder() + 1;
+    const nextContentOrder = this.getMaxDeckOrder() + 1;
     const normalizedReplacementSources = this.collectReplacementMediaSources(brokenReferences, decisionMap);
 
     const insertTemplate = this.db.prepare(
@@ -1143,14 +1143,14 @@ export class CastRepository {
         (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
-    const insertDeck = this.db.prepare(
-      'INSERT INTO decks (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    const insertPresentation = this.db.prepare(
+      'INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
     );
     const insertLyric = this.db.prepare(
       'INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
     );
     const insertSlide = this.db.prepare(
-      'INSERT INTO slides (id, deck_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     const insertElement = this.db.prepare(
       `INSERT INTO slide_elements
@@ -1213,13 +1213,13 @@ export class CastRepository {
           }
           if (importedTemplateId) {
             const importedTemplate = workingManifest.templates.find((template) => template.id === item.templateId) ?? null;
-            if (!importedTemplate || !isTemplateCompatibleWithContentItem(importedTemplate as Template, item.type)) {
+            if (!importedTemplate || !isTemplateCompatibleWithDeckItem(importedTemplate as Template, item.type)) {
               throw new Error(`Template ${item.templateId} is incompatible with ${item.title}`);
             }
           }
 
-          if (item.type === 'deck') {
-            insertDeck.run(newItemId, item.title, importedTemplateId, nextContentOrder + itemIndex, now, now);
+          if (item.type === 'presentation') {
+            insertPresentation.run(newItemId, item.title, importedTemplateId, nextContentOrder + itemIndex, now, now);
           } else {
             insertLyric.run(newItemId, item.title, importedTemplateId, nextContentOrder + itemIndex, now, now);
           }
@@ -1231,7 +1231,7 @@ export class CastRepository {
               const newSlideId = createId();
               insertSlide.run(
                 newSlideId,
-                item.type === 'deck' ? newItemId : null,
+                item.type === 'presentation' ? newItemId : null,
                 item.type === 'lyric' ? newItemId : null,
                 slide.width,
                 slide.height,
@@ -1318,19 +1318,19 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  addContentItemToSegment(segmentId: Id, itemId: Id): AppSnapshot {
+  addDeckItemToSegment(segmentId: Id, itemId: Id): AppSnapshot {
     const segment = this.db
       .prepare('SELECT playlist_id FROM playlist_segments WHERE id = ?')
       .get(segmentId) as { playlist_id: string } | undefined;
 
     if (!segment) return this.getSnapshot();
-    return this.moveContentItemToSegment(segment.playlist_id, itemId, segmentId);
+    return this.moveDeckItemToSegment(segment.playlist_id, itemId, segmentId);
   }
 
-  moveContentItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): AppSnapshot {
-    const owner = this.resolveContentOwnerRow(itemId);
+  moveDeckItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): AppSnapshot {
+    const owner = this.resolveDeckOwnerRow(itemId);
     if (!owner) return this.getSnapshot();
-    const ownerColumn = this.getContentOwnerColumn(owner.type);
+    const ownerColumn = this.getDeckOwnerColumn(owner.type);
 
     this.db
       .prepare(
@@ -1356,13 +1356,13 @@ export class CastRepository {
 
     this.db
       .prepare(
-        `INSERT INTO playlist_entries (id, segment_id, deck_id, lyric_id, order_index, created_at, updated_at)
+        `INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         createId(),
         segmentId,
-        owner.type === 'deck' ? itemId : null,
+        owner.type === 'presentation' ? itemId : null,
         owner.type === 'lyric' ? itemId : null,
         currentOrder + 1,
         now,
@@ -1372,18 +1372,18 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  createDeck(title: string): AppSnapshot {
+  createPresentation(title: string): AppSnapshot {
     const now = nowIso();
-    const currentOrder = this.getMaxContentOrder();
+    const currentOrder = this.getMaxDeckOrder();
     this.db
-      .prepare('INSERT INTO decks (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .prepare('INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run(createId(), title, null, currentOrder + 1, now, now);
     return this.getSnapshot();
   }
 
   createLyric(title: string): AppSnapshot {
     const now = nowIso();
-    const currentOrder = this.getMaxContentOrder();
+    const currentOrder = this.getMaxDeckOrder();
     this.db
       .prepare('INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run(createId(), title, null, currentOrder + 1, now, now);
@@ -1451,7 +1451,7 @@ export class CastRepository {
 
   deleteTemplate(templateId: Id): AppSnapshot {
     const tx = this.db.transaction(() => {
-      this.db.prepare('UPDATE decks SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
+      this.db.prepare('UPDATE presentations SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
       this.db.prepare('UPDATE lyrics SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
       this.db.prepare('DELETE FROM templates WHERE id = ?').run(templateId);
     });
@@ -1460,16 +1460,16 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  applyTemplateToContentItem(templateId: Id, itemId: Id): AppSnapshot {
+  applyTemplateToDeckItem(templateId: Id, itemId: Id): AppSnapshot {
     const template = this.getTemplateById(templateId);
     if (!template) return this.getSnapshot();
-    const owner = this.resolveContentOwnerRow(itemId);
-    if (!owner || !isTemplateCompatibleWithContentItem(template, owner.type)) {
+    const owner = this.resolveDeckOwnerRow(itemId);
+    if (!owner || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
       return this.getSnapshot();
     }
 
-    const ownerColumn = this.getContentOwnerColumn(owner.type);
-    const ownerTable = this.getContentTableName(owner.type);
+    const ownerColumn = this.getDeckOwnerColumn(owner.type);
+    const ownerTable = this.getDeckTableName(owner.type);
 
     const slides = this.db
       .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
@@ -1549,17 +1549,17 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  resetContentItemToTemplate(itemId: Id): AppSnapshot {
-    const owner = this.resolveContentOwnerRow(itemId);
+  resetDeckItemToTemplate(itemId: Id): AppSnapshot {
+    const owner = this.resolveDeckOwnerRow(itemId);
     if (!owner?.templateId) return this.getSnapshot();
 
     const template = this.getTemplateById(owner.templateId);
-    if (!template || !isTemplateCompatibleWithContentItem(template, owner.type)) {
+    if (!template || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
       return this.getSnapshot();
     }
 
-    const ownerColumn = this.getContentOwnerColumn(owner.type);
-    const ownerTable = this.getContentTableName(owner.type);
+    const ownerColumn = this.getDeckOwnerColumn(owner.type);
+    const ownerTable = this.getDeckTableName(owner.type);
     const slides = this.db
       .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
       .all(itemId) as Array<{ id: string }>;
@@ -1670,7 +1670,7 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  moveContentItem(id: Id, direction: 'up' | 'down'): AppSnapshot {
+  moveDeckItem(id: Id, direction: 'up' | 'down'): AppSnapshot {
     const orderedItems = this.getOrderedContentReferences();
     const currentIndex = orderedItems.findIndex((item) => item.id === id);
     if (currentIndex === -1) return this.getSnapshot();
@@ -1683,10 +1683,10 @@ export class CastRepository {
     const now = nowIso();
     const tx = this.db.transaction(() => {
       this.db
-        .prepare(`UPDATE ${this.getContentTableName(current.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
+        .prepare(`UPDATE ${this.getDeckTableName(current.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
         .run(neighbor.order, now, current.id);
       this.db
-        .prepare(`UPDATE ${this.getContentTableName(neighbor.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
+        .prepare(`UPDATE ${this.getDeckTableName(neighbor.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
         .run(current.order, now, neighbor.id);
     });
 
@@ -1700,13 +1700,13 @@ export class CastRepository {
 
     const now = nowIso();
     const slideId = createId();
-    const ownerColumn = this.getContentOwnerColumn(owner.type);
+    const ownerColumn = this.getDeckOwnerColumn(owner.type);
     const currentOrder =
       (this.db.prepare(`SELECT MAX(order_index) AS maxOrder FROM slides WHERE ${ownerColumn} = ?`).get(owner.id) as {
         maxOrder: number | null;
       }).maxOrder ?? -1;
     const assignedTemplate = owner.templateId ? this.getTemplateById(owner.templateId) : null;
-    const appliedTemplate = assignedTemplate && isTemplateCompatibleWithContentItem(assignedTemplate, owner.type)
+    const appliedTemplate = assignedTemplate && isTemplateCompatibleWithDeckItem(assignedTemplate, owner.type)
       ? assignedTemplate
       : null;
     const insertElement = this.db.prepare(
@@ -1717,11 +1717,11 @@ export class CastRepository {
 
     this.db
       .prepare(
-        'INSERT INTO slides (id, deck_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
         slideId,
-        owner.type === 'deck' ? owner.id : null,
+        owner.type === 'presentation' ? owner.id : null,
         owner.type === 'lyric' ? owner.id : null,
         input.width ?? DEFAULT_W,
         input.height ?? DEFAULT_H,
@@ -1776,13 +1776,13 @@ export class CastRepository {
 
   deleteSlide(slideId: Id): AppSnapshot {
     const slide = this.db
-      .prepare('SELECT deck_id, lyric_id FROM slides WHERE id = ?')
-      .get(slideId) as { deck_id: string | null; lyric_id: string | null } | undefined;
+      .prepare('SELECT presentation_id, lyric_id FROM slides WHERE id = ?')
+      .get(slideId) as { presentation_id: string | null; lyric_id: string | null } | undefined;
 
     if (!slide) return this.getSnapshot();
 
-    const ownerColumn = slide.deck_id ? 'deck_id' : 'lyric_id';
-    const ownerId = slide.deck_id ?? slide.lyric_id;
+    const ownerColumn = slide.presentation_id ? 'presentation_id' : 'lyric_id';
+    const ownerId = slide.presentation_id ?? slide.lyric_id;
     if (!ownerId) return this.getSnapshot();
 
     const tx = this.db.transaction(() => {
@@ -1808,15 +1808,15 @@ export class CastRepository {
     
     // Get the current slide to find its parent
     const slide = this.db
-      .prepare('SELECT id, deck_id, lyric_id FROM slides WHERE id = ?')
-      .get(input.slideId) as { id: string; deck_id: string | null; lyric_id: string | null } | undefined;
+      .prepare('SELECT id, presentation_id, lyric_id FROM slides WHERE id = ?')
+      .get(input.slideId) as { id: string; presentation_id: string | null; lyric_id: string | null } | undefined;
     
     if (!slide) return this.getSnapshot();
     
     // Determine parent column and value
-    const isDecksSlide = slide.deck_id !== null;
-    const ownerColumn = isDecksSlide ? 'deck_id' : 'lyric_id';
-    const ownerId = isDecksSlide ? slide.deck_id : slide.lyric_id;
+    const isDecksSlide = slide.presentation_id !== null;
+    const ownerColumn = isDecksSlide ? 'presentation_id' : 'lyric_id';
+    const ownerId = isDecksSlide ? slide.presentation_id : slide.lyric_id;
     
     if (!ownerId) return this.getSnapshot();
     
@@ -2132,9 +2132,9 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  renameDeck(id: Id, title: string): AppSnapshot {
+  renamePresentation(id: Id, title: string): AppSnapshot {
     this.db
-      .prepare('UPDATE decks SET title = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE presentations SET title = ?, updated_at = ? WHERE id = ?')
       .run(title, nowIso(), id);
     return this.getSnapshot();
   }
@@ -2219,27 +2219,27 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  deleteDeck(id: Id): AppSnapshot {
-    const tx = this.db.transaction((deckId: Id) => {
+  deletePresentation(id: Id): AppSnapshot {
+    const tx = this.db.transaction((presentationId: Id) => {
       this.db
         .prepare(
           `DELETE FROM slide_elements
-           WHERE slide_id IN (SELECT id FROM slides WHERE deck_id = ?)`
+           WHERE slide_id IN (SELECT id FROM slides WHERE presentation_id = ?)`
         )
-        .run(deckId);
+        .run(presentationId);
       this.db
-        .prepare('DELETE FROM slides WHERE deck_id = ?')
-        .run(deckId);
+        .prepare('DELETE FROM slides WHERE presentation_id = ?')
+        .run(presentationId);
       this.db
-        .prepare('DELETE FROM playlist_entries WHERE deck_id = ?')
-        .run(deckId);
+        .prepare('DELETE FROM playlist_entries WHERE presentation_id = ?')
+        .run(presentationId);
       this.db
-        .prepare('DELETE FROM decks WHERE id = ?')
-        .run(deckId);
+        .prepare('DELETE FROM presentations WHERE id = ?')
+        .run(presentationId);
     });
 
     tx(id);
-    this.normalizeContentItemOrder();
+    this.normalizeDeckItemOrder();
     return this.getSnapshot();
   }
 
@@ -2263,7 +2263,7 @@ export class CastRepository {
     });
 
     tx(id);
-    this.normalizeContentItemOrder();
+    this.normalizeDeckItemOrder();
     return this.getSnapshot();
   }
 
@@ -2299,7 +2299,7 @@ export class CastRepository {
     };
   }
 
-  private normalizeSlideOrder(ownerColumn: 'deck_id' | 'lyric_id', ownerId: Id): void {
+  private normalizeSlideOrder(ownerColumn: 'presentation_id' | 'lyric_id', ownerId: Id): void {
     const now = nowIso();
     this.db
       .prepare(
@@ -2333,19 +2333,19 @@ export class CastRepository {
     return 'content';
   }
 
-  private getContentTableName(type: ContentItemType): 'decks' | 'lyrics' {
-    return type === 'deck' ? 'decks' : 'lyrics';
+  private getDeckTableName(type: DeckItemType): 'presentations' | 'lyrics' {
+    return type === 'presentation' ? 'presentations' : 'lyrics';
   }
 
-  private getContentOwnerColumn(type: ContentItemType): 'deck_id' | 'lyric_id' {
-    return type === 'deck' ? 'deck_id' : 'lyric_id';
+  private getDeckOwnerColumn(type: DeckItemType): 'presentation_id' | 'lyric_id' {
+    return type === 'presentation' ? 'presentation_id' : 'lyric_id';
   }
 
-  private getMaxContentOrder(): number {
+  private getMaxDeckOrder(): number {
     const row = this.db.prepare(
       `SELECT MAX(order_index) AS maxOrder
        FROM (
-         SELECT order_index FROM decks
+         SELECT order_index FROM presentations
          UNION ALL
          SELECT order_index FROM lyrics
        )`
@@ -2353,24 +2353,24 @@ export class CastRepository {
     return row.maxOrder ?? -1;
   }
 
-  private getOrderedContentReferences(): Array<{ id: Id; type: ContentItemType; order: number }> {
+  private getOrderedContentReferences(): Array<{ id: Id; type: DeckItemType; order: number }> {
     return this.db.prepare(
       `SELECT id, type, order_index AS "order"
        FROM (
-         SELECT id, 'deck' AS type, order_index, created_at FROM decks
+         SELECT id, 'presentation' AS type, order_index, created_at FROM presentations
          UNION ALL
          SELECT id, 'lyric' AS type, order_index, created_at FROM lyrics
        )
        ORDER BY order_index ASC, created_at ASC, id ASC`
-    ).all() as Array<{ id: Id; type: ContentItemType; order: number }>;
+    ).all() as Array<{ id: Id; type: DeckItemType; order: number }>;
   }
 
-  private resolveContentOwnerRow(id: Id): ContentOwnerRow | null {
+  private resolveDeckOwnerRow(id: Id): DeckOwnerRow | null {
     const deck = this.db
-      .prepare('SELECT template_id FROM decks WHERE id = ?')
+      .prepare('SELECT template_id FROM presentations WHERE id = ?')
       .get(id) as { template_id: string | null } | undefined;
     if (deck) {
-      return { type: 'deck', templateId: deck.template_id };
+      return { type: 'presentation', templateId: deck.template_id };
     }
 
     const lyric = this.db
@@ -2383,31 +2383,31 @@ export class CastRepository {
     return null;
   }
 
-  private resolveSlideOwnerInput(input: SlideCreateInput): (ContentOwnerRow & { id: Id }) | null {
-    if (input.deckId && input.lyricId) return null;
-    const ownerId = input.deckId ?? input.lyricId ?? null;
+  private resolveSlideOwnerInput(input: SlideCreateInput): (DeckOwnerRow & { id: Id }) | null {
+    if (input.presentationId && input.lyricId) return null;
+    const ownerId = input.presentationId ?? input.lyricId ?? null;
     if (!ownerId) return null;
 
-    const owner = this.resolveContentOwnerRow(ownerId);
+    const owner = this.resolveDeckOwnerRow(ownerId);
     if (!owner) return null;
 
-    if (owner.type === 'deck' && input.deckId) return { ...owner, id: input.deckId };
+    if (owner.type === 'presentation' && input.presentationId) return { ...owner, id: input.presentationId };
     if (owner.type === 'lyric' && input.lyricId) return { ...owner, id: input.lyricId };
     return null;
   }
 
-  private getContentBundleItemById(itemId: Id): ContentBundleItem | null {
-    const owner = this.resolveContentOwnerRow(itemId);
+  private getDeckBundleItemById(itemId: Id): DeckBundleItem | null {
+    const owner = this.resolveDeckOwnerRow(itemId);
     if (!owner) return null;
 
-    const tableName = this.getContentTableName(owner.type);
+    const tableName = this.getDeckTableName(owner.type);
     const row = this.db
       .prepare(`SELECT id, title, template_id, order_index FROM ${tableName} WHERE id = ?`)
       .get(itemId) as { id: string; title: string; template_id: string | null; order_index: number } | undefined;
 
     if (!row) return null;
 
-    const ownerColumn = this.getContentOwnerColumn(owner.type);
+    const ownerColumn = this.getDeckOwnerColumn(owner.type);
     const slides = this.db
       .prepare(
         `SELECT id, width, height, notes, order_index
@@ -2417,7 +2417,7 @@ export class CastRepository {
       )
       .all(itemId) as Array<{ id: string; width: number; height: number; notes: string; order_index: number }>;
 
-    const bundleSlides = slides.map((slide): ContentBundleSlide => ({
+    const bundleSlides = slides.map((slide): DeckBundleSlide => ({
       id: slide.id,
       width: slide.width,
       height: slide.height,
@@ -2436,7 +2436,7 @@ export class CastRepository {
     };
   }
 
-  private getContentBundleTemplateById(templateId: Id): ContentBundleTemplate | null {
+  private getDeckBundleTemplateById(templateId: Id): DeckBundleTemplate | null {
     const row = this.db
       .prepare(
         `SELECT id, name, kind, width, height, order_index, elements_json
@@ -2509,8 +2509,8 @@ export class CastRepository {
     }));
   }
 
-  private assertValidContentBundleManifest(manifest: ContentBundleManifest): void {
-    if (!manifest || manifest.format !== 'cast-content-bundle' || manifest.version !== 1) {
+  private assertValidDeckBundleManifest(manifest: DeckBundleManifest): void {
+    if (!manifest || manifest.format !== 'cast-deck-bundle' || manifest.version !== 1) {
       throw new Error('Unsupported bundle format.');
     }
 
@@ -2529,7 +2529,7 @@ export class CastRepository {
 
     for (const item of manifest.items) {
       if (!item?.id || !item.title) throw new Error('Invalid bundle item.');
-      if (item.type !== 'deck' && item.type !== 'lyric') {
+      if (item.type !== 'presentation' && item.type !== 'lyric') {
         throw new Error(`Unknown content item type: ${item.type}`);
       }
       if (item.templateId && !templateIds.has(item.templateId)) {
@@ -2537,7 +2537,7 @@ export class CastRepository {
       }
       if (item.templateId) {
         const template = manifest.templates.find((entry) => entry.id === item.templateId) ?? null;
-        if (!template || !isTemplateCompatibleWithContentItem(template as Template, item.type)) {
+        if (!template || !isTemplateCompatibleWithDeckItem(template as Template, item.type)) {
           throw new Error(`Bundle item ${item.title} has an incompatible template.`);
         }
       }
@@ -2549,7 +2549,7 @@ export class CastRepository {
     }
   }
 
-  private collectBrokenBundleReferences(manifest: ContentBundleManifest): BrokenContentBundleReference[] {
+  private collectBrokenBundleReferences(manifest: DeckBundleManifest): BrokenDeckBundleReference[] {
     const references = new Map<string, BrokenReferenceAccumulator>();
 
     function collect(elements: SlideElement[], itemTitle: string | null, templateName: string | null) {
@@ -2592,12 +2592,12 @@ export class CastRepository {
   }
 
   private applyBrokenReferenceDecisions(
-    manifest: ContentBundleManifest,
-    decisionMap: ReadonlyMap<string, ContentBundleBrokenReferenceDecision>,
+    manifest: DeckBundleManifest,
+    decisionMap: ReadonlyMap<string, DeckBundleBrokenReferenceDecision>,
   ): void {
     function rewriteElements(
       elements: SlideElement[],
-      localDecisionMap: ReadonlyMap<string, ContentBundleBrokenReferenceDecision>,
+      localDecisionMap: ReadonlyMap<string, DeckBundleBrokenReferenceDecision>,
     ): SlideElement[] {
       return elements.flatMap((element) => {
         const reference = readElementMediaReference(element);
@@ -2630,12 +2630,12 @@ export class CastRepository {
       ...template,
       elements: rewriteElements(template.elements, decisionMap),
     }));
-    manifest.mediaReferences = collectContentBundleMediaReferences(manifest.items, manifest.templates);
+    manifest.mediaReferences = collectDeckBundleMediaReferences(manifest.items, manifest.templates);
   }
 
   private collectReplacementMediaSources(
-    brokenReferences: BrokenContentBundleReference[],
-    decisionMap: ReadonlyMap<string, ContentBundleBrokenReferenceDecision>,
+    brokenReferences: BrokenDeckBundleReference[],
+    decisionMap: ReadonlyMap<string, DeckBundleBrokenReferenceDecision>,
   ): Array<{ rawPath: string; src: string; elementTypes: Array<'image' | 'video'> }> {
     return brokenReferences.flatMap((reference) => {
       const decision = decisionMap.get(reference.source);
@@ -2712,10 +2712,10 @@ export class CastRepository {
     }));
   }
 
-  private getDecks(): Deck[] {
+  private getPresentations(): Presentation[] {
     const rows = this.db
       .prepare(
-        'SELECT id, title, template_id, order_index, created_at, updated_at FROM decks ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, template_id, order_index, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
       )
       .all() as Array<{
       id: string;
@@ -2726,15 +2726,15 @@ export class CastRepository {
       updated_at: string;
     }>;
 
-    return rows.map((row) => buildContentItem({
+    return rows.map((row) => buildDeckItem({
       id: row.id,
       title: row.title,
-      type: 'deck',
+      type: 'presentation',
       templateId: row.template_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
-    })) as Deck[];
+    })) as Presentation[];
   }
 
   private getLyrics(): Lyric[] {
@@ -2751,7 +2751,7 @@ export class CastRepository {
       updated_at: string;
     }>;
 
-    return rows.map((row) => buildContentItem({
+    return rows.map((row) => buildDeckItem({
       id: row.id,
       title: row.title,
       type: 'lyric',
@@ -2765,17 +2765,17 @@ export class CastRepository {
   private getSlides(): Slide[] {
     const rows = this.db
       .prepare(
-        `SELECT s.id, s.deck_id, s.lyric_id, s.width, s.height, s.notes, s.order_index, s.created_at, s.updated_at,
+        `SELECT s.id, s.presentation_id, s.lyric_id, s.width, s.height, s.notes, s.order_index, s.created_at, s.updated_at,
                 COALESCE(d.order_index, l.order_index) AS content_order
          FROM slides s
-         LEFT JOIN decks d ON d.id = s.deck_id
+         LEFT JOIN presentations d ON d.id = s.presentation_id
          LEFT JOIN lyrics l ON l.id = s.lyric_id
-         WHERE s.deck_id IS NOT NULL OR s.lyric_id IS NOT NULL
+         WHERE s.presentation_id IS NOT NULL OR s.lyric_id IS NOT NULL
          ORDER BY content_order ASC, s.order_index ASC`
       )
       .all() as Array<{
       id: string;
-      deck_id: string | null;
+      presentation_id: string | null;
       lyric_id: string | null;
       width: number;
       height: number;
@@ -2787,7 +2787,7 @@ export class CastRepository {
 
     return rows.map((row) => ({
       id: row.id,
-      deckId: row.deck_id,
+      presentationId: row.presentation_id,
       lyricId: row.lyric_id,
       width: row.width,
       height: row.height,
@@ -2804,7 +2804,7 @@ export class CastRepository {
         `SELECT se.*
          FROM slide_elements se
          JOIN slides s ON s.id = se.slide_id
-         LEFT JOIN decks d ON d.id = s.deck_id
+         LEFT JOIN presentations d ON d.id = s.presentation_id
          LEFT JOIN lyrics l ON l.id = s.lyric_id
          ORDER BY COALESCE(d.order_index, l.order_index) ASC, s.order_index ASC, se.layer ASC, se.z_index ASC`
       )
@@ -2886,12 +2886,12 @@ export class CastRepository {
   private getPlaylistEntries(segmentId: Id): PlaylistEntry[] {
     const rows = this.db
       .prepare(
-        'SELECT id, segment_id, deck_id, lyric_id, order_index, created_at, updated_at FROM playlist_entries WHERE segment_id = ? ORDER BY order_index ASC'
+        'SELECT id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at FROM playlist_entries WHERE segment_id = ? ORDER BY order_index ASC'
       )
       .all(segmentId) as Array<{
       id: string;
       segment_id: string;
-      deck_id: string | null;
+      presentation_id: string | null;
       lyric_id: string | null;
       order_index: number;
       created_at: string;
@@ -2901,7 +2901,7 @@ export class CastRepository {
     return rows.map((row) => ({
       id: row.id,
       segmentId: row.segment_id,
-      deckId: row.deck_id,
+      presentationId: row.presentation_id,
       lyricId: row.lyric_id,
       order: row.order_index,
       createdAt: row.created_at,
@@ -2909,18 +2909,18 @@ export class CastRepository {
     }));
   }
 
-  private getPlaylistTreesByLibrary(libraryId: Id, itemsById: ReadonlyMap<Id, ContentItem>): PlaylistTree[] {
+  private getPlaylistTreesByLibrary(libraryId: Id, itemsById: ReadonlyMap<Id, DeckItem>): PlaylistTree[] {
     return this.getPlaylistsByLibrary(libraryId).map((playlist) => {
       const segments = this.getPlaylistSegments(playlist.id).map((segment) => {
         const entries = this.getPlaylistEntries(segment.id)
           .map((entry) => {
-            const itemId = entry.deckId ?? entry.lyricId;
+            const itemId = entry.presentationId ?? entry.lyricId;
             if (!itemId) return null;
             const item = itemsById.get(itemId);
             if (!item) return null;
             return { entry, item };
           })
-          .filter((value): value is { entry: PlaylistEntry; item: ContentItem } => value !== null);
+          .filter((value): value is { entry: PlaylistEntry; item: DeckItem } => value !== null);
 
         return { segment, entries };
       });
@@ -3051,13 +3051,13 @@ export class CastRepository {
       .run(libraryId, libraryId);
   }
 
-  private normalizeContentItemOrder(): void {
+  private normalizeDeckItemOrder(): void {
     const orderedItems = this.getOrderedContentReferences();
     const now = nowIso();
     const tx = this.db.transaction(() => {
       orderedItems.forEach((item, index) => {
         this.db
-          .prepare(`UPDATE ${this.getContentTableName(item.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
+          .prepare(`UPDATE ${this.getDeckTableName(item.type)} SET order_index = ?, updated_at = ? WHERE id = ?`)
           .run(index, now, item.id);
       });
     });

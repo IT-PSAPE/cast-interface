@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import type {
-  ContentBundleBrokenReferenceAction,
-  ContentBundleBrokenReferenceDecision,
-  ContentBundleInspection,
-  ContentItem,
+  DeckBundleBrokenReferenceAction,
+  DeckBundleBrokenReferenceDecision,
+  DeckBundleInspection,
+  DeckItem,
   Id,
 } from '@core/types';
 import { useCast } from '../../contexts/cast-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 
 interface ImportDecisionState {
-  action: ContentBundleBrokenReferenceAction;
+  action: DeckBundleBrokenReferenceAction;
   replacementPath: string | null;
 }
 
 interface ImportExportSettingsState {
-  contentItems: ContentItem[];
+  deckItems: DeckItem[];
   filterText: string;
   selectedIds: Set<Id>;
   selectedCount: number;
   exportInFlight: boolean;
   importInFlight: boolean;
   importPath: string | null;
-  inspection: ContentBundleInspection | null;
+  inspection: DeckBundleInspection | null;
   decisionMap: ReadonlyMap<string, ImportDecisionState>;
   blockedImportReasons: string[];
   message: string | null;
@@ -36,39 +36,39 @@ interface ImportExportSettingsActions {
   exportSelected: () => Promise<void>;
   chooseImportBundle: () => Promise<void>;
   clearImportReview: () => void;
-  setBrokenReferenceAction: (source: string, action: ContentBundleBrokenReferenceAction) => void;
+  setBrokenReferenceAction: (source: string, action: DeckBundleBrokenReferenceAction) => void;
   chooseReplacementPath: (source: string) => Promise<void>;
   finalizeImport: () => Promise<void>;
 }
 
 export function useImportExportSettings(): { state: ImportExportSettingsState; actions: ImportExportSettingsActions } {
-  const { contentItems } = useProjectContent();
+  const { deckItems } = useProjectContent();
   const { mutate, setStatusText } = useCast();
   const [filterText, setFilterText] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<Id>>(new Set());
   const [exportInFlight, setExportInFlight] = useState(false);
   const [importInFlight, setImportInFlight] = useState(false);
   const [importPath, setImportPath] = useState<string | null>(null);
-  const [inspection, setInspection] = useState<ContentBundleInspection | null>(null);
+  const [inspection, setInspection] = useState<DeckBundleInspection | null>(null);
   const [decisionMap, setDecisionMap] = useState<Map<string, ImportDecisionState>>(new Map());
   const [message, setMessage] = useState<string | null>(null);
 
   const normalizedFilterText = filterText.trim().toLowerCase();
   const filteredItems = useMemo(() => {
-    return contentItems.filter((item) => {
+    return deckItems.filter((item) => {
       if (!normalizedFilterText) return true;
       return item.title.toLowerCase().includes(normalizedFilterText) || item.type.toLowerCase().includes(normalizedFilterText);
     });
-  }, [contentItems, normalizedFilterText]);
+  }, [deckItems, normalizedFilterText]);
 
   useEffect(() => {
-    const contentIds = new Set(contentItems.map((item) => item.id));
+    const contentIds = new Set(deckItems.map((item) => item.id));
     setSelectedIds((current) => {
       const next = new Set(Array.from(current).filter((id) => contentIds.has(id)));
       if (next.size === current.size) return current;
       return next;
     });
-  }, [contentItems]);
+  }, [deckItems]);
 
   const blockedImportReasons = useMemo(() => {
     if (!inspection) return [];
@@ -114,9 +114,9 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
   }
 
   function buildSuggestedBundleName(): string {
-    const selectedItems = contentItems.filter((item) => selectedIds.has(item.id));
+    const selectedItems = deckItems.filter((item) => selectedIds.has(item.id));
     if (selectedItems.length === 1) return selectedItems[0].title;
-    return selectedItems.length > 1 ? `cast-content-${selectedItems.length}-items` : 'cast-content';
+    return selectedItems.length > 1 ? `cast-deck-${selectedItems.length}-items` : 'cast-deck';
   }
 
   async function handleExportSelected() {
@@ -124,9 +124,9 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
     setExportInFlight(true);
     updateMessage(null);
     try {
-      const filePath = await window.castApi.chooseContentBundleExportPath(buildSuggestedBundleName());
+      const filePath = await window.castApi.chooseDeckBundleExportPath(buildSuggestedBundleName());
       if (!filePath) return;
-      const result = await window.castApi.exportContentBundle(Array.from(selectedIds), filePath);
+      const result = await window.castApi.exportDeckBundle(Array.from(selectedIds), filePath);
       updateMessage(`Exported ${result.itemCount} item${result.itemCount === 1 ? '' : 's'}.`);
     } catch (error) {
       updateMessage((error as Error).message);
@@ -148,7 +148,7 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
     setImportInFlight(true);
     updateMessage(null);
     try {
-      const filePath = await window.castApi.chooseContentBundleImportPath();
+      const filePath = await window.castApi.chooseDeckBundleImportPath();
       if (!filePath) return;
       await inspectBundle(filePath);
     } catch (error) {
@@ -165,7 +165,7 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
     updateMessage(null);
   }
 
-  function handleSetBrokenReferenceAction(source: string, action: ContentBundleBrokenReferenceAction) {
+  function handleSetBrokenReferenceAction(source: string, action: DeckBundleBrokenReferenceAction) {
     setDecisionMap((current) => {
       const next = new Map(current);
       const existing = next.get(source);
@@ -187,7 +187,7 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
     });
   }
 
-  function buildFinalizeDecisions(): ContentBundleBrokenReferenceDecision[] {
+  function buildFinalizeDecisions(): DeckBundleBrokenReferenceDecision[] {
     if (!inspection) return [];
     return inspection.brokenReferences.map((reference) => {
       const decision = decisionMap.get(reference.source);
@@ -221,7 +221,7 @@ export function useImportExportSettings(): { state: ImportExportSettingsState; a
 
   return {
     state: {
-      contentItems: filteredItems,
+      deckItems: filteredItems,
       filterText,
       selectedIds,
       selectedCount: selectedIds.size,

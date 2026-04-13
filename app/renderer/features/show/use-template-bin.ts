@@ -11,7 +11,7 @@ import { filterByText } from '../../utils/filter-by-text';
 
 export function useTemplateBin(filterText: string) {
   const { templates } = useProjectContent();
-  const { currentPlaylistContentItem, currentContentItem } = useNavigation();
+  const { currentPlaylistDeckItem, currentDeckItem } = useNavigation();
   const { currentOverlay } = useOverlayEditor();
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const {
@@ -25,18 +25,18 @@ export function useTemplateBin(filterText: string) {
   const menu = useContextMenuState<Id>();
 
   const filteredTemplates = filterByText(templates, filterText, (t) => [t.name, t.kind]);
-  const activeContentItem = currentPlaylistContentItem ?? currentContentItem;
+  const activeDeckItem = currentPlaylistDeckItem ?? currentDeckItem;
 
   function resolvePreviewTarget(template: Template) {
     if (template.kind === 'overlays' && workbenchMode === 'overlay-editor' && currentOverlay) {
       return { type: 'overlay' as const, overlayId: currentOverlay.id };
     }
-    if (!activeContentItem) return null;
-    if (template.kind === 'lyrics' && activeContentItem.type === 'lyric') {
-      return { type: 'content-item' as const, itemId: activeContentItem.id };
+    if (!activeDeckItem) return null;
+    if (template.kind === 'lyrics' && activeDeckItem.type === 'lyric') {
+      return { type: 'deck-item' as const, itemId: activeDeckItem.id };
     }
-    if (template.kind === 'slides' && activeContentItem.type === 'deck') {
-      return { type: 'content-item' as const, itemId: activeContentItem.id };
+    if (template.kind === 'slides' && activeDeckItem.type === 'presentation') {
+      return { type: 'deck-item' as const, itemId: activeDeckItem.id };
     }
     return null;
   }

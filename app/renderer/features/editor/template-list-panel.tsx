@@ -29,7 +29,7 @@ export function TemplateListPanel() {
   }
 
   function handleDeleteTemplate(templateId: Id) {
-    if (!window.confirm('Delete this template? Content items using it will keep their current elements but lose the template association.')) return;
+    if (!window.confirm('Delete this template? Deck items using it will keep their current elements but lose the template association.')) return;
     deleteTemplate(templateId);
   }
 

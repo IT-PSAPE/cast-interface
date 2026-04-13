@@ -7,11 +7,11 @@ import { SlideCard } from './slide-card';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
 
 export function SlideGrid() {
-  const { currentContentItemId, currentOutputContentItemId, isDetachedContentBrowser } = useNavigation();
+  const { currentDeckItemId, currentOutputDeckItemId, isDetachedDeckBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
   const { gridItemSize } = useSlideBrowser();
-  const showLiveState = !isDetachedContentBrowser && currentContentItemId === currentOutputContentItemId;
+  const showLiveState = !isDetachedDeckBrowser && currentDeckItemId === currentOutputDeckItemId;
 
   return (
     <section className="h-full min-h-0 overflow-y-auto p-2">

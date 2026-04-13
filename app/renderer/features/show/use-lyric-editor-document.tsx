@@ -13,19 +13,19 @@ function findTextElement(elements: SlideElement[]): SlideElement | null {
 }
 
 export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { currentContentItem } = useNavigation();
+  const { currentDeckItem } = useNavigation();
   const { slides } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
   const { mutate, runOperation, setStatusText } = useCast();
   const [isSaving, setIsSaving] = useState(false);
 
   const initialBlocks = useMemo<Block[]>(() => {
-    if (!isOpen || !currentContentItem || currentContentItem.type !== 'lyric') return [];
+    if (!isOpen || !currentDeckItem || currentDeckItem.type !== 'lyric') return [];
     return slides.map((slide) => ({
       id: slide.id,
       content: slideTextDetails(slideElementsBySlideId.get(slide.id) ?? []).text,
     }));
-  }, [isOpen, currentContentItem, slideElementsBySlideId, slides]);
+  }, [isOpen, currentDeckItem, slideElementsBySlideId, slides]);
 
   const slideIds = useMemo(() => new Set(slides.map((s) => s.id)), [slides]);
 
@@ -59,7 +59,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
   }, [mutate, saveRowText]);
 
   const saveBlocks = useCallback(async (blocks: Block[]) => {
-    if (!currentContentItem || currentContentItem.type !== 'lyric') return;
+    if (!currentDeckItem || currentDeckItem.type !== 'lyric') return;
 
     setIsSaving(true);
 
@@ -80,7 +80,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
             await saveRowText(block.id, block.content, slideElementsBySlideId.get(block.id) ?? []);
             orderedSlideIds.push(block.id);
           } else {
-            const createdSlideId = await createSlideForRow(currentContentItem.id, block.content);
+            const createdSlideId = await createSlideForRow(currentDeckItem.id, block.content);
             orderedSlideIds.push(createdSlideId);
           }
         }
@@ -98,7 +98,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
     } finally {
       setIsSaving(false);
     }
-  }, [createSlideForRow, currentContentItem, mutate, onClose, runOperation, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
+  }, [createSlideForRow, currentDeckItem, mutate, onClose, runOperation, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
 
   return { initialBlocks, saveBlocks, isSaving };
 }
