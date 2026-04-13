@@ -3,9 +3,9 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "lumora",
+      "name": "recast",
       "dependencies": {
-        "@lumora/ndi-native": "file:packages/ndi-native",
+        "@recast/ndi-native": "file:packages/ndi-native",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
@@ -90,7 +90,7 @@
 
     "@bramus/specificity": ["@bramus/specificity@2.4.2", "", { "dependencies": { "css-tree": "^3.0.0" }, "bin": { "specificity": "bin/cli.js" } }, "sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw=="],
 
-    "@lumora/ndi-native": ["@lumora/ndi-native@file:packages/ndi-native", { "dependencies": { "node-addon-api": "^8.3.1" }, "devDependencies": { "node-gyp": "^12.1.0" } }],
+    "@recast/ndi-native": ["@recast/ndi-native@file:packages/ndi-native", { "dependencies": { "node-addon-api": "^8.3.1" }, "devDependencies": { "node-gyp": "^12.1.0" } }],
 
     "@csstools/color-helpers": ["@csstools/color-helpers@6.0.2", "", {}, "sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q=="],
 

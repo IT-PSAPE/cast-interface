@@ -15,11 +15,11 @@ interface SlideBrowserContextValue {
 }
 
 const SlideBrowserContext = createContext<SlideBrowserContextValue | null>(null);
-const STORAGE_KEY = 'lumora.slide-browser-preferences.v1';
+const STORAGE_KEY = 'recast.slide-browser-preferences.v1';
 
 export function SlideBrowserProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState(getStoredSlideBrowserPreferences);
-  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('lumora.grid-size.slide-browser', 6, 4, 8);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.slide-browser', 6, 4, 8);
   const setSlideBrowserMode = (mode: SlideBrowserMode) => {
     const next = { ...preferences, slideBrowserMode: mode };
     setPreferences(next);

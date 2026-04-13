@@ -80,7 +80,7 @@ export function createApplicationMenu() {
       submenu: [
         {
           id: 'learn-more',
-          label: 'Lumora Website',
+          label: 'Recast Website',
           click: () => {
             void shell.openExternal('https://openai.com');
           },

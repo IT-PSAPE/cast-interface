@@ -1,8 +1,8 @@
 {
-  "name": "@lumora/ndi-native",
+  "name": "@recast/ndi-native",
   "version": "0.1.0",
   "private": true,
-  "description": "Native NDI sender bridge for Lumora",
+  "description": "Native NDI sender bridge for Recast",
   "main": "index.js",
   "types": "index.d.ts",
   "gypfile": false,

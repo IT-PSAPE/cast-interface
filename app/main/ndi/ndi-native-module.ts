@@ -19,5 +19,5 @@ export interface NdiNativeModule {
 
 export function defaultNdiModuleLoader(): NdiNativeModule {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('@lumora/ndi-native') as NdiNativeModule;
+  return require('@recast/ndi-native') as NdiNativeModule;
 }

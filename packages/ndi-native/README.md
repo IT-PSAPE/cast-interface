@@ -1,4 +1,4 @@
-# @lumora/ndi-native
+# @recast/ndi-native
 
 Native Node-API bridge for sending renderer paint frames over NDI.
 

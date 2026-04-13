@@ -10,7 +10,7 @@ type PreviewPanelTab = 'overlays' | 'audio';
 
 export function ShowPlaybackPanel() {
   const [activeTab, setActiveTab] = useState<PreviewPanelTab>('overlays');
-  const { gridSize, setGridSize, min, max } = useGridSize('lumora.grid-size.overlay-bin', 140, 100, 280);
+  const { gridSize, setGridSize, min, max } = useGridSize('recast.grid-size.overlay-bin', 140, 100, 280);
 
   function handleTabChange(value: string) {
     setActiveTab(value as PreviewPanelTab);

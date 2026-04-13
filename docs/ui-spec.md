@@ -1,4 +1,4 @@
-# Lumora UI Specification
+# Recast UI Specification
 
 Updated on 2026-03-08.
 
@@ -124,7 +124,7 @@ Global shortcuts, disabled while typing in editable fields:
 
 ## 6. Visual Reference
 
-Detailed component-level captures live in [ui-code-design-spec.md](/Users/Craig/Developer/Projects/Lumora/docs/ui-code-design-spec.md) and [ui-spec-assets/manifest.md](/Users/Craig/Developer/Projects/Lumora/docs/ui-spec-assets/manifest.md).
+Detailed component-level captures live in [ui-code-design-spec.md](/Users/Craig/Developer/Projects/recast/docs/ui-code-design-spec.md) and [ui-spec-assets/manifest.md](/Users/Craig/Developer/Projects/recast/docs/ui-spec-assets/manifest.md).
 
 Current workbench layout references:
 

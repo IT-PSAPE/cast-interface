@@ -1,4 +1,4 @@
-# Lumora Prototype
+# Recast Prototype
 
 Minimal cross-platform Electron prototype for a ProPresenter-style presentation workflow focused on:
 
@@ -158,7 +158,7 @@ npm run build
 
 The app includes a concrete native Node-API bridge package:
 
-- `packages/ndi-native` (`@lumora/ndi-native`)
+- `packages/ndi-native` (`@recast/ndi-native`)
 
 The Electron main process integration lives in `app/main/ndi/ndi-service.ts`.
 Runtime behavior reference lives in `docs/ndi-runtime-reference.md`.
@@ -175,7 +175,7 @@ Native module API:
 
 The sender is initialized with:
 
-- sender name: `Lumora - Audience`
+- sender name: `Recast - Audience`
 - resolution: `1920x1080`
 - alpha enabled: `false`
 
@@ -229,6 +229,6 @@ Default macOS candidate paths also include common NDI Tools bundle locations:
 ## Notes
 
 - `node:sqlite` still reports an experimental/release-candidate warning on current Node 22/23/24/25 lines. That warning is expected.
-- Persistence database is stored in Electron user data path as `lumora.sqlite`.
+- Persistence database is stored in Electron user data path as `recast.sqlite`.
 - The repository seeds an initial library/presentation/playlist/overlay for first launch.
 - Prototype intentionally excludes cloud/network automation features.

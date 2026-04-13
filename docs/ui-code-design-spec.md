@@ -1,4 +1,4 @@
-# Lumora UI Code Design Spec
+# Recast UI Code Design Spec
 
 Updated on 2026-03-08.
 Scope: `app/renderer` runtime structure, terminology, and screenshot coverage after the workbench, library-browser, slide-browser, and stage refactor.
@@ -373,5 +373,5 @@ States covered:
 
 ## 11. Reference
 
-- Canonical naming and rename history: [renderer-taxonomy.md](/Users/Craig/Developer/Projects/Lumora/docs/renderer-taxonomy.md)
-- Screenshot inventory: [ui-spec-assets/manifest.md](/Users/Craig/Developer/Projects/Lumora/docs/ui-spec-assets/manifest.md)
+- Canonical naming and rename history: [renderer-taxonomy.md](/Users/Craig/Developer/Projects/recast/docs/renderer-taxonomy.md)
+- Screenshot inventory: [ui-spec-assets/manifest.md](/Users/Craig/Developer/Projects/recast/docs/ui-spec-assets/manifest.md)

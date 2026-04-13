@@ -12,7 +12,7 @@ type WorkbenchContextValue = {
 };
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
-const STORAGE_KEY = 'lumora.workbench-mode.v1';
+const STORAGE_KEY = 'recast.workbench-mode.v1';
 const VALID_MODES = new Set<WorkbenchMode>(['show', 'slide-editor', 'overlay-editor', 'template-editor']);
 
 function parseWorkbenchMode(raw: string): WorkbenchMode | null {

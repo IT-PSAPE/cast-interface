@@ -10,7 +10,7 @@ interface LibraryPanelContextValue {
 }
 
 const LibraryPanelContext = createContext<LibraryPanelContextValue | null>(null);
-const STORAGE_KEY = 'lumora.library-panel-view.v1';
+const STORAGE_KEY = 'recast.library-panel-view.v1';
 
 export function LibraryPanelProvider({ children }: { children: ReactNode }) {
   const [libraryPanelView, setLibraryPanelViewState] = useState<LibraryPanelView>(getStoredLibraryPanelView);

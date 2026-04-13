@@ -67,7 +67,7 @@ function Root({ children }: { children: ReactNode }) {
   const { createDeck, createLyric } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('lumora.grid-size.resource-drawer', 6, 4, 8);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
     createDeck,
