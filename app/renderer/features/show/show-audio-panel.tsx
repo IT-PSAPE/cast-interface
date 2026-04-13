@@ -1,20 +1,11 @@
 import { IconGroup } from '@renderer/components/icon-group';
-import { Panel } from '@renderer/components/panel';
-import { CirclePause, CirclePlay, Plus, Repeat, SkipBack, SkipForward } from 'lucide-react';
-import { Button } from '../../components/controls/button';
-import { FileTrigger } from '../../components/form/file-trigger';
-import { useElements } from '../../contexts/element/element-context';
+import { CirclePause, CirclePlay, Repeat, SkipBack, SkipForward } from 'lucide-react';
 import { useShowAudio } from './show-audio-context';
 import { formatAudioTime } from './format-audio-time';
 import { ShowAudioRow } from './show-audio-row';
 
 export function ShowAudioPanel() {
-  const { importMedia } = useElements();
   const { actions, state } = useShowAudio();
-
-  function handleImportSelect(files: FileList) {
-    void importMedia(files);
-  }
 
   const currentTrackLabel = state.currentAudioAsset?.name ?? 'No audio selected';
   const progressPercent = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
@@ -24,18 +15,13 @@ export function ShowAudioPanel() {
   }
 
   return (
-    <Panel.Root>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-col gap-2 border-b border-primary px-2 py-2">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-primary">{currentTrackLabel}</div>
             <div className="text-xs text-tertiary">Now playing</div>
           </div>
-          <FileTrigger.Root accept="audio/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
-            <Button.Icon label="Import audio" variant="ghost">
-              <Plus/>
-            </Button.Icon>
-          </FileTrigger.Root>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -88,7 +74,7 @@ export function ShowAudioPanel() {
         </div>
       </div>
 
-      <Panel.Body className="p-2">
+      <div className="min-h-0 flex-1 overflow-auto p-2">
         {state.audioAssets.length === 0 ? (
           <div className="grid h-full place-items-center rounded border border-primary bg-primary/40 px-4 text-center text-sm text-tertiary">
             Import audio to build a reusable app-wide audio list.
@@ -106,7 +92,7 @@ export function ShowAudioPanel() {
             ))}
           </div>
         )}
-      </Panel.Body>
-    </Panel.Root>
+      </div>
+    </section>
   );
 }

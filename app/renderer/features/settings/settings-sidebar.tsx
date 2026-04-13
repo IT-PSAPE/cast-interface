@@ -1,5 +1,5 @@
 import { SelectableRow } from '../../components/display/selectable-row';
-import { Panel } from '../../components/panel';
+import { Panel } from '../../components/layout/panel';
 
 export type SettingsTabId = 'appearance' | 'output' | 'overlays' | 'import-export';
 
@@ -19,9 +19,9 @@ export function SettingsSidebar({ activeTab, onSelectTab }: SettingsSidebarProps
   const tabRows = SETTINGS_TABS.map((tab) => renderTabRow(tab, activeTab, onSelectTab));
 
   return (
-    <Panel.Root as="aside" bordered="right" className="bg-primary/35 p-3">
+    <Panel as="aside" bordered="right" className="bg-primary/35 p-3">
       <div className="flex flex-col gap-1">{tabRows}</div>
-    </Panel.Root>
+    </Panel>
   );
 }
 

@@ -22,8 +22,17 @@ import { ContentBinPanel } from './presentation-bin-panel';
 import { ResourceDrawerModeControl } from './resource-drawer-mode-control';
 import { TemplateBinPanel } from './template-bin-panel';
 import { cn } from '@renderer/utils/cn';
+import { ShowAudioPanel } from './show-audio-panel';
 
-const ACCEPTED_TYPES = ['image/', 'video/'];
+const IMPORT_ACCEPT_BY_TAB = {
+  media: 'image/*,video/*',
+  audio: 'audio/*',
+} as const;
+
+const IMPORT_TYPE_PREFIXES_BY_TAB = {
+  media: ['image/', 'video/'],
+  audio: ['audio/'],
+} as const;
 
 interface ResourceDrawerContextValue {
   actions: {
@@ -45,6 +54,7 @@ interface ResourceDrawerContextValue {
     showCreateAction: boolean;
     showGridSizeControl: boolean;
     showImportAction: boolean;
+    showModeControl: boolean;
   };
   state: {
     drawerTab: DrawerTab;
@@ -58,8 +68,16 @@ interface ResourceDrawerContextValue {
 const ResourceDrawerContext = createContext<ResourceDrawerContextValue | null>(null);
 type ContentCreateAction = 'presentation' | 'lyric-edit' | 'lyric-empty';
 
-function hasMediaFiles(transfer: DataTransfer): boolean {
-  return Array.from(transfer.items).some((item) => item.kind === 'file' && ACCEPTED_TYPES.some((type) => item.type.startsWith(type)));
+function isImportTab(tab: DrawerTab): tab is keyof typeof IMPORT_ACCEPT_BY_TAB {
+  return tab === 'media' || tab === 'audio';
+}
+
+function hasImportableFiles(transfer: DataTransfer, tab: DrawerTab): boolean {
+  if (!isImportTab(tab)) return false;
+  return Array.from(transfer.items).some((item) => (
+    item.kind === 'file'
+    && IMPORT_TYPE_PREFIXES_BY_TAB[tab].some((type) => item.type.startsWith(type))
+  ));
 }
 
 function useDrawer() {
@@ -120,7 +138,7 @@ function Root({ children }: { children: ReactNode }) {
   }
 
   function handleDragOver(event: React.DragEvent<HTMLElement>) {
-    if (drawerTab !== 'media' || !hasMediaFiles(event.dataTransfer)) return;
+    if (!hasImportableFiles(event.dataTransfer, drawerTab)) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     setIsDragOver(true);
@@ -134,7 +152,7 @@ function Root({ children }: { children: ReactNode }) {
   function handleDrop(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     setIsDragOver(false);
-    if (drawerTab !== 'media' || event.dataTransfer.files.length === 0) return;
+    if (!isImportTab(drawerTab) || event.dataTransfer.files.length === 0) return;
     void importMedia(event.dataTransfer.files);
   }
 
@@ -220,8 +238,9 @@ function Root({ children }: { children: ReactNode }) {
       gridSizeMin,
       gridSizeStep,
       showCreateAction: drawerTab === 'deck' || drawerTab === 'templates',
-      showImportAction: drawerTab === 'media',
-      showGridSizeControl: drawerViewMode === 'grid',
+      showGridSizeControl: drawerViewMode === 'grid' && drawerTab !== 'audio',
+      showImportAction: drawerTab === 'media' || drawerTab === 'audio',
+      showModeControl: drawerTab !== 'audio',
     },
     state: {
       drawerTab,
@@ -288,23 +307,25 @@ function ResourceDrawerContent() {
         <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5" >
           <Tabs.Trigger value="deck" className="px-1 py-0.5 text-[11px]">Deck</Tabs.Trigger>
           <Tabs.Trigger value="media" className="px-1 py-0.5 text-[11px]">Media</Tabs.Trigger>
+          <Tabs.Trigger value="audio" className="px-1 py-0.5 text-[11px]">Audio</Tabs.Trigger>
           <Tabs.Trigger value="templates" className="px-1 py-0.5 text-[11px]">Templates</Tabs.Trigger>
         </Tabs.List>
 
         <div className={cn('flex shrink-0 items-center gap-0.5')}>
           {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
           {meta.showImportAction &&
-            <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
-              <Button.Icon label="Import media" variant="ghost"><Plus /></Button.Icon>
+            <FileTrigger.Root accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media} multiple onSelect={handleImportSelect} className="relative inline-flex">
+              <Button.Icon label={state.drawerTab === 'audio' ? 'Import audio' : 'Import media'} variant="ghost"><Plus /></Button.Icon>
             </FileTrigger.Root>
           }
           {meta.showCreateAction && <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </Button.Icon>}
-          <ResourceDrawerModeControl />
+          {meta.showModeControl ? <ResourceDrawerModeControl /> : null}
         </div>
       </div>
       <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
-        <Tabs.Panel value="media"><MediaBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
         <Tabs.Panel value="deck"><ContentBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="media"><MediaBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="audio"><ShowAudioPanel /></Tabs.Panel>
         <Tabs.Panel value="templates"><TemplateBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
       </Tabs.Panels>
     </Tabs.Root>

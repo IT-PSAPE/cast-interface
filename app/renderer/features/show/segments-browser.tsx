@@ -1,11 +1,12 @@
 import { FolderPlus } from 'lucide-react';
 import { Button } from '../../components/controls/button';
-import { SectionHeader } from '../../components/display/section-header';
-import { Panel } from '../../components/panel';
+import { Panel } from '../../components/layout/panel';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useLibraryBrowser } from './library-browser-context';
 import { useLibraryPanelState } from './library-panel-context';
 import { PlaylistSegmentGroup } from './playlist-segment-group';
+import { Label } from '@renderer/components/display/text';
+import { Accordion } from '@renderer/components/display/accordion';
 
 export function SegmentsBrowser() {
   const { createSegment } = useNavigation();
@@ -20,21 +21,19 @@ export function SegmentsBrowser() {
   }
 
   return (
-    <Panel.Root as="section">
-      <SectionHeader.Root>
-        <SectionHeader.Body>
-          <span className="text-sm font-semibold uppercase tracking-wider text-tertiary">Segments</span>
-        </SectionHeader.Body>
-        <SectionHeader.Trailing>
-          <Button.Icon label="New segment" onClick={handleNewSegment}>
-            <FolderPlus />
-          </Button.Icon>
-        </SectionHeader.Trailing>
-      </SectionHeader.Root>
+    <Panel as="section">
+      <Panel.Header>
+        <Label.xs className="text-tertiary mr-auto">Segments</Label.xs>
+        <Button.Icon label="New segment" onClick={handleNewSegment}>
+          <FolderPlus />
+        </Button.Icon>
+      </Panel.Header>
 
-      <Panel.Body className="px-1.5 py-1.5 space-y-1">
-        {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
+      <Panel.Body>
+        <Accordion type='multiple'>
+          {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
+        </Accordion>
       </Panel.Body>
-    </Panel.Root>
+    </Panel>
   );
 }

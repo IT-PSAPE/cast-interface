@@ -19,7 +19,7 @@ function resolveInitialViewMode(): ResourceDrawerViewMode {
 }
 
 export function ResourceDrawerProvider({ children }: { children: ReactNode }) {
-  const [drawerTab, setDrawerTab] = useState<DrawerTab>('media');
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>('deck');
   const [drawerViewMode, setDrawerViewModeState] = useState<ResourceDrawerViewMode>(resolveInitialViewMode);
 
   function setDrawerViewMode(mode: ResourceDrawerViewMode) {

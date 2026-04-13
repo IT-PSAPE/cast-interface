@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Button } from '../../components/controls/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { DialogFrame } from '../../components/overlays/dialog-frame';
-import { Panel } from '../../components/panel';
+import { Panel } from '../../components/layout/panel';
 
 interface CreateLyricDialogProps {
   isBusy: boolean;
@@ -56,7 +56,7 @@ interface CreateLyricPanelProps {
 
 function CreateLyricPanel({ actions, description, entity, title }: CreateLyricPanelProps) {
   return (
-    <Panel.Root as="section" className="justify-between rounded-lg border border-primary bg-tertiary/20 p-6">
+    <Panel as="section" className="justify-between rounded-lg border border-primary bg-tertiary/20 p-6">
       <div className="flex flex-col gap-5">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary bg-primary text-secondary">
           <DeckItemIcon entity={entity} size={22} strokeWidth={1.75} />
@@ -69,6 +69,6 @@ function CreateLyricPanel({ actions, description, entity, title }: CreateLyricPa
       <div className="pt-6">
         {actions}
       </div>
-    </Panel.Root>
+    </Panel>
   );
 }

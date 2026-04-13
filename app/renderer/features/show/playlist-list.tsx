@@ -1,9 +1,8 @@
 import { Button } from '../../components/controls/button';
 import { EllipsisVertical, List, Plus } from 'lucide-react';
 import { EditableField } from '../../components/form/editable-field';
-import { Panel } from '../../components/panel';
+import { Panel } from '../../components/layout/panel';
 
-import { SectionHeader } from '../../components/display/section-header';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useLibraryBrowser } from './library-browser-context';
 
@@ -16,17 +15,13 @@ export function PlaylistList() {
   if (!currentLibraryBundle) return null;
 
   return (
-    <Panel.Root as="section" className="border-b border-primary">
-      <SectionHeader.Root bordered={false}>
-        <SectionHeader.Body>
-          <span className="text-sm font-semibold text-tertiary uppercase tracking-wider">Playlist</span>
-        </SectionHeader.Body>
-        <SectionHeader.Trailing>
-          <Button.Icon label="New playlist" onClick={handleCreate}>
-            <Plus/>
-          </Button.Icon>
-        </SectionHeader.Trailing>
-      </SectionHeader.Root>
+    <Panel as="section" className="border-b border-primary">
+      <Panel.Header>
+        <span className="text-sm font-semibold text-tertiary uppercase tracking-wider mr-auto">Playlist</span>
+        <Button.Icon label="New playlist" onClick={handleCreate}>
+          <Plus/>
+        </Button.Icon>
+      </Panel.Header>
 
       <Panel.Body className="px-1.5 py-1.5 space-y-1" role="list" aria-label="Playlists">
         {currentLibraryBundle.playlists.map((tree) => {
@@ -72,6 +67,6 @@ export function PlaylistList() {
           );
         })}
       </Panel.Body>
-    </Panel.Root>
+    </Panel>
   );
 }

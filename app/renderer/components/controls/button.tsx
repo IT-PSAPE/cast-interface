@@ -93,7 +93,7 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   active?: boolean;
   children: ReactNode;
   className?: string;
-  label: string;
+  label?: string;
   variant?: ButtonVariant;
 }
 

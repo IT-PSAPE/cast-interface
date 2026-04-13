@@ -105,7 +105,7 @@ export function EditableField({
           ref={inputRef as React.RefObject<HTMLTextAreaElement>}
           {...sharedProps}
           rows={Math.max(3, draft.split('\n').length || 1)}
-          className={`m-0 w-full resize-y border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
+          className={`m-0 w-full resize-y border-none bg-transparent p-0 font-inherit outline-none ${className}`}
         />
       );
     }
@@ -114,7 +114,7 @@ export function EditableField({
       <input
         ref={inputRef as React.RefObject<HTMLInputElement>}
         {...sharedProps}
-        className={`all-unset m-0 border-none bg-transparent p-0 text-inherit font-inherit outline-none ${className}`}
+        className={`all-unset m-0 border-none bg-transparent p-0 font-inherit outline-none ${className}`}
       />
     );
   }
@@ -128,8 +128,8 @@ export function EditableField({
   }
 
   return (
-    <Label.sm onDoubleClick={handleDoubleClick} className={`cursor-default select-none truncate ${className}`}>
+    <Label.xs onDoubleClick={handleDoubleClick} className={`cursor-default select-none truncate ${className}`}>
       {value || placeholder}
-    </Label.sm>
+    </Label.xs>
   );
 }

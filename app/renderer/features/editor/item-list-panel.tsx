@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
-import { Button } from '../../components/controls/button';
-import { Panel } from '../../components/panel';
-import { PanelRoute } from '../workbench/panel-route';
+import { Button } from '@renderer/components/controls/button';
+import { Panel } from '@renderer/components/layout/panel';
+import { PanelRoute } from '@renderer/features/workbench/panel-route';
 import { ObjectListPanel } from './object-list-panel';
 
 interface ItemListPanelProps {
@@ -19,14 +19,14 @@ interface ItemListPanelProps {
 
 export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onAdd, addLabel, children, contextMenu, listAriaLabel }: ItemListPanelProps) {
   return (
-    <Panel.Root as="aside" bordered="right">
+    <Panel as="aside" bordered="right">
       <PanelRoute.Split splitId={splitId} orientation="vertical" className="h-full">
         <PanelRoute.Panel id={listPanelId} defaultSize={440} minSize={180}>
           <Panel.Section
             title={typeof title === 'string' ? <span className="truncate text-sm font-medium text-primary">{title}</span> : title}
             action={(
               <Button.Icon label={addLabel} onClick={onAdd}>
-                <Plus/>
+                <Plus />
               </Button.Icon>
             )}
             headerClassName="border-b border-primary"
@@ -48,6 +48,6 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
         </PanelRoute.Panel>
       </PanelRoute.Split>
       {contextMenu}
-    </Panel.Root>
+    </Panel>
   );
 }
