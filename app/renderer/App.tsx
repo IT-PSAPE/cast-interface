@@ -147,7 +147,7 @@ function AppLayoutContent() {
   if (!snapshot) {
     return (
       <div className="flex items-center justify-center h-full text-secondary">
-        Loading Recast…
+        Loading Recast App
       </div>
     );
   }
