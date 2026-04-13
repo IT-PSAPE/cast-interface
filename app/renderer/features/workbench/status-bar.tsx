@@ -1,4 +1,5 @@
 import { cv } from '@renderer/utils/cv';
+import { LoaderCircle } from 'lucide-react';
 import { useCast } from '../../contexts/cast-context';
 import { useNdi } from '../../contexts/ndi-context';
 
@@ -13,16 +14,20 @@ const indicatorStyles = cv({
 });
 
 export function StatusBar() {
-  const { statusText } = useCast();
+  const { isRunningOperation, operationText, statusText } = useCast();
   const { state: { diagnostics, outputState } } = useNdi();
   const audienceStateLabel = diagnostics?.sourceStatus === 'live' ? 'Audience live' : 'Audience idle';
+  const displayText = isRunningOperation ? operationText ?? 'Processing...' : statusText;
 
   return (
     <div
       data-ui-region="status-bar"
       className="border-t border-primary bg-primary/60 px-2 py-1 flex items-center gap-3 text-sm"
     >
-      <span className="text-secondary">{statusText}</span>
+      <span className="flex items-center gap-2 text-secondary">
+        {isRunningOperation ? <LoaderCircle size={14} className="animate-spin text-tertiary" /> : null}
+        {displayText}
+      </span>
 
       <div className="ml-auto flex items-center gap-2 text-tertiary">
         <span className="flex items-center gap-1">

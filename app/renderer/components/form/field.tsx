@@ -1,8 +1,8 @@
 import type { CSSProperties, KeyboardEventHandler, ReactNode, Ref } from 'react';
 import { useRef } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
-import { CustomSelect } from './custom-select';
+import { Dropdown } from './dropdown';
 import { Checkbox } from './checkbox';
 
 type ColorMode = 'solid' | 'gradient' | 'image';
@@ -58,10 +58,20 @@ function FieldInput({ disabled = false, type = 'text', value, onChange, onBlur, 
 }
 
 function FieldSelect({ value, onChange, onBlur, options, icon, label, wide }: { value: string; onChange: (value: string) => void; onBlur?: () => void; options: Array<{ value: string; label: string; style?: CSSProperties }>; icon?: ReactNode; label?: string; wide?: boolean }) {
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? '';
+
   const select = (
     <div className="flex min-w-0 items-center">
       {icon ? <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">{icon}</span> : null}
-      <CustomSelect value={value} onChange={onChange} onBlur={onBlur} options={options} />
+      <Dropdown>
+        <Dropdown.Trigger className="flex min-w-0 w-full items-center min-h-8 rounded-md bg-tertiary text-sm text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer">
+          <span className="truncate flex-1 px-1.5 text-left">{selectedLabel}</span>
+          <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-tertiary" />
+        </Dropdown.Trigger>
+        <Dropdown.Panel>
+          {options.map((opt) => <Dropdown.Item key={opt.value} onClick={() => { onChange(opt.value); onBlur?.(); }}>{opt.label}</Dropdown.Item>)}
+        </Dropdown.Panel>
+      </Dropdown>
     </div>
   );
 
@@ -121,7 +131,17 @@ function FieldColor({ value, onChange, label, wide, mode = 'solid', onModeChange
       <input ref={pickerRef} type="color" value={toPickerHex(safeValue)} onChange={handlePickerChange} className="sr-only" tabIndex={-1} />
       <span className="text-tertiary text-sm select-none">#</span>
       <input type="text" value={displayHex(safeValue)} onChange={handleHexInput} maxLength={8} className="min-w-0 w-full bg-transparent py-1 pr-2 outline-none font-mono text-sm" />
-      {onModeChange ? <CustomSelect value={mode} onChange={handleModeChange} options={FILL_MODE_OPTIONS} className="shrink-0" /> : null}
+      {onModeChange ? (
+        <Dropdown className="shrink-0">
+          <Dropdown.Trigger className="flex items-center py-1 rounded-sm bg-tertiary text-sm text-primary cursor-pointer">
+            <span className="truncate px-1.5">{FILL_MODE_OPTIONS.find((o) => o.value === mode)?.label}</span>
+            <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-tertiary" />
+          </Dropdown.Trigger>
+          <Dropdown.Panel>
+            {FILL_MODE_OPTIONS.map((opt) => <Dropdown.Item key={opt.value} onClick={() => handleModeChange(opt.value)}>{opt.label}</Dropdown.Item>)}
+          </Dropdown.Panel>
+        </Dropdown>
+      ) : null}
     </div>
   );
 

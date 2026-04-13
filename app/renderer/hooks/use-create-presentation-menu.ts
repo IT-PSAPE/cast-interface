@@ -3,14 +3,15 @@ import { useCreateMenu } from './use-create-menu';
 
 interface UseCreatePresentationMenuOptions {
   createDeck: () => void | Promise<void>;
-  createLyric: () => void | Promise<void>;
+  createEmptyLyric: () => void | Promise<void>;
+  createLyricFromText?: () => void | Promise<void>;
   deckLabel?: string;
   lyricLabel?: string;
 }
 
-export function useCreateContentMenu({ createDeck, createLyric, deckLabel, lyricLabel }: UseCreatePresentationMenuOptions) {
+export function useCreateContentMenu({ createDeck, createEmptyLyric, createLyricFromText, deckLabel, lyricLabel }: UseCreatePresentationMenuOptions) {
   return useCreateMenu(
-    () => buildCreateContentMenuItems({ createDeck, createLyric, deckLabel, lyricLabel }),
-    [createDeck, createLyric, deckLabel, lyricLabel],
+    () => buildCreateContentMenuItems({ createDeck, createEmptyLyric, createLyricFromText, deckLabel, lyricLabel }),
+    [createDeck, createEmptyLyric, createLyricFromText, deckLabel, lyricLabel],
   );
 }

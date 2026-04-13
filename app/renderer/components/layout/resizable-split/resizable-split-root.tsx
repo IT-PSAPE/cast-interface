@@ -46,12 +46,13 @@ interface ResizableSplitRootProps {
   orientation: 'horizontal' | 'vertical';
   panes: ResizablePaneRenderConfig[];
   className?: string;
+  onContainerResize?: (size: number) => void;
   onResizeStart: (event: ResizableSplitResizeStartEvent) => void;
   onResize: (event: ResizableSplitResizeMoveEvent) => void;
   onResizeEnd: (event: ResizableSplitResizeEndEvent) => void;
 }
 
-export function ResizableSplitRoot({ orientation, panes, className = '', onResizeStart, onResize, onResizeEnd }: ResizableSplitRootProps) {
+export function ResizableSplitRoot({ orientation, panes, className = '', onContainerResize, onResizeStart, onResize, onResizeEnd }: ResizableSplitRootProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const activeHandleIndexRef = useRef<number | null>(null);
@@ -101,6 +102,9 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onResiz
 
   useLayoutEffect(() => {
     recalculateHandles();
+    const container = containerRef.current;
+    if (!container) return;
+    onContainerResize?.(orientation === 'horizontal' ? container.clientWidth : container.clientHeight);
   }, [recalculateHandles]);
 
   useEffect(() => {
@@ -110,13 +114,14 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onResiz
 
     const observer = new ResizeObserver(() => {
       recalculateHandles();
+      onContainerResize?.(orientation === 'horizontal' ? container.clientWidth : container.clientHeight);
     });
 
     observer.observe(container);
     return () => {
       observer.disconnect();
     };
-  }, [recalculateHandles]);
+  }, [onContainerResize, orientation, recalculateHandles]);
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     const handleIndex = readHandleIndex(event.currentTarget);

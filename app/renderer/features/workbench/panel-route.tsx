@@ -112,11 +112,16 @@ function Split({ splitId, orientation, className = '', children }: PanelRouteSpl
     context.state.endDrag({ splitId });
   }, [context.state, splitId]);
 
+  const handleContainerResize = useCallback((size: number) => {
+    context.state.syncToContainer({ definition, size });
+  }, [context.state, definition]);
+
   return (
     <ResizableSplitRoot
       orientation={orientation}
       className={className}
       panes={resizablePanes}
+      onContainerResize={handleContainerResize}
       onResizeStart={handleResizeStart}
       onResize={handleResize}
       onResizeEnd={handleResizeEnd}

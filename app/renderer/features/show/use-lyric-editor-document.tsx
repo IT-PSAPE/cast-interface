@@ -1,49 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { ElementCreateInput, Id, SlideElement } from '@core/types';
+import type { Id, SlideElement } from '@core/types';
 import type { Block } from '../../components/form/doc-editor';
 import { useCast } from '../../contexts/cast-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useSlides } from '../../contexts/slide-context';
 import { slideTextDetails } from '../../utils/slides';
+import { buildLyricTextElement } from './lyric-text-utils';
 
 function findTextElement(elements: SlideElement[]): SlideElement | null {
   return elements.find((element) => element.type === 'text' && 'text' in element.payload) ?? null;
-}
-
-function createFallbackLyricTextElement(slideId: Id, text: string): ElementCreateInput {
-  return {
-    slideId,
-    type: 'text',
-    x: 180,
-    y: 860,
-    width: 1560,
-    height: 170,
-    payload: {
-      text,
-      fontFamily: 'Avenir Next',
-      fontSize: 72,
-      color: '#FFFFFF',
-      alignment: 'center',
-      verticalAlign: 'middle',
-      lineHeight: 1.2,
-      caseTransform: 'none',
-      weight: '700',
-      visible: true,
-      locked: false,
-      fillEnabled: false,
-      fillColor: '#00000000',
-      strokeEnabled: false,
-      shadowEnabled: false,
-    },
-  };
 }
 
 export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { currentContentItem } = useNavigation();
   const { slides } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
-  const { mutate, setStatusText } = useCast();
+  const { mutate, runOperation, setStatusText } = useCast();
   const [isSaving, setIsSaving] = useState(false);
 
   const initialBlocks = useMemo<Block[]>(() => {
@@ -68,7 +41,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
       }
       return;
     }
-    await mutate(() => window.castApi.createElement(createFallbackLyricTextElement(slideId, text)));
+    await mutate(() => window.castApi.createElement(buildLyricTextElement(slideId, text)));
   }, [mutate]);
 
   const createSlideForRow = useCallback(async (lyricId: Id, text: string) => {
@@ -91,39 +64,41 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
     setIsSaving(true);
 
     try {
-      const removedSlideIds = slides
-        .filter((slide) => !blocks.some((block) => block.id === slide.id))
-        .map((slide) => slide.id);
+      await runOperation('Saving lyrics...', async () => {
+        const removedSlideIds = slides
+          .filter((slide) => !blocks.some((block) => block.id === slide.id))
+          .map((slide) => slide.id);
 
-      for (const slideId of removedSlideIds) {
-        await mutate(() => window.castApi.deleteSlide(slideId));
-      }
-
-      const orderedSlideIds: Id[] = [];
-
-      for (const block of blocks) {
-        if (slideIds.has(block.id)) {
-          await saveRowText(block.id, block.content, slideElementsBySlideId.get(block.id) ?? []);
-          orderedSlideIds.push(block.id);
-        } else {
-          const createdSlideId = await createSlideForRow(currentContentItem.id, block.content);
-          orderedSlideIds.push(createdSlideId);
+        for (const slideId of removedSlideIds) {
+          await mutate(() => window.castApi.deleteSlide(slideId));
         }
-      }
 
-      for (const [index, slideId] of orderedSlideIds.entries()) {
-        await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder: index }));
-      }
+        const orderedSlideIds: Id[] = [];
 
-      setStatusText('Saved lyrics');
-      onClose();
+        for (const block of blocks) {
+          if (slideIds.has(block.id)) {
+            await saveRowText(block.id, block.content, slideElementsBySlideId.get(block.id) ?? []);
+            orderedSlideIds.push(block.id);
+          } else {
+            const createdSlideId = await createSlideForRow(currentContentItem.id, block.content);
+            orderedSlideIds.push(createdSlideId);
+          }
+        }
+
+        for (const [index, slideId] of orderedSlideIds.entries()) {
+          await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder: index }));
+        }
+
+        setStatusText('Saved lyrics');
+        onClose();
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save lyrics.';
       setStatusText(message);
     } finally {
       setIsSaving(false);
     }
-  }, [createSlideForRow, currentContentItem, mutate, onClose, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
+  }, [createSlideForRow, currentContentItem, mutate, onClose, runOperation, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
 
   return { initialBlocks, saveBlocks, isSaving };
 }

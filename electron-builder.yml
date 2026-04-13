@@ -1,0 +1,50 @@
+appId: com.recast.app
+productName: Recast
+copyright: Copyright © 2026 Recast
+
+directories:
+  buildResources: resources
+  output: dist
+
+files:
+  - out/**/*
+  - resources/**/*
+  - "!node_modules/@recast/ndi-native/{src,binding.gyp}"
+
+extraResources:
+  - from: resources/
+    to: .
+    filter:
+      - "**/*"
+
+mac:
+  category: public.app-category.productivity
+  icon: resources/icon.icns
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  artifactName: "${productName}-${version}-mac.${ext}"
+
+win:
+  icon: resources/icon.ico
+  target:
+    - nsis
+  artifactName: "${productName}-${version}-win.${ext}"
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  deleteAppDataOnUninstall: false
+
+linux:
+  icon: resources/icon.png
+  category: Utility
+  target:
+    - AppImage
+    - deb
+  artifactName: "${productName}-${version}-linux.${ext}"

@@ -3,7 +3,8 @@ import type { Hsb, Rgb, Hsl } from '../../../utils/color';
 import {
   hexToHsb, hsbToRgb, rgbToHex, rgbToHsb, rgbToHsl, hslToRgb,
 } from '../../../utils/color';
-import { CustomSelect } from '../custom-select';
+import { ChevronDown } from 'lucide-react';
+import { Dropdown } from '../dropdown';
 
 type ColorMode = 'hex' | 'rgb' | 'hsb' | 'hsl';
 
@@ -69,7 +70,15 @@ export function ColorModeInputs({ hsb, alpha, mode, showAlpha, onHsbChange, onAl
 
   return (
     <div className="flex items-stretch gap-px">
-      <CustomSelect value={mode} onChange={handleModeSelect} options={COLOR_MODE_OPTIONS} className="shrink-0" />
+      <Dropdown className="shrink-0">
+        <Dropdown.Trigger className="flex items-center py-1 rounded-sm bg-tertiary text-sm text-primary cursor-pointer">
+          <span className="truncate px-1.5">{COLOR_MODE_OPTIONS.find((o) => o.value === mode)?.label}</span>
+          <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-tertiary" />
+        </Dropdown.Trigger>
+        <Dropdown.Panel>
+          {COLOR_MODE_OPTIONS.map((opt) => <Dropdown.Item key={opt.value} onClick={() => handleModeSelect(opt.value)}>{opt.label}</Dropdown.Item>)}
+        </Dropdown.Panel>
+      </Dropdown>
 
       {mode === 'hex' ? <MiniHexInput value={rgbToHex(rgb)} onCommit={handleHexCommit} /> : null}
       {mode === 'rgb' ? (

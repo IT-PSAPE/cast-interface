@@ -125,7 +125,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
             if (!createdItemId) return;
             selectPlaylistContentItem(createdItemId);
           },
-          createLyric: async () => {
+          createEmptyLyric: async () => {
             const createdItemId = await createLyricInSegment(currentLibraryId, target.id);
             if (!createdItemId) return;
             selectPlaylistContentItem(createdItemId);

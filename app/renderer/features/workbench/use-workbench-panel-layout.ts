@@ -15,6 +15,7 @@ import {
   resizeSplitFromDelta,
   setPaneVisibility,
 } from './split-resize';
+import { fitSplitLayoutToContainer } from './split-normalize';
 
 const STORAGE_KEY = 'recast.workbench-layout.v1';
 const STORAGE_VERSION = 3;
@@ -40,6 +41,11 @@ interface ResizeEndInput {
   splitId: SplitId;
 }
 
+interface ContainerResizeInput {
+  definition: SplitDefinition;
+  size: number;
+}
+
 interface UseWorkbenchPanelLayoutResult {
   liveLayouts: WorkbenchPanelLayouts;
   committedLayouts: WorkbenchPanelLayouts;
@@ -48,6 +54,7 @@ interface UseWorkbenchPanelLayoutResult {
   startDrag: (input: ResizeStartInput) => void;
   updateDrag: (input: ResizeMoveInput) => void;
   endDrag: (input: ResizeEndInput) => void;
+  syncToContainer: (input: ContainerResizeInput) => void;
   togglePanel: (splitId: SplitId, paneId: PaneId) => void;
   isPanelVisible: (splitId: SplitId, paneId: PaneId) => boolean;
 }
@@ -151,6 +158,16 @@ export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
     replaceBothLayouts(committedNext, true);
   }, [replaceBothLayouts]);
 
+  const syncToContainer = useCallback((input: ContainerResizeInput) => {
+    registerSplit(input.definition);
+
+    const currentSplit = resolveSplitLayout(committedLayoutsRef.current, input.definition);
+    const fittedSplit = fitSplitLayoutToContainer(input.definition, currentSplit, input.size);
+    if (areSplitLayoutsEqual(currentSplit, fittedSplit, input.definition)) return;
+
+    replaceBothLayouts(setSplitLayout(committedLayoutsRef.current, input.definition.id, fittedSplit), true);
+  }, [registerSplit, replaceBothLayouts]);
+
   const togglePanel = useCallback((splitId: SplitId, paneId: PaneId) => {
     dragSessionRef.current = null;
 
@@ -179,6 +196,7 @@ export function useWorkbenchPanelLayout(): UseWorkbenchPanelLayoutResult {
     startDrag,
     updateDrag,
     endDrag,
+    syncToContainer,
     togglePanel,
     isPanelVisible,
   };
@@ -237,7 +255,18 @@ function isSplitLayoutState(value: unknown): value is SplitLayoutState {
   });
 }
 
+function areSplitLayoutsEqual(left: SplitLayoutState, right: SplitLayoutState, definition: SplitDefinition): boolean {
+  return definition.paneOrder.every((paneId) => {
+    const leftPane = left.panes[paneId];
+    const rightPane = right.panes[paneId];
+    return leftPane.size === rightPane.size
+      && leftPane.visible === rightPane.visible
+      && leftPane.lastVisibleSize === rightPane.lastVisibleSize;
+  });
+}
+
 export type {
+  ContainerResizeInput,
   ResizeStartInput,
   ResizeMoveInput,
   ResizeEndInput,

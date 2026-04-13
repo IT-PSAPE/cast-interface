@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, nativeImage, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CastRepository } from '@database/store';
@@ -25,6 +25,8 @@ if (cliOptions.userDataDir) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+const WORKBENCH_MIN_WIDTH = 140 + 360 + 140;
+const WORKBENCH_MIN_HEIGHT = Math.max(360 + 96, 240 + 120) + 96;
 const repository = new CastRepository();
 const ndiConfigStore = new NdiConfigStore();
 const ndiService = new NdiService({
@@ -66,12 +68,26 @@ if (process.platform !== 'win32') {
   }
 }
 
+function getAppIcon(): string {
+  const resourcesPath = app.isPackaged
+    ? path.join(process.resourcesPath)
+    : path.join(__dirname, '../../resources');
+
+  if (process.platform === 'win32') {
+    return path.join(resourcesPath, 'icon.ico');
+  }
+  return path.join(resourcesPath, 'icon.png');
+}
+
 function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
   return {
     width,
     height,
+    minWidth: WORKBENCH_MIN_WIDTH,
+    minHeight: WORKBENCH_MIN_HEIGHT,
     show: false,
     backgroundColor: '#121212',
+    icon: getAppIcon(),
     ...(process.platform === 'win32'
       ? {
         titleBarStyle: 'hidden' as const,
@@ -136,6 +152,21 @@ app.whenReady().then(() => {
   protocol.handle('cast-media', (request) => {
     const filePath = decodeURIComponent(request.url.slice('cast-media://'.length));
     return net.fetch(pathToFileURL(filePath).toString());
+  });
+
+  const iconPngPath = path.join(
+    app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../resources'),
+    'icon.png',
+  );
+
+  if (process.platform === 'darwin') {
+    app.dock?.setIcon(nativeImage.createFromPath(iconPngPath));
+  }
+
+  app.setAboutPanelOptions({
+    applicationName: 'Recast',
+    applicationVersion: app.getVersion(),
+    ...(process.platform === 'linux' ? { iconPath: iconPngPath } : {}),
   });
 
   Menu.setApplicationMenu(createApplicationMenu());

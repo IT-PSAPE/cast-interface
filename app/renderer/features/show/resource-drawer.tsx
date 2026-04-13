@@ -14,8 +14,10 @@ import { useGridSize } from '../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { DrawerTab } from '../../types/ui';
+import { CreateLyricFromTextDialog } from './create-lyric-from-text-dialog';
 import { MediaBinPanel } from './media-bin-panel';
 import { ContentBinPanel } from './presentation-bin-panel';
+import { ResourceDrawerModeControl } from './resource-drawer-mode-control';
 import { TemplateBinPanel } from './template-bin-panel';
 
 const ACCEPTED_TYPES = ['image/', 'video/'];
@@ -38,6 +40,7 @@ interface ResourceDrawerContextValue {
     gridSizeMin: number;
     gridSizeStep: number;
     showCreateAction: boolean;
+    showGridSizeControl: boolean;
     showImportAction: boolean;
   };
   state: {
@@ -62,16 +65,19 @@ function useDrawer() {
 }
 
 function Root({ children }: { children: ReactNode }) {
-  const { drawerTab, setDrawerTab } = useResourceDrawer();
+  const { drawerTab, drawerViewMode, setDrawerTab } = useResourceDrawer();
   const { importMedia } = useElements();
-  const { createDeck, createLyric } = useNavigation();
+  const { createDeck, createEmptyLyric, createLyricFromText } = useNavigation();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
   const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isCreateLyricDialogOpen, setIsCreateLyricDialogOpen] = useState(false);
+  const [isCreatingLyricFromText, setIsCreatingLyricFromText] = useState(false);
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateContentMenu({
     createDeck,
-    createLyric
+    createEmptyLyric,
+    createLyricFromText: handleOpenCreateLyricDialog,
   });
   const {
     menuItems: templateMenuItems,
@@ -144,7 +150,8 @@ function Root({ children }: { children: ReactNode }) {
       gridSizeMin,
       gridSizeStep,
       showCreateAction: drawerTab === 'content' || drawerTab === 'templates',
-      showImportAction: drawerTab === 'media'
+      showImportAction: drawerTab === 'media',
+      showGridSizeControl: drawerViewMode === 'grid',
     },
     state: {
       drawerTab,
@@ -154,6 +161,26 @@ function Root({ children }: { children: ReactNode }) {
       templateMenuState
     }
   };
+
+  function handleOpenCreateLyricDialog() {
+    setIsCreateLyricDialogOpen(true);
+  }
+
+  function handleCloseCreateLyricDialog() {
+    if (isCreatingLyricFromText) return;
+    setIsCreateLyricDialogOpen(false);
+  }
+
+  async function handleCreateLyricFromText(text: string) {
+    setIsCreatingLyricFromText(true);
+
+    try {
+      await createLyricFromText(text);
+      setIsCreateLyricDialogOpen(false);
+    } finally {
+      setIsCreatingLyricFromText(false);
+    }
+  }
 
   return (
     <ResourceDrawerContext.Provider value={value}>
@@ -181,6 +208,12 @@ function Root({ children }: { children: ReactNode }) {
             onClose={closeTemplateMenu}
           />
         ) : null}
+        <CreateLyricFromTextDialog
+          isOpen={isCreateLyricDialogOpen}
+          isSubmitting={isCreatingLyricFromText}
+          onClose={handleCloseCreateLyricDialog}
+          onSubmit={handleCreateLyricFromText}
+        />
       </footer>
     </ResourceDrawerContext.Provider>
   );
@@ -195,7 +228,8 @@ function ResourceDrawerActions() {
 
   return (
     <>
-      <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} />
+      <ResourceDrawerModeControl />
+      {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
       {meta.showImportAction ? (
         <FileTrigger.Root accept="image/*,video/*" multiple onSelect={handleImportSelect} className="relative inline-flex">
           <Button.Icon label="Import media" variant="ghost">

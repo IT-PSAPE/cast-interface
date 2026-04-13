@@ -34,7 +34,7 @@ const SlideContext = createContext<SlideContextValue | null>(null);
 const NO_SLIDE_SELECTED = -1;
 
 export function SlideProvider({ children }: { children: ReactNode }) {
-  const { mutate, setStatusText } = useCast();
+  const { mutate, runOperation, setStatusText } = useCast();
   const {
     currentContentItemId,
     currentPlaylistContentItemId,
@@ -187,15 +187,17 @@ export function SlideProvider({ children }: { children: ReactNode }) {
 
   const createSlideAction = useCallback(async () => {
     if (!currentContentItemId || !currentContentItem) return;
-    const previousSlideIds = new Set(slides.map((slide) => slide.id));
-    const nextSnapshot = await mutate(() => window.castApi.createSlide({
-      deckId: currentContentItem.type === 'deck' ? currentContentItemId : null,
-      lyricId: currentContentItem.type === 'lyric' ? currentContentItemId : null,
-    }));
-    const createdSlideIndex = findCreatedSlideIndex(nextSnapshot, currentContentItemId, previousSlideIds);
-    if (createdSlideIndex !== null) updateVisibleSelectedSlideIndex(currentContentItemId, createdSlideIndex);
-    setStatusText('Created slide');
-  }, [currentContentItem, currentContentItemId, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+    await runOperation('Creating slide...', async () => {
+      const previousSlideIds = new Set(slides.map((slide) => slide.id));
+      const nextSnapshot = await mutate(() => window.castApi.createSlide({
+        deckId: currentContentItem.type === 'deck' ? currentContentItemId : null,
+        lyricId: currentContentItem.type === 'lyric' ? currentContentItemId : null,
+      }));
+      const createdSlideIndex = findCreatedSlideIndex(nextSnapshot, currentContentItemId, previousSlideIds);
+      if (createdSlideIndex !== null) updateVisibleSelectedSlideIndex(currentContentItemId, createdSlideIndex);
+      setStatusText('Created slide');
+    });
+  }, [currentContentItem, currentContentItemId, mutate, runOperation, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const deleteSlideAction = useCallback(async (slideId: Id) => {
     if (!currentContentItemId) return;

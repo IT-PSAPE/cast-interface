@@ -45,7 +45,7 @@ function buildPaneStyle(
     }
 
     style.flexGrow = 0;
-    style.flexShrink = 1;
+    style.flexShrink = 0;
     style.flexBasis = `${size}px`;
     return style;
   }
@@ -61,7 +61,7 @@ function buildPaneStyle(
   }
 
   style.flexGrow = 0;
-  style.flexShrink = 1;
+  style.flexShrink = 0;
   style.flexBasis = `${size}px`;
   return style;
 }

@@ -3,17 +3,23 @@ import type { AppSnapshot } from '@core/types';
 
 interface CastContextValue {
   snapshot: AppSnapshot | null;
+  isRunningOperation: boolean;
+  operationText: string | null;
   statusText: string;
   setStatusText: (text: string) => void;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+  runOperation: <T>(text: string, action: () => Promise<T>) => Promise<T>;
 }
 
 const CastContext = createContext<CastContextValue | null>(null);
 
 export function CastProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
+  const [isRunningOperation, setIsRunningOperation] = useState(false);
+  const [operationText, setOperationText] = useState<string | null>(null);
   const [statusText, setStatusText] = useState('Ready');
   const mutateQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const operationDepthRef = useRef(0);
 
   useEffect(() => {
     void window.castApi.getSnapshot().then(setSnapshot).catch((error) => {
@@ -42,9 +48,25 @@ export function CastProvider({ children }: { children: ReactNode }) {
     return queued;
   }, []);
 
+  const runOperation = useCallback(async <T,>(text: string, action: () => Promise<T>) => {
+    operationDepthRef.current += 1;
+    setOperationText(text);
+    setIsRunningOperation(true);
+
+    try {
+      return await action();
+    } finally {
+      operationDepthRef.current = Math.max(0, operationDepthRef.current - 1);
+      if (operationDepthRef.current === 0) {
+        setIsRunningOperation(false);
+        setOperationText(null);
+      }
+    }
+  }, []);
+
   const value = useMemo<CastContextValue>(
-    () => ({ snapshot, statusText, setStatusText, mutate }),
-    [snapshot, statusText, mutate],
+    () => ({ snapshot, isRunningOperation, operationText, statusText, setStatusText, mutate, runOperation }),
+    [snapshot, isRunningOperation, operationText, statusText, mutate, runOperation],
   );
 
   return <CastContext.Provider value={value}>{children}</CastContext.Provider>;

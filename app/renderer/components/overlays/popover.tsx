@@ -4,7 +4,14 @@ import { clamp } from '../../utils/math';
 
 // ── Types ──────────────────────────────────────────────────
 
-export type PopoverPlacement = 'top' | 'bottom' | 'left' | 'right';
+type PopoverSide = 'top' | 'bottom' | 'left' | 'right';
+type PopoverAlign = 'start' | 'center' | 'end';
+
+export type PopoverPlacement =
+  | 'top' | 'top-start' | 'top-end'
+  | 'bottom' | 'bottom-start' | 'bottom-end'
+  | 'left' | 'left-start' | 'left-end'
+  | 'right' | 'right-start' | 'right-end';
 
 interface PopoverProps {
   anchor: HTMLElement | null;
@@ -103,6 +110,18 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
   );
 }
 
+// ── Parsing ───────────────────────────────────────────────
+
+function parsePlacement(p: PopoverPlacement): { side: PopoverSide; align: PopoverAlign } {
+  const idx = p.indexOf('-');
+  if (idx === -1) return { side: p as PopoverSide, align: 'center' };
+  return { side: p.slice(0, idx) as PopoverSide, align: p.slice(idx + 1) as PopoverAlign };
+}
+
+function buildPlacement(side: PopoverSide, align: PopoverAlign): PopoverPlacement {
+  return (align === 'center' ? side : `${side}-${align}`) as PopoverPlacement;
+}
+
 // ── Positioning logic ──────────────────────────────────────
 
 function resolvePosition(
@@ -116,7 +135,7 @@ function resolvePosition(
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Try preferred placement first, then opposite, then cross-axis options
+  // Try preferred placement first, then fallbacks
   const fallbackOrder = getFallbackOrder(preferred);
 
   for (const candidate of fallbackOrder) {
@@ -135,31 +154,41 @@ function resolvePosition(
   };
 }
 
+function alignOnAxis(anchorStart: number, anchorSize: number, contentSize: number, align: PopoverAlign): number {
+  switch (align) {
+    case 'start': return anchorStart;
+    case 'center': return anchorStart + (anchorSize - contentSize) / 2;
+    case 'end': return anchorStart + anchorSize - contentSize;
+  }
+}
+
 function computePosition(
   anchor: DOMRect,
   content: DOMRect,
   placement: PopoverPlacement,
   offset: number,
 ): { top: number; left: number } {
-  switch (placement) {
+  const { side, align } = parsePlacement(placement);
+
+  switch (side) {
     case 'bottom':
       return {
         top: anchor.bottom + offset,
-        left: anchor.left + (anchor.width - content.width) / 2,
+        left: alignOnAxis(anchor.left, anchor.width, content.width, align),
       };
     case 'top':
       return {
         top: anchor.top - content.height - offset,
-        left: anchor.left + (anchor.width - content.width) / 2,
+        left: alignOnAxis(anchor.left, anchor.width, content.width, align),
       };
     case 'right':
       return {
-        top: anchor.top + (anchor.height - content.height) / 2,
+        top: alignOnAxis(anchor.top, anchor.height, content.height, align),
         left: anchor.right + offset,
       };
     case 'left':
       return {
-        top: anchor.top + (anchor.height - content.height) / 2,
+        top: alignOnAxis(anchor.top, anchor.height, content.height, align),
         left: anchor.left - content.width - offset,
       };
   }
@@ -180,17 +209,26 @@ function fitsInViewport(
 }
 
 function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
-  const opposite: Record<PopoverPlacement, PopoverPlacement> = {
+  const { side, align } = parsePlacement(preferred);
+
+  const oppositeSide: Record<PopoverSide, PopoverSide> = {
     top: 'bottom',
     bottom: 'top',
     left: 'right',
     right: 'left',
   };
-  const crossAxis: Record<PopoverPlacement, [PopoverPlacement, PopoverPlacement]> = {
+
+  const crossAxis: Record<PopoverSide, [PopoverSide, PopoverSide]> = {
     top: ['left', 'right'],
     bottom: ['left', 'right'],
     left: ['top', 'bottom'],
     right: ['top', 'bottom'],
   };
-  return [preferred, opposite[preferred], ...crossAxis[preferred]];
+
+  return [
+    preferred,
+    buildPlacement(oppositeSide[side], align),
+    buildPlacement(crossAxis[side][0], 'center'),
+    buildPlacement(crossAxis[side][1], 'center'),
+  ];
 }

@@ -3,7 +3,14 @@
   "productName": "Recast",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-platform presentation prototype with reusable content hierarchy, slide rendering, and offscreen-rendered NDI output",
+  "description": "Cross-platform presentation tool with reusable content hierarchy, slide rendering, and NDI output",
+  "author": "IT-PSAPE",
+  "homepage": "https://github.com/IT-PSAPE/cast-interface#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IT-PSAPE/cast-interface.git"
+  },
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -21,6 +28,11 @@
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
     "capture:ui-screenshots": "npm run build && node app/e2e/capture-ui-screenshots.mjs",
+    "pack": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
     "build:ndi-native": "npm --prefix packages/ndi-native run build",
     "clean:ndi-native": "npm --prefix packages/ndi-native run clean",
     "rebuild:ndi-native": "npm --prefix packages/ndi-native run rebuild"
@@ -50,6 +62,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^35.0.1",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^3.1.0",
     "typescript": "^5.8.2",
     "vite": "^5.4.14"
