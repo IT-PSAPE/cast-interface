@@ -6,6 +6,10 @@ directories:
   buildResources: resources
   output: dist
 
+publish:
+  provider: github
+  releaseType: release
+
 files:
   - out/**/*
   - resources/**/*
@@ -44,6 +48,7 @@ nsis:
 linux:
   icon: resources/icon.png
   category: Utility
+  maintainer: Craig Chihururu <craigchihururu@gmail.com>
   target:
     - AppImage
     - deb
