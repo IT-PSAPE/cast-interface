@@ -166,6 +166,8 @@ If those conditions are not met, keep the JSX inline in the parent component and
   - **No inline function definitions** inside JSX or render bodies. Extract handlers, callbacks, and closures into named functions declared before the return statement.
 - Generic components must be domain-agnostic: no theme handling, feature flags, API calls, or business rules.
 - Domain logic must live in hooks, services, or utilities and be injected into components via props.
+- Feature-specific state and actions must be read from that feature's own context instead of being drilled through multiple component layers as props.
+- If a value or handler is only meaningful inside a single feature, expose it from the feature context/provider and consume it directly in the feature components that need it.
 - Hooks own state, side effects, and orchestration.
 - Services own API calls.
 - Utilities own pure, reusable logic (formatters, parsers, calculations).

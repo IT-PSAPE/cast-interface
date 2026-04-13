@@ -1,21 +1,24 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ThemeMode } from '../types/ui';
+import { useLocalStorage } from '../hooks/use-local-storage';
 
 const STORAGE_KEY = 'cast-theme-mode';
+const VALID_MODES = new Set<ThemeMode>(['light', 'dark', 'system']);
 
-interface ThemeContextValue {
-  themeMode: ThemeMode;
-  resolvedTheme: 'light' | 'dark';
-  setThemeMode: (mode: ThemeMode) => void;
-}
+type ThemeContextValue = {
+  state: {
+    themeMode: ThemeMode;
+    resolvedTheme: 'light' | 'dark';
+  };
+  actions: {
+    setThemeMode: (mode: ThemeMode) => void;
+  };
+};
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getStoredThemeMode(): ThemeMode {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-  return 'dark';
+function parseThemeMode(raw: string): ThemeMode | null {
+  return VALID_MODES.has(raw as ThemeMode) ? (raw as ThemeMode) : null;
 }
 
 function getSystemPreference(): 'light' | 'dark' {
@@ -23,7 +26,7 @@ function getSystemPreference(): 'light' | 'dark' {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(getStoredThemeMode);
+  const [themeMode, setThemeMode] = useLocalStorage<ThemeMode>(STORAGE_KEY, 'dark', parseThemeMode);
   const [systemPref, setSystemPref] = useState<'light' | 'dark'>(getSystemPreference);
 
   const resolvedTheme = themeMode === 'system' ? systemPref : themeMode;
@@ -41,16 +44,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', resolvedTheme);
   }, [resolvedTheme]);
 
-  const setThemeMode = useCallback((mode: ThemeMode) => {
-    setThemeModeState(mode);
-    localStorage.setItem(STORAGE_KEY, mode);
-  }, []);
-
-  const value = useMemo<ThemeContextValue>(() => ({
+  const state = useMemo<ThemeContextValue['state']>(() => ({
     themeMode,
     resolvedTheme,
+  }), [themeMode, resolvedTheme]);
+
+  const actions = useMemo<ThemeContextValue['actions']>(() => ({
     setThemeMode,
-  }), [themeMode, resolvedTheme, setThemeMode]);
+  }), [setThemeMode]);
+
+  const value = useMemo<ThemeContextValue>(() => ({
+    state,
+    actions,
+  }), [state, actions]);
 
   return (
     <ThemeContext.Provider value={value}>
@@ -59,7 +65,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useTheme() {
+export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
   if (!context) throw new Error('useTheme must be used within ThemeProvider');
   return context;

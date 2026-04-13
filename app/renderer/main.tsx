@@ -1,13 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { LibraryPanelProvider } from './features/library-browser/contexts/library-panel-context';
-import { NdiProvider } from './contexts/ndi-context';
-import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
-import { SlideBrowserProvider } from './contexts/slide-browser-context';
-import { ThemeProvider } from './contexts/theme-context';
-import { WorkbenchProvider } from './contexts/workbench-context';
-import { UiSpecScreen } from './spec/ui-spec-screen';
 import './theme.css';
 
 window.addEventListener('error', (event) => {
@@ -20,29 +13,6 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {resolveRendererView() === 'ui-spec' ? (
-      <ThemeProvider>
-        <NdiProvider>
-          <WorkbenchProvider>
-            <SlideBrowserProvider>
-              <LibraryPanelProvider>
-                <OverlayDefaultsProvider>
-                  <UiSpecScreen />
-                </OverlayDefaultsProvider>
-              </LibraryPanelProvider>
-            </SlideBrowserProvider>
-          </WorkbenchProvider>
-        </NdiProvider>
-      </ThemeProvider>
-    ) : (
-      <App />
-    )}
+    <App />
   </React.StrictMode>
 );
-
-function resolveRendererView(): 'app' | 'ui-spec' {
-  const params = new URLSearchParams(window.location.search);
-  const view = params.get('view');
-  if (view === 'ui-spec') return 'ui-spec';
-  return 'app';
-}

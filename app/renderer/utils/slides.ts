@@ -1,6 +1,7 @@
 import type { MediaAsset, OverlayAnimation, Slide, SlideElement } from '@core/types';
 import type { SlideBrowserMode, PlaylistBrowserMode, ShortcutItem, SlideVisualState } from '../types/ui';
 import { LAYER_ORDER } from '../types/ui';
+export { clamp } from './math';
 
 export const SHORTCUTS: ShortcutItem[] = [
   { keys: 'Arrow Right', action: 'Next live slide' },
@@ -8,12 +9,11 @@ export const SHORTCUTS: ShortcutItem[] = [
   { keys: '1-9', action: 'Take slide by index' },
   { keys: 'Enter / Space', action: 'Take selected slide' },
   { keys: 'Delete / Backspace', action: 'Delete selected element' },
-  { keys: 'Alt + 1..3', action: 'Switch slide view (focus/grid/list)' },
+  { keys: 'Alt + 1..2', action: 'Switch slide view (grid/list)' },
   { keys: 'Shift + Alt + 1..3', action: 'Switch playlist view (current/tabs/continuous)' },
 ];
 
 export const CANVAS_VIEW_LABELS: Record<SlideBrowserMode, string> = {
-  focus: 'Focus',
   grid: 'Grid',
   list: 'List',
 };
@@ -111,9 +111,6 @@ export function parseNumber(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 interface OverlayDefaultOptions {
   animationKind?: OverlayAnimation['kind'];

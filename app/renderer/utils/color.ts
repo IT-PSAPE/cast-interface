@@ -1,3 +1,5 @@
+import { clamp } from './math';
+
 /** RGB color with 0–255 channels. */
 export interface Rgb { r: number; g: number; b: number }
 
@@ -146,8 +148,4 @@ export function hsbToHex(hsb: Hsb): string {
 /** Pure hue CSS color for the saturation/brightness gradient background. */
 export function hueToHex(hue: number): string {
   return rgbToHex(hsbToRgb({ h: hue, s: 100, b: 100 }));
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

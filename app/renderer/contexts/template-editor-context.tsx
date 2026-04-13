@@ -1,13 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { createDefaultTemplateElements } from '@core/templates';
 import type { AppSnapshot, Id, SlideElement, Template, TemplateKind } from '@core/types';
+import { cloneElements } from '../utils/staged-editor-utils';
 import { createId } from '../utils/create-id';
+import { useStagedCollection } from '../hooks/use-staged-collection';
 import { useCast } from './cast-context';
 import { useProjectContent } from './use-project-content';
 import { useWorkbench } from './workbench-context';
 
 export type TemplateApplyTarget =
-  | { type: 'presentation'; presentationId: Id }
+  | { type: 'deck-item'; itemId: Id }
   | { type: 'overlay'; overlayId: Id };
 
 interface TemplateEditorContextValue {
@@ -22,7 +24,7 @@ interface TemplateEditorContextValue {
   replaceTemplateElements: (elements: SlideElement[]) => void;
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
-  resetPresentationToAssignedTemplate: (presentationId: Id) => Promise<void>;
+  resetDeckItemToAssignedTemplate: (itemId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -33,36 +35,20 @@ const TemplateEditorContext = createContext<TemplateEditorContextValue | null>(n
 
 export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
-  const { workbenchMode } = useWorkbench();
-  const { presentationsById, templates: persistedTemplates } = useProjectContent();
-  const [currentTemplateId, setCurrentTemplateId] = useState<Id | null>(null);
-  const [stagedTemplates, setStagedTemplates] = useState<Template[] | null>(null);
-  const [isPushingChanges, setIsPushingChanges] = useState(false);
-  const previousWorkbenchModeRef = useRef(workbenchMode);
+  const { state: { workbenchMode } } = useWorkbench();
+  const { deckItemsById, templates: persistedTemplates } = useProjectContent();
 
-  const templates = stagedTemplates ?? persistedTemplates;
-  const hasPendingChanges = useMemo(() => {
-    if (!stagedTemplates) return false;
-    return templateCollectionSignature(stagedTemplates) !== templateCollectionSignature(persistedTemplates);
-  }, [persistedTemplates, stagedTemplates]);
+  const staged = useStagedCollection<Template>({
+    persistedItems: persistedTemplates,
+    signatureOf: templateSignature,
+    workbenchModeKey: 'template-editor',
+    currentWorkbenchMode: workbenchMode,
+  });
 
-  useEffect(() => {
-    if (templates.length === 0) {
-      setCurrentTemplateId(null);
-      return;
-    }
-    if (!currentTemplateId || !templates.some((template) => template.id === currentTemplateId)) {
-      setCurrentTemplateId(templates[0]?.id ?? null);
-    }
-  }, [currentTemplateId, templates]);
-
-  const currentTemplate = useMemo(
-    () => templates.find((template) => template.id === currentTemplateId) ?? null,
-    [currentTemplateId, templates],
-  );
+  const templates = staged.items;
 
   const updateTemplateDraft = useCallback((input: { id: Id; name?: string; kind?: TemplateKind; elements?: SlideElement[] }) => {
-    setStagedTemplates((current) => {
+    staged.setStagedItems((current) => {
       const source = current ?? persistedTemplates;
       return source.map((template) => (
         template.id === input.id
@@ -76,12 +62,12 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
           : template
       ));
     });
-  }, [persistedTemplates]);
+  }, [persistedTemplates, staged]);
 
   const replaceTemplateElements = useCallback((elements: SlideElement[]) => {
-    if (!currentTemplateId) return;
-    updateTemplateDraft({ id: currentTemplateId, elements });
-  }, [currentTemplateId, updateTemplateDraft]);
+    if (!staged.currentItemId) return;
+    updateTemplateDraft({ id: staged.currentItemId, elements });
+  }, [staged.currentItemId, updateTemplateDraft]);
 
   const createTemplate = useCallback((kind: TemplateKind) => {
     const now = new Date().toISOString();
@@ -97,10 +83,10 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
       createdAt: now,
       updatedAt: now,
     };
-    setStagedTemplates((current) => [...(current ?? persistedTemplates), draft]);
-    setCurrentTemplateId(draft.id);
+    staged.setStagedItems((current) => [...(current ?? persistedTemplates), draft]);
+    staged.setCurrentItemId(draft.id);
     setStatusText('Created template');
-  }, [persistedTemplates, setStatusText, templates]);
+  }, [persistedTemplates, setStatusText, staged, templates]);
 
   const duplicateTemplate = useCallback((templateId: Id) => {
     const sourceTemplate = templates.find((template) => template.id === templateId) ?? null;
@@ -114,35 +100,38 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
       createdAt: now,
       updatedAt: now,
     };
-    setStagedTemplates((current) => [...(current ?? persistedTemplates), duplicate]);
-    setCurrentTemplateId(duplicate.id);
+    staged.setStagedItems((current) => [...(current ?? persistedTemplates), duplicate]);
+    staged.setCurrentItemId(duplicate.id);
     setStatusText('Duplicated template');
-  }, [persistedTemplates, setStatusText, templates]);
+  }, [persistedTemplates, setStatusText, staged, templates]);
 
   const renameTemplate = useCallback((templateId: Id, name: string) => {
     updateTemplateDraft({ id: templateId, name });
   }, [updateTemplateDraft]);
 
   const deleteTemplate = useCallback((templateId: Id) => {
-    setStagedTemplates((current) => (current ?? persistedTemplates).filter((template) => template.id !== templateId));
-    setCurrentTemplateId((current) => (current === templateId ? null : current));
+    staged.setStagedItems((current) => (current ?? persistedTemplates).filter((template) => template.id !== templateId));
+    staged.setCurrentItemId((current) => (current === templateId ? null : current));
     setStatusText('Deleted template');
-  }, [persistedTemplates, setStatusText]);
+  }, [persistedTemplates, setStatusText, staged]);
 
   const openTemplateEditor = useCallback((templateId: Id) => {
-    setCurrentTemplateId(templateId);
-  }, []);
+    staged.setCurrentItemId(templateId);
+  }, [staged]);
 
   const pushChanges = useCallback(async (): Promise<Id | null> => {
-    if (!stagedTemplates || isPushingChanges) return currentTemplateId;
-    if (templateCollectionSignature(stagedTemplates) === templateCollectionSignature(persistedTemplates)) {
-      setStagedTemplates(null);
-      return currentTemplateId;
+    if (!staged.stagedItems || staged.isPushingChanges) return staged.currentItemId;
+    const stagedTemplates = staged.stagedItems;
+    const stagedSig = stagedTemplates.map(templateSignature).join();
+    const persistedSig = persistedTemplates.map(templateSignature).join();
+    if (stagedSig === persistedSig) {
+      staged.setStagedItems(null);
+      return staged.currentItemId;
     }
 
-    setIsPushingChanges(true);
+    staged.setIsPushingChanges(true);
     try {
-      let resolvedCurrentTemplateId = currentTemplateId;
+      let resolvedCurrentTemplateId = staged.currentItemId;
       const next = await mutate(async () => {
         let snapshot: AppSnapshot | null = null;
         let knownTemplates = persistedTemplates;
@@ -191,74 +180,70 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
         return window.castApi.getSnapshot();
       });
 
-      setStagedTemplates(null);
+      staged.setStagedItems(null);
       const currentTemplateStillExists = resolvedCurrentTemplateId
         ? next.templates.some((template) => template.id === resolvedCurrentTemplateId)
         : false;
       if (!resolvedCurrentTemplateId || !currentTemplateStillExists) {
         resolvedCurrentTemplateId = next.templates[0]?.id ?? null;
       }
-      setCurrentTemplateId(resolvedCurrentTemplateId);
+      staged.setCurrentItemId(resolvedCurrentTemplateId);
       setStatusText('Template changes pushed');
       return resolvedCurrentTemplateId;
     } finally {
-      setIsPushingChanges(false);
+      staged.setIsPushingChanges(false);
     }
-  }, [currentTemplateId, isPushingChanges, mutate, persistedTemplates, setStatusText, stagedTemplates]);
+  }, [staged, mutate, persistedTemplates, setStatusText]);
 
   const resolveTemplateIdForMutation = useCallback(async (templateId: Id): Promise<Id | null> => {
-    if (currentTemplateId === templateId) {
+    if (staged.currentItemId === templateId) {
       return await pushChanges() ?? templateId;
     }
-    if (hasPendingChanges) {
+    if (staged.hasPendingChanges) {
       await pushChanges();
     }
     return templateId;
-  }, [currentTemplateId, hasPendingChanges, pushChanges]);
+  }, [staged.currentItemId, staged.hasPendingChanges, pushChanges]);
 
   const applyTemplateToTarget = useCallback(async (templateId: Id, target: TemplateApplyTarget) => {
     const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
-    if (target.type === 'presentation') {
-      await mutate(() => window.castApi.applyTemplateToPresentation(resolvedTemplateId, target.presentationId));
-      setStatusText('Applied template to presentation');
+    if (target.type === 'deck-item') {
+      await mutate(() => window.castApi.applyTemplateToDeckItem(resolvedTemplateId, target.itemId));
+      setStatusText('Applied template to item');
       return;
     }
     await mutate(() => window.castApi.applyTemplateToOverlay(resolvedTemplateId, target.overlayId));
     setStatusText('Applied template to overlay');
   }, [mutate, resolveTemplateIdForMutation, setStatusText]);
 
-  const resetPresentationToAssignedTemplate = useCallback(async (presentationId: Id) => {
-    const presentation = presentationsById.get(presentationId) ?? null;
-    const templateId = presentation?.templateId ?? null;
+  const resetDeckItemToAssignedTemplate = useCallback(async (itemId: Id) => {
+    const deckItem = deckItemsById.get(itemId) ?? null;
+    const templateId = deckItem?.templateId ?? null;
     if (!templateId) return;
     const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
-    await mutate(() => window.castApi.resetPresentationToTemplate(presentationId));
-    setStatusText('Reset presentation to template');
-  }, [mutate, presentationsById, resolveTemplateIdForMutation, setStatusText]);
+    await mutate(() => window.castApi.resetDeckItemToTemplate(itemId));
+    setStatusText('Reset item to template');
+  }, [deckItemsById, mutate, resolveTemplateIdForMutation, setStatusText]);
 
   useEffect(() => {
-    const previousWorkbenchMode = previousWorkbenchModeRef.current;
-    previousWorkbenchModeRef.current = workbenchMode;
-    if (previousWorkbenchMode !== 'template-editor' || workbenchMode === 'template-editor') return;
-    if (!hasPendingChanges || isPushingChanges) return;
-    void pushChanges();
-  }, [hasPendingChanges, isPushingChanges, pushChanges, workbenchMode]);
+    staged.registerAutoPush(() => void pushChanges());
+  }, [staged, pushChanges]);
 
   const value = useMemo<TemplateEditorContextValue>(() => ({
     templates,
-    currentTemplateId,
-    currentTemplate,
-    hasPendingChanges,
-    isPushingChanges,
-    setCurrentTemplateId,
+    currentTemplateId: staged.currentItemId,
+    currentTemplate: staged.currentItem,
+    hasPendingChanges: staged.hasPendingChanges,
+    isPushingChanges: staged.isPushingChanges,
+    setCurrentTemplateId: staged.setCurrentItemId,
     openTemplateEditor,
     updateTemplateDraft,
     replaceTemplateElements,
     createTemplate,
     applyTemplateToTarget,
-    resetPresentationToAssignedTemplate,
+    resetDeckItemToAssignedTemplate,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
@@ -266,18 +251,18 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   }), [
     applyTemplateToTarget,
     createTemplate,
-    currentTemplate,
-    currentTemplateId,
+    staged.currentItem,
+    staged.currentItemId,
     deleteTemplate,
     duplicateTemplate,
-    hasPendingChanges,
-    isPushingChanges,
+    staged.hasPendingChanges,
+    staged.isPushingChanges,
     openTemplateEditor,
     pushChanges,
     renameTemplate,
-    resetPresentationToAssignedTemplate,
+    resetDeckItemToAssignedTemplate,
     replaceTemplateElements,
-    setCurrentTemplateId,
+    staged.setCurrentItemId,
     templates,
     updateTemplateDraft,
   ]);
@@ -291,16 +276,8 @@ export function useTemplateEditor(): TemplateEditorContextValue {
   return context;
 }
 
-function cloneElements(elements: SlideElement[]): SlideElement[] {
-  return JSON.parse(JSON.stringify(elements)) as SlideElement[];
-}
-
 function cloneTemplate(template: Template): Template {
   return JSON.parse(JSON.stringify(template)) as Template;
-}
-
-function templateCollectionSignature(templates: Template[]): string {
-  return JSON.stringify(templates.map(templateSignature));
 }
 
 function templateSignature(template: Template): string {

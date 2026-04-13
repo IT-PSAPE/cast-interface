@@ -1,11 +1,12 @@
 import type { Id, SlideElement } from '@core/types';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type SlideBrowserMode = 'focus' | 'grid' | 'list';
+export type SlideBrowserMode = 'grid' | 'list';
+export type ResourceDrawerViewMode = 'grid' | 'list';
 export type PlaylistBrowserMode = 'current' | 'tabs' | 'continuous';
 export type WorkbenchMode = 'show' | 'slide-editor' | 'overlay-editor' | 'template-editor';
 export type InteractionMode = 'move' | 'resize';
-export type DrawerTab = 'media' | 'overlays' | 'presentations' | 'templates';
+export type DrawerTab = 'media' | 'overlays' | 'deck' | 'templates';
 export type InspectorTab = 'presentation' | 'slide' | 'shape' | 'text';
 export type LibraryPanelView = 'libraries' | 'playlist';
 export type SlideVisualState = 'live' | 'queued' | 'selected' | 'warning';

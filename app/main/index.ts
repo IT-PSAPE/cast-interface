@@ -1,7 +1,8 @@
-import { app, BrowserWindow, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, nativeImage, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CastRepository } from '@database/store';
+import { createApplicationMenu } from './application-menu';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
 import { NdiConfigStore } from './ndi/ndi-config-store';
@@ -18,12 +19,17 @@ interface CliOptions {
 
 type RendererView = CliOptions['rendererView'];
 
+const APP_NAME = 'Recast';
+const APP_ID = 'com.recast.app';
 const cliOptions = resolveCliOptions(process.argv);
+app.setName(APP_NAME);
 if (cliOptions.userDataDir) {
   app.setPath('userData', path.resolve(cliOptions.userDataDir));
 }
 
 let mainWindow: BrowserWindow | null = null;
+const WORKBENCH_MIN_WIDTH = 140 + 360 + 140;
+const WORKBENCH_MIN_HEIGHT = Math.max(360 + 96, 240 + 120) + 96;
 const repository = new CastRepository();
 const ndiConfigStore = new NdiConfigStore();
 const ndiService = new NdiService({
@@ -65,12 +71,42 @@ if (process.platform !== 'win32') {
   }
 }
 
+function getAppIcon(): string {
+  const resourcesPath = app.isPackaged
+    ? path.join(process.resourcesPath)
+    : path.join(__dirname, '../../resources');
+
+  if (process.platform === 'win32') {
+    return path.join(resourcesPath, 'icon.ico');
+  }
+  return path.join(resourcesPath, 'icon.png');
+}
+
 function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
   return {
+    title: APP_NAME,
     width,
     height,
+    minWidth: WORKBENCH_MIN_WIDTH,
+    minHeight: WORKBENCH_MIN_HEIGHT,
     show: false,
     backgroundColor: '#121212',
+    icon: getAppIcon(),
+    ...(process.platform === 'win32'
+      ? {
+        titleBarStyle: 'hidden' as const,
+        titleBarOverlay: {
+          color: '#111111',
+          symbolColor: '#d4d4d4',
+          height: 36,
+        },
+      }
+      : process.platform === 'darwin'
+        ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 13, y: 13 },
+        }
+        : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       sandbox: false,
@@ -102,6 +138,10 @@ function loadRendererView(window: BrowserWindow, view: RendererView): void {
 function createMainWindow(): void {
   const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
   mainWindow = window;
+  window.setTitle(APP_NAME);
+  if (process.platform === 'win32') {
+    window.setMenuBarVisibility(false);
+  }
   window.once('ready-to-show', () => {
     window.show();
   });
@@ -114,11 +154,31 @@ function createMainWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(APP_ID);
+  }
+
   protocol.handle('cast-media', (request) => {
     const filePath = decodeURIComponent(request.url.slice('cast-media://'.length));
     return net.fetch(pathToFileURL(filePath).toString());
   });
 
+  const iconPngPath = path.join(
+    app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../resources'),
+    'icon.png',
+  );
+
+  if (process.platform === 'darwin') {
+    app.dock?.setIcon(nativeImage.createFromPath(iconPngPath));
+  }
+
+  app.setAboutPanelOptions({
+    applicationName: APP_NAME,
+    applicationVersion: app.getVersion(),
+    ...(process.platform === 'linux' ? { iconPath: iconPngPath } : {}),
+  });
+
+  Menu.setApplicationMenu(createApplicationMenu());
   registerIpcHandlers(repository, ndiService, () => mainWindow);
   createMainWindow();
 

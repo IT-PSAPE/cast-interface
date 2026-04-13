@@ -1,6 +1,6 @@
 # UI Screenshot Manifest
 
-Generated: 2026-03-08T07:12:33.491Z
+Generated: 2026-03-22T12:41:43.157Z
 
 ## Shared
 - shared/shared-actions.png
@@ -14,6 +14,9 @@ Generated: 2026-03-08T07:12:33.491Z
 - app/app-toolbar-show.png
 - app/app-toolbar-slide-editor.png
 - app/overlay-editor-layout.png
+- app/settings-dialog-appearance.png
+- app/settings-dialog-outputs.png
+- app/settings-dialog-overlays.png
 - app/settings-dialog.png
 - app/show-mode-layout.png
 - app/slide-editor-layout.png
@@ -23,16 +26,17 @@ Generated: 2026-03-08T07:12:33.491Z
 - features/inspector-overlay.png
 - features/inspector-presentation.png
 - features/inspector-shape.png
-- features/inspector-slide.png
 - features/inspector-text.png
 - features/library-panel-libraries.png
 - features/library-panel-playlist.png
-- features/media-picker-dialog.png
+- features/object-list-panel.png
 - features/overlay-list-panel.png
+- features/preview-panel-audio.png
+- features/preview-panel-overlays.png
 - features/preview-panel.png
 - features/resource-drawer-media.png
-- features/resource-drawer-overlays.png
 - features/resource-drawer-presentations.png
+- features/resource-drawer-templates.png
 - features/slide-browser-continuous-grid.png
 - features/slide-browser-continuous-list.png
 - features/slide-browser-focus.png

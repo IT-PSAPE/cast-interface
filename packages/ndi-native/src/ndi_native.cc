@@ -38,6 +38,8 @@ constexpr uint32_t MakeFourCC(char a, char b, char c, char d) {
 
 constexpr uint32_t kFourCCBgra = MakeFourCC('B', 'G', 'R', 'A');
 constexpr uint32_t kFourCCBgrx = MakeFourCC('B', 'G', 'R', 'X');
+constexpr uint32_t kFourCCRgba = MakeFourCC('R', 'G', 'B', 'A');
+constexpr uint32_t kFourCCRgbx = MakeFourCC('R', 'G', 'B', 'X');
 
 struct NDIlib_send_create_t {
   const char* p_ndi_name;
@@ -523,21 +525,21 @@ void CopyBgraFrame(const uint8_t* source,
   }
 }
 
-void CopyRgbaFrameToBgra(const uint8_t* source,
-                         uint8_t* target,
-                         int32_t width,
-                         int32_t height,
-                         int32_t sourceStride,
-                         int32_t targetStride,
-                         bool withAlpha) {
+void CopyRgbaFrame(const uint8_t* source,
+                   uint8_t* target,
+                   int32_t width,
+                   int32_t height,
+                   int32_t sourceStride,
+                   int32_t targetStride,
+                   bool withAlpha) {
   for (int32_t y = 0; y < height; ++y) {
     const uint8_t* srcLine = source + static_cast<size_t>(y) * static_cast<size_t>(sourceStride);
     uint8_t* dstLine = target + static_cast<size_t>(y) * static_cast<size_t>(targetStride);
 
     for (int32_t x = 0; x < width; ++x) {
-      dstLine[x * 4 + 0] = srcLine[x * 4 + 2]; // B <- R
-      dstLine[x * 4 + 1] = srcLine[x * 4 + 1]; // G <- G
-      dstLine[x * 4 + 2] = srcLine[x * 4 + 0]; // R <- B
+      dstLine[x * 4 + 0] = srcLine[x * 4 + 0];
+      dstLine[x * 4 + 1] = srcLine[x * 4 + 1];
+      dstLine[x * 4 + 2] = srcLine[x * 4 + 2];
       dstLine[x * 4 + 3] = withAlpha ? srcLine[x * 4 + 3] : static_cast<uint8_t>(255);
     }
   }
@@ -739,18 +741,18 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
     scratch.resize(targetSize);
   }
 
-  CopyRgbaFrameToBgra(rgba.Data(),
-                       scratch.data(),
-                       width,
-                       height,
-                       stride,
-                       targetStride,
-                       sender.withAlpha);
+  CopyRgbaFrame(rgba.Data(),
+                scratch.data(),
+                width,
+                height,
+                stride,
+                targetStride,
+                sender.withAlpha);
 
   NDIlib_video_frame_v2_t frame{};
   frame.xres = width;
   frame.yres = height;
-  frame.FourCC = sender.withAlpha ? kFourCCBgra : kFourCCBgrx;
+  frame.FourCC = sender.withAlpha ? kFourCCRgba : kFourCCRgbx;
   frame.frame_rate_N = 60000;
   frame.frame_rate_D = 1001;
   frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);

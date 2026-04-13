@@ -3,7 +3,7 @@ import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
 const iconGroupRootStyles = cv({
-  base: 'flex items-stretch gap-px rounded-md *:first:rounded-l-md *:last:rounded-r-md',
+  base: 'flex items-stretch gap-px rounded-md rounded-l-md overflow-clip',
   variants: {
     fill: {
       true: ['w-full'],
@@ -11,20 +11,21 @@ const iconGroupRootStyles = cv({
     },
   },
   defaultVariants: {
-    fill: 'false',
+    fill: false,
   },
 });
 
 interface IconGroupRootProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   children: ReactNode;
   fill?: boolean;
+  rounded?: boolean;
 }
 
 export function IconGroupRoot({ children, className, fill = false, ...divProps }: IconGroupRootProps) {
   return (
     <div
       {...divProps}
-      className={cn(iconGroupRootStyles({ fill: fill ? 'true' : 'false' }), className)}
+      className={cn(iconGroupRootStyles({ fill }), className)}
     >
       {children}
     </div>

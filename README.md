@@ -1,4 +1,4 @@
-# Cast Interface Prototype
+# Recast Prototype
 
 Minimal cross-platform Electron prototype for a ProPresenter-style presentation workflow focused on:
 
@@ -158,7 +158,7 @@ npm run build
 
 The app includes a concrete native Node-API bridge package:
 
-- `packages/ndi-native` (`@cast-interface/ndi-native`)
+- `packages/ndi-native` (`@recast/ndi-native`)
 
 The Electron main process integration lives in `app/main/ndi/ndi-service.ts`.
 Runtime behavior reference lives in `docs/ndi-runtime-reference.md`.
@@ -169,14 +169,15 @@ Native module API:
 
 - `initializeSender({ senderName, width, height, withAlpha })`
 - `sendBgraFrame(senderName, buffer, width, height, stride)`
+- `sendRgbaFrame(senderName, buffer, width, height)`
 - `getSenderConnections(senderName, timeoutMs?)`
 - `destroySender(senderName?)`
 
 The sender is initialized with:
 
-- sender name: `Cast Interface - Audience`
+- sender name: `Recast - Audience`
 - resolution: `1920x1080`
-- alpha enabled: `true`
+- alpha enabled: `false`
 
 Main process NDI behavior:
 
@@ -187,6 +188,8 @@ Main process NDI behavior:
 - If paint frames stop arriving, the main process re-sends the last paint or an empty frame that matches the current alpha mode at `30 FPS`.
 - The offscreen renderer window is recreated automatically after crash/load failure and replays the latest program scene.
 - Output raster is fixed at `1920x1080`; only sender name and alpha are operator-configurable.
+- Audience output defaults to opaque video because many NDI receivers present transparent frames as a white surface.
+- If you enable alpha and preview in NDI Studio Monitor, make sure `Show the NDI source's Alpha Channel` is turned off unless you want to inspect the matte.
 - Graceful shutdown (`before-quit`, `will-quit`, process exit/signals) tears down all NDI senders and runtime.
 
 ### NDI runtime discovery
@@ -226,6 +229,6 @@ Default macOS candidate paths also include common NDI Tools bundle locations:
 ## Notes
 
 - `node:sqlite` still reports an experimental/release-candidate warning on current Node 22/23/24/25 lines. That warning is expected.
-- Persistence database is stored in Electron user data path as `cast-interface.sqlite`.
+- Persistence database is stored in Electron user data path as `recast.sqlite`.
 - The repository seeds an initial library/presentation/playlist/overlay for first launch.
 - Prototype intentionally excludes cloud/network automation features.

@@ -1,4 +1,5 @@
 import type {
+  DeckItemType,
   GroupElementPayload,
   Id,
   ImageElementPayload,
@@ -9,14 +10,7 @@ import type {
   TextElementPayload,
   VideoElementPayload,
 } from './types';
-
-function cloneElements(elements: SlideElement[]): SlideElement[] {
-  return JSON.parse(JSON.stringify(elements)) as SlideElement[];
-}
-
-function cloneElement(element: SlideElement): SlideElement {
-  return JSON.parse(JSON.stringify(element)) as SlideElement;
-}
+import { cloneElement, cloneElements } from './clone';
 
 function mergeTemplatePayload(templateElement: SlideElement, contentElement: SlideElement | null): SlideElement['payload'] {
   if (!contentElement || templateElement.type !== contentElement.type) {
@@ -64,9 +58,9 @@ function consumeTypedMatches(elements: SlideElement[]): Map<SlideElement['type']
   return matches;
 }
 
-export function isTemplateCompatibleWithPresentation(template: Template, presentationKind: 'canvas' | 'lyrics'): boolean {
-  if (template.kind === 'slides') return presentationKind === 'canvas';
-  if (template.kind === 'lyrics') return presentationKind === 'lyrics';
+export function isTemplateCompatibleWithDeckItem(template: Template, deckItemType: DeckItemType): boolean {
+  if (template.kind === 'slides') return deckItemType === 'presentation';
+  if (template.kind === 'lyrics') return deckItemType === 'lyric';
   return false;
 }
 
