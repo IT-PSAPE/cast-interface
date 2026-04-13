@@ -13,7 +13,7 @@ export interface NdiOutputDefinition extends NdiOutputConfig {
 export const NDI_OUTPUT_DEFINITIONS: Record<NdiOutputName, NdiOutputDefinition> = {
   audience: {
     output: 'audience',
-    senderName: 'Cast Interface - Audience',
+    senderName: 'Lumora - Audience',
     width: NDI_OUTPUT_WIDTH,
     height: NDI_OUTPUT_HEIGHT,
     withAlpha: false,

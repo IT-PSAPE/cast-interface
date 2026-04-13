@@ -16,7 +16,7 @@ import {
   setPaneVisibility,
 } from './split-resize';
 
-const STORAGE_KEY = 'cast-interface.workbench-layout.v1';
+const STORAGE_KEY = 'lumora.workbench-layout.v1';
 const STORAGE_VERSION = 3;
 
 interface PersistedWorkbenchLayouts {

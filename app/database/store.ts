@@ -175,7 +175,7 @@ export class CastRepository {
 
   constructor() {
     const userData = app.getPath('userData');
-    const dbPath = path.join(userData, 'cast-interface.sqlite');
+    const dbPath = path.join(userData, 'lumora.sqlite');
     this.db = new SqliteDatabase(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
@@ -811,7 +811,7 @@ export class CastRepository {
         .run(slideId, deckId, null, DEFAULT_W, DEFAULT_H, '', 0, now, now);
 
       const titlePayload = JSON.stringify({
-        text: 'Welcome to Cast Interface',
+        text: 'Welcome to Lumora',
         fontFamily: 'Helvetica',
         fontSize: 64,
         color: '#FFFFFF',

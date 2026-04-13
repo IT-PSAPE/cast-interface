@@ -5,7 +5,7 @@ describe('createDefaultNdiOutputConfigs', () => {
   it('defaults the audience output to opaque video', () => {
     expect(createDefaultNdiOutputConfigs()).toEqual({
       audience: {
-        senderName: 'Cast Interface - Audience',
+        senderName: 'Lumora - Audience',
         withAlpha: false,
       },
     });

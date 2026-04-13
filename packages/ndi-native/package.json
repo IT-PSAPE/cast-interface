@@ -1,8 +1,8 @@
 {
-  "name": "@cast-interface/ndi-native",
+  "name": "@lumora/ndi-native",
   "version": "0.1.0",
   "private": true,
-  "description": "Native NDI sender bridge for Cast Interface",
+  "description": "Native NDI sender bridge for Lumora",
   "main": "index.js",
   "types": "index.d.ts",
   "gypfile": false,

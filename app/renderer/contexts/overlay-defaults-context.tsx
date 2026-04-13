@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OverlayAnimation } from '@core/types';
 
-const STORAGE_KEY = 'cast-interface.overlay-defaults.v1';
+const STORAGE_KEY = 'lumora.overlay-defaults.v1';
 
 export interface OverlayDefaultsState {
   animationKind: OverlayAnimation['kind'];
