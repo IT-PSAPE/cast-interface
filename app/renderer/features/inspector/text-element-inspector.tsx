@@ -5,8 +5,8 @@ import { FieldInput, FieldSelect } from '../../components/form/field';
 import { useTextInspector } from './use-text-inspector';
 
 import {
-  AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
-  AlignLeft, AlignRight, AlignStartVertical,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight,
+  AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart,
   Baseline, Bold, Italic,
   Strikethrough, Type, Underline,
 } from 'lucide-react';
@@ -112,13 +112,13 @@ export function TextElementInspector() {
 
             <SegmentedControl fill className="w-full" value={formatting.verticalAlign} onValueChange={handleVerticalAlighmentChange} aria-label="Vertical text alignment">
               <SegmentedControl.Icon fill value="top" title="Align top" aria-label="Align top">
-                <AlignStartVertical className="size-4" />
+                <AlignVerticalJustifyStart className="size-4" />
               </SegmentedControl.Icon>
               <SegmentedControl.Icon fill value="middle" title="Align middle" aria-label="Align middle">
-                <AlignCenterVertical className="size-4" />
+                <AlignVerticalJustifyCenter className="size-4" />
               </SegmentedControl.Icon>
               <SegmentedControl.Icon fill value="bottom" title="Align bottom" aria-label="Align bottom">
-                <AlignEndVertical className="size-4" />
+                <AlignVerticalJustifyEnd className="size-4" />
               </SegmentedControl.Icon>
             </SegmentedControl>
           </div>

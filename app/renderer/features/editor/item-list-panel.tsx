@@ -32,7 +32,7 @@ export function ItemListPanel({ title, splitId, listPanelId, objectsPanelId, onA
             headerClassName="border-b border-primary"
             bodyClassName="overflow-y-auto p-2"
           >
-            <div className="grid content-start gap-1" role="grid" aria-label={listAriaLabel}>
+            <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label={listAriaLabel}>
               {children}
             </div>
           </Panel.Section>

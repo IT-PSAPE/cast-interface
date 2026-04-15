@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { GripHorizontal, Plus } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -9,108 +9,78 @@ import type { Block } from './doc-editor'
 export type SortableBlockProps = {
     block: Block
     isMenuOpen: boolean
-    contentRef: (el: HTMLDivElement | null) => void
+    contentRef: (el: HTMLTextAreaElement | null) => void
     onUpdate: (content: string) => void
-    onEnter: (afterContent: string) => void
+    onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
     onMenuToggle: () => void
     onMenuClose: () => void
     onMenuAction: (action: string) => void
     onAddBelow: () => void
-    onPaste: (before: string, lines: string[], after: string) => void
-    onFocusPrev: () => void
-    onFocusNext: () => void
+    onPaste: (before: string, segments: string[], after: string) => void
 }
 
-export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onEnter, onDelete, onMergeWithPrev, onMenuToggle, onMenuClose, onMenuAction, onAddBelow, onPaste, onFocusPrev, onFocusNext }: SortableBlockProps) {
+function splitPastedSegments(text: string): string[] {
+    return text
+        .replace(/\r\n/g, '\n')
+        .split(/\n\s*\n/g)
+}
+
+function resizeTextarea(element: HTMLTextAreaElement) {
+    element.style.height = '0px'
+    element.style.height = `${element.scrollHeight}px`
+}
+
+export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onMenuToggle, onMenuClose, onMenuAction, onAddBelow, onPaste }: SortableBlockProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
     const style = { transform: CSS.Transform.toString(transform), transition }
-
-    const initialised = useRef(false)
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
-        (el: HTMLDivElement | null) => {
+        (el: HTMLTextAreaElement | null) => {
+            textareaRef.current = el
             contentRef(el)
-            if (el && !initialised.current) {
-                el.textContent = block.content
-                initialised.current = true
-            }
         },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [],
+        [contentRef],
     )
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter') {
+    useEffect(() => {
+        const textarea = textareaRef.current
+        if (!textarea) return
+        resizeTextarea(textarea)
+    }, [block.content])
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            const el = e.currentTarget
-            const sel = window.getSelection()
-            let before = ''
-            let after = ''
+            const { selectionStart, selectionEnd, value } = e.currentTarget
+            onSplit(value.slice(0, selectionStart), value.slice(selectionEnd))
+            return
+        }
 
-            if (sel?.rangeCount) {
-                const range = sel.getRangeAt(0)
-                const preRange = range.cloneRange()
-                preRange.selectNodeContents(el)
-                preRange.setEnd(range.startContainer, range.startOffset)
-                before = preRange.toString()
-                after = (el.textContent || '').slice(before.length)
-            }
-
-            el.textContent = before
-            onUpdate(before)
-            onEnter(after)
-        } else if (e.key === 'Backspace') {
-            const sel = window.getSelection()
-            if (!sel?.rangeCount) return
-            const range = sel.getRangeAt(0)
-            if (!range.collapsed) return
-
-            const atStart = (range.startOffset === 0 && range.startContainer === e.currentTarget)
-                || (range.startOffset === 0 && range.startContainer === e.currentTarget.firstChild)
-
-            if (!atStart) return
-
+        if (e.key === 'Backspace' && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
             e.preventDefault()
-            const text = e.currentTarget.textContent || ''
-            if (text === '') {
+            if (e.currentTarget.value === '') {
                 onDelete()
-            } else {
-                onMergeWithPrev(text)
+                return
             }
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            onFocusPrev()
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            onFocusNext()
+
+            onMergeWithPrev(e.currentTarget.value)
         }
     }
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const text = e.clipboardData.getData('text/plain')
-        if (!text.includes('\n')) return
+        const segments = splitPastedSegments(text)
+        if (segments.length <= 1) return
 
         e.preventDefault()
-        const el = e.currentTarget
-        const sel = window.getSelection()
-        let before = ''
-        let after = ''
+        const { selectionStart, selectionEnd, value } = e.currentTarget
+        onPaste(value.slice(0, selectionStart), segments, value.slice(selectionEnd))
+    }
 
-        if (sel?.rangeCount) {
-            const range = sel.getRangeAt(0)
-            const preRange = range.cloneRange()
-            preRange.selectNodeContents(el)
-            preRange.setEnd(range.startContainer, range.startOffset)
-            before = preRange.toString()
-            const postRange = range.cloneRange()
-            postRange.selectNodeContents(el)
-            postRange.setStart(range.endContainer, range.endOffset)
-            after = postRange.toString()
-        }
-
-        const lines = text.split('\n')
-        onPaste(before, lines, after)
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        onUpdate(e.currentTarget.value)
     }
 
     return (
@@ -158,15 +128,16 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onEnter
                 </div>
             </div>
 
-            <div
+            <textarea
                 ref={setContentRef}
-                contentEditable
-                suppressContentEditableWarning
-                className="doc-block min-h-[1.7em] flex-1 break-words px-0.5 py-px text-paragraph-sm text-primary outline-none"
-                data-placeholder="Type something..."
+                value={block.content}
+                rows={1}
+                spellCheck={false}
+                className="doc-block min-h-[1.7em] flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
+                placeholder="Type something..."
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                onInput={e => onUpdate(e.currentTarget.textContent || '')}
+                onChange={handleChange}
             />
         </div>
     )

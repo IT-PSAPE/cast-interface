@@ -42,9 +42,9 @@ export function SlideCard({ index, state, scene, elements, isFocused, onActivate
         </SceneFrame>
       )}
       caption={(
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-          <span className="truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
+          <span className="min-w-0 truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
         </div>
       )}
     />

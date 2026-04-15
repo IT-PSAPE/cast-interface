@@ -25,7 +25,7 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
     )
     const [openMenu, setOpenMenu] = useState<string | null>(null)
 
-    const contentRefs = useRef<Record<string, HTMLDivElement | null>>({})
+    const contentRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
     const blocksRef = useRef(blocks)
     useEffect(() => { blocksRef.current = blocks }, [blocks])
 
@@ -44,13 +44,8 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             const el = contentRefs.current[id]
             if (!el) return
             el.focus()
-            try {
-                const range = document.createRange()
-                range.selectNodeContents(el)
-                range.collapse(false)
-                window.getSelection()?.removeAllRanges()
-                window.getSelection()?.addRange(range)
-            } catch { /* empty */ }
+            const end = el.value.length
+            el.setSelectionRange(end, end)
         })
     }, [])
 
@@ -59,13 +54,7 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             const el = contentRefs.current[id]
             if (!el) return
             el.focus()
-            try {
-                const range = document.createRange()
-                range.setStart(el.firstChild ?? el, 0)
-                range.collapse(true)
-                window.getSelection()?.removeAllRanges()
-                window.getSelection()?.addRange(range)
-            } catch { /* empty */ }
+            el.setSelectionRange(0, 0)
         })
     }, [])
 
@@ -82,15 +71,8 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         requestAnimationFrame(() => {
             const el = contentRefs.current[newId]
             if (!el) return
-            if (content) el.textContent = content
             el.focus()
-            try {
-                const range = document.createRange()
-                range.setStart(el.firstChild ?? el, 0)
-                range.collapse(true)
-                window.getSelection()?.removeAllRanges()
-                window.getSelection()?.addRange(range)
-            } catch { /* empty */ }
+            el.setSelectionRange(0, 0)
         })
     }, [])
 
@@ -107,6 +89,24 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         setBlocks(prev => prev.map(b => b.id === id ? { ...b, content } : b))
     }, [])
 
+    const splitBlock = useCallback((blockId: string, before: string, after: string) => {
+        const newId = uid()
+        setBlocks(prev => {
+            const idx = prev.findIndex(b => b.id === blockId)
+            if (idx === -1) return prev
+            const next = [...prev]
+            next[idx] = { ...next[idx], content: before }
+            next.splice(idx + 1, 0, { id: newId, content: after })
+            return next
+        })
+        requestAnimationFrame(() => {
+            const el = contentRefs.current[newId]
+            if (!el) return
+            el.focus()
+            el.setSelectionRange(0, 0)
+        })
+    }, [])
+
     const mergeWithPrev = useCallback((id: string, text: string) => {
         const curr = blocksRef.current
         const idx = curr.findIndex(b => b.id === id)
@@ -120,25 +120,15 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         requestAnimationFrame(() => {
             const el = contentRefs.current[prevBlock.id]
             if (!el) return
-            el.textContent = prevBlock.content + text
             el.focus()
-            try {
-                const textNode = el.firstChild
-                if (textNode) {
-                    const range = document.createRange()
-                    range.setStart(textNode, mergePoint)
-                    range.collapse(true)
-                    window.getSelection()?.removeAllRanges()
-                    window.getSelection()?.addRange(range)
-                }
-            } catch { /* empty */ }
+            el.setSelectionRange(mergePoint, mergePoint)
         })
     }, [])
 
-    const pasteIntoBlock = useCallback((blockId: string, before: string, lines: string[], after: string) => {
-        const firstLine = before + lines[0]
-        const middleLines = lines.slice(1, -1)
-        const lastLine = lines.length > 1 ? (lines[lines.length - 1] + after) : null
+    const pasteIntoBlock = useCallback((blockId: string, before: string, segments: string[], after: string) => {
+        const firstLine = before + segments[0]
+        const middleLines = segments.slice(1, -1)
+        const lastLine = segments.length > 1 ? (segments[segments.length - 1] + after) : null
 
         const newBlocks: Block[] = middleLines.map(line => ({ id: uid(), content: line }))
         const lastId = lastLine !== null ? uid() : null
@@ -157,26 +147,11 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
 
         const focusTargetId = lastId ?? blockId
         requestAnimationFrame(() => {
-            const el = contentRefs.current[blockId]
-            if (el) el.textContent = firstLine
-            for (const newBlock of newBlocks) {
-                const newEl = contentRefs.current[newBlock.id]
-                if (newEl) newEl.textContent = newBlock.content
-            }
             const focusEl = contentRefs.current[focusTargetId]
             if (!focusEl) return
             focusEl.focus()
-            try {
-                const textNode = focusEl.firstChild
-                if (textNode) {
-                    const cursorPos = lastLine !== null ? lastLine.length - after.length : firstLine.length
-                    const range = document.createRange()
-                    range.setStart(textNode, Math.min(cursorPos, textNode.textContent?.length ?? 0))
-                    range.collapse(true)
-                    window.getSelection()?.removeAllRanges()
-                    window.getSelection()?.addRange(range)
-                }
-            } catch { /* empty */ }
+            const cursorPos = lastLine !== null ? lastLine.length - after.length : firstLine.length
+            focusEl.setSelectionRange(cursorPos, cursorPos)
         })
     }, [])
 
@@ -225,22 +200,14 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
                                 isMenuOpen={openMenu === block.id}
                                 contentRef={el => { contentRefs.current[block.id] = el }}
                                 onUpdate={content => updateBlock(block.id, content)}
-                                onEnter={content => addBlockAfter(block.id, content)}
+                                onSplit={(before, after) => splitBlock(block.id, before, after)}
                                 onDelete={() => deleteBlock(block.id)}
                                 onMergeWithPrev={text => mergeWithPrev(block.id, text)}
                                 onMenuToggle={() => setOpenMenu(prev => prev === block.id ? null : block.id)}
                                 onMenuClose={() => setOpenMenu(null)}
                                 onMenuAction={action => handleMenuAction(block.id, action)}
                                 onAddBelow={() => addBlockAfter(block.id)}
-                                onPaste={(before, lines, after) => pasteIntoBlock(block.id, before, lines, after)}
-                                onFocusPrev={() => {
-                                    const prev = blocks[index - 1]
-                                    if (prev) focusEnd(prev.id)
-                                }}
-                                onFocusNext={() => {
-                                    const next = blocks[index + 1]
-                                    if (next) focusStart(next.id)
-                                }}
+                                onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
                             />
                         ))}
                     </SortableContext>
