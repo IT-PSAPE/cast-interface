@@ -1549,58 +1549,6 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  resetDeckItemToTemplate(itemId: Id): AppSnapshot {
-    const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner?.templateId) return this.getSnapshot();
-
-    const template = this.getTemplateById(owner.templateId);
-    if (!template || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
-      return this.getSnapshot();
-    }
-
-    const ownerColumn = this.getDeckOwnerColumn(owner.type);
-    const ownerTable = this.getDeckTableName(owner.type);
-    const slides = this.db
-      .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
-      .all(itemId) as Array<{ id: string }>;
-    const deleteElements = this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?');
-    const insertElement = this.db.prepare(
-      `INSERT INTO slide_elements
-        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    const now = nowIso();
-
-    const tx = this.db.transaction(() => {
-      this.db.prepare(`UPDATE ${ownerTable} SET updated_at = ? WHERE id = ?`).run(now, itemId);
-      for (const slide of slides) {
-        const resetElements = applyTemplateToElements(template, [], slide.id);
-        deleteElements.run(slide.id);
-        for (const element of resetElements) {
-          insertElement.run(
-            element.id,
-            slide.id,
-            element.type,
-            element.x,
-            element.y,
-            element.width,
-            element.height,
-            element.rotation,
-            element.opacity,
-            element.zIndex,
-            element.layer,
-            JSON.stringify(element.payload),
-            now,
-            now,
-          );
-        }
-      }
-    });
-
-    tx();
-    return this.getSnapshot();
-  }
-
   applyTemplateToOverlay(templateId: Id, overlayId: Id): AppSnapshot {
     const template = this.getTemplateById(templateId);
     if (!template || template.kind !== 'overlays') return this.getSnapshot();

@@ -36,28 +36,40 @@ function useAccordionItem() {
 type AccordionRootProps = HTMLAttributes<HTMLDivElement> & {
     type?: "single" | "multiple";
     defaultValue?: string | string[];
+    value?: string | string[];
+    onValueChange?: (value: string | string[]) => void;
 };
 
-function AccordionRoot({ type = "single", defaultValue, children, className, ...props }: AccordionRootProps) {
-    const [openItems, setOpenItems] = useState<Set<string>>(() => {
+function AccordionRoot({ type = "single", defaultValue, value, onValueChange, children, className, ...props }: AccordionRootProps) {
+    const [uncontrolledOpenItems, setUncontrolledOpenItems] = useState<Set<string>>(() => {
         if (!defaultValue) return new Set();
         return new Set(Array.isArray(defaultValue) ? defaultValue : [defaultValue]);
     });
 
+    const openItems = useMemo(() => {
+        if (value === undefined) return uncontrolledOpenItems;
+        if (Array.isArray(value)) return new Set(value);
+        return new Set(value ? [value] : []);
+    }, [uncontrolledOpenItems, value]);
+
     const toggle = useCallback(
         (value: string) => {
-            setOpenItems((prev) => {
-                const next = new Set(prev);
-                if (next.has(value)) {
-                    next.delete(value);
-                } else {
-                    if (type === "single") next.clear();
-                    next.add(value);
-                }
-                return next;
-            });
+            const next = new Set(openItems);
+            if (next.has(value)) {
+                next.delete(value);
+            } else {
+                if (type === "single") next.clear();
+                next.add(value);
+            }
+
+            if (onValueChange) {
+                onValueChange(type === "single" ? [...next][0] ?? "" : [...next]);
+                return;
+            }
+
+            setUncontrolledOpenItems(next);
         },
-        [type],
+        [onValueChange, openItems, type],
     );
 
     const contextValue = useMemo(() => ({ openItems, toggle }), [openItems, toggle]);

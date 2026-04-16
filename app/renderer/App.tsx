@@ -18,11 +18,6 @@ import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { AppToolbar } from './features/workbench/app-toolbar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
 import { LibraryPanelProvider } from './features/show/library-panel-context';
-import { ShowModeLayout } from './features/workbench/show-mode-layout';
-import { SlideEditorLayout } from './features/workbench/slide-editor-layout';
-import { EditorLayout } from './features/workbench/editor-layout';
-import { OverlayListPanel } from './features/editor/overlay-list-panel';
-import { TemplateListPanel } from './features/editor/template-list-panel';
 import { PanelRoute, usePanelRoute } from './features/workbench/panel-route';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { OverlayProvider } from './components/overlays/overlay-provider';
@@ -31,6 +26,10 @@ import { StatusBar } from './features/workbench/status-bar';
 import { ProgramOutputProvider } from './features/show/program-output-context';
 import { ShowAudioProvider } from './features/show/show-audio-context';
 import { NdiFrameCapture } from './features/show/ndi-frame-capture';
+import { OverlayEditorScreen } from './screens/overlay-editor/page';
+import { ShowScreen } from './screens/show/page';
+import { SlideEditorScreen } from './screens/slide-editor/page';
+import { TemplateEditorScreen } from './screens/template-editor/page';
 
 // ─── Provider Groups ─────────────────────────────────────────────────
 // Organized by responsibility tier following moc-console patterns:
@@ -214,10 +213,10 @@ function AppLayoutContent() {
       <WindowsInlineMenuBar />
       <AppToolbar audienceOutputActive={outputState.audience} onToggleAudienceOutput={toggleAudienceOutput} panelToggles={panelToggles} />
       <main className='flex-1 min-h-0'>
-        {workbenchMode === 'show' ? <ShowModeLayout /> : null}
-        {workbenchMode === 'slide-editor' ? <SlideEditorLayout /> : null}
-        {workbenchMode === 'overlay-editor' ? <EditorLayout leftPanel={<OverlayListPanel />} /> : null}
-        {workbenchMode === 'template-editor' ? <EditorLayout leftPanel={<TemplateListPanel />} /> : null}
+        {workbenchMode === 'show' ? <ShowScreen /> : null}
+        {workbenchMode === 'slide-editor' ? <SlideEditorScreen /> : null}
+        {workbenchMode === 'overlay-editor' ? <OverlayEditorScreen /> : null}
+        {workbenchMode === 'template-editor' ? <TemplateEditorScreen /> : null}
       </main>
       <StatusBar />
     </div>

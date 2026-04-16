@@ -24,7 +24,6 @@ interface TemplateEditorContextValue {
   replaceTemplateElements: (elements: SlideElement[]) => void;
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
-  resetDeckItemToAssignedTemplate: (itemId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -36,7 +35,7 @@ const TemplateEditorContext = createContext<TemplateEditorContextValue | null>(n
 export function TemplateEditorProvider({ children }: { children: ReactNode }) {
   const { mutate, setStatusText } = useCast();
   const { state: { workbenchMode } } = useWorkbench();
-  const { deckItemsById, templates: persistedTemplates } = useProjectContent();
+  const { templates: persistedTemplates } = useProjectContent();
 
   const staged = useStagedCollection<Template>({
     persistedItems: persistedTemplates,
@@ -217,16 +216,6 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     setStatusText('Applied template to overlay');
   }, [mutate, resolveTemplateIdForMutation, setStatusText]);
 
-  const resetDeckItemToAssignedTemplate = useCallback(async (itemId: Id) => {
-    const deckItem = deckItemsById.get(itemId) ?? null;
-    const templateId = deckItem?.templateId ?? null;
-    if (!templateId) return;
-    const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
-    if (!resolvedTemplateId) return;
-    await mutate(() => window.castApi.resetDeckItemToTemplate(itemId));
-    setStatusText('Reset item to template');
-  }, [deckItemsById, mutate, resolveTemplateIdForMutation, setStatusText]);
-
   useEffect(() => {
     staged.registerAutoPush(() => void pushChanges());
   }, [staged, pushChanges]);
@@ -243,7 +232,6 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     replaceTemplateElements,
     createTemplate,
     applyTemplateToTarget,
-    resetDeckItemToAssignedTemplate,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
@@ -260,7 +248,6 @@ export function TemplateEditorProvider({ children }: { children: ReactNode }) {
     openTemplateEditor,
     pushChanges,
     renameTemplate,
-    resetDeckItemToAssignedTemplate,
     replaceTemplateElements,
     staged.setCurrentItemId,
     templates,

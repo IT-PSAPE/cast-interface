@@ -10,7 +10,7 @@ import { useWorkbench } from '../contexts/workbench-context';
 export function useKeyboardShortcuts(): void {
   const { setStatusText } = useCast();
   const { slides, activateSlide, takeSlide, goNext, goPrev } = useSlides();
-  const { selectedElementId, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
+  const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
   const { setSlideBrowserMode, setPlaylistBrowserMode } = useSlideBrowser();
   const { state: { workbenchMode } } = useWorkbench();
   const isEditSlideBrowser = workbenchMode === 'slide-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
@@ -76,6 +76,14 @@ export function useKeyboardShortcuts(): void {
         return;
       }
 
+      if (event.key === 'Escape') {
+        if (isEditSlideBrowser && selectedElementId) {
+          event.preventDefault();
+          clearSelection();
+        }
+        return;
+      }
+
       if (event.key === 'ArrowRight') {
         if (isEditSlideBrowser && selectedElementId) {
           event.preventDefault();
@@ -118,5 +126,5 @@ export function useKeyboardShortcuts(): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditSlideBrowser, slides.length, selectedElementId, activateSlide, takeSlide, goNext, goPrev, deleteSelected, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo]);
+  }, [isEditSlideBrowser, slides.length, selectedElementId, activateSlide, takeSlide, goNext, goPrev, clearSelection, deleteSelected, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo]);
 }

@@ -8,27 +8,6 @@ import { useNavigation } from '../../contexts/navigation-context';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 
-interface ToolbarButtonProps {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  children: ReactNode;
-}
-
-function ToolbarButton({ label, onClick, disabled = false, children }: ToolbarButtonProps) {
-  return (
-    <Button.Icon
-      label={label}
-      onClick={onClick}
-      disabled={disabled}
-      variant="ghost"
-      className="text-primary hover:bg-white/10"
-    >
-      {children}
-    </Button.Icon>
-  );
-}
-
 interface StageToolbarProps {
   onOpenMediaPicker?: () => void;
 }
@@ -45,14 +24,6 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
       ? currentTemplate?.kind === 'lyrics'
       : false;
 
-  function handleAddText() {
-    void createText();
-  }
-
-  function handleAddShape() {
-    void createShape();
-  }
-
   function handleAddMedia() {
     if (onOpenMediaPicker) {
       onOpenMediaPicker();
@@ -66,22 +37,22 @@ export function StageToolbar({ onOpenMediaPicker }: StageToolbarProps) {
   return (
     <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-primary bg-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
       {!hideAddText ? (
-        <ToolbarButton label="Add Text" onClick={handleAddText}>
+        <Button.Icon label="Add Text" onClick={createText}>
           <Type size={18} strokeWidth={1.5} />
-        </ToolbarButton>
+        </Button.Icon>
       ) : null}
-      <ToolbarButton label="Add Shape" onClick={handleAddShape}>
+      <Button.Icon label="Add Shape" onClick={createShape}>
         <Square size={18} strokeWidth={1.5} />
-      </ToolbarButton>
-      <ToolbarButton label="Add Media" onClick={handleAddMedia}>
+      </Button.Icon>
+      <Button.Icon label="Add Media" onClick={handleAddMedia}>
         <Image size={18} strokeWidth={1.5} />
-      </ToolbarButton>
-      <ToolbarButton label="Draw Path" onClick={handleUnavailable} disabled>
+      </Button.Icon>
+      <Button.Icon label="Draw Path" onClick={handleUnavailable} disabled>
         <PencilLine size={18} strokeWidth={1.5} />
-      </ToolbarButton>
-      <ToolbarButton label="Add Web Source" onClick={handleUnavailable} disabled>
+      </Button.Icon>
+      <Button.Icon label="Add Web Source" onClick={handleUnavailable} disabled>
         <Globe size={18} strokeWidth={1.5} />
-      </ToolbarButton>
+      </Button.Icon>
     </div>
   );
 }

@@ -12,7 +12,7 @@ export function DeckItemInspector() {
     renameDeckItem,
   } = useNavigation();
   const { templatesById } = useProjectContent();
-  const { resetDeckItemToAssignedTemplate } = useTemplateEditor();
+  const { applyTemplateToTarget } = useTemplateEditor();
   const [titleDraft, setTitleDraft] = useState('');
 
   const assignedTemplate = currentDeckItem?.templateId
@@ -40,7 +40,7 @@ export function DeckItemInspector() {
 
   function handleResetToTemplate() {
     if (!currentDeckItem?.templateId) return;
-    void resetDeckItemToAssignedTemplate(currentDeckItem.id);
+    void applyTemplateToTarget(currentDeckItem.templateId, { type: 'deck-item', itemId: currentDeckItem.id });
   }
 
   if (!currentDeckItem) {

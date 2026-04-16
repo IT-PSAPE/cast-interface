@@ -10,7 +10,7 @@ import { Accordion } from '@renderer/components/display/accordion';
 
 export function SegmentsBrowser() {
   const { createSegment } = useNavigation();
-  const { libraryPanelView } = useLibraryPanelState();
+  const { libraryPanelView, expandedSegmentIds, setExpandedSegmentIds } = useLibraryPanelState();
   const { state } = useLibraryBrowser();
 
   function handleNewSegment() { void createSegment(); }
@@ -30,10 +30,14 @@ export function SegmentsBrowser() {
       </Panel.Header>
 
       <Panel.Body>
-        <Accordion type='multiple'>
+        <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
           {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
         </Accordion>
       </Panel.Body>
     </Panel>
   );
+
+  function handleSegmentValueChange(value: string | string[]) {
+    setExpandedSegmentIds(Array.isArray(value) ? value : value ? [value] : []);
+  }
 }
