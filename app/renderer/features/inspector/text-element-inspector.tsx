@@ -1,7 +1,7 @@
 import type { TextCaseTransform } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { ColorPicker } from '../../components/form/color-picker';
-import { FieldInput, FieldSelect } from '../../components/form/field';
+import { FieldIcon, FieldInput, FieldSelect } from '../../components/form/field';
 import { useTextInspector } from './use-text-inspector';
 
 import {
@@ -57,8 +57,12 @@ export function TextElementInspector() {
             <FieldInput type="text" value={formatting.weight} onChange={handleWeightChange} />
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<Type className="size-4" />} type="number" value={formatting.fontSize} onChange={handleFontSizeChange} />
-            <FieldInput icon={<Baseline className="size-4" />} type="number" value={formatting.lineHeight} onChange={handleLineHeightChange} />
+            <FieldInput type="number" value={formatting.fontSize} onChange={handleFontSizeChange}>
+              <FieldIcon><Type className="size-4" /></FieldIcon>
+            </FieldInput>
+            <FieldInput type="number" value={formatting.lineHeight} onChange={handleLineHeightChange}>
+              <FieldIcon><Baseline className="size-4" /></FieldIcon>
+            </FieldInput>
           </Section.Row>
         </Section.Body>
       </Section.Root>

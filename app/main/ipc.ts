@@ -139,6 +139,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.moveDeckItemToSegment, (_event, playlistId: Id, itemId: Id, segmentId: Id | null) =>
     repo.moveDeckItemToSegment(playlistId, itemId, segmentId)
   );
+  safeHandle(IPC.movePlaylistEntryToSegment, (_event, entryId: Id, segmentId: Id | null) =>
+    repo.movePlaylistEntryToSegment(entryId, segmentId)
+  );
   safeHandle(IPC.moveDeckItem, (_event, id: Id, direction: 'up' | 'down') =>
     repo.moveDeckItem(id, direction)
   );

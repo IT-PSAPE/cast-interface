@@ -40,6 +40,7 @@ export interface MainApi {
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   addDeckItemToSegment: (segmentId: Id, itemId: Id) => Promise<AppSnapshot>;
   moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
+  movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   createPresentation: (title: string) => Promise<AppSnapshot>;
   createLyric: (title: string) => Promise<AppSnapshot>;
@@ -107,6 +108,7 @@ export const IPC = {
   movePlaylist: 'cast:movePlaylist',
   addDeckItemToSegment: 'cast:addDeckItemToSegment',
   moveDeckItemToSegment: 'cast:moveDeckItemToSegment',
+  movePlaylistEntryToSegment: 'cast:movePlaylistEntryToSegment',
   moveDeckItem: 'cast:moveDeckItem',
   createPresentation: 'cast:createPresentation',
   createLyric: 'cast:createLyric',

@@ -1,6 +1,6 @@
 import { cn } from '@renderer/utils/cn';
 import { ColorPicker } from '../../components/form/color-picker';
-import { FieldInput } from '../../components/form/field';
+import { FieldIcon, FieldInput } from '../../components/form/field';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
   AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
@@ -62,11 +62,17 @@ export function ShapeElementInspector() {
             </IconGroup.Root>
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={Math.round(elementDraft.x)} onChange={handleXChange} />
-            <FieldInput icon={<MoveVertical size={14} />} type="number" value={Math.round(elementDraft.y)} onChange={handleYChange} />
+            <FieldInput type="number" value={Math.round(elementDraft.x)} onChange={handleXChange}>
+              <FieldIcon><MoveHorizontal size={14} /></FieldIcon>
+            </FieldInput>
+            <FieldInput type="number" value={Math.round(elementDraft.y)} onChange={handleYChange}>
+              <FieldIcon><MoveVertical size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<RotateCcw size={14} />} type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange} />
+            <FieldInput type="number" value={Math.round(elementDraft.rotation)} onChange={handleRotationChange}>
+              <FieldIcon><RotateCcw size={14} /></FieldIcon>
+            </FieldInput>
             <IconGroup.Root fill>
               <IconGroup.Item>
                 <CornerUpRight className="size-4" />
@@ -88,8 +94,12 @@ export function ShapeElementInspector() {
         </Section.Header>
         <Section.Body>
           <Section.Row>
-            <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={Math.round(elementDraft.width)} onChange={handleWChange} />
-            <FieldInput icon={<MoveVertical size={14} />} type="number" value={Math.round(elementDraft.height)} onChange={handleHChange} />
+            <FieldInput type="number" value={Math.round(elementDraft.width)} onChange={handleWChange}>
+              <FieldIcon><MoveHorizontal size={14} /></FieldIcon>
+            </FieldInput>
+            <FieldInput type="number" value={Math.round(elementDraft.height)} onChange={handleHChange}>
+              <FieldIcon><MoveVertical size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
         </Section.Body>
       </Section.Root>
@@ -100,8 +110,12 @@ export function ShapeElementInspector() {
         </Section.Header>
         <Section.Body>
           <Section.Row>
-            <FieldInput icon={<Eye size={14} />} type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1} />
-            <FieldInput icon={<Square size={14} />} type="number" value={0} onChange={() => { }} min={0} max={100} step={1} />
+            <FieldInput type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1}>
+              <FieldIcon><Eye size={14} /></FieldIcon>
+            </FieldInput>
+            <FieldInput type="number" value={0} onChange={() => { }} min={0} max={100} step={1}>
+              <FieldIcon><Square size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
         </Section.Body>
       </Section.Root>

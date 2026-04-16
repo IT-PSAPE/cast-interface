@@ -60,7 +60,8 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
       onClick={handleSelect}
       onDoubleClick={row.textEditable ? undefined : handleOpen}
       className={rowStateClass}
-      preview={(
+    >
+      <Thumbnail.Preview>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">
           {row.elements.length === 0 ? (
             <div className="absolute inset-0 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
@@ -69,8 +70,8 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
           ) : null}
           <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
         </SceneFrame>
-      )}
-      body={(
+      </Thumbnail.Preview>
+      <Thumbnail.Body className={row.textEditable ? 'content-start' : 'content-center'}>
         <>
           <div className={cn('flex gap-2', row.textEditable ? 'items-start' : 'items-center')}>
             <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{row.index + 1}.</span>
@@ -83,13 +84,14 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
             </p>
           ) : null}
         </>
-      )}
-      bodyClassName={row.textEditable ? 'content-start' : 'content-center'}
-      overlay={row.state === 'live' ? (
-        <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
-          <Play size={12} strokeWidth={1.9} />
-        </span>
+      </Thumbnail.Body>
+      {row.state === 'live' ? (
+        <Thumbnail.Overlay position="top-right" className="right-2 top-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+            <Play size={12} strokeWidth={1.9} />
+          </span>
+        </Thumbnail.Overlay>
       ) : null}
-    />
+    </Thumbnail.Row>
   );
 }

@@ -1,5 +1,4 @@
 import { Button } from '../../components/controls/button';
-import { SearchField } from '../../components/form/search-field';
 import { SettingsSection } from './settings-section';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';
 import { DeckBundleSelectionList } from './deck-bundle-selection-list';
@@ -34,53 +33,65 @@ export function ImportExportSettingsPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsSection
-        title="Export Deck"
-        action={(
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.deckItems.length === 0}>Select Visible</Button>
-            <Button variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button>
-            <Button onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
-              {state.exportInFlight ? 'Exporting...' : `Export Selected${hasSelection ? ` (${state.selectedCount})` : ''}`}
-            </Button>
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Export Deck</SettingsSection.Title>
+          <SettingsSection.Action>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.deckItems.length === 0}>Select Visible</Button>
+              <Button variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button>
+              <Button onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
+                {state.exportInFlight ? 'Exporting...' : `Export Selected${hasSelection ? ` (${state.selectedCount})` : ''}`}
+              </Button>
+            </div>
+          </SettingsSection.Action>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              value={state.filterText}
+              onChange={(e) => actions.setFilterText(e.target.value)}
+              placeholder="Search presentations and lyrics"
+              className="max-w-sm rounded border border-primary bg-tertiary px-2 py-0.5 text-sm text-secondary placeholder:text-tertiary outline-none transition-colors focus:border-brand"
+            />
+            <DeckBundleSelectionList items={state.deckItems} selectedIds={state.selectedIds} onToggle={actions.toggleSelectedId} />
           </div>
-        )}
-      >
-        <div className="flex flex-col gap-3">
-          <SearchField value={state.filterText} onChange={actions.setFilterText} placeholder="Search presentations and lyrics" className="max-w-sm" />
-          <DeckBundleSelectionList items={state.deckItems} selectedIds={state.selectedIds} onToggle={actions.toggleSelectedId} />
-        </div>
-      </SettingsSection>
+        </SettingsSection.Body>
+      </SettingsSection.Root>
 
-      <SettingsSection
-        title="Import Bundle"
-        action={(
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</Button>
-            <Button variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
-              {state.importInFlight && !hasInspection ? 'Loading...' : 'Choose Bundle'}
-            </Button>
-            <Button onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
-              {state.importInFlight && hasInspection ? 'Importing...' : 'Import'}
-            </Button>
-          </div>
-        )}
-      >
-        {!hasInspection ? (
-          <div className="rounded border border-primary bg-tertiary/30 px-3 py-4 text-sm text-tertiary">
-            Choose a `.cst` file to inspect its items, templates, and media references before importing.
-          </div>
-        ) : (
-          renderInspectionContent({
-            importPath: state.importPath,
-            inspection,
-            decisionMap: state.decisionMap,
-            blockedImportReasons: state.blockedImportReasons,
-            onActionChange: actions.setBrokenReferenceAction,
-            onChooseReplacement: actions.chooseReplacementPath,
-          })
-        )}
-      </SettingsSection>
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Import Bundle</SettingsSection.Title>
+          <SettingsSection.Action>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</Button>
+              <Button variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
+                {state.importInFlight && !hasInspection ? 'Loading...' : 'Choose Bundle'}
+              </Button>
+              <Button onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
+                {state.importInFlight && hasInspection ? 'Importing...' : 'Import'}
+              </Button>
+            </div>
+          </SettingsSection.Action>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          {!hasInspection ? (
+            <div className="rounded border border-primary bg-tertiary/30 px-3 py-4 text-sm text-tertiary">
+              Choose a `.cst` file to inspect its items, templates, and media references before importing.
+            </div>
+          ) : (
+            renderInspectionContent({
+              importPath: state.importPath,
+              inspection,
+              decisionMap: state.decisionMap,
+              blockedImportReasons: state.blockedImportReasons,
+              onActionChange: actions.setBrokenReferenceAction,
+              onChooseReplacement: actions.chooseReplacementPath,
+            })
+          )}
+        </SettingsSection.Body>
+      </SettingsSection.Root>
 
       {state.message ? (
         <div className="rounded border border-primary bg-tertiary/25 px-3 py-2 text-sm text-secondary">

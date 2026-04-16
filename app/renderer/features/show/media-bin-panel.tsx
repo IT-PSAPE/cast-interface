@@ -75,9 +75,11 @@ function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCa
         <Thumbnail.Row
           onClick={handleAssignLayer}
           selected={isActive}
-          preview={renderMediaPreview(asset)}
-          previewClassName="aspect-video"
-          body={(
+        >
+          <Thumbnail.Preview className="aspect-video">
+            {renderMediaPreview(asset)}
+          </Thumbnail.Preview>
+          <Thumbnail.Body>
             <>
               <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
                 <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
@@ -85,15 +87,15 @@ function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCa
               </div>
               <Paragraph.xs className="uppercase tracking-wide text-tertiary">{asset.type}</Paragraph.xs>
             </>
-          )}
-          overlay={(
-            <div className="absolute right-2 top-2 hidden group-hover:block">
+          </Thumbnail.Body>
+          <Thumbnail.Overlay position="top-right" className="right-2 top-2 hidden group-hover:block">
+            <div>
               <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
                 <Ellipsis />
               </Button.Icon>
             </div>
-          )}
-        />
+          </Thumbnail.Overlay>
+        </Thumbnail.Row>
       </div>
     );
   }
@@ -104,24 +106,25 @@ function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCa
         onClick={handleAssignLayer}
         selected={isActive}
         className={cn(isActive ? 'ring-1 ring-brand-400/35' : '')}
-        body={(
+      >
+        <Thumbnail.Body>
           <>
             <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
             <MediaThumbnail asset={asset} />
-            <div className="absolute right-1 top-1 hidden group-hover:block">
-              <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                <Ellipsis />
-              </Button.Icon>
-            </div>
           </>
-        )}
-        caption={(
+        </Thumbnail.Body>
+        <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+          <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+            <Ellipsis />
+          </Button.Icon>
+        </Thumbnail.Overlay>
+        <Thumbnail.Caption>
           <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
             <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
             <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
           </div>
-        )}
-      />
+        </Thumbnail.Caption>
+      </Thumbnail.Tile>
     </div>
   );
 }

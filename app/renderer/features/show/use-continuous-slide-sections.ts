@@ -5,21 +5,21 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { useSlides } from '../../contexts/slide-context';
 
 export function useContinuousSlideSections() {
-  const { currentDeckItemId, currentOutputDeckItemId } = useNavigation();
-  const { currentSlideIndex, liveSlideIndex, activateDeckItemSlide, focusDeckItemSlide } = useSlides();
+  const { currentPlaylistEntryId, currentOutputPlaylistEntryId } = useNavigation();
+  const { currentSlideIndex, liveSlideIndex, activatePlaylistEntrySlide, focusPlaylistEntrySlide } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
 
-  const handleActivateSlide = useCallback((itemId: Id, slideIndex: number) => {
-    activateDeckItemSlide(itemId, slideIndex);
-  }, [activateDeckItemSlide]);
+  const handleActivateSlide = useCallback((entryId: Id, itemId: Id, slideIndex: number) => {
+    activatePlaylistEntrySlide(entryId, itemId, slideIndex);
+  }, [activatePlaylistEntrySlide]);
 
-  const handleEditSlide = useCallback((itemId: Id, slideIndex: number) => {
-    focusDeckItemSlide(itemId, slideIndex);
-  }, [focusDeckItemSlide]);
+  const handleEditSlide = useCallback((entryId: Id, itemId: Id, slideIndex: number) => {
+    focusPlaylistEntrySlide(entryId, itemId, slideIndex);
+  }, [focusPlaylistEntrySlide]);
 
   return {
-    currentDeckItemId,
-    currentOutputDeckItemId,
+    currentPlaylistEntryId,
+    currentOutputPlaylistEntryId,
     currentSlideIndex,
     liveSlideIndex,
     slideElementsBySlideId,

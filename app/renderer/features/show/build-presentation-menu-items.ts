@@ -2,27 +2,27 @@ import type { Id, PlaylistTree } from '@core/types';
 import type { ContextMenuItem } from '../../components/overlays/context-menu';
 
 interface BuildPresentationMenuItemsOptions {
+  entryId?: Id;
   itemId: Id;
   scope: 'library' | 'segment';
-  currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
   itemIds: Id[];
-  selectDeckItem: (id: Id) => void;
+  selectPlaylistEntry?: (entryId: Id) => void;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
-  moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
+  movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<void>;
   beginRenameDeckItem: (id: Id) => void;
   deleteDeckItem: (id: Id) => Promise<void>;
 }
 
 export function buildDeckItemMenuItems({
+  entryId,
   itemId,
   scope,
-  currentPlaylistId,
   selectedTree,
   itemIds,
-  selectDeckItem,
+  selectPlaylistEntry,
   moveDeckItem,
-  moveDeckItemToSegment,
+  movePlaylistEntryToSegment,
   beginRenameDeckItem,
   deleteDeckItem
 }: BuildPresentationMenuItemsOptions): ContextMenuItem[] {
@@ -59,15 +59,15 @@ export function buildDeckItemMenuItems({
   }
 
   const assignedSegmentId = selectedTree?.segments.find((segment) =>
-    segment.entries.some((entry) => entry.item.id === itemId)
+    segment.entries.some((entry) => entry.entry.id === entryId)
   )?.segment.id ?? null;
   const moveOptions = (selectedTree?.segments ?? []).map((segment) => ({
     id: `move-${segment.segment.id}`,
     label: segment.segment.name,
     onSelect: () => {
-      if (!currentPlaylistId) return;
-      void moveDeckItemToSegment(currentPlaylistId, itemId, segment.segment.id);
-      selectDeckItem(itemId);
+      if (!entryId) return;
+      void movePlaylistEntryToSegment(entryId, segment.segment.id);
+      selectPlaylistEntry?.(entryId);
     }
   }));
 
@@ -78,16 +78,15 @@ export function buildDeckItemMenuItems({
     {
       id: 'move-deck-item',
       label: 'Move',
-      disabled: !currentPlaylistId,
+      disabled: !entryId,
       children: [
         ...moveOptions,
         {
           id: 'move-none',
           label: 'Not in selected playlist',
           onSelect: () => {
-            if (!currentPlaylistId) return;
-            void moveDeckItemToSegment(currentPlaylistId, itemId, null);
-            selectDeckItem(itemId);
+            if (!entryId) return;
+            void movePlaylistEntryToSegment(entryId, null);
           }
         }
       ]
@@ -95,11 +94,10 @@ export function buildDeckItemMenuItems({
     {
       id: 'remove-from-segment',
       label: 'Remove',
-      disabled: !currentPlaylistId || !assignedSegmentId,
+      disabled: !entryId || !assignedSegmentId,
       onSelect: () => {
-        if (!currentPlaylistId) return;
-        void moveDeckItemToSegment(currentPlaylistId, itemId, null);
-        selectDeckItem(itemId);
+        if (!entryId) return;
+        void movePlaylistEntryToSegment(entryId, null);
       }
     },
     deleteItem

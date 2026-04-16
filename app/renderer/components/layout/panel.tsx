@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
+import { Children, isValidElement, type ButtonHTMLAttributes, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -13,18 +13,36 @@ interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
   scroll?: boolean;
 }
 
+interface PanelSectionProps extends HTMLAttributes<HTMLElement> {
+  children?: ReactNode;
+}
+
+interface PanelSectionPartProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+}
+
 interface PanelItemProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
-  leading?: ReactNode;
-  trailing?: ReactNode;
   selected?: boolean;
 }
 
-interface PanelSectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
-  title?: ReactNode;
-  action?: ReactNode;
-  headerClassName?: string;
-  bodyClassName?: string;
+interface PanelItemPartProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+}
+
+interface SectionSlots {
+  action: ReactElement<PanelSectionPartProps> | null;
+  body: ReactElement<PanelSectionPartProps> | null;
+  header: ReactElement<PanelSectionPartProps> | null;
+  looseChildren: ReactNode[];
+  title: ReactElement<PanelSectionPartProps> | null;
+}
+
+interface ItemSlots {
+  body: ReactElement<PanelItemPartProps> | null;
+  leading: ReactElement<PanelItemPartProps> | null;
+  looseChildren: ReactNode[];
+  trailing: ReactElement<PanelItemPartProps> | null;
 }
 
 const panelStyles = cv({
@@ -42,7 +60,7 @@ const panelStyles = cv({
 });
 
 const itemStyles = cv({
-  base: 'group relative flex items-center w-full rounded-sm border-0 px-2 py-1.5 text-left cursor-pointer',
+  base: 'group relative flex w-full items-center rounded-sm border-0 px-2 py-1.5 text-left',
   variants: {
     selected: {
       true: ['bg-active text-primary'],
@@ -56,7 +74,7 @@ const itemStyles = cv({
 
 function Root({ children, className, as: Component = 'div', bordered = 'none', ...rest }: PanelRootProps) {
   return (
-    <Component data-layer="panel" className={cn(panelStyles({ bordered }), className,)} {...rest} >
+    <Component data-layer="panel" className={cn(panelStyles({ bordered }), className)} {...rest}>
       {children}
     </Component>
   );
@@ -64,7 +82,7 @@ function Root({ children, className, as: Component = 'div', bordered = 'none', .
 
 function PanelHeader({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-layer="panel-header" className={cn('h-8 flex items-center px-2 py-0.5 border-b border-primary', className)} {...rest}>
+    <div data-layer="panel-header" className={cn('flex h-8 items-center border-b border-primary px-2 py-0.5', className)} {...rest}>
       {children}
     </div>
   );
@@ -86,57 +104,204 @@ function PanelFooter({ children, className, ...rest }: HTMLAttributes<HTMLDivEle
   );
 }
 
-function PanelSection({ children, className, title, action, headerClassName, bodyClassName, ...rest }: PanelSectionProps) {
-  if (!title) {
-    return (
-      <div data-layer="panel-section" className={cn('', className)} {...rest}>
-        {children}
-      </div>
-    );
-  }
+function Section({ children, className, ...rest }: PanelSectionProps) {
+  const slots = collectSectionSlots(children);
+  const bodyChildren = slots.body?.props.children ?? slots.looseChildren;
+  const hasHeader = Boolean(slots.header || slots.title || slots.action);
 
   return (
     <section data-layer="panel-section" className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)} {...rest}>
-      <header className={cn('flex h-8 items-center gap-2 px-2', headerClassName)}>
-        <div className="min-w-0 flex-1">{title}</div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </header>
-      <div className={cn('min-h-0 flex-1', bodyClassName)}>
-        {children}
+      {hasHeader ? (
+        <div className={cn('flex h-8 items-center gap-2 px-2', slots.header?.props.className)}>
+          <div className={cn('min-w-0 flex-1', slots.title?.props.className)}>
+            {slots.title?.props.children ?? null}
+          </div>
+          {slots.action ? (
+            <div className={cn('shrink-0', slots.action.props.className)}>
+              {slots.action.props.children}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className={cn('min-h-0 flex-1', slots.body?.props.className)}>
+        {bodyChildren}
       </div>
     </section>
   );
 }
 
-function PanelItem({ children, className, leading, trailing, selected, ...rest }: PanelItemProps) {
+function SectionHeader(_props: PanelSectionPartProps) {
+  return null;
+}
+
+function SectionTitle(_props: PanelSectionPartProps) {
+  return null;
+}
+
+function SectionAction(_props: PanelSectionPartProps) {
+  return null;
+}
+
+function SectionBody(_props: PanelSectionPartProps) {
+  return null;
+}
+
+function Item({ children, className, selected, ...rest }: PanelItemProps) {
+  const slots = collectItemSlots(children);
+  const content = slots.body?.props.children ?? slots.looseChildren;
+
   return (
     <div className={itemStyles({ selected, className })} data-layer="panel-item" {...rest}>
-      {leading ? <span className="shrink-0 text-tertiary mr-2">{leading}</span> : null}
-      {children}
-      {trailing ? <span className="shrink-0 ml-2">{trailing}</span> : null}
+      {slots.leading ? (
+        <span className={cn('mr-2 shrink-0 text-tertiary', slots.leading.props.className)}>
+          {slots.leading.props.children}
+        </span>
+      ) : null}
+      {content}
+      {slots.trailing ? (
+        <span className={cn('ml-2 shrink-0', slots.trailing.props.className)}>
+          {slots.trailing.props.children}
+        </span>
+      ) : null}
     </div>
   );
 }
 
+function ItemLeading(_props: PanelItemPartProps) {
+  return null;
+}
 
-type PanelItemButtonProps = HTMLAttributes<HTMLButtonElement>;
+function ItemBody(_props: PanelItemPartProps) {
+  return null;
+}
 
+function ItemTrailing(_props: PanelItemPartProps) {
+  return null;
+}
+
+type PanelItemButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
 type PanelItemActionsProps = HTMLAttributes<HTMLDivElement>;
 
 function PanelItemButton({ className, ...props }: PanelItemButtonProps) {
-  return <button className={cn('w-full flex items-center gap-2 text-left', className)} {...props} />
+  return <button className={cn('flex w-full items-center gap-2 text-left', className)} {...props} />;
 }
 
-function PanelItemActions({ className, ...props }: PanelItemActionsProps){
-  return <div className={cn('absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100', className)} {...props} />
+function PanelItemActions({ className, ...props }: PanelItemActionsProps) {
+  return (
+    <div
+      className={cn('absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100', className)}
+      {...props}
+    />
+  );
+}
+
+function collectSectionSlots(children: ReactNode): SectionSlots {
+  const slots: SectionSlots = {
+    action: null,
+    body: null,
+    header: null,
+    looseChildren: [],
+    title: null,
+  };
+
+  Children.forEach(children, (child) => {
+    if (!isValidElement<PanelSectionPartProps>(child)) {
+      slots.looseChildren.push(child);
+      return;
+    }
+
+    if (child.type === SectionHeader) {
+      slots.header = child as ReactElement<PanelSectionPartProps>;
+      const headerSlots = collectSectionHeaderSlots(child.props.children);
+      slots.title = headerSlots.title;
+      slots.action = headerSlots.action;
+      slots.looseChildren.push(...headerSlots.looseChildren);
+      return;
+    }
+    if (child.type === SectionTitle) {
+      slots.title = child as ReactElement<PanelSectionPartProps>;
+      return;
+    }
+    if (child.type === SectionAction) {
+      slots.action = child as ReactElement<PanelSectionPartProps>;
+      return;
+    }
+    if (child.type === SectionBody) {
+      slots.body = child as ReactElement<PanelSectionPartProps>;
+      return;
+    }
+
+    slots.looseChildren.push(child);
+  });
+
+  return slots;
+}
+
+function collectSectionHeaderSlots(children: ReactNode) {
+  const slots: { action: ReactElement<PanelSectionPartProps> | null; looseChildren: ReactNode[]; title: ReactElement<PanelSectionPartProps> | null } = {
+    action: null,
+    looseChildren: [],
+    title: null,
+  };
+
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) {
+      slots.looseChildren.push(child);
+      return;
+    }
+    if (child.type === SectionTitle) {
+      slots.title = child as ReactElement<PanelSectionPartProps>;
+      return;
+    }
+    if (child.type === SectionAction) {
+      slots.action = child as ReactElement<PanelSectionPartProps>;
+      return;
+    }
+    slots.looseChildren.push(child);
+  });
+
+  return slots;
+}
+
+function collectItemSlots(children: ReactNode): ItemSlots {
+  const slots: ItemSlots = { body: null, leading: null, looseChildren: [], trailing: null };
+
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) {
+      slots.looseChildren.push(child);
+      return;
+    }
+    if (child.type === ItemLeading) {
+      slots.leading = child as ReactElement<PanelItemPartProps>;
+      return;
+    }
+    if (child.type === ItemBody) {
+      slots.body = child as ReactElement<PanelItemPartProps>;
+      return;
+    }
+    if (child.type === ItemTrailing) {
+      slots.trailing = child as ReactElement<PanelItemPartProps>;
+      return;
+    }
+    slots.looseChildren.push(child);
+  });
+
+  return slots;
 }
 
 export const Panel = Object.assign(Root, {
   Header: PanelHeader,
   Body: PanelBody,
   Footer: PanelFooter,
-  Section: PanelSection,
-  Item: PanelItem,
+  Section,
+  SectionHeader,
+  SectionTitle,
+  SectionAction,
+  SectionBody,
+  Item,
+  ItemLeading,
+  ItemBody,
+  ItemTrailing,
   ItemButton: PanelItemButton,
   ItemActions: PanelItemActions,
 });

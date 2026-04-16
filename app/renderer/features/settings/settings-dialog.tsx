@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DialogFrame } from '../../components/overlays/dialog-frame';
+import { Dialog } from '../../components/overlays/dialog';
 import { Tabs } from '../../components/display/tabs';
 import { AppearanceSettingsPanel } from './appearance-settings-panel';
 import { ImportExportSettingsPanel } from './import-export-settings-panel';
@@ -19,24 +19,31 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
   }
 
   return (
-    <DialogFrame
-      title="Settings"
-      onClose={onClose}
-      dataUiRegion="settings-dialog"
-      bodyClassName="min-h-0"
-      popupClassName="max-w-[1040px] h-[min(760px,calc(100vh-2rem))]"
-    >
-      <Tabs.Root value={activeTab} onValueChange={handleSelectTab}>
-        <div className="grid h-full min-h-0 md:grid-cols-[240px_minmax(0,1fr)]">
-          <SettingsSidebar activeTab={activeTab} onSelectTab={setActiveTab} />
-          <Tabs.Panels className="min-h-0 overflow-y-auto px-5 py-4">
-            <Tabs.Panel value="appearance"><AppearanceSettingsPanel /></Tabs.Panel>
-            <Tabs.Panel value="output"><OutputSettingsPanel /></Tabs.Panel>
-            <Tabs.Panel value="overlays"><OverlaySettingsPanel /></Tabs.Panel>
-            <Tabs.Panel value="import-export"><ImportExportSettingsPanel /></Tabs.Panel>
-          </Tabs.Panels>
-        </div>
-      </Tabs.Root>
-    </DialogFrame>
+    <Dialog.Root open onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content data-ui-region="settings-dialog" className="h-[min(760px,calc(100vh-2rem))] max-w-[1040px]">
+            <Dialog.Header>
+              <Dialog.Title>Settings</Dialog.Title>
+              <Dialog.CloseButton />
+            </Dialog.Header>
+            <Dialog.Body className="min-h-0">
+              <Tabs.Root value={activeTab} onValueChange={handleSelectTab}>
+                <div className="grid h-full min-h-0 md:grid-cols-[240px_minmax(0,1fr)]">
+                  <SettingsSidebar activeTab={activeTab} onSelectTab={setActiveTab} />
+                  <Tabs.Panels className="min-h-0 overflow-y-auto px-5 py-4">
+                    <Tabs.Panel value="appearance"><AppearanceSettingsPanel /></Tabs.Panel>
+                    <Tabs.Panel value="output"><OutputSettingsPanel /></Tabs.Panel>
+                    <Tabs.Panel value="overlays"><OverlaySettingsPanel /></Tabs.Panel>
+                    <Tabs.Panel value="import-export"><ImportExportSettingsPanel /></Tabs.Panel>
+                  </Tabs.Panels>
+                </div>
+              </Tabs.Root>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

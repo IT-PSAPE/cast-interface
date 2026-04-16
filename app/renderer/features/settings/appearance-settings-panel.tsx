@@ -18,13 +18,18 @@ export function AppearanceSettingsPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsSection title="Theme">
-        <div className="flex flex-col gap-2">
-          <SegmentedControl value={themeMode} onValueChange={handleThemeModeChange} aria-label="Theme mode">
-            {themeOptions}
-          </SegmentedControl>
-        </div>
-      </SettingsSection>
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Theme</SettingsSection.Title>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          <div className="flex flex-col gap-2">
+            <SegmentedControl value={themeMode} onValueChange={handleThemeModeChange} aria-label="Theme mode">
+              {themeOptions}
+            </SegmentedControl>
+          </div>
+        </SettingsSection.Body>
+      </SettingsSection.Root>
     </div>
   );
 }

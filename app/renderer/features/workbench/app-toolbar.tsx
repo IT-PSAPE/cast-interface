@@ -2,12 +2,32 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
 import { SettingsDialog } from '../settings/settings-dialog';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { OutputToggle } from '../show/output-toggle';
 import type { WorkbenchMode } from '../../types/ui';
 import { Button } from '@renderer/components/controls/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
+import { cv } from '@renderer/utils/cv';
 
 const isMac = window.castApi.platform === 'darwin';
+
+const outputDotStyles = cv({
+  base: 'inline-block h-2 w-2 rounded-full transition-colors',
+  variants: {
+    active: {
+      true: ['bg-green-500'],
+      false: ['bg-red-500'],
+    },
+  },
+});
+
+const outputBorderStyles = cv({
+  base: 'flex items-center gap-1.5 rounded border bg-tertiary px-2 py-1 text-sm cursor-pointer transition-colors hover:border-text-muted',
+  variants: {
+    active: {
+      true: ['border-green-500/40'],
+      false: ['border-red-500/40'],
+    },
+  },
+});
 
 interface PanelToggleButton {
   id: 'left' | 'right' | 'bottom';
@@ -72,7 +92,16 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
         </div>
 
         <div className="ml-auto flex items-center gap-2" style={noDragStyle}>
-          <OutputToggle label="Audience" active={audienceOutputActive} onClick={onToggleAudienceOutput} />
+          <Button
+            variant="ghost"
+            onClick={onToggleAudienceOutput}
+            type="button"
+            className={outputBorderStyles({ active: audienceOutputActive })}
+            aria-pressed={audienceOutputActive}
+          >
+            <span className={outputDotStyles({ active: audienceOutputActive })} aria-hidden="true" />
+            <span className="text-primary">Audience</span>
+          </Button>
 
           <SegmentedControl
             label="Panel visibility"

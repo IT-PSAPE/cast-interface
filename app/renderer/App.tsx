@@ -18,7 +18,7 @@ import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { AppToolbar } from './features/workbench/app-toolbar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
 import { LibraryPanelProvider } from './features/show/library-panel-context';
-import { PanelRoute, usePanelRoute } from './features/workbench/panel-route';
+import { SplitPanel, usePanelRoute } from './features/workbench/split-panel';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { OverlayProvider } from './components/overlays/overlay-provider';
 import { RenderSceneProvider } from './features/stage/render-scene-provider';
@@ -130,9 +130,9 @@ export function App() {
 
 function AppLayout() {
   return (
-    <PanelRoute.Root>
+    <SplitPanel>
       <AppLayoutContent />
-    </PanelRoute.Root>
+    </SplitPanel>
   );
 }
 

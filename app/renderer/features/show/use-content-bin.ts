@@ -21,7 +21,7 @@ export function useContentBin(filterText: string) {
     renameDeckItem,
     deleteDeckItem,
     moveDeckItem,
-    moveDeckItemToSegment,
+    movePlaylistEntryToSegment,
   } = useLibraryPanelManagement();
   const menu = useContextMenuState<Id>();
   const [editingPresentationId, setEditingPresentationId] = useState<Id | null>(null);
@@ -39,16 +39,14 @@ export function useContentBin(filterText: string) {
     return buildDeckItemMenuItems({
       itemId: menu.menuState.data,
       scope: 'library',
-      currentPlaylistId,
       selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
       itemIds: deckItems.map((item) => item.id),
-      selectDeckItem: browseDeckItem,
       moveDeckItem,
-      moveDeckItemToSegment,
+      movePlaylistEntryToSegment,
       beginRenameDeckItem: setEditingPresentationId,
       deleteDeckItem,
     });
-  }, [browseDeckItem, deckItems, currentLibraryBundle, currentPlaylistId, deleteDeckItem, menu.menuState, moveDeckItem, moveDeckItemToSegment]);
+  }, [browseDeckItem, deckItems, currentLibraryBundle, currentPlaylistId, deleteDeckItem, menu.menuState, moveDeckItem, movePlaylistEntryToSegment]);
 
   function handleRename(itemId: Id, title: string) {
     void renameDeckItem(itemId, title);

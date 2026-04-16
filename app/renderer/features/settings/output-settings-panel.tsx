@@ -24,53 +24,52 @@ export function OutputSettingsPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsSection title="Audience screen">
-        <p className="text-sm text-tertiary">System display output is not wired yet.</p>
-      </SettingsSection>
-      <SettingsSection title="Audience NDI">
-        <CheckboxField
-          checked={outputState.audience}
-          label="Enabled"
-          onChange={handleSetOutputEnabled}
-        />
-
-        <div className="flex flex-col gap-3">
-          <FieldInput
-            label="Sender name"
-            value={senderNameDraft}
-            onChange={setSenderNameDraft}
-            onBlur={handleCommitSenderName}
-            wide
-          />
-        </div>
-
-        <CheckboxField
-          checked={config.withAlpha}
-          label="Include alpha channel"
-          onChange={handleSetWithAlpha}
-        />
-        <p className="text-sm text-tertiary">
-          Leave this off for normal audience playback. In NDI Studio Monitor, also disable `Show the NDI source's Alpha Channel`
-          unless you intentionally want to view the matte.
-        </p>
-      </SettingsSection>
-
-      <SettingsSection title="NDI diagnostics">
-        {diagnostics ? (
-          <div className="flex flex-col gap-1 text-sm text-secondary">
-            <div>Runtime: {diagnostics.runtimeLoaded ? (diagnostics.runtimePath ?? 'Loaded') : 'Not loaded'}</div>
-            <div>Status: {diagnostics.sourceStatus}</div>
-            {diagnostics.activeSender ? (
-              <div>Sender: {diagnostics.activeSender.senderName} ({diagnostics.activeSender.width}x{diagnostics.activeSender.height})</div>
-            ) : null}
-            {diagnostics.lastError ? (
-              <div className="text-red-400">Error: {diagnostics.lastError}</div>
-            ) : null}
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Audience screen</SettingsSection.Title>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          <p className="text-sm text-tertiary">System display output is not wired yet.</p>
+        </SettingsSection.Body>
+      </SettingsSection.Root>
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Audience NDI</SettingsSection.Title>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          <CheckboxField checked={outputState.audience} label="Enabled" onChange={handleSetOutputEnabled} />
+          <div className="flex flex-col gap-3">
+            <FieldInput label="Sender name" value={senderNameDraft} onChange={setSenderNameDraft} onBlur={handleCommitSenderName} wide />
           </div>
-        ) : (
-          <p className="text-sm text-tertiary">Waiting for NDI diagnostics.</p>
-        )}
-      </SettingsSection>
+          <CheckboxField checked={config.withAlpha} label="Include alpha channel" onChange={handleSetWithAlpha} />
+          <p className="text-sm text-tertiary">
+            Leave this off for normal audience playback. In NDI Studio Monitor, also disable `Show the NDI source's Alpha Channel`
+            unless you intentionally want to view the matte.
+          </p>
+        </SettingsSection.Body>
+      </SettingsSection.Root>
+
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>NDI diagnostics</SettingsSection.Title>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          {diagnostics ? (
+            <div className="flex flex-col gap-1 text-sm text-secondary">
+              <div>Runtime: {diagnostics.runtimeLoaded ? (diagnostics.runtimePath ?? 'Loaded') : 'Not loaded'}</div>
+              <div>Status: {diagnostics.sourceStatus}</div>
+              {diagnostics.activeSender ? (
+                <div>Sender: {diagnostics.activeSender.senderName} ({diagnostics.activeSender.width}x{diagnostics.activeSender.height})</div>
+              ) : null}
+              {diagnostics.lastError ? (
+                <div className="text-red-400">Error: {diagnostics.lastError}</div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-tertiary">Waiting for NDI diagnostics.</p>
+          )}
+        </SettingsSection.Body>
+      </SettingsSection.Root>
     </div>
   );
 }

@@ -16,8 +16,8 @@ interface PlaylistSegmentGroupProps {
 }
 
 export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
-  const { currentPlaylistDeckItemId } = useNavigation();
-  const { selectPlaylistDeckItem } = useSlides();
+  const { currentPlaylistEntryId } = useNavigation();
+  const { selectPlaylistEntry } = useSlides();
   const { actions } = useLibraryBrowser();
   const isSegmentEditing = actions.isEditing('segment', segment.segment.id);
   const segmentHeaderColors = getSegmentHeaderColors(segment.segment.id, segment.segment.colorKey);
@@ -58,14 +58,14 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
       </div>
       <Accordion.Content>
         {segment.entries.map((entry) => {
-          const isSelected = entry.item.id === currentPlaylistDeckItemId;
+          const isSelected = entry.entry.id === currentPlaylistEntryId;
           const isPresentationEditing = actions.isEditing('presentation', entry.item.id);
 
-          function handleSelect() { selectPlaylistDeckItem(entry.item.id); }
-          function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentPresentationContextMenu(event, entry.item.id); }
+          function handleSelect() { selectPlaylistEntry(entry.entry.id); }
+          function handleContextMenu(event: React.MouseEvent<HTMLElement>) { actions.handleSegmentPresentationContextMenu(event, entry.entry.id, entry.item.id); }
           function handleMenuButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
             event.stopPropagation();
-            actions.openSegmentPresentationMenuFromButton(entry.item.id, event.currentTarget);
+            actions.openSegmentPresentationMenuFromButton(entry.entry.id, entry.item.id, event.currentTarget);
           }
 
           function handleRename(title: string) {
@@ -74,7 +74,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
           }
 
           return (
-            <Panel.Item className='!rounded-none'>
+            <Panel.Item key={entry.entry.id} className='!rounded-none' selected={isSelected} onContextMenu={handleContextMenu}>
               <Panel.ItemButton onClick={handleSelect}>
                 <DeckItemIcon entity={entry.item} className="shrink-0 text-tertiary" />
                 <Paragraph.xs>{entry.item.title}</Paragraph.xs>

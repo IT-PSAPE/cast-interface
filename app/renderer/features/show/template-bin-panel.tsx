@@ -3,7 +3,6 @@ import { Ellipsis } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { Paragraph } from '../../components/display/text';
 import { Thumbnail } from '../../components/display/thumbnail';
-import { SceneThumbnailCard } from '../../components/display/scene-thumbnail-card';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { buildRenderScene } from '../stage/build-render-scene';
 import { SceneStage } from '../stage/scene-stage';
@@ -69,42 +68,47 @@ function TemplateCard({ template, index, isSelected, mode, onOpen, onOpenMenu }:
       <Thumbnail.Row
         onClick={handleOpen}
         selected={isSelected}
-        preview={(
+      >
+        <Thumbnail.Preview>
           <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">
             <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
           </SceneFrame>
-        )}
-        body={(
+        </Thumbnail.Preview>
+        <Thumbnail.Body>
           <>
             <Paragraph.xs className="truncate text-secondary">{template.name}</Paragraph.xs>
             <Paragraph.xs className="uppercase tracking-wide text-tertiary">{template.kind}</Paragraph.xs>
           </>
-        )}
-        overlay={(
-          <div className="absolute right-2 top-2 hidden group-hover:block">
+        </Thumbnail.Body>
+        <Thumbnail.Overlay position="top-right" className="right-2 top-2 hidden group-hover:block">
+          <div>
             <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
               <Ellipsis />
             </Button.Icon>
           </div>
-        )}
-      />
+        </Thumbnail.Overlay>
+      </Thumbnail.Row>
     );
   }
 
   return (
-    <SceneThumbnailCard
-      scene={scene}
-      index={index}
-      label={template.name}
-      secondaryText={template.name}
-      selected={isSelected}
-      onClick={handleOpen}
-      onDoubleClick={handleOpen}
-      menuButton={(
+    <Thumbnail.Tile onClick={handleOpen} onDoubleClick={handleOpen} selected={isSelected}>
+      <Thumbnail.Body>
+        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+        </SceneFrame>
+      </Thumbnail.Body>
+      <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
         <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-          <Ellipsis/>
+          <Ellipsis />
         </Button.Icon>
-      )}
-    />
+      </Thumbnail.Overlay>
+      <Thumbnail.Caption>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+          <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
+        </div>
+      </Thumbnail.Caption>
+    </Thumbnail.Tile>
   );
 }

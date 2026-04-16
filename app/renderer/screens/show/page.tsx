@@ -3,7 +3,6 @@ import { ChevronLeft, Folder, LayoutTemplate, Plus } from 'lucide-react';
 import { useCast } from '@renderer/contexts/cast-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { Button } from '@renderer/components/controls/button';
-import { EmptyStatePanel } from '@renderer/components/display/empty-state-panel';
 import { Label } from '@renderer/components/display/text';
 import { EditableField } from '@renderer/components/form/editable-field';
 import { Panel } from '../../components/layout/panel';
@@ -21,7 +20,7 @@ import { SlideBrowserToolbar } from '../../features/show/slide-browser-toolbar';
 import { SlideGrid } from '../../features/show/slide-grid';
 import { SlideList } from '../../features/show/slide-list';
 import { useSlideBrowserView } from '../../features/show/use-slide-browser-view';
-import { PanelRoute } from '../../features/workbench/panel-route';
+import { SplitPanel } from '../../features/workbench/split-panel';
 
 export function ShowScreen() {
   return (
@@ -49,8 +48,8 @@ function ShowScreenContent() {
 
   return (
     <section data-ui-region="show-mode-layout" className="h-full min-h-0 overflow-hidden">
-      <PanelRoute.Split splitId="show-main" orientation="horizontal" className="h-full">
-        <PanelRoute.Panel id="show-left" defaultSize={300} minSize={140} collapsible>
+      <SplitPanel.Panel splitId="show-main" orientation="horizontal" className="h-full">
+        <SplitPanel.Segment id="show-left" defaultSize={300} minSize={140} collapsible>
           <Panel as="aside" bordered="right" data-ui-region="library-panel">
             {libraryPanelView === 'libraries' && snapshot ? (
               <>
@@ -60,50 +59,56 @@ function ShowScreenContent() {
                     <Plus />
                   </Button.Icon>
                 </Panel.Header>
-                <Panel.Section className="space-y-1 px-1.5 py-2">
-                  {snapshot.libraryBundles.map((bundle) => {
-                    const isEditing = bundle.library.id === recentlyCreatedId || libraryBrowserActions.isEditing('library', bundle.library.id);
+                <Panel.Section>
+                  <Panel.SectionBody className="space-y-1 px-1.5 py-2">
+                    {snapshot.libraryBundles.map((bundle) => {
+                      const isEditing = bundle.library.id === recentlyCreatedId || libraryBrowserActions.isEditing('library', bundle.library.id);
 
-                    function handleSelect() {
-                      clearTimeout(clickTimer.current);
-                      selectLibrary(bundle.library.id);
-                      clickTimer.current = setTimeout(() => {
-                        libraryBrowserActions.setPlaylistView();
-                      }, 250);
-                    }
+                      function handleSelect() {
+                        clearTimeout(clickTimer.current);
+                        selectLibrary(bundle.library.id);
+                        clickTimer.current = setTimeout(() => {
+                          libraryBrowserActions.setPlaylistView();
+                        }, 250);
+                      }
 
-                    function handleDoubleClick() {
-                      clearTimeout(clickTimer.current);
-                    }
+                      function handleDoubleClick() {
+                        clearTimeout(clickTimer.current);
+                      }
 
-                    function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-                      libraryBrowserActions.handleLibraryContextMenu(event, bundle.library.id);
-                    }
+                      function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+                        libraryBrowserActions.handleLibraryContextMenu(event, bundle.library.id);
+                      }
 
-                    function handleRename(name: string) {
-                      void renameLibrary(bundle.library.id, name);
-                      clearRecentlyCreated();
-                      libraryBrowserActions.clearEditing();
-                    }
+                      function handleRename(name: string) {
+                        void renameLibrary(bundle.library.id, name);
+                        clearRecentlyCreated();
+                        libraryBrowserActions.clearEditing();
+                      }
 
-                    return (
-                      <Panel.Item
-                        key={bundle.library.id}
-                        role="button"
-                        onClick={handleSelect}
-                        onDoubleClick={handleDoubleClick}
-                        onContextMenu={handleContextMenu}
-                        leading={<Folder size={14} strokeWidth={1.75} />}
-                      >
-                        <EditableField
-                          value={bundle.library.name}
-                          onCommit={handleRename}
-                          editing={isEditing}
-                          className="text-md font-medium"
-                        />
-                      </Panel.Item>
-                    );
-                  })}
+                      return (
+                        <Panel.Item
+                          key={bundle.library.id}
+                          role="button"
+                          onClick={handleSelect}
+                          onDoubleClick={handleDoubleClick}
+                          onContextMenu={handleContextMenu}
+                        >
+                          <Panel.ItemLeading>
+                            <Folder size={14} strokeWidth={1.75} />
+                          </Panel.ItemLeading>
+                          <Panel.ItemBody>
+                            <EditableField
+                              value={bundle.library.name}
+                              onCommit={handleRename}
+                              editing={isEditing}
+                              className="text-md font-medium"
+                            />
+                          </Panel.ItemBody>
+                        </Panel.Item>
+                      );
+                    })}
+                  </Panel.SectionBody>
                 </Panel.Section>
               </>
             ) : null}
@@ -117,14 +122,14 @@ function ShowScreenContent() {
                   <Label.sm className="mr-auto pl-1">{currentLibraryBundle.library.name}</Label.sm>
                 </Panel.Header>
 
-                <PanelRoute.Split splitId="library-panel" orientation="vertical" className="flex-1">
-                  <PanelRoute.Panel id="library-playlists" defaultSize={200} minSize={120}>
+                <SplitPanel.Panel splitId="library-panel" orientation="vertical" className="flex-1">
+                  <SplitPanel.Segment id="library-playlists" defaultSize={200} minSize={120}>
                     <PlaylistList />
-                  </PanelRoute.Panel>
-                  <PanelRoute.Panel id="library-segments" defaultSize={320} minSize={180}>
+                  </SplitPanel.Segment>
+                  <SplitPanel.Segment id="library-segments" defaultSize={320} minSize={180}>
                     <SegmentsBrowser />
-                  </PanelRoute.Panel>
-                </PanelRoute.Split>
+                  </SplitPanel.Segment>
+                </SplitPanel.Panel>
               </>
             ) : null}
 
@@ -137,19 +142,23 @@ function ShowScreenContent() {
               />
             ) : null}
           </Panel>
-        </PanelRoute.Panel>
-        <PanelRoute.Panel id="show-center" defaultSize={840} minSize={360}>
-          <PanelRoute.Split splitId="show-center" orientation="vertical" className="h-full">
-            <PanelRoute.Panel id="show-middle" defaultSize={600} minSize={360}>
+        </SplitPanel.Segment>
+        <SplitPanel.Segment id="show-center" defaultSize={840} minSize={360}>
+          <SplitPanel.Panel splitId="show-center" orientation="vertical" className="h-full">
+            <SplitPanel.Segment id="show-middle" defaultSize={600} minSize={360}>
               <main data-ui-region="slide-browser" className="flex h-full min-h-0 flex-col overflow-hidden">
                 <SlideBrowserToolbar items={state.items} headerVariant={state.headerVariant} />
                 <section className="min-h-0 flex-1 overflow-hidden">
                   {state.contentVariant === 'empty' ? (
-                    <EmptyStatePanel
-                      glyph={<LayoutTemplate />}
-                      title="No item selected"
-                      description="Select an item from a playlist or from the deck drawer to load slides in the browser."
-                    />
+                    <section className="flex h-full min-h-0 items-center justify-center p-6">
+                      <div className="flex flex-col max-w-md items-center gap-3 rounded-lg border border-primary bg-primary/50 px-8 py-10 text-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-primary bg-tertiary text-tertiary">
+                          <LayoutTemplate />
+                        </div>
+                        <h2 className="m-0 text-lg font-semibold text-primary">No item selected</h2>
+                        <p className="m-0 text-sm text-tertiary">Select an item from a playlist or from the deck drawer to load slides in the browser.</p>
+                      </div>
+                    </section>
                   ) : null}
                   {state.contentVariant === 'single-grid' ? <SlideGrid /> : null}
                   {state.contentVariant === 'single-list' ? <SlideList /> : null}
@@ -157,16 +166,16 @@ function ShowScreenContent() {
                   {state.contentVariant === 'continuous-list' ? <ContinuousSlideList items={state.items} /> : null}
                 </section>
               </main>
-            </PanelRoute.Panel>
-            <PanelRoute.Panel id="show-bottom" defaultSize={260} minSize={96} collapsible>
+            </SplitPanel.Segment>
+            <SplitPanel.Segment id="show-bottom" defaultSize={260} minSize={96} collapsible>
               <ResourceDrawer />
-            </PanelRoute.Panel>
-          </PanelRoute.Split>
-        </PanelRoute.Panel>
-        <PanelRoute.Panel id="show-right" defaultSize={320} minSize={140} collapsible>
+            </SplitPanel.Segment>
+          </SplitPanel.Panel>
+        </SplitPanel.Segment>
+        <SplitPanel.Segment id="show-right" defaultSize={320} minSize={140} collapsible>
           <PreviewPanel />
-        </PanelRoute.Panel>
-      </PanelRoute.Split>
+        </SplitPanel.Segment>
+      </SplitPanel.Panel>
     </section>
   );
 }

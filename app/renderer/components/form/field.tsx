@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEventHandler, ReactNode, Ref } from 'react';
+import { Children, isValidElement, type CSSProperties, type HTMLAttributes, type KeyboardEventHandler, type ReactNode, type Ref } from 'react';
 import { useRef } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
@@ -31,11 +31,20 @@ function FieldLabel({ label, wide, children }: { label: string; wide?: boolean; 
   );
 }
 
-function FieldInput({ disabled = false, type = 'text', value, onChange, onBlur, min, max, step, icon, label, wide }: { disabled?: boolean; type?: 'number' | 'text'; value: string | number; onChange: (value: string) => void; onBlur?: () => void; min?: number; max?: number; step?: number; icon?: ReactNode; label?: string; wide?: boolean }) {
+function FieldIcon({ children, className, ...rest }: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={className} {...rest}>
+      {children}
+    </span>
+  );
+}
+
+function FieldInput({ children, disabled = false, type = 'text', value, onChange, onBlur, min, max, step, label, wide }: { children?: ReactNode; disabled?: boolean; type?: 'number' | 'text'; value: string | number; onChange: (value: string) => void; onBlur?: () => void; min?: number; max?: number; step?: number; label?: string; wide?: boolean }) {
   function handleValueChange(event: React.ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value);
   }
 
+  const icon = extractFieldIcon(children);
   const input = (
     <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-primary transition-colors focus-within:border-brand">
       {icon ? <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">{icon}</span> : null}
@@ -57,8 +66,9 @@ function FieldInput({ disabled = false, type = 'text', value, onChange, onBlur, 
   return <FieldLabel label={label} wide={wide}>{input}</FieldLabel>;
 }
 
-function FieldSelect({ value, onChange, onBlur, options, icon, label, wide }: { value: string; onChange: (value: string) => void; onBlur?: () => void; options: Array<{ value: string; label: string; style?: CSSProperties }>; icon?: ReactNode; label?: string; wide?: boolean }) {
+function FieldSelect({ children, value, onChange, onBlur, options, label, wide }: { children?: ReactNode; value: string; onChange: (value: string) => void; onBlur?: () => void; options: Array<{ value: string; label: string; style?: CSSProperties }>; label?: string; wide?: boolean }) {
   const selectedLabel = options.find((o) => o.value === value)?.label ?? '';
+  const icon = extractFieldIcon(children);
 
   const select = (
     <div className="flex min-w-0 items-center">
@@ -158,5 +168,17 @@ function FieldCheckbox({ checked, className, disabled = false, label, onChange }
   );
 }
 
-export const Field = { Label: FieldLabel, Input: FieldInput, Select: FieldSelect, Textarea: FieldTextarea, Color: FieldColor, Checkbox: FieldCheckbox };
-export { FieldLabel, FieldInput, FieldSelect, FieldTextarea, FieldColor, FieldCheckbox };
+function extractFieldIcon(children: ReactNode): ReactNode {
+  let icon: ReactNode = null;
+
+  Children.forEach(children, (child) => {
+    if (!isValidElement<{ children?: ReactNode }>(child)) return;
+    if (child.type !== FieldIcon) return;
+    icon = child.props.children;
+  });
+
+  return icon;
+}
+
+export const Field = { Label: FieldLabel, Icon: FieldIcon, Input: FieldInput, Select: FieldSelect, Textarea: FieldTextarea, Color: FieldColor, Checkbox: FieldCheckbox };
+export { FieldLabel, FieldIcon, FieldInput, FieldSelect, FieldTextarea, FieldColor, FieldCheckbox };

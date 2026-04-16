@@ -100,8 +100,9 @@ function DeckItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpe
           onClick={handleOpen}
           selected={isSelected}
           className={isSelected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : ''}
-          preview={renderScenePreview(scene)}
-          body={(
+        >
+          <Thumbnail.Preview>{renderScenePreview(scene)}</Thumbnail.Preview>
+          <Thumbnail.Body>
             <>
               <div className="flex items-center gap-2">
                 <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
@@ -116,15 +117,15 @@ function DeckItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpe
                 {slides.length} {slides.length === 1 ? 'slide' : 'slides'}
               </Paragraph.xs>
             </>
-          )}
-          overlay={(
-            <div className="absolute right-2 top-2 hidden group-hover:block">
+          </Thumbnail.Body>
+          <Thumbnail.Overlay position="top-right" className="right-2 top-2 hidden group-hover:block">
+            <div>
               <Button.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
                 <Ellipsis />
               </Button.Icon>
             </div>
-          )}
-        />
+          </Thumbnail.Overlay>
+        </Thumbnail.Row>
       </div>
     );
   }
@@ -135,8 +136,9 @@ function DeckItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpe
         onClick={handleOpen}
         selected={isSelected}
         className={isSelected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : ''}
-        body={renderCardBody(scene, handleMenuClick)}
-        caption={(
+      >
+        <Thumbnail.Body>{renderCardBody(scene, handleMenuClick)}</Thumbnail.Body>
+        <Thumbnail.Caption>
           <div className="flex items-center gap-2">
             <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
             <EditableField
@@ -146,8 +148,8 @@ function DeckItemCard({ item, slides, isSelected, isEditing, mode, onOpen, onOpe
               className="min-w-0 truncate text-sm text-secondary"
             />
           </div>
-        )}
-      />
+        </Thumbnail.Caption>
+      </Thumbnail.Tile>
     </div>
   );
 }

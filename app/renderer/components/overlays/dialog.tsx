@@ -152,6 +152,14 @@ function Header({ children, className, ...props }: HTMLAttributes<HTMLDivElement
   );
 }
 
+function Body({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('min-h-0 flex-1', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 function Title({ children, className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   const generatedId = useId();
   const { meta } = useDialog();
@@ -198,4 +206,12 @@ function CloseButton({ className, label = 'Close', ...props }: Omit<ComponentPro
   );
 }
 
-export const Dialog = { Root, Trigger, Portal, Backdrop, Positioner, Content, Header, Title, Description, Close, CloseButton };
+function Footer({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('flex items-center justify-between border-t border-primary px-4 py-3', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const Dialog = { Root, Trigger, Portal, Backdrop, Positioner, Content, Header, Body, Footer, Title, Description, Close, CloseButton };

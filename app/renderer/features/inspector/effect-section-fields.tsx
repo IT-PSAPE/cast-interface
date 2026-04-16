@@ -1,7 +1,7 @@
 import type { StrokePosition } from '@core/types';
 import { MoveHorizontal, MoveVertical, RulerDimensionLine, Sun } from 'lucide-react';
 import { ColorPicker } from '../../components/form/color-picker';
-import { FieldInput, FieldSelect } from '../../components/form/field';
+import { FieldIcon, FieldInput, FieldSelect } from '../../components/form/field';
 import { Section } from './inspector-section';
 import { parseNumber } from '../../utils/slides';
 
@@ -41,7 +41,9 @@ export function StrokeSectionFields({ label, enabled, color, width, position, on
           </Section.Row>
           <Section.Row>
             <FieldSelect value={position} onChange={handlePositionChange} options={STROKE_POSITION_OPTIONS} />
-            <FieldInput icon={<RulerDimensionLine size={14} />} type="number" value={width} onChange={handleWidthChange} />
+            <FieldInput type="number" value={width} onChange={handleWidthChange}>
+              <FieldIcon><RulerDimensionLine size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
         </Section.Body>
       ) : null}
@@ -77,11 +79,17 @@ export function ShadowSectionFields({ label, enabled, color, blur, offsetX, offs
       {enabled ? (
         <Section.Body>
           <Section.Row>
-            <FieldInput icon={<MoveHorizontal size={14} />} type="number" value={offsetX} onChange={handleOffsetXChange} />
-            <FieldInput icon={<MoveVertical size={14} />} type="number" value={offsetY} onChange={handleOffsetYChange} />
+            <FieldInput type="number" value={offsetX} onChange={handleOffsetXChange}>
+              <FieldIcon><MoveHorizontal size={14} /></FieldIcon>
+            </FieldInput>
+            <FieldInput type="number" value={offsetY} onChange={handleOffsetYChange}>
+              <FieldIcon><MoveVertical size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
           <Section.Row>
-            <FieldInput icon={<Sun size={14} />} type="number" value={blur} onChange={handleBlurChange} />
+            <FieldInput type="number" value={blur} onChange={handleBlurChange}>
+              <FieldIcon><Sun size={14} /></FieldIcon>
+            </FieldInput>
           </Section.Row>
           <Section.Row lead>
             <ColorPicker value={color} onChange={handleColorChange} />

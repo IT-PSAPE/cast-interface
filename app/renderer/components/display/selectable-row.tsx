@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -15,28 +15,27 @@ const selectableRowStyles = cv({
   },
 });
 
-interface SelectableRowProps extends Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'draggable' | 'onDragEnd' | 'onDragOver' | 'onDragStart' | 'onDrop'> {
-  selected: boolean;
-  leading?: ReactNode;
-  title: string;
-  onClick: () => void;
-  trailing?: ReactNode;
+interface SelectableRowRootProps extends Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'draggable' | 'onClick' | 'onDragEnd' | 'onDragOver' | 'onDragStart' | 'onDrop'> {
+  children: ReactNode;
   className?: string;
+  selected: boolean;
 }
 
-export function SelectableRow({
-  selected,
-  leading,
-  title,
-  onClick,
-  trailing,
+interface SelectableRowPartProps extends HTMLAttributes<HTMLSpanElement> {
+  children: ReactNode;
+}
+
+function Root({
+  children,
   className,
   draggable,
+  onClick,
   onDragEnd,
   onDragOver,
   onDragStart,
   onDrop,
-}: SelectableRowProps) {
+  selected,
+}: SelectableRowRootProps) {
   return (
     <button
       type="button"
@@ -48,9 +47,33 @@ export function SelectableRow({
       onDragStart={onDragStart}
       onDrop={onDrop}
     >
-      {leading}
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
-      {trailing}
+      {children}
     </button>
   );
 }
+
+function Leading({ children, className, ...rest }: SelectableRowPartProps) {
+  return (
+    <span className={cn('shrink-0 text-tertiary', className)} {...rest}>
+      {children}
+    </span>
+  );
+}
+
+function Label({ children, className, ...rest }: SelectableRowPartProps) {
+  return (
+    <span className={cn('min-w-0 flex-1 truncate text-sm font-medium', className)} {...rest}>
+      {children}
+    </span>
+  );
+}
+
+function Trailing({ children, className, ...rest }: SelectableRowPartProps) {
+  return (
+    <span className={cn('ml-auto flex shrink-0 items-center gap-1', className)} {...rest}>
+      {children}
+    </span>
+  );
+}
+
+export const SelectableRow = { Root, Leading, Label, Trailing };

@@ -1319,12 +1319,37 @@ export class CastRepository {
   }
 
   addDeckItemToSegment(segmentId: Id, itemId: Id): AppSnapshot {
-    const segment = this.db
-      .prepare('SELECT playlist_id FROM playlist_segments WHERE id = ?')
-      .get(segmentId) as { playlist_id: string } | undefined;
+    const owner = this.resolveDeckOwnerRow(itemId);
+    if (!owner) return this.getSnapshot();
 
-    if (!segment) return this.getSnapshot();
-    return this.moveDeckItemToSegment(segment.playlist_id, itemId, segmentId);
+    const exists = this.db
+      .prepare('SELECT id FROM playlist_segments WHERE id = ?')
+      .get(segmentId) as { id: string } | undefined;
+
+    if (!exists) return this.getSnapshot();
+
+    const now = nowIso();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlist_entries WHERE segment_id = ?').get(segmentId) as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
+
+    this.db
+      .prepare(
+        `INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        createId(),
+        segmentId,
+        owner.type === 'presentation' ? itemId : null,
+        owner.type === 'lyric' ? itemId : null,
+        currentOrder + 1,
+        now,
+        now,
+      );
+
+    return this.getSnapshot();
   }
 
   moveDeckItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): AppSnapshot {
@@ -1368,6 +1393,44 @@ export class CastRepository {
         now,
         now,
       );
+
+    return this.getSnapshot();
+  }
+
+  movePlaylistEntryToSegment(entryId: Id, segmentId: Id | null): AppSnapshot {
+    const entry = this.db
+      .prepare(
+        `SELECT pe.id, pe.segment_id, ps.playlist_id
+         FROM playlist_entries pe
+         JOIN playlist_segments ps ON ps.id = pe.segment_id
+         WHERE pe.id = ?`
+      )
+      .get(entryId) as { id: string; segment_id: string; playlist_id: string } | undefined;
+
+    if (!entry) return this.getSnapshot();
+
+    if (!segmentId) {
+      this.db
+        .prepare('DELETE FROM playlist_entries WHERE id = ?')
+        .run(entryId);
+      return this.getSnapshot();
+    }
+
+    const targetSegment = this.db
+      .prepare('SELECT id FROM playlist_segments WHERE id = ? AND playlist_id = ?')
+      .get(segmentId, entry.playlist_id) as { id: string } | undefined;
+
+    if (!targetSegment) return this.getSnapshot();
+
+    const now = nowIso();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlist_entries WHERE segment_id = ?').get(segmentId) as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
+
+    this.db
+      .prepare('UPDATE playlist_entries SET segment_id = ?, order_index = ?, updated_at = ? WHERE id = ?')
+      .run(segmentId, currentOrder + 1, now, entryId);
 
     return this.getSnapshot();
   }

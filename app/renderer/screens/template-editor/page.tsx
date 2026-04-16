@@ -1,18 +1,20 @@
 import type { Id, Template } from '@core/types';
-import { Ellipsis, Layers, Music, Presentation, Trash2 } from 'lucide-react';
+import { Ellipsis, Layers, Music, Plus, Presentation, Trash2 } from 'lucide-react';
 import { Button } from '../../components/controls/button';
-import { SceneThumbnailCard } from '../../components/display/scene-thumbnail-card';
+import { SceneFrame } from '../../components/display/scene-frame';
+import { Thumbnail } from '../../components/display/thumbnail';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { ItemListPanel } from '../../features/editor/item-list-panel';
+import { ObjectListPanel } from '../../features/editor/object-list-panel';
 import { InspectorTabsPanel } from '../../features/inspector/inspector-tabs-panel';
 import { useInspectorPanelPushAction } from '../../features/inspector/use-inspector-panel-push-action';
 import { buildRenderScene } from '../../features/stage/build-render-scene';
+import { SceneStage } from '../../features/stage/scene-stage';
 import { StagePanel } from '../../features/stage/stage-panel';
-import { PanelRoute } from '../../features/workbench/panel-route';
+import { SplitPanel } from '../../features/workbench/split-panel';
 
 export function TemplateEditorScreen() {
   const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate } = useTemplateEditor();
@@ -37,55 +39,83 @@ export function TemplateEditorScreen() {
 
   return (
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
-      <PanelRoute.Split splitId="editor-main" orientation="horizontal" className="h-full">
-        <PanelRoute.Panel id="editor-left" defaultSize={280} minSize={140} collapsible>
-          <ItemListPanel
-            title="Templates"
-            splitId="template-list-panel"
-            listPanelId="template-list"
-            objectsPanelId="template-objects"
-            onAdd={handleOpenCreateMenu}
-            addLabel="Create template"
-            listAriaLabel="Templates"
-            contextMenu={menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
-          >
-            {templates.map((template, index) => {
-              const scene = buildRenderScene(null, template.elements);
+      <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
+        <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
+          <Panel as="aside" bordered="right">
+            <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
+              <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
+                <Panel.Section>
+                  <Panel.SectionHeader className="border-b border-primary">
+                    <Panel.SectionTitle>
+                      <span className="truncate text-sm font-medium text-primary">Templates</span>
+                    </Panel.SectionTitle>
+                    <Panel.SectionAction>
+                      <Button.Icon label="Create template" onClick={handleOpenCreateMenu}>
+                        <Plus />
+                      </Button.Icon>
+                    </Panel.SectionAction>
+                  </Panel.SectionHeader>
+                  <Panel.SectionBody className="overflow-y-auto p-2">
+                    <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
+                      {templates.map((template, index) => {
+                        const scene = buildRenderScene(null, template.elements);
 
-              function handleSelect() {
-                openTemplateEditor(template.id);
-              }
+                        function handleSelect() {
+                          openTemplateEditor(template.id);
+                        }
 
-              function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-                event.stopPropagation();
-                templateMenu.openFromButton(event.currentTarget, template.id);
-              }
+                        function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
+                          event.stopPropagation();
+                          templateMenu.openFromButton(event.currentTarget, template.id);
+                        }
 
-              return (
-                <SceneThumbnailCard
-                  key={template.id}
-                  scene={scene}
-                  index={index}
-                  label={template.name}
-                  secondaryText={template.name}
-                  selected={template.id === currentTemplateId}
-                  onClick={handleSelect}
-                  captionIcon={<TemplateKindIcon kind={template.kind} />}
-                  menuButton={(
-                    <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                      <Ellipsis />
-                    </Button.Icon>
-                  )}
-                />
-              );
-            })}
+                        return (
+                          <Thumbnail.Tile key={template.id} onClick={handleSelect} selected={template.id === currentTemplateId}>
+                            <Thumbnail.Body>
+                              <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+                                <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+                              </SceneFrame>
+                            </Thumbnail.Body>
+                            <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+                              <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+                                <Ellipsis />
+                              </Button.Icon>
+                            </Thumbnail.Overlay>
+                            <Thumbnail.Caption>
+                              <div className="flex items-center gap-2">
+                                <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+                                <TemplateKindIcon kind={template.kind} />
+                                <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
+                              </div>
+                            </Thumbnail.Caption>
+                          </Thumbnail.Tile>
+                        );
+                      })}
+                    </div>
+                  </Panel.SectionBody>
+                </Panel.Section>
+              </SplitPanel.Segment>
+              <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
+                <Panel.Section>
+                  <Panel.SectionHeader className="border-b border-t border-primary">
+                    <Panel.SectionTitle>
+                      <span className="text-sm font-medium text-primary">Objects</span>
+                    </Panel.SectionTitle>
+                  </Panel.SectionHeader>
+                  <Panel.SectionBody className="overflow-y-auto p-2">
+                    <ObjectListPanel />
+                  </Panel.SectionBody>
+                </Panel.Section>
+              </SplitPanel.Segment>
+            </SplitPanel.Panel>
+            {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
             {templateMenu.menuState ? <ContextMenu x={templateMenu.menuState.x} y={templateMenu.menuState.y} items={buildTemplateMenuItems(templateMenu.menuState.data)} onClose={templateMenu.close} /> : null}
-          </ItemListPanel>
-        </PanelRoute.Panel>
-        <PanelRoute.Panel id="editor-center" defaultSize={840} minSize={360}>
+          </Panel>
+        </SplitPanel.Segment>
+        <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
           <StagePanel />
-        </PanelRoute.Panel>
-        <PanelRoute.Panel id="editor-right" defaultSize={320} minSize={140} collapsible>
+        </SplitPanel.Segment>
+        <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
             {inspectorState.isVisible ? (
@@ -96,8 +126,8 @@ export function TemplateEditorScreen() {
               </Panel.Footer>
             ) : null}
           </Panel>
-        </PanelRoute.Panel>
-      </PanelRoute.Split>
+        </SplitPanel.Segment>
+      </SplitPanel.Panel>
     </section>
   );
 }

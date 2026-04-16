@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Button } from '../../components/controls/button';
-import { DialogFrame } from '../../components/overlays/dialog-frame';
+import { Dialog } from '../../components/overlays/dialog';
 import DocEditor, { type Block } from '../../components/form/doc-editor';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useLyricEditorSave } from './use-lyric-editor-document';
@@ -29,30 +29,32 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
 
   if (!isOpen || !currentDeckItem || currentDeckItem.type !== 'lyric') return null;
 
-  const footer = (
-    <div className="ml-auto flex items-center gap-2">
-      <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
-      <Button variant="take" onClick={handleSave} disabled={isSaving}>Save</Button>
-    </div>
-  );
-
   return (
-    <DialogFrame
-      title="Lyric editor"
-      onClose={onClose}
-      dataUiRegion="lyric-editor-modal"
-      bodyClassName="h-full overflow-auto bg-primary/95 px-0 py-0"
-      footer={footer}
-      popupClassName="h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)]"
-    >
-      <div className="px-6 py-5 min-h-80">
-        <div className="mx-auto flex max-w-3xl justify-center">
-          <DocEditor
-            initialBlocks={initialBlocks}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-    </DialogFrame>
+    <Dialog.Root open onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content data-ui-region="lyric-editor-modal" className="h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)]">
+            <Dialog.Header>
+              <Dialog.Title>Lyric editor</Dialog.Title>
+              <Dialog.CloseButton />
+            </Dialog.Header>
+            <Dialog.Body className="h-full overflow-auto bg-primary/95 px-0 py-0">
+              <div className="min-h-80 px-6 py-5">
+                <div className="mx-auto flex max-w-3xl justify-center">
+                  <DocEditor initialBlocks={initialBlocks} onChange={handleChange} />
+                </div>
+              </div>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <div className="ml-auto flex items-center gap-2">
+                <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                <Button variant="take" onClick={handleSave} disabled={isSaving}>Save</Button>
+              </div>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

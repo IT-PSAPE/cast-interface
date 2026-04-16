@@ -21,7 +21,7 @@ function PlaylistTabItem({ item }: { item: PlaylistPresentationSequenceItem }) {
   const tabLabel = `${item.item.title}${duplicateSuffix}`;
 
   return (
-    <Tabs.Trigger value={item.item.id}>
+    <Tabs.Trigger value={item.entryId}>
       <span className="max-w-[180px] truncate" title={tabLabel}>
         {tabLabel}
       </span>
@@ -35,8 +35,8 @@ const PLAYLIST_MODE_LABELS: Record<PlaylistBrowserMode, string> = { current: 'Cu
 export function SlideBrowserToolbar({ items, headerVariant }: SlideBrowserToolbarProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
-  const { slides, selectPlaylistDeckItem } = useSlides();
-  const { currentDeckItem, currentPlaylistDeckItemId, isDetachedDeckBrowser } = useNavigation();
+  const { selectPlaylistEntry } = useSlides();
+  const { currentDeckItem, currentPlaylistEntryId, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, setSlideBrowserMode, playlistBrowserMode, setPlaylistBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useSlideBrowser();
 
   const isGridMode = slideBrowserMode === 'grid';
@@ -82,7 +82,7 @@ export function SlideBrowserToolbar({ items, headerVariant }: SlideBrowserToolba
         {showContentInfo && (
           <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
             {headerVariant === 'tabs' ? (
-              <Tabs.Root value={currentPlaylistDeckItemId ?? undefined} onValueChange={selectPlaylistDeckItem}>
+              <Tabs.Root value={currentPlaylistEntryId ?? undefined} onValueChange={selectPlaylistEntry}>
                 <div className="min-w-max">
                   <Tabs.List label="Playlist items">
                     {items.map((item) => <PlaylistTabItem key={item.entryId} item={item} />)}

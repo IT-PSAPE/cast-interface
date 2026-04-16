@@ -52,31 +52,18 @@ export function OverlaySettingsPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsSection title="Overlay defaults">
-        <div className="grid gap-4 md:grid-cols-2">
-          <FieldSelect
-            label="Animation"
-            value={overlayDefaults.animationKind}
-            onChange={handleAnimationKindChange}
-            options={ANIMATION_OPTIONS}
-          />
-          <FieldInput
-            type="number"
-            label="Transition duration (ms)"
-            value={durationDraft}
-            onChange={setDurationDraft}
-            onBlur={handleDurationBlur}
-          />
-          <FieldInput
-            type="number"
-            label="Auto-clear after (ms)"
-            value={autoClearDraft}
-            onChange={setAutoClearDraft}
-            onBlur={handleAutoClearBlur}
-            wide
-          />
-        </div>
-      </SettingsSection>
+      <SettingsSection.Root>
+        <SettingsSection.Header>
+          <SettingsSection.Title>Overlay defaults</SettingsSection.Title>
+        </SettingsSection.Header>
+        <SettingsSection.Body>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldSelect label="Animation" value={overlayDefaults.animationKind} onChange={handleAnimationKindChange} options={ANIMATION_OPTIONS} />
+            <FieldInput type="number" label="Transition duration (ms)" value={durationDraft} onChange={setDurationDraft} onBlur={handleDurationBlur} />
+            <FieldInput type="number" label="Auto-clear after (ms)" value={autoClearDraft} onChange={setAutoClearDraft} onBlur={handleAutoClearBlur} wide />
+          </div>
+        </SettingsSection.Body>
+      </SettingsSection.Root>
     </div>
   );
 }

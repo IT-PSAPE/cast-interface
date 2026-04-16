@@ -1,12 +1,15 @@
 import { useCallback } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
-import { getSlideVisualState } from '../../utils/slides';
+import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
 import type { PlaylistPresentationSequenceItem } from './use-playlist-presentation-sequence';
 import { buildThumbnailScene } from '../stage/build-render-scene';
 import { useSlideBrowser } from './slide-browser-context';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
-import { SlideCard } from './slide-card';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
+import { SceneFrame } from '@renderer/components/display/scene-frame';
+import { SceneStage } from '../stage/scene-stage';
+import { Play } from 'lucide-react';
+import { Thumbnail } from '@renderer/components/display/thumbnail';
 
 interface ContinuousSlideGridProps {
   items: PlaylistPresentationSequenceItem[];
@@ -14,19 +17,19 @@ interface ContinuousSlideGridProps {
 
 interface GridSectionProps {
   item: PlaylistPresentationSequenceItem;
-  currentDeckItemId: Id | null;
-  currentOutputDeckItemId: Id | null;
+  currentPlaylistEntryId: Id | null;
+  currentOutputPlaylistEntryId: Id | null;
   currentSlideIndex: number;
   gridItemSize: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
-  onActivateSlide: (itemId: Id, slideIndex: number) => void;
-  onEditSlide: (itemId: Id, slideIndex: number) => void;
+  onActivateSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
+  onEditSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
 }
 
-function GridSection({ item, currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
-  const isCurrentPresentation = item.item.id === currentDeckItemId;
-  const isLivePresentation = item.item.id === currentOutputDeckItemId;
+function GridSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
+  const isCurrentPresentation = item.entryId === currentPlaylistEntryId;
+  const isLivePresentation = item.entryId === currentOutputPlaylistEntryId;
 
   const renderSlideCard = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
@@ -34,15 +37,47 @@ function GridSection({ item, currentDeckItemId, currentOutputDeckItemId, current
     const scene = buildThumbnailScene(slide, elements);
 
     function handleActivate() {
-      onActivateSlide(item.item.id, index);
+      onActivateSlide(item.entryId, item.item.id, index);
     }
 
     function handleEdit() {
-      onEditSlide(item.item.id, index);
+      onEditSlide(item.entryId, item.item.id, index);
     }
 
+    const isLive = state === 'live';
+    const isEmpty = state === 'warning';
+
     return (
-      <SlideCard key={slide.id} index={index} state={state} scene={scene} elements={elements} isFocused={isCurrentPresentation && index === currentSlideIndex} onActivate={handleActivate} onEdit={handleEdit} />
+      <Thumbnail.Tile
+        key={slide.id}
+        onClick={handleActivate}
+        onDoubleClick={handleEdit}
+        selected={isCurrentPresentation && index === currentSlideIndex}
+      >
+        <Thumbnail.Body>
+          <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+            {isEmpty ? (
+              <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
+                Empty
+              </div>
+            ) : null}
+            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          </SceneFrame>
+        </Thumbnail.Body>
+        {isLive ? (
+          <Thumbnail.Overlay position="top-left">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+              <Play size={12} strokeWidth={1.9} />
+            </span>
+          </Thumbnail.Overlay>
+        ) : null}
+        <Thumbnail.Caption>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+            <span className="min-w-0 truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
+          </div>
+        </Thumbnail.Caption>
+      </Thumbnail.Tile>
     );
   }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
 
@@ -54,7 +89,7 @@ function GridSection({ item, currentDeckItemId, currentOutputDeckItemId, current
 }
 
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
-  const { currentDeckItemId, currentOutputDeckItemId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
+  const { currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
   const { gridItemSize } = useSlideBrowser();
 
   if (items.length === 0) {
@@ -72,8 +107,8 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
           <GridSection
             key={item.entryId}
             item={item}
-            currentDeckItemId={currentDeckItemId}
-            currentOutputDeckItemId={currentOutputDeckItemId}
+            currentPlaylistEntryId={currentPlaylistEntryId}
+            currentOutputPlaylistEntryId={currentOutputPlaylistEntryId}
             currentSlideIndex={currentSlideIndex}
             gridItemSize={gridItemSize}
             liveSlideIndex={liveSlideIndex}

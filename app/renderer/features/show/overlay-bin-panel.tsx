@@ -4,8 +4,10 @@ import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-c
 import { usePresentationLayers } from '../../contexts/presentation-layer-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { overlayToLayerElements } from '@core/presentation-layers';
+import { Thumbnail } from '../../components/display/thumbnail';
+import { SceneFrame } from '../../components/display/scene-frame';
 import { buildRenderScene } from '../stage/build-render-scene';
-import { SceneThumbnailCard } from '../../components/display/scene-thumbnail-card';
+import { SceneStage } from '../stage/scene-stage';
 import { BinPanelLayout } from './bin-panel-layout';
 import { filterByText } from '../../utils/filter-by-text';
 
@@ -62,14 +64,18 @@ function OverlayCard({ overlay, index, isActive, onActivate, onEdit, setWorkbenc
   }
 
   return (
-    <SceneThumbnailCard
-      scene={scene}
-      index={index}
-      label={overlay.name}
-      secondaryText={overlay.name}
-      onClick={handleActivate}
-      onDoubleClick={handleEdit}
-      selected={isActive}
-    />
+    <Thumbnail.Tile onClick={handleActivate} onDoubleClick={handleEdit} selected={isActive}>
+      <Thumbnail.Body>
+        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+        </SceneFrame>
+      </Thumbnail.Body>
+      <Thumbnail.Caption>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+          <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
+        </div>
+      </Thumbnail.Caption>
+    </Thumbnail.Tile>
   );
 }

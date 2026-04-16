@@ -9,6 +9,17 @@ function findCreatedId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
   return null;
 }
 
+function getSegmentEntryIds(snapshot: AppSnapshot | null | undefined, segmentId: Id): Id[] {
+  for (const bundle of snapshot?.libraryBundles ?? []) {
+    for (const playlist of bundle.playlists) {
+      const segment = playlist.segments.find((entry) => entry.segment.id === segmentId);
+      if (segment) return segment.entries.map((entry) => entry.entry.id);
+    }
+  }
+
+  return [];
+}
+
 export function useLibraryPanelManagement() {
   const { snapshot, mutate, setStatusText } = useCast();
 
@@ -90,6 +101,11 @@ export function useLibraryPanelManagement() {
     setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
   }, [mutate, setStatusText]);
 
+  const movePlaylistEntryToSegment = useCallback(async (entryId: Id, segmentId: Id | null) => {
+    await mutate(() => window.castApi.movePlaylistEntryToSegment(entryId, segmentId));
+    setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
+  }, [mutate, setStatusText]);
+
   const movePlaylist = useCallback(async (id: Id, direction: 'up' | 'down') => {
     await mutate(() => window.castApi.movePlaylist(id, direction));
     setStatusText(direction === 'up' ? 'Moved playlist up' : 'Moved playlist down');
@@ -101,9 +117,11 @@ export function useLibraryPanelManagement() {
   }, [mutate, setStatusText]);
 
   const addDeckItemToSegment = useCallback(async (segmentId: Id, itemId: Id) => {
-    await mutate(() => window.castApi.addDeckItemToSegment(segmentId, itemId));
+    const previousEntryIds = new Set(getSegmentEntryIds(snapshot, segmentId));
+    const nextSnapshot = await mutate(() => window.castApi.addDeckItemToSegment(segmentId, itemId));
     setStatusText('Added item to segment');
-  }, [mutate, setStatusText]);
+    return findCreatedId(previousEntryIds, getSegmentEntryIds(nextSnapshot, segmentId));
+  }, [mutate, setStatusText, snapshot]);
 
   const createDeckItemEntryInSegment = useCallback(async (
     segmentId: Id,
@@ -120,10 +138,10 @@ export function useLibraryPanelManagement() {
     if (!createdItemId) return null;
 
     await mutate(() => createSlide(createdItemId));
-    await mutate(() => window.castApi.addDeckItemToSegment(segmentId, createdItemId));
+    await addDeckItemToSegment(segmentId, createdItemId);
     setStatusText(statusText);
     return createdItemId;
-  }, [snapshot, mutate, setStatusText]);
+  }, [addDeckItemToSegment, snapshot, mutate, setStatusText]);
 
   const createPresentationInSegment = useCallback(async (_libraryId: Id, segmentId: Id) => {
     return createDeckItemEntryInSegment(
@@ -154,6 +172,7 @@ export function useLibraryPanelManagement() {
     deleteSegment,
     deleteDeckItem,
     moveDeckItemToSegment,
+    movePlaylistEntryToSegment,
     movePlaylist,
     moveDeckItem,
     addDeckItemToSegment,

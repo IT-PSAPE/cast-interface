@@ -1,26 +1,18 @@
 import {
+  Children,
+  isValidElement,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { ResizableSplitHandle } from './resizable-split-handle';
-import { ResizableSplitPane } from './resizable-split-pane';
-
-interface ResizablePaneRenderConfig {
-  id: string;
-  visible: boolean;
-  size: number;
-  minSize: number;
-  maxSize: number;
-  flexible: boolean;
-  className?: string;
-  content: ReactNode;
-}
+import { ResizableSplitPane, type ResizableSplitPaneProps } from './resizable-split-pane';
 
 interface ResizableSplitResizeStartEvent {
   handleIndex: number;
@@ -43,20 +35,20 @@ interface HandleDescriptor {
 }
 
 interface ResizableSplitRootProps {
-  orientation: 'horizontal' | 'vertical';
-  panes: ResizablePaneRenderConfig[];
+  children: ReactNode;
   className?: string;
   onContainerResize?: (size: number) => void;
-  onResizeStart: (event: ResizableSplitResizeStartEvent) => void;
   onResize: (event: ResizableSplitResizeMoveEvent) => void;
   onResizeEnd: (event: ResizableSplitResizeEndEvent) => void;
+  onResizeStart: (event: ResizableSplitResizeStartEvent) => void;
+  orientation: 'horizontal' | 'vertical';
 }
 
-export function ResizableSplitRoot({ orientation, panes, className = '', onContainerResize, onResizeStart, onResize, onResizeEnd }: ResizableSplitRootProps) {
+export function ResizableSplitRoot({ children, className = '', onContainerResize, onResize, onResizeEnd, onResizeStart, orientation }: ResizableSplitRootProps) {
+  const paneElements = collectPaneElements(children);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const activeHandleIndexRef = useRef<number | null>(null);
-
   const [handleDescriptors, setHandleDescriptors] = useState<HandleDescriptor[]>([]);
   const [activeHandleIndex, setActiveHandleIndex] = useState<number | null>(null);
   const [hoveredHandleIndex, setHoveredHandleIndex] = useState<number | null>(null);
@@ -66,14 +58,14 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
     const container = containerRef.current;
     if (!container) return sizes;
 
-    for (const pane of panes) {
-      const paneElement = findPaneElement(container, pane.id);
+    for (const pane of paneElements) {
+      const paneElement = findPaneElement(container, pane.props.paneId);
       if (!paneElement) continue;
-      sizes[pane.id] = orientation === 'horizontal' ? paneElement.offsetWidth : paneElement.offsetHeight;
+      sizes[pane.props.paneId] = orientation === 'horizontal' ? paneElement.offsetWidth : paneElement.offsetHeight;
     }
 
     return sizes;
-  }, [orientation, panes]);
+  }, [orientation, paneElements]);
 
   const recalculateHandles = useCallback(() => {
     const container = containerRef.current;
@@ -81,36 +73,31 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
 
     const nextHandles: HandleDescriptor[] = [];
 
-    for (let index = 0; index < panes.length - 1; index++) {
-      const leftPane = panes[index];
-      const rightPane = panes[index + 1];
+    for (let index = 0; index < paneElements.length - 1; index++) {
+      const leftPane = paneElements[index].props;
+      const rightPane = paneElements[index + 1].props;
       const isActiveBoundary = activeHandleIndexRef.current === index;
       const shouldRender = (leftPane.visible && rightPane.visible) || isActiveBoundary;
       if (!shouldRender) continue;
 
-      const boundary = findBoundaryPosition(container, orientation, leftPane.id, rightPane.id);
+      const boundary = findBoundaryPosition(container, orientation, leftPane.paneId, rightPane.paneId);
       if (typeof boundary !== 'number') continue;
-
       nextHandles.push({ index, position: boundary });
     }
 
-    setHandleDescriptors((current) => {
-      if (areHandleDescriptorsEqual(current, nextHandles)) return current;
-      return nextHandles;
-    });
-  }, [orientation, panes]);
+    setHandleDescriptors((current) => (areHandleDescriptorsEqual(current, nextHandles) ? current : nextHandles));
+  }, [orientation, paneElements]);
 
   useLayoutEffect(() => {
     recalculateHandles();
     const container = containerRef.current;
     if (!container) return;
     onContainerResize?.(orientation === 'horizontal' ? container.clientWidth : container.clientHeight);
-  }, [recalculateHandles]);
+  }, [onContainerResize, orientation, recalculateHandles]);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
-    if (typeof ResizeObserver === 'undefined') return;
+    if (!container || typeof ResizeObserver === 'undefined') return;
 
     const observer = new ResizeObserver(() => {
       recalculateHandles();
@@ -118,9 +105,7 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
     });
 
     observer.observe(container);
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [onContainerResize, orientation, recalculateHandles]);
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -133,27 +118,24 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
       event.currentTarget.setPointerCapture(event.pointerId);
     }
 
-    const pointerPosition = extractPointerPosition(orientation, event.clientX, event.clientY);
-    const paneSizes = measurePaneSizes();
-
     activePointerIdRef.current = event.pointerId;
     activeHandleIndexRef.current = handleIndex;
     setActiveHandleIndex(handleIndex);
     setHoveredHandleIndex(handleIndex);
 
-    onResizeStart({ handleIndex, pointerPosition, paneSizes });
+    onResizeStart({
+      handleIndex,
+      pointerPosition: extractPointerPosition(orientation, event.clientX, event.clientY),
+      paneSizes: measurePaneSizes(),
+    });
     recalculateHandles();
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     const handleIndex = readHandleIndex(event.currentTarget);
-    if (handleIndex === null) return;
-    if (activePointerIdRef.current !== event.pointerId) return;
-    if (activeHandleIndexRef.current !== handleIndex) return;
-
+    if (handleIndex === null || activePointerIdRef.current !== event.pointerId || activeHandleIndexRef.current !== handleIndex) return;
     event.preventDefault();
-    const pointerPosition = extractPointerPosition(orientation, event.clientX, event.clientY);
-    onResize({ handleIndex, pointerPosition });
+    onResize({ handleIndex, pointerPosition: extractPointerPosition(orientation, event.clientX, event.clientY) });
   }
 
   function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
@@ -173,19 +155,15 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
 
   function handlePointerLeave(event: ReactPointerEvent<HTMLDivElement>) {
     const handleIndex = readHandleIndex(event.currentTarget);
-    if (handleIndex === null) return;
-    if (activeHandleIndexRef.current === handleIndex) return;
+    if (handleIndex === null || activeHandleIndexRef.current === handleIndex) return;
     setHoveredHandleIndex((current) => (current === handleIndex ? null : current));
   }
 
   function completePointerSession(target: HTMLDivElement, pointerId: number) {
     const handleIndex = readHandleIndex(target);
-    if (handleIndex === null) return;
-    if (activePointerIdRef.current !== pointerId) return;
+    if (handleIndex === null || activePointerIdRef.current !== pointerId) return;
 
-    if (typeof target.hasPointerCapture === 'function'
-      && target.hasPointerCapture(pointerId)
-      && typeof target.releasePointerCapture === 'function') {
+    if (typeof target.hasPointerCapture === 'function' && target.hasPointerCapture(pointerId) && typeof target.releasePointerCapture === 'function') {
       target.releasePointerCapture(pointerId);
     }
 
@@ -198,51 +176,33 @@ export function ResizableSplitRoot({ orientation, panes, className = '', onConta
     recalculateHandles();
   }
 
-  function renderPane(pane: ResizablePaneRenderConfig) {
-    return (
-      <ResizableSplitPane
-        key={pane.id}
-        paneId={pane.id}
-        orientation={orientation}
-        size={pane.size}
-        minSize={pane.minSize}
-        maxSize={pane.maxSize}
-        flexible={pane.flexible}
-        visible={pane.visible}
-        className={pane.className}
-      >
-        {pane.content}
-      </ResizableSplitPane>
-    );
-  }
-
-  function renderHandle(handle: HandleDescriptor) {
-    return (
-      <ResizableSplitHandle
-        key={handle.index}
-        orientation={orientation}
-        handleIndex={handle.index}
-        position={handle.position}
-        active={activeHandleIndex === handle.index}
-        hovered={hoveredHandleIndex === handle.index}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onPointerEnter={handlePointerEnter}
-        onPointerLeave={handlePointerLeave}
-      />
-    );
-  }
-
-  const paneNodes = panes.map(renderPane);
-  const handleNodes = handleDescriptors.map(renderHandle);
   return (
     <div ref={containerRef} className={cn('relative flex min-h-0 min-w-0 overflow-hidden', orientation === 'horizontal' ? 'flex-row' : 'flex-col', className)}>
-      {paneNodes}
-      {handleNodes}
+      {paneElements}
+      {handleDescriptors.map((handle) => (
+        <ResizableSplitHandle
+          key={handle.index}
+          orientation={orientation}
+          handleIndex={handle.index}
+          position={handle.position}
+          active={activeHandleIndex === handle.index}
+          hovered={hoveredHandleIndex === handle.index}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onPointerEnter={handlePointerEnter}
+          onPointerLeave={handlePointerLeave}
+        />
+      ))}
     </div>
   );
+}
+
+function collectPaneElements(children: ReactNode): ReactElement<ResizableSplitPaneProps>[] {
+  return Children.toArray(children).filter((child): child is ReactElement<ResizableSplitPaneProps> => (
+    isValidElement<ResizableSplitPaneProps>(child) && child.type === ResizableSplitPane
+  ));
 }
 
 function extractPointerPosition(orientation: 'horizontal' | 'vertical', x: number, y: number): number {
@@ -252,40 +212,27 @@ function extractPointerPosition(orientation: 'horizontal' | 'vertical', x: numbe
 function readHandleIndex(target: HTMLDivElement): number | null {
   const rawIndex = target.dataset.handleIndex;
   if (!rawIndex) return null;
-
   const parsedIndex = Number(rawIndex);
-  if (Number.isNaN(parsedIndex)) return null;
-
-  return parsedIndex;
+  return Number.isNaN(parsedIndex) ? null : parsedIndex;
 }
 
 function areHandleDescriptorsEqual(current: HandleDescriptor[], next: HandleDescriptor[]): boolean {
   if (current.length !== next.length) return false;
-
   for (let index = 0; index < current.length; index++) {
     if (current[index].index !== next[index].index) return false;
     if (Math.abs(current[index].position - next[index].position) > 0.5) return false;
   }
-
   return true;
 }
 
-function findBoundaryPosition(
-  container: HTMLDivElement,
-  orientation: 'horizontal' | 'vertical',
-  leftPaneId: string,
-  rightPaneId: string,
-): number | null {
+function findBoundaryPosition(container: HTMLDivElement, orientation: 'horizontal' | 'vertical', leftPaneId: string, rightPaneId: string): number | null {
   const leftPane = findPaneElement(container, leftPaneId);
   if (leftPane) {
-    return orientation === 'horizontal'
-      ? leftPane.offsetLeft + leftPane.offsetWidth
-      : leftPane.offsetTop + leftPane.offsetHeight;
+    return orientation === 'horizontal' ? leftPane.offsetLeft + leftPane.offsetWidth : leftPane.offsetTop + leftPane.offsetHeight;
   }
 
   const rightPane = findPaneElement(container, rightPaneId);
   if (!rightPane) return null;
-
   return orientation === 'horizontal' ? rightPane.offsetLeft : rightPane.offsetTop;
 }
 
@@ -294,7 +241,6 @@ function findPaneElement(container: HTMLDivElement, paneId: string): HTMLElement
 }
 
 export type {
-  ResizablePaneRenderConfig,
   ResizableSplitResizeStartEvent,
   ResizableSplitResizeMoveEvent,
   ResizableSplitResizeEndEvent,

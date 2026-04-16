@@ -73,7 +73,7 @@ export function ObjectListRow({
   }
 
   return (
-    <SelectableRow
+    <SelectableRow.Root
       selected={selected}
       onClick={handleSelect}
       className={`${dropClassName} ${dragClassName}`}
@@ -82,10 +82,13 @@ export function ObjectListRow({
       onDragOver={handleDragOver}
       onDragStart={handleDragStart}
       onDrop={handleDrop}
-      leading={<TypeIcon type={element.type} />}
-      title={title}
-      trailing={
-        <span className="ml-auto flex items-center gap-1">
+    >
+      <SelectableRow.Leading>
+        <TypeIcon type={element.type} />
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{title}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="flex items-center gap-1">
           <Button.Icon variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-primary' : 'text-tertiary'}>
             <LockIcon closed={locked} />
           </Button.Icon>
@@ -93,8 +96,8 @@ export function ObjectListRow({
             <VisibilityIcon visible={visible} />
           </Button.Icon>
         </span>
-      }
-    />
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
   );
 }
 

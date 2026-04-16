@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ContextMenu } from '../../components/overlays/context-menu';
-import { Plus } from 'lucide-react';
+import { Grid2x2, List, Plus } from 'lucide-react';
 import { Button } from '../../components/controls/button';
+import { SegmentedControl } from '../../components/controls/segmented-control';
 import { Tabs } from '../../components/display/tabs';
-import { DeckItemIcon } from '../../components/display/entity-icon';
+import { DeckItemIcon, MediaAssetIcon } from '../../components/display/entity-icon';
+import { SelectableRow } from '../../components/display/selectable-row';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { useCreateMenu } from '../../hooks/use-create-menu';
@@ -14,15 +16,14 @@ import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useGridSize } from '../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import type { DrawerTab } from '../../types/ui';
+import type { DrawerTab, ResourceDrawerViewMode } from '../../types/ui';
 import { CreateLyricDialog } from '../show/create-lyric-dialog';
 import { LyricEditorModal } from '../show/lyric-editor-modal';
+import { useShowAudio } from '../show/show-audio-context';
 import { MediaBinPanel } from '../show/media-bin-panel';
 import { ContentBinPanel } from '../show/presentation-bin-panel';
-import { ResourceDrawerModeControl } from './resource-drawer-mode-control';
 import { TemplateBinPanel } from '../show/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
-import { ShowAudioPanel } from '../show/show-audio-panel';
 
 const IMPORT_ACCEPT_BY_TAB = {
   media: 'image/*,video/*',
@@ -290,8 +291,14 @@ function Root({ children }: { children: ReactNode }) {
   );
 }
 
+function isResourceDrawerViewMode(value: string): value is ResourceDrawerViewMode {
+  return value === 'grid' || value === 'list';
+}
+
 function ResourceDrawerContent() {
   const { actions, meta, state } = useDrawer();
+  const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
+  const { actions: audioActions, state: audioState } = useShowAudio();
 
   function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     actions.handleImport(event);
@@ -299,6 +306,12 @@ function ResourceDrawerContent() {
 
   function handleTabChange(value: string) {
     actions.setDrawerTab(value as DrawerTab);
+  }
+
+  function handleViewModeChange(nextValue: string | string[]) {
+    if (Array.isArray(nextValue)) return;
+    if (!isResourceDrawerViewMode(nextValue)) return;
+    setDrawerViewMode(nextValue);
   }
 
   return (
@@ -318,7 +331,16 @@ function ResourceDrawerContent() {
             </FileTrigger.Root>
           }
           {meta.showCreateAction && <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </Button.Icon>}
-          {meta.showModeControl ? <ResourceDrawerModeControl /> : null}
+          {meta.showModeControl ? (
+            <SegmentedControl value={drawerViewMode} onValueChange={handleViewModeChange} aria-label="Resource drawer mode">
+              <SegmentedControl.Icon value="grid" title="Grid view" aria-label="Grid view">
+                <Grid2x2 size={14} strokeWidth={1.5} />
+              </SegmentedControl.Icon>
+              <SegmentedControl.Icon value="list" title="List view" aria-label="List view">
+                <List size={14} strokeWidth={1.5} />
+              </SegmentedControl.Icon>
+            </SegmentedControl>
+          ) : null}
         </div>
       </div>
       <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
@@ -329,7 +351,31 @@ function ResourceDrawerContent() {
           <MediaBinPanel filterText="" gridItemSize={meta.gridSize} />
         </Tabs.Panel>
         <Tabs.Panel value="audio">
-          <ShowAudioPanel />
+          <section className="h-full min-h-0 overflow-auto p-2">
+            <div className="flex min-h-full flex-col">
+              {audioState.audioAssets.length === 0 ? (
+                <div className="grid flex-1 place-items-center rounded border border-primary bg-primary/40 px-4 text-center text-sm text-tertiary">
+                  Import audio to build a reusable app-wide audio list.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {audioState.audioAssets.map((asset) => (
+                    <SelectableRow.Root
+                      key={asset.id}
+                      selected={audioState.currentAudioAssetId === asset.id}
+                      onClick={() => audioActions.selectAudio(asset.id)}
+                      className="h-9"
+                    >
+                      <SelectableRow.Leading>
+                        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+                      </SelectableRow.Leading>
+                      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+                    </SelectableRow.Root>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         </Tabs.Panel>
         <Tabs.Panel value="templates">
           <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />

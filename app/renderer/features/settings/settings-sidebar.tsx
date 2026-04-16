@@ -31,11 +31,12 @@ function renderTabRow(tab: { id: SettingsTabId; title: string }, activeTab: Sett
   }
 
   return (
-    <SelectableRow
+    <SelectableRow.Root
       key={tab.id}
       selected={tab.id === activeTab}
-      title={tab.title}
       onClick={handleClick}
-    />
+    >
+      <SelectableRow.Label>{tab.title}</SelectableRow.Label>
+    </SelectableRow.Root>
   );
 }

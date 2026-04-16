@@ -1,7 +1,14 @@
+import { isLyricDeckItem } from '@core/deck-items';
+import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
+import { Button } from '../../components/controls/button';
 import { MediaPickerDialog } from '../../components/overlays/media-picker-dialog';
+import { useCast } from '../../contexts/cast-context';
+import { useElements } from '../../contexts/element/element-context';
+import { useNavigation } from '../../contexts/navigation-context';
+import { useTemplateEditor } from '../../contexts/template-editor-context';
+import { useWorkbench } from '../../contexts/workbench-context';
 import { useStagePanelController } from './use-stage-panel-controller';
 import { StageViewport } from './stage-viewport';
-import { StageToolbar } from './stage-toolbar';
 
 function formatMetric(value: number | null): string {
   if (value === null) return '--';
@@ -11,6 +18,26 @@ function formatMetric(value: number | null): string {
 export function StagePanel() {
   const { actions, state } = useStagePanelController();
   const { x, y, width, height } = state.selectionMetrics;
+  const { createText, createShape } = useElements();
+  const { setStatusText } = useCast();
+  const { currentDeckItem } = useNavigation();
+  const { currentTemplate } = useTemplateEditor();
+  const { state: { workbenchMode } } = useWorkbench();
+  const hideAddText = workbenchMode === 'slide-editor'
+    ? isLyricDeckItem(currentDeckItem)
+    : workbenchMode === 'template-editor'
+      ? currentTemplate?.kind === 'lyrics'
+      : false;
+
+  function handleAddMedia() {
+    if (actions.openMediaPicker) {
+      actions.openMediaPicker();
+    }
+  }
+
+  function handleUnavailable() {
+    setStatusText('This element type is not yet available.');
+  }
 
   return (
     <section
@@ -22,7 +49,25 @@ export function StagePanel() {
           <>
             <StageViewport />
             <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
-              <StageToolbar onOpenMediaPicker={actions.openMediaPicker} />
+              <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-primary bg-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
+                {!hideAddText ? (
+                  <Button.Icon label="Add Text" onClick={createText}>
+                    <Type size={18} strokeWidth={1.5} />
+                  </Button.Icon>
+                ) : null}
+                <Button.Icon label="Add Shape" onClick={createShape}>
+                  <Square size={18} strokeWidth={1.5} />
+                </Button.Icon>
+                <Button.Icon label="Add Media" onClick={handleAddMedia}>
+                  <Image size={18} strokeWidth={1.5} />
+                </Button.Icon>
+                <Button.Icon label="Draw Path" onClick={handleUnavailable} disabled>
+                  <PencilLine size={18} strokeWidth={1.5} />
+                </Button.Icon>
+                <Button.Icon label="Add Web Source" onClick={handleUnavailable} disabled>
+                  <Globe size={18} strokeWidth={1.5} />
+                </Button.Icon>
+              </div>
             </div>
             {state.showMediaPicker ? (
               <MediaPickerDialog

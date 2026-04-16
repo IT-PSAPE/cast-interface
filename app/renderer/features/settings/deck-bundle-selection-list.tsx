@@ -20,14 +20,19 @@ function DeckBundleSelectionRow({ item, selected, onToggle }: DeckBundleSelectio
   }
 
   return (
-    <SelectableRow
+    <SelectableRow.Root
       selected={selected}
       onClick={handleClick}
-      leading={<DeckItemIcon entity={item} size={14} strokeWidth={1.75} className="text-tertiary" />}
-      title={item.title}
-      trailing={<span className="shrink-0 text-xs uppercase tracking-wide text-tertiary">{item.type}</span>}
       className="h-9"
-    />
+    >
+      <SelectableRow.Leading>
+        <DeckItemIcon entity={item} size={14} strokeWidth={1.75} className="text-tertiary" />
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{item.title}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="text-xs uppercase tracking-wide text-tertiary">{item.type}</span>
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
   );
 }
 

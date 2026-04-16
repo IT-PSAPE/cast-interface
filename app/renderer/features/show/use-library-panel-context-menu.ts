@@ -12,16 +12,16 @@ type LibraryPanelMenuTarget =
   | { type: 'library'; id: Id }
   | { type: 'playlist'; id: Id }
   | { type: 'segment'; id: Id }
-  | { type: 'deck-item'; id: Id; scope: 'library' | 'segment' };
+  | { type: 'deck-item'; itemId: Id; entryId?: Id; scope: 'library' | 'segment' };
 
 export type EditingTarget = { type: 'library' | 'playlist' | 'segment' | 'presentation'; id: string } | null;
 
 export function useLibraryPanelContextMenu() {
   const { currentLibraryBundle, currentLibraryId, currentPlaylistId } = useNavigation();
   const { deckItems } = useProjectContent();
-  const { selectPlaylistDeckItem } = useSlides();
+  const { selectPlaylistDeckItem, selectPlaylistEntry } = useSlides();
   const { setLibraryPanelView } = useLibraryPanelState();
-  const { deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, moveDeckItemToSegment, createPresentationInSegment, createLyricInSegment } = useLibraryPanelManagement();
+  const { deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment } = useLibraryPanelManagement();
   const menu = useContextMenuState<LibraryPanelMenuTarget>();
   const [editingTarget, setEditingTarget] = useState<EditingTarget>(null);
   const selectedTree = currentLibraryBundle?.playlists.find((playlist) => playlist.playlist.id === currentPlaylistId) ?? null;
@@ -43,13 +43,13 @@ export function useLibraryPanelContextMenu() {
     return buildLibraryPanelMenuItems({
       target: menu.menuState.data,
       currentLibraryId,
-      currentPlaylistId,
       selectedTree,
       libraryDeckItems: deckItems,
       playlistIds,
       deckItemIds,
       setLibraryPanelView,
       selectPlaylistDeckItem,
+      selectPlaylistEntry,
       deleteLibrary,
       deletePlaylist,
       deleteSegment,
@@ -58,7 +58,7 @@ export function useLibraryPanelContextMenu() {
       moveDeckItem,
       setSegmentColor,
       addDeckItemToSegment,
-      moveDeckItemToSegment,
+      movePlaylistEntryToSegment,
       createPresentationInSegment,
       createLyricInSegment,
       beginRenameLibrary: (id: Id) => beginEditing('library', id),
@@ -66,7 +66,7 @@ export function useLibraryPanelContextMenu() {
       beginRenameSegment: (id: Id) => beginEditing('segment', id),
       beginRenamePresentation: (id: Id) => beginEditing('presentation', id),
     });
-  }, [menu.menuState, currentLibraryId, currentPlaylistId, selectedTree, deckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, moveDeckItemToSegment, createPresentationInSegment, createLyricInSegment, beginEditing]);
+  }, [menu.menuState, currentLibraryId, currentPlaylistId, selectedTree, deckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginEditing]);
 
   return {
     menuState: menu.menuState,
@@ -78,10 +78,10 @@ export function useLibraryPanelContextMenu() {
     handleLibraryContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'library', id }),
     handlePlaylistContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'playlist', id }),
     handleSegmentContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'segment', id }),
-    handleSegmentPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'deck-item', id, scope: 'segment' }),
+    handleSegmentPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, entryId: string, itemId: string) => menu.openFromEvent(event, { type: 'deck-item', entryId, itemId, scope: 'segment' }),
     openPlaylistMenuFromButton: (id: string, button: HTMLElement) => menu.openFromButton(button, { type: 'playlist', id }),
     openSegmentMenuFromButton: (id: string, button: HTMLElement) => menu.openFromButton(button, { type: 'segment', id }),
-    openSegmentPresentationMenuFromButton: (id: string, button: HTMLElement) => menu.openFromButton(button, { type: 'deck-item', id, scope: 'segment' }),
+    openSegmentPresentationMenuFromButton: (entryId: string, itemId: string, button: HTMLElement) => menu.openFromButton(button, { type: 'deck-item', entryId, itemId, scope: 'segment' }),
     closeMenu: menu.close,
   };
 }

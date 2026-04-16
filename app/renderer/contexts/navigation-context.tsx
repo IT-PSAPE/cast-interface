@@ -4,7 +4,7 @@ import type { Id, LibraryPlaylistBundle } from '@core/types';
 import { useCast } from './cast-context';
 import { useProjectContent } from './use-project-content';
 import type { NavigationActionsValue, NavigationContextValue, NavigationStateValue } from './navigation-context-types';
-import { findCreatedId, resolveCurrentDeckItemId, resolveCurrentPlaylistDeckItemId, resolvePinnedLyricDeckItemId } from './navigation-context-utils';
+import { findCreatedId, findFirstPlaylistEntryByDeckItemId, findPlaylistEntryById, resolveCurrentDeckItemId, resolveCurrentPlaylistEntryId, resolvePinnedLyricDeckItemId } from './navigation-context-utils';
 
 type ContentBrowseSource = 'playlist' | 'project';
 
@@ -17,8 +17,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
   const [currentPlaylistId, setCurrentPlaylistIdState] = useState<Id | null>(null);
+  const [currentPlaylistEntryId, setCurrentPlaylistEntryId] = useState<Id | null>(null);
   const [currentPlaylistDeckItemId, setCurrentPlaylistDeckItemId] = useState<Id | null>(null);
   const [currentDrawerDeckItemId, setCurrentDrawerDeckItemId] = useState<Id | null>(null);
+  const [currentOutputPlaylistEntryId, setCurrentOutputPlaylistEntryId] = useState<Id | null>(null);
   const [currentOutputDeckItemId, setCurrentOutputDeckItemId] = useState<Id | null>(null);
   const [deckBrowseSource, setContentBrowseSource] = useState<ContentBrowseSource>('playlist');
   const [outputArmVersion, setOutputArmVersion] = useState(0);
@@ -58,6 +60,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       selectedTree,
       deckItemsById,
     );
+    const nextPlaylistEntryId = resolveCurrentPlaylistEntryId(
+      currentPlaylistEntryId,
+      selectedTree,
+      nextPlaylistDeckItemId,
+    );
+    if (nextPlaylistEntryId !== currentPlaylistEntryId) {
+      setCurrentPlaylistEntryId(nextPlaylistEntryId);
+    }
     if (nextPlaylistDeckItemId !== currentPlaylistDeckItemId) {
       setCurrentPlaylistDeckItemId(nextPlaylistDeckItemId);
     }
@@ -71,6 +81,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (nextOutputDeckItemId !== currentOutputDeckItemId) {
         setCurrentOutputDeckItemId(nextOutputDeckItemId);
       }
+      const nextOutputEntryId = resolveCurrentPlaylistEntryId(
+        currentOutputPlaylistEntryId,
+        selectedTree,
+        nextOutputDeckItemId,
+      );
+      if (nextOutputEntryId !== currentOutputPlaylistEntryId) {
+        setCurrentOutputPlaylistEntryId(nextOutputEntryId);
+      }
+    } else if (currentOutputPlaylistEntryId !== null) {
+      setCurrentOutputPlaylistEntryId(null);
     }
 
     if (deckBrowseSource === 'project' && nextDrawerDeckItemId === null) {
@@ -82,7 +102,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     deckItemsById,
     currentDrawerDeckItemId,
     currentLibraryId,
+    currentOutputPlaylistEntryId,
     currentOutputDeckItemId,
+    currentPlaylistEntryId,
     currentPlaylistDeckItemId,
     currentPlaylistId,
     snapshot,
@@ -120,8 +142,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const clearRecentlyCreated = useCallback(() => { setRecentlyCreatedId(null); }, []);
 
   const clearContentBrowser = useCallback(() => {
+    setCurrentPlaylistEntryId(null);
     setCurrentPlaylistDeckItemId(null);
     setCurrentDrawerDeckItemId(null);
+    setCurrentOutputPlaylistEntryId(null);
+    setCurrentOutputDeckItemId(null);
     setContentBrowseSource('playlist');
   }, []);
 
@@ -144,11 +169,28 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setCurrentPlaylistIdState(playlistId);
   }, [clearContentBrowser, currentPlaylistId]);
 
+  const selectPlaylistEntry = useCallback((entryId: Id) => {
+    const entry = findPlaylistEntryById(
+      currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
+      entryId,
+    );
+    if (!entry) return;
+    setCurrentPlaylistEntryId(entry.entryId);
+    setCurrentPlaylistDeckItemId(entry.itemId);
+    setContentBrowseSource('playlist');
+    setStatusText('Opened item');
+  }, [currentLibraryBundle, currentPlaylistId, setStatusText]);
+
   const selectPlaylistDeckItem = useCallback((itemId: Id) => {
+    const entry = findFirstPlaylistEntryByDeckItemId(
+      currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
+      itemId,
+    );
+    setCurrentPlaylistEntryId(entry?.entryId ?? null);
     setCurrentPlaylistDeckItemId(itemId);
     setContentBrowseSource('playlist');
     setStatusText('Opened item');
-  }, [setStatusText]);
+  }, [currentLibraryBundle, currentPlaylistId, setStatusText]);
 
   const browseDeckItem = useCallback((itemId: Id) => {
     setCurrentDrawerDeckItemId(itemId);
@@ -157,11 +199,30 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   }, [setStatusText]);
 
   const armOutputDeckItem = useCallback((itemId: Id) => {
+    const entry = findFirstPlaylistEntryByDeckItemId(
+      currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
+      itemId,
+    );
+    setCurrentOutputPlaylistEntryId(entry?.entryId ?? null);
     setCurrentOutputDeckItemId(itemId);
     setOutputArmVersion((current) => current + 1);
-  }, []);
+  }, [currentLibraryBundle, currentPlaylistId]);
 
-  const clearOutputDeckItem = useCallback(() => { setCurrentOutputDeckItemId(null); }, []);
+  const armOutputPlaylistEntry = useCallback((entryId: Id) => {
+    const entry = findPlaylistEntryById(
+      currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
+      entryId,
+    );
+    if (!entry) return;
+    setCurrentOutputPlaylistEntryId(entry.entryId);
+    setCurrentOutputDeckItemId(entry.itemId);
+    setOutputArmVersion((current) => current + 1);
+  }, [currentLibraryBundle, currentPlaylistId]);
+
+  const clearOutputDeckItem = useCallback(() => {
+    setCurrentOutputPlaylistEntryId(null);
+    setCurrentOutputDeckItemId(null);
+  }, []);
 
   const createLibrary = useCallback(async () => {
     const previousIds = new Set(snapshot?.libraries.map((library) => library.id) ?? []);
@@ -227,7 +288,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const addDeckItemToSegment = useCallback(async (segmentId: Id) => {
     if (!currentDeckItemId || !currentPlaylistId) return;
     await mutate(() => window.castApi.addDeckItemToSegment(segmentId, currentDeckItemId));
-    setStatusText('Moved item to segment');
+    setStatusText('Added item to segment');
   }, [currentDeckItemId, currentPlaylistId, mutate, setStatusText]);
 
   const moveCurrentDeckItemToSegment = useCallback(async (segmentId: Id | null) => {
@@ -260,9 +321,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const stateValue = useMemo<NavigationStateValue>(() => ({
     currentLibraryId,
     currentPlaylistId,
+    currentPlaylistEntryId,
     currentDeckItemId,
     currentPlaylistDeckItemId,
     currentDrawerDeckItemId,
+    currentOutputPlaylistEntryId,
     currentOutputDeckItemId,
     currentLibraryBundle,
     currentDeckItem,
@@ -278,8 +341,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     currentDrawerDeckItemId,
     currentLibraryBundle,
     currentLibraryId,
+    currentOutputPlaylistEntryId,
     currentOutputDeckItemId,
     currentPlaylistDeckItem,
+    currentPlaylistEntryId,
     currentPlaylistDeckItemId,
     currentPlaylistId,
     outputArmVersion,
@@ -289,8 +354,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const actionsValue = useMemo<NavigationActionsValue>(() => ({
     selectLibrary,
+    selectPlaylistEntry,
     selectPlaylistDeckItem,
     browseDeckItem,
+    armOutputPlaylistEntry,
     armOutputDeckItem,
     clearOutputDeckItem,
     setCurrentPlaylistId,
@@ -307,6 +374,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renameDeckItem,
   }), [
     addDeckItemToSegment,
+    armOutputPlaylistEntry,
     armOutputDeckItem,
     browseDeckItem,
     clearOutputDeckItem,
@@ -321,6 +389,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renameLibrary,
     renamePlaylist,
     selectLibrary,
+    selectPlaylistEntry,
     selectPlaylistDeckItem,
     setCurrentPlaylistId,
   ]);

@@ -11,18 +11,18 @@ type LibraryPanelMenuTarget =
   | { type: 'library'; id: Id }
   | { type: 'playlist'; id: Id }
   | { type: 'segment'; id: Id }
-  | { type: 'deck-item'; id: Id; scope: 'library' | 'segment' };
+  | { type: 'deck-item'; itemId: Id; entryId?: Id; scope: 'library' | 'segment' };
 
 interface BuildMenuItemsOptions {
   target: LibraryPanelMenuTarget;
   currentLibraryId: Id | null;
-  currentPlaylistId: Id | null;
   selectedTree: PlaylistTree | null;
   libraryDeckItems: DeckItem[];
   playlistIds: Id[];
   deckItemIds: Id[];
   setLibraryPanelView: (stage: LibraryPanelView) => void;
   selectPlaylistDeckItem: (id: Id) => void;
+  selectPlaylistEntry: (entryId: Id) => void;
   deleteLibrary: (id: Id) => Promise<void>;
   deletePlaylist: (id: Id) => Promise<void>;
   deleteSegment: (id: Id) => Promise<void>;
@@ -30,8 +30,8 @@ interface BuildMenuItemsOptions {
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<void>;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
   setSegmentColor: (id: Id, colorKey: string | null) => Promise<void>;
-  addDeckItemToSegment: (segmentId: Id, itemId: Id) => Promise<void>;
-  moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<void>;
+  addDeckItemToSegment: (segmentId: Id, itemId: Id) => Promise<Id | null>;
+  movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<void>;
   createPresentationInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
   createLyricInSegment: (libraryId: Id, segmentId: Id) => Promise<Id | null>;
   beginRenameLibrary: (id: Id) => void;
@@ -41,7 +41,7 @@ interface BuildMenuItemsOptions {
 }
 
 export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): ContextMenuItem[] {
-  const { target, currentLibraryId, currentPlaylistId, selectedTree, libraryDeckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, moveDeckItemToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
+  const { target, currentLibraryId, selectedTree, libraryDeckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
 
   if (target.type === 'library') {
     return [
@@ -84,8 +84,14 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
       label: item.title,
       icon: createElement(DeckItemIcon, { entity: item, size: 14, strokeWidth: 1.75 }),
       onSelect: () => {
-        void addDeckItemToSegment(target.id, item.id);
-        selectPlaylistDeckItem(item.id);
+        void addDeckItemToSegment(target.id, item.id).then((entryId) => {
+          if (entryId) {
+            selectPlaylistEntry(entryId);
+            return;
+          }
+
+          selectPlaylistDeckItem(item.id);
+        });
       }
     }));
     const colorChildren: ContextMenuItem[] = SEGMENT_COLOR_OPTIONS.map((option) => ({
@@ -145,14 +151,14 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
   }
 
   return buildDeckItemMenuItems({
-    itemId: target.id,
+    entryId: target.entryId,
+    itemId: target.itemId,
     scope: target.scope,
-    currentPlaylistId,
     selectedTree,
     itemIds: deckItemIds,
-    selectDeckItem: selectPlaylistDeckItem,
+    selectPlaylistEntry,
     moveDeckItem,
-    moveDeckItemToSegment,
+    movePlaylistEntryToSegment,
     beginRenameDeckItem: beginRenamePresentation,
     deleteDeckItem,
   });
