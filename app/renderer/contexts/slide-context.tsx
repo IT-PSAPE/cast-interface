@@ -3,7 +3,7 @@ import { getSlideDeckItemId } from '@core/deck-items';
 import type { AppSnapshot, Id, Slide, SlideElement } from '@core/types';
 import { clamp, sortSlides } from '../utils/slides';
 import { useIndexedSelection } from '../hooks/use-indexed-selection';
-import { useCast } from './cast-context';
+import { useCast } from './app-context';
 import { useNavigation } from './navigation-context';
 import { useProjectContent } from './use-project-content';
 

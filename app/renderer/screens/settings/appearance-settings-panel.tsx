@@ -1,5 +1,5 @@
 import type { ThemeMode } from '../../types/ui';
-import { useTheme } from '../../contexts/theme-context';
+import { useTheme } from '../../contexts/app-context';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 
 const THEME_OPTIONS: ThemeMode[] = ['light', 'dark', 'system'];

@@ -1,9 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
-import { useDeckEditor } from '../../contexts/deck-editor-context';
-import { useTemplateEditor } from '../../contexts/template-editor-context';
+import { useOverlayEditor, useDeckEditor, useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { useRenderScenes } from './render-scene-provider';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 
 interface InspectorPanelPushActionState {
   isVisible: boolean;

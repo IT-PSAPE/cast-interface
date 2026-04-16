@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { MediaAsset } from '@core/types';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useInspector } from './inspector-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { useRenderScenes } from './render-scene-provider';
 import { mapViewportPointToScene, type SceneViewportTransform } from './use-scene-stage-viewport';
 
 interface StageViewportControllerActions {

@@ -1,9 +1,9 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import type { NdiSourceStatus } from '@core/types';
+import { useNdi } from '../../contexts/app-context';
 import { useNavigation } from '../../contexts/navigation-context';
-import { useNdi } from '../../contexts/ndi-context';
 import { useSlides } from '../../contexts/slide-context';
-import { useRenderScenes } from '../canvas/render-scene-provider';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import type { RenderScene } from '../canvas/scene-types';
 
 export interface ProgramOutput {
@@ -12,9 +12,7 @@ export interface ProgramOutput {
   background: 'black' | 'transparent';
 }
 
-const ProgramOutputContext = createContext<ProgramOutput | null>(null);
-
-export function ProgramOutputProvider({ children }: { children: ReactNode }) {
+export function useProgramOutput(): ProgramOutput {
   const { state: { outputConfigs } } = useNdi();
   const { currentOutputDeckItemId } = useNavigation();
   const { liveSlide } = useSlides();
@@ -23,17 +21,9 @@ export function ProgramOutputProvider({ children }: { children: ReactNode }) {
   const status: NdiSourceStatus = currentOutputDeckItemId && liveSlide ? 'live' : 'idle';
   const background = outputConfig.withAlpha ? 'transparent' : 'black';
 
-  const value = useMemo<ProgramOutput>(() => ({
+  return useMemo<ProgramOutput>(() => ({
     scene: programScene,
     status,
     background,
   }), [programScene, status, background]);
-
-  return <ProgramOutputContext.Provider value={value}>{children}</ProgramOutputContext.Provider>;
-}
-
-export function useProgramOutput(): ProgramOutput {
-  const value = useContext(ProgramOutputContext);
-  if (!value) throw new Error('useProgramOutput must be used within ProgramOutputProvider');
-  return value;
 }

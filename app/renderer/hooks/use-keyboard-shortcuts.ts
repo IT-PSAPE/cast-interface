@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import type { SlideBrowserMode, PlaylistBrowserMode } from '../types/ui';
 import { CANVAS_VIEW_LABELS, PLAYLIST_DISPLAY_MODE_LABELS } from '../utils/slides';
-import { useCast } from '../contexts/cast-context';
+import { useCast } from '../contexts/app-context';
 import { useSlides } from '../contexts/slide-context';
-import { useElements } from '../contexts/element/element-context';
+import { useElements } from '../contexts/canvas/canvas-context';
 import { useDeckBrowser } from '../features/deck/deck-browser-context';
 import { useWorkbench } from '../contexts/workbench-context';
 

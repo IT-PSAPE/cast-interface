@@ -1,7 +1,7 @@
 import type { TextCaseTransform, TextElementPayload, TextHorizontalAlign, TextVerticalAlign } from '@core/types';
 import { applyTextVisualPayload, readTextFormatting, readTextVisualPayload, type TextFormattingState, type TextVisualState } from '@core/element-payload';
 import { parseNumber } from '../../utils/slides';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 import { useSystemFonts } from './use-system-fonts';
 import type { CSSProperties } from 'react';
 

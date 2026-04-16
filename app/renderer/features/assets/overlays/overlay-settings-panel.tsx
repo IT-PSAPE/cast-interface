@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FieldInput, FieldSelect } from '../../../components/form/field';
-import { useOverlayDefaults } from '../../../contexts/overlay-defaults-context';
+import { useWorkbench } from '../../../contexts/workbench-context';
 
 const ANIMATION_OPTIONS = [
   { value: 'none', label: 'None' },
@@ -10,7 +10,7 @@ const ANIMATION_OPTIONS = [
 ];
 
 export function OverlaySettingsPanel() {
-  const { overlayDefaults, updateOverlayDefaults } = useOverlayDefaults();
+  const { state: { overlayDefaults }, actions: { updateOverlayDefaults } } = useWorkbench();
   const [durationDraft, setDurationDraft] = useState(String(overlayDefaults.durationMs));
   const [autoClearDraft, setAutoClearDraft] = useState(
     overlayDefaults.autoClearDurationMs == null ? '' : String(overlayDefaults.autoClearDurationMs),

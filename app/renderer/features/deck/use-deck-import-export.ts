@@ -6,7 +6,7 @@ import type {
   DeckItem,
   Id,
 } from '@core/types';
-import { useCast } from '../../contexts/cast-context';
+import { useCast } from '../../contexts/app-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 
 interface ImportDecisionState {

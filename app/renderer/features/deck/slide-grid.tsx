@@ -1,7 +1,7 @@
 import { useSlides } from '../../contexts/slide-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
-import { useRenderScenes } from '../canvas/render-scene-provider';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useDeckBrowser } from './deck-browser-context';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
 import { Thumbnail } from '@renderer/components/display/thumbnail';

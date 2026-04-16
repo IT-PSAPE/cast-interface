@@ -6,21 +6,20 @@ import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { Panel } from '../../components/layout/panel';
 import { IconGroup } from '@renderer/components/icon-group';
 import { useNavigation } from '../../contexts/navigation-context';
-import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
-import { usePresentationLayers } from '../../contexts/presentation-layer-context';
+import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
+import { useAudio, usePresentationLayers } from '../../contexts/playback/playback-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useGridSize } from '../../hooks/use-grid-size';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
-import { useProgramOutput } from './program-output-context';
+import { useProgramOutput } from './use-program-output';
 import { SceneStage } from '../canvas/scene-stage';
-import { useShowAudio } from './audio-playback-context';
 
 export function PreviewPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
   const { currentOutputDeckItemId } = useNavigation();
   const { clearCurrentSlideSelection } = useSlides();
-  const { actions: audioActions, state: audioState } = useShowAudio();
+  const audio = useAudio();
   const { scene, background } = useProgramOutput();
   const { createOverlay } = useOverlayEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
@@ -28,16 +27,16 @@ export function PreviewPanel() {
   const mediaActive = Boolean(mediaLayerAsset);
   const contentActive = contentLayerVisible && Boolean(currentOutputDeckItemId);
   const overlayActive = activeOverlays.length > 0;
-  const audioActive = audioState.isPlaying || audioState.currentTime > 0;
+  const audioActive = audio.isPlaying || audio.currentTime > 0;
   const checkerboard = background === 'transparent';
   const stageClassName = checkerboard ? 'bg-transparent' : 'bg-black';
 
   function handleClearMedia() { clearLayer('media'); }
   function handleClearContent() { clearLayer('content'); }
   function handleClearOverlay() { clearLayer('overlay'); }
-  function handleClearAudio() { audioActions.clearAudio(); }
+  function handleClearAudio() { audio.clearAudio(); }
   function handleClearAll() {
-    audioActions.clearAudio();
+    audio.clearAudio();
     clearAllLayers();
     clearCurrentSlideSelection();
   }

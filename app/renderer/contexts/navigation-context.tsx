@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getSlideDeckItemId } from '@core/deck-items';
 import type { Id, LibraryPlaylistBundle } from '@core/types';
-import { useCast } from './cast-context';
+import { useCast } from './app-context';
 import { useProjectContent } from './use-project-content';
 import type { NavigationActionsValue, NavigationContextValue, NavigationStateValue } from './navigation-context-types';
 import { findCreatedId, findFirstPlaylistEntryByDeckItemId, findPlaylistEntryById, resolveCurrentDeckItemId, resolveCurrentPlaylistEntryId, resolvePinnedLyricDeckItemId } from './navigation-context-utils';

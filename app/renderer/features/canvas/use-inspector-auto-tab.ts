@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useInspector } from './inspector-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 
 export function useInspectorAutoTab() {
   const { inspectorTab, setInspectorTab } = useInspector();

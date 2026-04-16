@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Id, SlideElement } from '@core/types';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 import { useInspector } from './inspector-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { LAYER_ORDER } from '../../types/ui';

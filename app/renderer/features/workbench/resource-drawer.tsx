@@ -9,17 +9,17 @@ import { SelectableRow } from '../../components/display/selectable-row';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { useCreateMenu } from '../../hooks/use-create-menu';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useResourceDrawer } from './resource-drawer-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useGridSize } from '../../hooks/use-grid-size';
-import { useTemplateEditor } from '../../contexts/template-editor-context';
+import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { DrawerTab, ResourceDrawerViewMode } from '../../types/ui';
 import { CreateLyricDialog } from '../deck/create-lyric-dialog';
 import { LyricEditorModal } from '../deck/lyric-editor-modal';
-import { useShowAudio } from '../playback/audio-playback-context';
+import { useAudio } from '../../contexts/playback/playback-context';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
 import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
@@ -298,7 +298,7 @@ function isResourceDrawerViewMode(value: string): value is ResourceDrawerViewMod
 function ResourceDrawerContent() {
   const { actions, meta, state } = useDrawer();
   const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
-  const { actions: audioActions, state: audioState } = useShowAudio();
+  const audio = useAudio();
 
   function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     actions.handleImport(event);
@@ -353,17 +353,17 @@ function ResourceDrawerContent() {
         <Tabs.Panel value="audio">
           <section className="h-full min-h-0 overflow-auto p-2">
             <div className="flex min-h-full flex-col">
-              {audioState.audioAssets.length === 0 ? (
+              {audio.audioAssets.length === 0 ? (
                 <div className="grid flex-1 place-items-center rounded border border-primary bg-primary/40 px-4 text-center text-sm text-tertiary">
                   Import audio to build a reusable app-wide audio list.
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {audioState.audioAssets.map((asset) => (
+                  {audio.audioAssets.map((asset) => (
                     <SelectableRow.Root
                       key={asset.id}
-                      selected={audioState.currentAudioAssetId === asset.id}
-                      onClick={() => audioActions.selectAudio(asset.id)}
+                      selected={audio.currentAudioAssetId === asset.id}
+                      onClick={() => audio.selectAudio(asset.id)}
                       className="h-9"
                     >
                       <SelectableRow.Leading>

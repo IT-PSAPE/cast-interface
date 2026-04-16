@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Id, SlideElement } from '@core/types';
 import type { Block } from '../../components/form/doc-editor';
-import { useCast } from '../../contexts/cast-context';
+import { useCast } from '../../contexts/app-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useSlides } from '../../contexts/slide-context';

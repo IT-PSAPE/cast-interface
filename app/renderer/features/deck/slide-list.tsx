@@ -1,5 +1,5 @@
 import { useOutlineView } from './use-slide-list-view';
-import { useRenderScenes } from '../canvas/render-scene-provider';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { SlideOutlineRow } from './slide-list-row';
 
 export function SlideList() {

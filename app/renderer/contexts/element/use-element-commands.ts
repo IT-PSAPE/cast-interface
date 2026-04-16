@@ -2,11 +2,8 @@ import { useCallback } from 'react';
 import { isLyricDeckItem } from '@core/deck-items';
 import type { AppSnapshot, DeckItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slides';
-import { useOverlayDefaults } from '../overlay-defaults-context';
-import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
+import { useOverlayEditor, useDeckEditor, useTemplateEditor } from '../asset-editor/asset-editor-context';
 import { useProjectContent } from '../use-project-content';
-import { useDeckEditor } from '../deck-editor-context';
-import { useTemplateEditor } from '../template-editor-context';
 import { useWorkbench } from '../workbench-context';
 import {
   newOverlayElement,
@@ -27,7 +24,7 @@ interface CommandsParams {
 }
 
 export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
-  const { overlayDefaults } = useOverlayDefaults();
+  const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
   const { getSlideElements, replaceSlideElements } = useDeckEditor();

@@ -2,8 +2,8 @@ import { X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
 import { Button } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayBackdrop, OverlayClose, OverlayPortal, OverlayTrigger } from './overlay-primitives';
-import { useOverlayStack } from './overlay-provider';
 
 interface DialogContextValue {
   state: { isOpen: boolean; isTopmost: boolean; zIndex: number };
@@ -40,11 +40,11 @@ function Root({ children, closeOnBackdropClick = true, closeOnEscape = true, def
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const [titleId, setTitleId] = useState<string | undefined>(undefined);
   const [descriptionId, setDescriptionId] = useState<string | undefined>(undefined);
-  const { actions: overlayActions, meta: overlayMeta, state: overlayState } = useOverlayStack();
+  const { overlayStack } = useWorkbench();
   const isOpen = isControlled ? open : uncontrolledOpen;
-  const stackIndex = overlayState.stack.indexOf(dialogId);
-  const isTopmost = stackIndex === overlayState.stack.length - 1 && stackIndex >= 0;
-  const zIndex = overlayMeta.baseZIndex + Math.max(stackIndex, 0) * 10;
+  const stackIndex = overlayStack.stack.indexOf(dialogId);
+  const isTopmost = stackIndex === overlayStack.stack.length - 1 && stackIndex >= 0;
+  const zIndex = overlayStack.baseZIndex + Math.max(stackIndex, 0) * 10;
 
   const setOpenState = useCallback((nextOpen: boolean) => {
     if (!isControlled) setUncontrolledOpen(nextOpen);
@@ -61,11 +61,11 @@ function Root({ children, closeOnBackdropClick = true, closeOnEscape = true, def
 
   useEffect(() => {
     if (!isOpen) return undefined;
-    overlayActions.register(dialogId);
+    overlayStack.register(dialogId);
     return () => {
-      overlayActions.unregister(dialogId);
+      overlayStack.unregister(dialogId);
     };
-  }, [dialogId, isOpen, overlayActions]);
+  }, [dialogId, isOpen, overlayStack]);
 
   useEffect(() => {
     if (!closeOnEscape || !isOpen || !isTopmost) return undefined;

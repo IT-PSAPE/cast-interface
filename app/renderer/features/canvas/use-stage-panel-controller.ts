@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MediaAsset } from '@core/types';
-import { useElements } from '../../contexts/element/element-context';
-import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
+import { useOverlayEditor, useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useSlides } from '../../contexts/slide-context';
-import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useWorkbench } from '../../contexts/workbench-context';
 

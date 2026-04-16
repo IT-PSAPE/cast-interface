@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
 import type { ElementUpdateInput, Id, TextElementPayload } from '@core/types';
-import { useElements } from '../../contexts/element/element-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 import { resolveSnap, resolveTransformSnap } from './snap-guides';
 import type { GuideLine, RenderScene } from './scene-types';
 import { createDragSession, type DragSession } from './scene-stage-drag-session';

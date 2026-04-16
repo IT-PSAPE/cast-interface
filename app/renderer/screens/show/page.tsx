@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { ChevronLeft, Folder, LayoutTemplate, Plus } from 'lucide-react';
-import { useCast } from '@renderer/contexts/cast-context';
+import { useCast } from '@renderer/contexts/app-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { Button } from '@renderer/components/controls/button';
 import { Label } from '@renderer/components/display/text';

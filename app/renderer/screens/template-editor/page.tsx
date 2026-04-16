@@ -5,7 +5,7 @@ import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
-import { useTemplateEditor } from '../../contexts/template-editor-context';
+import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';

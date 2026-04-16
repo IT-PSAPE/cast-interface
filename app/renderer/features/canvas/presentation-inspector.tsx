@@ -3,7 +3,7 @@ import { Button } from '../../components/controls/button';
 import { FieldInput } from '../../components/form/field';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { useTemplateEditor } from '../../contexts/template-editor-context';
+import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { Section } from './inspector-section';
 
 export function DeckItemInspector() {

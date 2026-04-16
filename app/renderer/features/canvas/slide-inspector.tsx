@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FieldInput, FieldSelect } from '../../components/form/field';
-import { useCast } from '../../contexts/cast-context';
-import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
+import { useCast } from '../../contexts/app-context';
+import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { Section } from './inspector-section';
 

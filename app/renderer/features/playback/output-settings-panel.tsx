@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FieldCheckbox as CheckboxField, FieldInput } from '../../components/form/field';
-import { useNdi } from '../../contexts/ndi-context';
+import { useNdi } from '../../contexts/app-context';
 
 export function OutputSettingsPanel() {
   const { state: { outputState, outputConfigs, diagnostics }, actions: { setOutputEnabled, updateOutputConfig } } = useNdi();

@@ -6,7 +6,7 @@ import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
-import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
+import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
@@ -108,7 +108,7 @@ export function OverlayEditorScreen() {
                 </Panel.Section>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            {menu.menuState ? <ContextMenu x={menu.menuState.x} y={menu.menuState.y} items={buildMenuItems(menu.menuState.data)} onClose={menu.close} /> : null}
+            {menu.menuState && <ContextMenu x={menu.menuState.x} y={menu.menuState.y} items={buildMenuItems(menu.menuState.data)} onClose={menu.close} />}
           </Panel>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Id, SlideElement } from '@core/types';
-import { useCast } from '../../contexts/cast-context';
+import { useCast } from '../../contexts/app-context';
 
 interface UpdateSlideOutlineTextInput {
   elements: SlideElement[];

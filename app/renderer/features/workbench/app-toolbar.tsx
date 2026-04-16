@@ -28,7 +28,7 @@ const outputBorderStyles = cv({
   },
 });
 
-interface PanelToggleButton {
+export interface PanelToggleButton {
   id: 'left' | 'right' | 'bottom';
   label: string;
   active: boolean;

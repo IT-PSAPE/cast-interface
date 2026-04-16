@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { AppSnapshot, DeckItemType, Id } from '@core/types';
-import { useCast } from '../../contexts/cast-context';
+import { useCast } from '../../contexts/app-context';
 
 function findCreatedId(previousIds: Set<Id>, currentIds: Id[]): Id | null {
   for (const id of currentIds) {

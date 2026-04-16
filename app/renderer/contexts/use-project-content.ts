@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { getSlideDeckItemId } from '@core/deck-items';
 import type { DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Template } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
-import { useCast } from './cast-context';
+import { useCast } from './app-context';
 
 interface ProjectContent {
   presentations: Presentation[];

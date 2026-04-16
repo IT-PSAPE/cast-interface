@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import type { Id } from '@core/types';
 import type { ContextMenuItem } from '../../../components/overlays/context-menu';
-import { useElements } from '../../../contexts/element/element-context';
-import { usePresentationLayers } from '../../../contexts/presentation-layer-context';
+import { useElements } from '../../../contexts/canvas/canvas-context';
+import { usePresentationLayers } from '../../../contexts/playback/playback-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { useContextMenuState } from '../../../hooks/use-context-menu-state';
 import { filterByText } from '../../../utils/filter-by-text';
