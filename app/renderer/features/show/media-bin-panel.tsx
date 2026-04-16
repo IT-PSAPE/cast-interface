@@ -7,7 +7,7 @@ import { Thumbnail } from '../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { BinPanelLayout } from './bin-panel-layout';
-import { useResourceDrawer } from './resource-drawer-context';
+import { useResourceDrawer } from '../resource-bin/resource-drawer-context';
 import { useMediaBin } from './use-media-bin';
 
 interface MediaBinPanelProps {

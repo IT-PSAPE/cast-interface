@@ -15,14 +15,14 @@ import { useGridSize } from '../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { DrawerTab } from '../../types/ui';
-import { CreateLyricDialog } from './create-lyric-dialog';
-import { LyricEditorModal } from './lyric-editor-modal';
-import { MediaBinPanel } from './media-bin-panel';
-import { ContentBinPanel } from './presentation-bin-panel';
+import { CreateLyricDialog } from '../show/create-lyric-dialog';
+import { LyricEditorModal } from '../show/lyric-editor-modal';
+import { MediaBinPanel } from '../show/media-bin-panel';
+import { ContentBinPanel } from '../show/presentation-bin-panel';
 import { ResourceDrawerModeControl } from './resource-drawer-mode-control';
-import { TemplateBinPanel } from './template-bin-panel';
+import { TemplateBinPanel } from '../show/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
-import { ShowAudioPanel } from './show-audio-panel';
+import { ShowAudioPanel } from '../show/show-audio-panel';
 
 const IMPORT_ACCEPT_BY_TAB = {
   media: 'image/*,video/*',
@@ -303,15 +303,14 @@ function ResourceDrawerContent() {
 
   return (
     <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
-      <div className="flex border-b border-primary px-1 py-0.5">
+      <div className="h-8 flex border-b border-primary px-1 items-end">
         <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5" >
-          <Tabs.Trigger value="deck" className="px-1 py-0.5 text-[11px]">Deck</Tabs.Trigger>
-          <Tabs.Trigger value="media" className="px-1 py-0.5 text-[11px]">Media</Tabs.Trigger>
-          <Tabs.Trigger value="audio" className="px-1 py-0.5 text-[11px]">Audio</Tabs.Trigger>
-          <Tabs.Trigger value="templates" className="px-1 py-0.5 text-[11px]">Templates</Tabs.Trigger>
+          <Tabs.Trigger value="deck">Deck</Tabs.Trigger>
+          <Tabs.Trigger value="media">Media</Tabs.Trigger>
+          <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
+          <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
         </Tabs.List>
-
-        <div className={cn('flex shrink-0 items-center gap-0.5')}>
+        <div className={cn('flex shrink-0 items-center gap-0.5 py-0.5')}>
           {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
           {meta.showImportAction &&
             <FileTrigger.Root accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media} multiple onSelect={handleImportSelect} className="relative inline-flex">
@@ -323,10 +322,18 @@ function ResourceDrawerContent() {
         </div>
       </div>
       <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
-        <Tabs.Panel value="deck"><ContentBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
-        <Tabs.Panel value="media"><MediaBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
-        <Tabs.Panel value="audio"><ShowAudioPanel /></Tabs.Panel>
-        <Tabs.Panel value="templates"><TemplateBinPanel filterText="" gridItemSize={meta.gridSize} /></Tabs.Panel>
+        <Tabs.Panel value="deck">
+          <ContentBinPanel filterText="" gridItemSize={meta.gridSize} />
+        </Tabs.Panel>
+        <Tabs.Panel value="media">
+          <MediaBinPanel filterText="" gridItemSize={meta.gridSize} />
+        </Tabs.Panel>
+        <Tabs.Panel value="audio">
+          <ShowAudioPanel />
+        </Tabs.Panel>
+        <Tabs.Panel value="templates">
+          <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />
+        </Tabs.Panel>
       </Tabs.Panels>
     </Tabs.Root>
   );

@@ -1,4 +1,4 @@
-import { ResourceDrawer } from '../show/resource-drawer';
+import { ResourceDrawer } from '../resource-bin/resource-drawer';
 import { PreviewPanel } from '../show/preview-panel';
 import { LibraryPanel } from '../show/library-panel';
 import { PanelRoute } from './panel-route';

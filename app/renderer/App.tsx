@@ -10,7 +10,7 @@ import { ElementProvider } from './contexts/element/element-context';
 import { OverlayEditorProvider } from './contexts/overlay-editor/overlay-editor-context';
 import { TemplateEditorProvider } from './contexts/template-editor-context';
 import { InspectorProvider } from './features/inspector/inspector-context';
-import { ResourceDrawerProvider } from './features/show/resource-drawer-context';
+import { ResourceDrawerProvider } from './features/resource-bin/resource-drawer-context';
 import { SlideBrowserProvider } from './features/show/slide-browser-context';
 import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
 import { WorkbenchProvider, useWorkbench } from './contexts/workbench-context';

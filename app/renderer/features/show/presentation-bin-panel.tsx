@@ -7,7 +7,7 @@ import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { useResourceDrawer } from './resource-drawer-context';
+import { useResourceDrawer } from '../resource-bin/resource-drawer-context';
 import { buildThumbnailScene } from '../stage/build-render-scene';
 import { SceneStage } from '../stage/scene-stage';
 import { BinPanelLayout } from './bin-panel-layout';

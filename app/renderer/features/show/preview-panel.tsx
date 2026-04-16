@@ -32,7 +32,7 @@ export function PreviewPanel() {
       <div>
         <LivePreview />
         <div className="border-b border-primary p-[1px]">
-          <IconGroup.Root fill >
+          <IconGroup.Root fill className='rounded-none' >
             <IconGroup.Item aria-label="Clear all layers" title="Clear all layers" onClick={handleClearAll}><XCircle className="size-4" /></IconGroup.Item>
             <IconGroup.Item active={mediaActive} aria-label="Clear media layer" title="Clear media layer" onClick={handleClearMedia}><Image className="size-4" /></IconGroup.Item>
             <IconGroup.Item active={contentActive} aria-label="Clear content layer" title="Clear content layer" onClick={handleClearContent}><AlignLeft className="size-4" /></IconGroup.Item>

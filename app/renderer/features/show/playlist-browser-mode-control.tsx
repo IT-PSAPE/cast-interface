@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AppWindow, RectangleHorizontal, Rows3 } from 'lucide-react';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { useSlideBrowser } from './slide-browser-context';
 
@@ -9,30 +10,15 @@ interface PlaylistViewOption {
 }
 
 function PlaylistCurrentIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-      <rect x="2.5" y="3" width="11" height="10" rx="1" strokeWidth="1.2" />
-    </svg>
-  );
+  return <RectangleHorizontal size={14} strokeWidth={1.7} aria-hidden="true" />;
 }
 
 function PlaylistTabsIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-      <path d="M3 5.5V4a1 1 0 0 1 1-1h2.2l1 1h4.8a1 1 0 0 1 1 1v1" strokeWidth="1.2" />
-      <rect x="3" y="5.5" width="10" height="6.5" rx="0.9" strokeWidth="1.2" />
-    </svg>
-  );
+  return <AppWindow size={14} strokeWidth={1.7} aria-hidden="true" />;
 }
 
 function PlaylistContinuousIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" aria-hidden="true">
-      <rect x="3" y="3" width="10" height="2.2" rx="0.7" strokeWidth="1.1" />
-      <rect x="3" y="6.9" width="10" height="2.2" rx="0.7" strokeWidth="1.1" />
-      <rect x="3" y="10.8" width="10" height="2.2" rx="0.7" strokeWidth="1.1" />
-    </svg>
-  );
+  return <Rows3 size={14} strokeWidth={1.7} aria-hidden="true" />;
 }
 
 export function PlaylistBrowserModeControl() {

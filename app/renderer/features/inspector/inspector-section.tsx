@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Check } from 'lucide-react';
 import { Checkbox } from '@renderer/components/form/checkbox';
 import { cv } from '@renderer/utils/cv';
 
@@ -57,18 +58,9 @@ function CheckboxControl({ checked, className, onChange }: CheckboxProps) {
   return (
     <Checkbox.Root checked={checked} onCheckedChange={onChange} className={className}>
       <Checkbox.Indicator className="size-4">
-        {checked ? <CheckboxMark /> : null}
+        {checked ? <Check size={14} strokeWidth={3} aria-hidden="true" />: null}
       </Checkbox.Indicator>
     </Checkbox.Root>
   );
 }
-
-function CheckboxMark() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="stroke-current">
-      <path d="M5 13l4 4L19 7" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export const Section = { Root, Header, Body, Row, Checkbox: CheckboxControl };

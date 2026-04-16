@@ -8,7 +8,7 @@ import { SceneFrame } from '../../components/display/scene-frame';
 import { buildRenderScene } from '../stage/build-render-scene';
 import { SceneStage } from '../stage/scene-stage';
 import { BinPanelLayout } from './bin-panel-layout';
-import { useResourceDrawer } from './resource-drawer-context';
+import { useResourceDrawer } from '../resource-bin/resource-drawer-context';
 import { useTemplateBin } from './use-template-bin';
 
 interface TemplateBinPanelProps {
