@@ -1,6 +1,7 @@
 import type { DeckItem, Id } from '@core/types';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SelectableRow } from '../../components/display/selectable-row';
+import { EmptyState } from '../../components/display/empty-state';
 
 interface DeckBundleSelectionListProps {
   items: DeckItem[];
@@ -47,7 +48,7 @@ export function DeckBundleSelectionList({ items, selectedIds, onToggle }: DeckBu
   ));
 
   if (rows.length === 0) {
-    return <div className="rounded border border-primary bg-tertiary/30 px-3 py-4 text-sm text-tertiary">No matching items.</div>;
+    return <EmptyState.Root><EmptyState.Title>No matching items.</EmptyState.Title></EmptyState.Root>;
   }
 
   return <div className="flex flex-col gap-1">{rows}</div>;

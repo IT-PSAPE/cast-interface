@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import type { Id, Overlay } from '@core/types';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useOverlayEditor } from '../../../contexts/asset-editor/asset-editor-context';
 import { usePresentationLayers } from '../../../contexts/playback/playback-context';
-import { useProjectContent } from '../../../contexts/use-project-content';
 import { overlayToLayerElements } from '@core/presentation-layers';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
@@ -17,12 +17,14 @@ interface OverlayBinPanelProps {
 }
 
 export function OverlayBinPanel({ filterText, gridItemSize }: OverlayBinPanelProps) {
-  const { overlays: allOverlays } = useProjectContent();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const { setCurrentOverlayId } = useOverlayEditor();
+  const { overlays: allOverlays, setCurrentOverlayId } = useOverlayEditor();
   const { activeOverlayIds, activateOverlay } = usePresentationLayers();
 
-  const overlays = filterByText(allOverlays, filterText, (overlay) => [overlay.name, overlay.type]);
+  const overlays = useMemo(
+    () => filterByText(allOverlays, filterText, (overlay: Overlay) => [overlay.name, overlay.type]),
+    [allOverlays, filterText],
+  );
 
   return (
     <BinPanelLayout gridItemSize={gridItemSize} menuState={null} menuItems={[]} onCloseMenu={() => {}}>

@@ -13,6 +13,7 @@ import {
 import { Section } from './inspector-section';
 import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
+import { EmptyState } from '../../components/display/empty-state';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
@@ -24,7 +25,7 @@ export function TextElementInspector() {
   const result = useTextInspector();
 
   if (!result) {
-    return <div className="text-sm text-tertiary">Select an object to edit text properties.</div>;
+    return <EmptyState.Root><EmptyState.Title>Select an object to edit text properties.</EmptyState.Title></EmptyState.Root>;
   }
 
   const { state, actions } = result;

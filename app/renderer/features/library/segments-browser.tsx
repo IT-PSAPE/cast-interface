@@ -7,6 +7,7 @@ import { useLibraryPanelState } from './library-panel-context';
 import { PlaylistSegmentGroup } from './playlist-segment-group';
 import { Label } from '@renderer/components/display/text';
 import { Accordion } from '@renderer/components/display/accordion';
+import { EmptyState } from '../../components/display/empty-state';
 
 export function SegmentsBrowser() {
   const { createSegment } = useNavigation();
@@ -17,7 +18,7 @@ export function SegmentsBrowser() {
 
   if (libraryPanelView !== 'playlist') return null;
   if (!state.selectedTree) {
-    return <div className="grid h-full min-h-0 place-items-center p-4 text-sm text-tertiary">Select a playlist</div>;
+    return <EmptyState.Root><EmptyState.Title>Select a playlist</EmptyState.Title></EmptyState.Root>;
   }
 
   return (

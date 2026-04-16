@@ -10,6 +10,7 @@ import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { SceneStage } from '../canvas/scene-stage';
 import { Play } from 'lucide-react';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
+import { EmptyState } from '../../components/display/empty-state';
 
 interface ContinuousSlideGridProps {
   items: PlaylistDeckSequenceItem[];
@@ -94,9 +95,9 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
 
   if (items.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-sm text-tertiary">
-        No playlist items available.
-      </section>
+      <EmptyState.Root>
+        <EmptyState.Title>No playlist items available.</EmptyState.Title>
+      </EmptyState.Root>
     );
   }
 

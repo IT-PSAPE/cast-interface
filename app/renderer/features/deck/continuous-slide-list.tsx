@@ -8,6 +8,7 @@ import { buildThumbnailScene } from '../canvas/build-render-scene';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { SlideOutlineRow } from './slide-list-row';
+import { EmptyState } from '../../components/display/empty-state';
 
 interface ContinuousSlideListProps {
   items: PlaylistDeckSequenceItem[];
@@ -80,9 +81,9 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
 
   if (items.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-sm text-tertiary">
-        No playlist items available.
-      </section>
+      <EmptyState.Root>
+        <EmptyState.Title>No playlist items available.</EmptyState.Title>
+      </EmptyState.Root>
     );
   }
 

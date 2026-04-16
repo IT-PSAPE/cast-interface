@@ -5,7 +5,9 @@ import { useInspector } from './inspector-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { LAYER_ORDER } from '../../types/ui';
 import { ObjectListRow } from './object-list-row';
+import { ObjectListContext } from './object-list-context';
 import { reorderElementStack, type StackDropPlacement } from './reorder-element-stack';
+import { EmptyState } from '../../components/display/empty-state';
 
 interface DropTarget {
   elementId: Id;
@@ -98,40 +100,37 @@ export function ObjectListPanel() {
     void commitElementUpdates(updates);
   }
 
-  function renderRow(element: SlideElement) {
-    return (
-      <ObjectListRow
-        key={element.id}
-        element={element}
-        dragging={element.id === draggingId}
-        dropPlacement={dropTarget?.elementId === element.id ? dropTarget.placement : null}
-        selected={element.id === selectedElementId}
-        onDragEnd={handleDragEnd}
-        onDragOver={handleDragOver}
-        onDragStart={handleDragStart}
-        onDrop={handleDrop}
-        onSelect={handleSelect}
-        onToggleLock={handleToggleLock}
-        onToggleVisibility={handleToggleVisibility}
-      />
-    );
-  }
+  const contextValue = useMemo(() => ({
+    selectedElementId,
+    draggingId,
+    dropTarget,
+    onSelect: handleSelect,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+    onDragOver: handleDragOver,
+    onDrop: handleDrop,
+    onToggleLock: handleToggleLock,
+    onToggleVisibility: handleToggleVisibility,
+  }), [selectedElementId, draggingId, dropTarget, effectiveElements]);
 
   if (orderedElements.length === 0) {
     return (
-      <div
-        data-ui-region="object-list-panel"
-        className="grid h-full place-items-center rounded border border-secondary bg-tertiary/20 text-sm text-tertiary"
-      >
-        {isOverlayEdit ? 'No objects in this overlay.' : isTemplateEdit ? 'No objects in this template.' : 'No objects on this slide.'}
-      </div>
+      <EmptyState.Root data-ui-region="object-list-panel">
+        <EmptyState.Title>
+          {isOverlayEdit ? 'No objects in this overlay.' : isTemplateEdit ? 'No objects in this template.' : 'No objects on this slide.'}
+        </EmptyState.Title>
+      </EmptyState.Root>
     );
   }
 
   return (
-    <div data-ui-region="object-list-panel" className="flex flex-col gap-1.5">
-      {orderedElements.map(renderRow)}
-    </div>
+    <ObjectListContext.Provider value={contextValue}>
+      <div data-ui-region="object-list-panel" className="flex flex-col gap-1.5">
+        {orderedElements.map((element) => (
+          <ObjectListRow key={element.id} element={element} />
+        ))}
+      </div>
+    </ObjectListContext.Provider>
   );
 }
 

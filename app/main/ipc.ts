@@ -164,6 +164,20 @@ export const registerIpcHandlers = (
   );
   safeHandle(IPC.deleteMediaAsset, (_event, id: Id) => repo.deleteMediaAsset(id));
   safeHandle(IPC.updateMediaAssetSrc, (_event, id: Id, src: string) => repo.updateMediaAssetSrc(id, src));
+  safeHandle(IPC.getAudioCoverArt, async (_event, src: string) => {
+    const { resolveLocalMediaSourcePath } = await import('@database/media-source-utils');
+    const filePath = resolveLocalMediaSourcePath(src);
+    if (!filePath) return null;
+    try {
+      const { parseFile } = await import('music-metadata');
+      const metadata = await parseFile(filePath);
+      const picture = metadata.common.picture?.[0];
+      if (!picture) return null;
+      return `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
+    } catch {
+      return null;
+    }
+  });
   safeHandle(IPC.createOverlay, (_event, overlay: OverlayCreateInput) => repo.createOverlay(overlay));
   safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));

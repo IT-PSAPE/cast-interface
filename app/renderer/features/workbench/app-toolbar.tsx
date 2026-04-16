@@ -5,6 +5,8 @@ import type { WorkbenchMode } from '../../types/ui';
 import { Button } from '@renderer/components/controls/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { cv } from '@renderer/utils/cv';
+import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
+import { useNdi } from '@renderer/contexts/app-context';
 
 const isMac = window.castApi.platform === 'darwin';
 
@@ -35,14 +37,11 @@ export interface PanelToggleButton {
   onToggle: () => void;
 }
 
-interface AppToolbarProps {
-  audienceOutputActive: boolean;
-  onToggleAudienceOutput: () => void;
-  panelToggles: PanelToggleButton[];
-}
-
-export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panelToggles }: AppToolbarProps) {
+export function AppToolbar() {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
+  const panelToggles = useWorkbenchPanelToggles();
+  const { state: { outputState }, actions: { toggleAudienceOutput } } = useNdi();
+
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
     [panelToggles],
@@ -90,12 +89,12 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
         <div className="ml-auto flex items-center gap-2" style={noDragStyle}>
           <Button
             variant="ghost"
-            onClick={onToggleAudienceOutput}
+            onClick={toggleAudienceOutput}
             type="button"
-            className={outputBorderStyles({ active: audienceOutputActive })}
-            aria-pressed={audienceOutputActive}
+            className={outputBorderStyles({ active: outputState.audience })}
+            aria-pressed={outputState.audience}
           >
-            <span className={outputDotStyles({ active: audienceOutputActive })} aria-hidden="true" />
+            <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
             <span className="text-primary">Audience</span>
           </Button>
 
@@ -109,7 +108,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
           </SegmentedControl>
 
           <Button.Icon label="Settings" onClick={handleOpenSettings}>
-            <Settings/>
+            <Settings />
           </Button.Icon>
         </div>
       </div>

@@ -2,36 +2,30 @@ import type { Id, SlideElement, TextElementPayload } from '@core/types';
 import { Box, Eye, EyeOff, Film, Image, Lock, LockOpen, Square, Type } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { SelectableRow } from '../../components/display/selectable-row';
-import type { StackDropPlacement } from './reorder-element-stack';
+import { useObjectList } from './object-list-context';
 import { compactText } from '../../utils/slides';
 
 interface ObjectListRowProps {
   element: SlideElement;
-  selected: boolean;
-  dragging: boolean;
-  dropPlacement: StackDropPlacement | null;
-  onSelect: (id: Id) => void;
-  onDragEnd: () => void;
-  onDragOver: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
-  onDragStart: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
-  onDrop: (id: Id, event: React.DragEvent<HTMLButtonElement>) => void;
-  onToggleLock: (id: Id, locked: boolean) => void;
-  onToggleVisibility: (id: Id, visible: boolean) => void;
 }
 
-export function ObjectListRow({
-  element,
-  selected,
-  dragging,
-  dropPlacement,
-  onSelect,
-  onDragEnd,
-  onDragOver,
-  onDragStart,
-  onDrop,
-  onToggleLock,
-  onToggleVisibility,
-}: ObjectListRowProps) {
+export function ObjectListRow({ element }: ObjectListRowProps) {
+  const {
+    selectedElementId,
+    draggingId,
+    dropTarget,
+    onSelect,
+    onDragEnd,
+    onDragOver,
+    onDragStart,
+    onDrop,
+    onToggleLock,
+    onToggleVisibility,
+  } = useObjectList();
+
+  const selected = element.id === selectedElementId;
+  const dragging = element.id === draggingId;
+  const dropPlacement = dropTarget?.elementId === element.id ? dropTarget.placement : null;
   const visible = element.payload.visible ?? true;
   const locked = element.payload.locked ?? false;
   const title = objectTitle(element);
@@ -122,7 +116,6 @@ function TypeIcon({ type }: { type: SlideElement['type'] }) {
   if (type === 'video') return <Film size={12} strokeWidth={2} className={className} />;
   return <Box size={12} strokeWidth={2} className={className} />;
 }
-
 
 function LockIcon({ closed }: { closed: boolean }) {
   return closed

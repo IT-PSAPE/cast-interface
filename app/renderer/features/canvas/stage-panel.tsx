@@ -9,6 +9,7 @@ import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-cont
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useStagePanelController } from './use-stage-panel-controller';
 import { StageViewport } from './stage-viewport';
+import { EmptyState } from '../../components/display/empty-state';
 
 function formatMetric(value: number | null): string {
   if (value === null) return '--';
@@ -78,9 +79,9 @@ export function StagePanel() {
             ) : null}
           </>
         ) : (
-          <div className="grid h-full min-h-0 place-items-center rounded-md border border-primary bg-primary text-sm text-tertiary">
-            {state.emptyStateLabel}
-          </div>
+          <EmptyState.Root>
+            <EmptyState.Title>{state.emptyStateLabel}</EmptyState.Title>
+          </EmptyState.Root>
         )}
       </div>
 

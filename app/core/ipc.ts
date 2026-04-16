@@ -82,6 +82,7 @@ export interface MainApi {
   getNdiDiagnostics: () => Promise<NdiDiagnostics>;
   sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
+  getAudioCoverArt: (src: string) => Promise<string | null>;
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
 }
 
@@ -143,6 +144,7 @@ export const IPC = {
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
   deletePresentation: 'cast:deletePresentation',
   deleteLyric: 'cast:deleteLyric',
+  getAudioCoverArt: 'cast:getAudioCoverArt',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
   getNdiOutputState: 'ndi:getOutputState',
   getNdiOutputConfigs: 'ndi:getOutputConfigs',

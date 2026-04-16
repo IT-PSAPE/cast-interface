@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OverlayAnimation } from '@core/types';
-import type { DrawerTab, InspectorTab, LibraryPanelView, PlaylistBrowserMode, ResourceDrawerViewMode, SlideBrowserMode, WorkbenchMode } from '../types/ui';
+import type { DrawerTab, DrawerViewModeMap, InspectorTab, LibraryPanelView, PlaylistBrowserMode, ResourceDrawerViewMode, SlideBrowserMode, WorkbenchMode } from '../types/ui';
 import { useGridSize } from '../hooks/use-grid-size';
 import { useLocalStorage } from '../hooks/use-local-storage';
 
@@ -47,7 +47,7 @@ type WorkbenchContextValue = {
     deckBrowserGridSizeMin: number;
     deckBrowserGridSizeStep: number;
     drawerTab: DrawerTab;
-    drawerViewMode: ResourceDrawerViewMode;
+    drawerViewModes: DrawerViewModeMap;
     expandedSegmentIds: string[];
     inspectorTab: InspectorTab;
     libraryPanelView: LibraryPanelView;
@@ -59,7 +59,7 @@ type WorkbenchContextValue = {
   actions: {
     setDeckBrowserGridItemSize: (size: number) => void;
     setDrawerTab: (tab: DrawerTab) => void;
-    setDrawerViewMode: (mode: ResourceDrawerViewMode) => void;
+    setDrawerViewMode: (tab: DrawerTab, mode: ResourceDrawerViewMode) => void;
     setExpandedSegmentIds: (segmentIds: string[]) => void;
     setInspectorTab: (tab: InspectorTab) => void;
     setLibraryPanelView: (view: LibraryPanelView) => void;
@@ -74,7 +74,8 @@ type WorkbenchContextValue = {
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
 const WORKBENCH_MODE_STORAGE_KEY = 'recast.workbench-mode.v1';
 const DECK_BROWSER_STORAGE_KEY = 'recast.deck-browser-preferences.v1';
-const RESOURCE_DRAWER_VIEW_STORAGE_KEY = 'recast.resource-drawer-view.v1';
+const DRAWER_VIEW_MODES_STORAGE_KEY = 'recast.drawer-view-modes.v1';
+const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', media: 'grid', audio: 'list', templates: 'grid' };
 const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'recast.library-panel-view.v1';
 const EXPANDED_SEGMENTS_STORAGE_KEY = 'recast.library-panel-expanded-segments.v1';
 const OVERLAY_DEFAULTS_STORAGE_KEY = 'recast.overlay-defaults.v1';
@@ -88,10 +89,11 @@ const DEFAULT_OVERLAY_DEFAULTS: OverlayDefaultsState = {
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [workbenchMode, setWorkbenchMode] = useLocalStorage<WorkbenchMode>(WORKBENCH_MODE_STORAGE_KEY, 'show', parseWorkbenchMode);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('deck');
-  const [drawerViewMode, setDrawerViewModeRaw] = useLocalStorage<ResourceDrawerViewMode>(
-    RESOURCE_DRAWER_VIEW_STORAGE_KEY,
-    'grid',
-    parseDrawerViewMode,
+  const [drawerViewModes, setDrawerViewModesRaw] = useLocalStorage<DrawerViewModeMap>(
+    DRAWER_VIEW_MODES_STORAGE_KEY,
+    DEFAULT_DRAWER_VIEW_MODES,
+    parseDrawerViewModes,
+    JSON.stringify,
   );
   const [libraryPanelView, setLibraryPanelViewRaw] = useLocalStorage<LibraryPanelView>(
     LIBRARY_PANEL_VIEW_STORAGE_KEY,
@@ -150,9 +152,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     };
   }, [overlayStackEntries.length]);
 
-  const setDrawerViewMode = useCallback((mode: ResourceDrawerViewMode) => {
-    setDrawerViewModeRaw(mode);
-  }, [setDrawerViewModeRaw]);
+  const setDrawerViewMode = useCallback((tab: DrawerTab, mode: ResourceDrawerViewMode) => {
+    setDrawerViewModesRaw({ ...drawerViewModes, [tab]: mode });
+  }, [drawerViewModes, setDrawerViewModesRaw]);
 
   const setLibraryPanelView = useCallback((view: LibraryPanelView) => {
     setLibraryPanelViewRaw(view);
@@ -185,7 +187,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     deckBrowserGridSizeMin,
     deckBrowserGridSizeStep,
     drawerTab,
-    drawerViewMode,
+    drawerViewModes,
     expandedSegmentIds,
     inspectorTab,
     libraryPanelView,
@@ -200,7 +202,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     deckBrowserGridSizeStep,
     deckBrowserPreferences,
     drawerTab,
-    drawerViewMode,
+    drawerViewModes,
     expandedSegmentIds,
     inspectorTab,
     libraryPanelView,
@@ -259,8 +261,23 @@ function parseWorkbenchMode(raw: string): WorkbenchMode | null {
   return VALID_MODES.has(raw as WorkbenchMode) ? (raw as WorkbenchMode) : null;
 }
 
-function parseDrawerViewMode(raw: string): ResourceDrawerViewMode | null {
-  return raw === 'list' ? 'list' : raw === 'grid' ? 'grid' : null;
+function isValidViewMode(value: unknown): value is ResourceDrawerViewMode {
+  return value === 'grid' || value === 'list';
+}
+
+function parseDrawerViewModes(raw: string): DrawerViewModeMap | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const deck = parsed.deck;
+    const media = parsed.media;
+    const audio = parsed.audio;
+    const templates = parsed.templates;
+    if (!isValidViewMode(deck) || !isValidViewMode(media) || !isValidViewMode(audio) || !isValidViewMode(templates)) return null;
+    return { deck, media, audio, templates };
+  } catch {
+    return null;
+  }
 }
 
 function parseLibraryPanelView(raw: string): LibraryPanelView | null {

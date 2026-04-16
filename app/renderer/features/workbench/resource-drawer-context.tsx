@@ -1,28 +1,23 @@
+import type { ResourceDrawerViewMode } from '../../types/ui';
 import { useWorkbench } from '../../contexts/workbench-context';
 
 interface ResourceDrawerContextValue {
   drawerTab: ReturnType<typeof useWorkbench>['state']['drawerTab'];
-  drawerViewMode: ReturnType<typeof useWorkbench>['state']['drawerViewMode'];
+  drawerViewMode: ResourceDrawerViewMode;
   setDrawerTab: (tab: ReturnType<typeof useWorkbench>['state']['drawerTab']) => void;
-  setDrawerViewMode: (mode: ReturnType<typeof useWorkbench>['state']['drawerViewMode']) => void;
+  setDrawerViewMode: (mode: ResourceDrawerViewMode) => void;
 }
 
 export function useResourceDrawer(): ResourceDrawerContextValue {
   const {
-    state: {
-      drawerTab,
-      drawerViewMode,
-    },
-    actions: {
-      setDrawerTab,
-      setDrawerViewMode,
-    },
+    state: { drawerTab, drawerViewModes },
+    actions: { setDrawerTab, setDrawerViewMode },
   } = useWorkbench();
 
   return {
     drawerTab,
-    drawerViewMode,
+    drawerViewMode: drawerViewModes[drawerTab],
     setDrawerTab,
-    setDrawerViewMode,
+    setDrawerViewMode: (mode) => setDrawerViewMode(drawerTab, mode),
   };
 }

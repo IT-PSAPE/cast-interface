@@ -3,17 +3,16 @@ import type { Id, Template } from '@core/types';
 import type { ContextMenuItem } from '../../../components/overlays/context-menu';
 import { useNavigation } from '../../../contexts/navigation-context';
 import { useOverlayEditor, useTemplateEditor } from '../../../contexts/asset-editor/asset-editor-context';
-import { useProjectContent } from '../../../contexts/use-project-content';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useContextMenuState } from '../../../hooks/use-context-menu-state';
 import { filterByText } from '../../../utils/filter-by-text';
 
 export function useTemplateBin(filterText: string) {
-  const { templates } = useProjectContent();
   const { currentPlaylistDeckItem, currentDeckItem } = useNavigation();
   const { currentOverlay } = useOverlayEditor();
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const {
+    templates,
     applyTemplateToTarget,
     currentTemplateId,
     deleteTemplate,
@@ -23,7 +22,10 @@ export function useTemplateBin(filterText: string) {
   } = useTemplateEditor();
   const menu = useContextMenuState<Id>();
 
-  const filteredTemplates = filterByText(templates, filterText, (t) => [t.name, t.kind]);
+  const filteredTemplates = useMemo(
+    () => filterByText(templates, filterText, (t) => [t.name, t.kind]),
+    [templates, filterText],
+  );
   const activeDeckItem = currentPlaylistDeckItem ?? currentDeckItem;
 
   function resolvePreviewTarget(template: Template) {

@@ -35,7 +35,7 @@ export function useStagedCollection<T extends { id: Id }>({
   const previousWorkbenchModeRef = useRef(currentWorkbenchMode);
   const autoPushRef = useRef<(() => void) | null>(null);
 
-  const items = stagedItems ?? persistedItems;
+  const items = useMemo(() => stagedItems ?? persistedItems, [stagedItems, persistedItems]);
 
   const hasPendingChanges = useMemo(() => {
     if (!stagedItems) return false;

@@ -20,10 +20,12 @@ import type { DrawerTab, ResourceDrawerViewMode } from '../../types/ui';
 import { CreateLyricDialog } from '../deck/create-lyric-dialog';
 import { LyricEditorModal } from '../deck/lyric-editor-modal';
 import { useAudio } from '../../contexts/playback/playback-context';
+import { useAudioCoverArt } from '../../hooks/use-audio-cover-art';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
 import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
+import { EmptyState } from '../../components/display/empty-state';
 
 const IMPORT_ACCEPT_BY_TAB = {
   media: 'image/*,video/*',
@@ -354,23 +356,19 @@ function ResourceDrawerContent() {
           <section className="h-full min-h-0 overflow-auto p-2">
             <div className="flex min-h-full flex-col">
               {audio.audioAssets.length === 0 ? (
-                <div className="grid flex-1 place-items-center rounded border border-primary bg-primary/40 px-4 text-center text-sm text-tertiary">
-                  Import audio to build a reusable app-wide audio list.
-                </div>
+                <EmptyState.Root>
+                  <EmptyState.Title>No audio files</EmptyState.Title>
+                  <EmptyState.Description>Import audio to build a reusable app-wide audio list.</EmptyState.Description>
+                </EmptyState.Root>
               ) : (
                 <div className="flex flex-col gap-1">
                   {audio.audioAssets.map((asset) => (
-                    <SelectableRow.Root
+                    <AudioRow
                       key={asset.id}
-                      selected={audio.currentAudioAssetId === asset.id}
-                      onClick={() => audio.selectAudio(asset.id)}
-                      className="h-9"
-                    >
-                      <SelectableRow.Leading>
-                        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-                      </SelectableRow.Leading>
-                      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-                    </SelectableRow.Root>
+                      asset={asset}
+                      isSelected={audio.currentAudioAssetId === asset.id}
+                      onSelect={() => audio.selectAudio(asset.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -382,6 +380,23 @@ function ResourceDrawerContent() {
         </Tabs.Panel>
       </Tabs.Panels>
     </Tabs.Root>
+  );
+}
+
+function AudioRow({ asset, isSelected, onSelect }: { asset: import('@core/types').MediaAsset; isSelected: boolean; onSelect: () => void }) {
+  const coverArt = useAudioCoverArt(asset.src);
+
+  return (
+    <SelectableRow.Root selected={isSelected} onClick={onSelect} className="h-9">
+      <SelectableRow.Leading>
+        {coverArt ? (
+          <img src={coverArt} alt="" className="h-6 w-6 rounded object-cover" />
+        ) : (
+          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+        )}
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+    </SelectableRow.Root>
   );
 }
 

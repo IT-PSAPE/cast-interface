@@ -11,12 +11,13 @@ import { IconGroup } from '@renderer/components/icon-group';
 import { useShapeInspector } from './use-shape-inspector';
 import { Section } from './inspector-section';
 import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
+import { EmptyState } from '../../components/display/empty-state';
 
 export function ShapeElementInspector() {
   const result = useShapeInspector();
 
   if (!result) {
-    return <div className="text-sm text-tertiary">Select an object to edit shape properties.</div>;
+    return <EmptyState.Root><EmptyState.Title>Select an object to edit shape properties.</EmptyState.Title></EmptyState.Root>;
   }
 
   const { state, actions } = result;

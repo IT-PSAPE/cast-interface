@@ -1,6 +1,7 @@
 import { useOutlineView } from './use-slide-list-view';
 import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { SlideOutlineRow } from './slide-list-row';
+import { EmptyState } from '../../components/display/empty-state';
 
 export function SlideList() {
   const { rows, currentSlideIndex, selectSlide, openSlide, updateText } = useOutlineView();
@@ -24,9 +25,9 @@ export function SlideList() {
 
   if (rows.length === 0) {
     return (
-      <section className="grid h-full min-h-0 place-items-center text-sm text-tertiary">
-        No slides available.
-      </section>
+      <EmptyState.Root>
+        <EmptyState.Title>No slides available.</EmptyState.Title>
+      </EmptyState.Root>
     );
   }
 

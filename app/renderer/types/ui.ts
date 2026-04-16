@@ -7,6 +7,7 @@ export type PlaylistBrowserMode = 'current' | 'tabs' | 'continuous';
 export type WorkbenchMode = 'show' | 'deck-editor' | 'overlay-editor' | 'template-editor' | 'settings';
 export type InteractionMode = 'move' | 'resize';
 export type DrawerTab = 'deck' | 'media' | 'audio' | 'templates';
+export type DrawerViewModeMap = Record<DrawerTab, ResourceDrawerViewMode>;
 export type InspectorTab = 'presentation' | 'slide' | 'shape' | 'text';
 export type LibraryPanelView = 'libraries' | 'playlist';
 export type SlideVisualState = 'live' | 'queued' | 'selected' | 'warning';

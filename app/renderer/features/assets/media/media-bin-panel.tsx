@@ -3,6 +3,7 @@ import { cn } from '@renderer/utils/cn';
 import { Ellipsis } from 'lucide-react';
 import { Button } from '../../../components/controls/button';
 import { MediaAssetIcon } from '../../../components/display/entity-icon';
+import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
 import { FileTrigger } from '../../../components/form/file-trigger';
@@ -30,16 +31,18 @@ export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) 
         menuItems={currentMenuItems}
         onCloseMenu={menu.close}
       >
-        {mediaAssets.map((asset) => (
-          <MediaCard
-            key={asset.id}
-            asset={asset}
-            isActive={mediaLayerAssetId === asset.id}
-            mode={drawerViewMode}
-            onAssignLayer={setMediaLayerAsset}
-            onOpenMenu={menu.openFromButton}
-          />
-        ))}
+        {mediaAssets.map((asset) => {
+          const shared = {
+            key: asset.id,
+            asset,
+            isActive: mediaLayerAssetId === asset.id,
+            onAssignLayer: setMediaLayerAsset,
+            onOpenMenu: menu.openFromButton,
+          };
+          return drawerViewMode === 'list'
+            ? <MediaRow {...shared} />
+            : <MediaTile {...shared} />;
+        })}
       </BinPanelLayout>
 
       <FileTrigger.Root hidden inputRef={fileInputRef} accept="image/*,video/*" onSelect={handleChangeSourceSelect} />
@@ -47,15 +50,14 @@ export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) 
   );
 }
 
-interface MediaCardProps {
+interface MediaItemProps {
   asset: MediaAsset;
   isActive: boolean;
-  mode: 'grid' | 'list';
   onAssignLayer: (id: Id) => void;
   onOpenMenu: (button: HTMLElement, data: Id) => void;
 }
 
-function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCardProps) {
+function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps) {
   function handleDragStart(e: React.DragEvent) {
     e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
   }
@@ -69,35 +71,40 @@ function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCa
     onOpenMenu(e.currentTarget, asset.id);
   }
 
-  if (mode === 'list') {
-    return (
-      <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
-        <Thumbnail.Row
-          onClick={handleAssignLayer}
-          selected={isActive}
-        >
-          <Thumbnail.Preview className="aspect-video">
-            {renderMediaPreview(asset)}
-          </Thumbnail.Preview>
-          <Thumbnail.Body>
-            <>
-              <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
-                <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-                <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
-              </div>
-              <Paragraph.xs className="uppercase tracking-wide text-tertiary">{asset.type}</Paragraph.xs>
-            </>
-          </Thumbnail.Body>
-          <Thumbnail.Overlay position="top-right" className="right-2 top-2 hidden group-hover:block">
-            <div>
-              <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                <Ellipsis />
-              </Button.Icon>
-            </div>
-          </Thumbnail.Overlay>
-        </Thumbnail.Row>
-      </div>
-    );
+  return (
+    <SelectableRow.Root
+      selected={isActive}
+      onClick={handleAssignLayer}
+      draggable
+      onDragStart={handleDragStart}
+      className="group h-9 cursor-grab"
+    >
+      <SelectableRow.Leading>
+        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
+        <Button.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
+          <Ellipsis size={14} />
+        </Button.Icon>
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
+  );
+}
+
+function MediaTile({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps) {
+  function handleDragStart(e: React.DragEvent) {
+    e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
+  }
+
+  function handleAssignLayer() {
+    onAssignLayer(asset.id);
+  }
+
+  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onOpenMenu(e.currentTarget, asset.id);
   }
 
   return (
@@ -126,15 +133,6 @@ function MediaCard({ asset, isActive, mode, onAssignLayer, onOpenMenu }: MediaCa
         </Thumbnail.Caption>
       </Thumbnail.Tile>
     </div>
-  );
-}
-
-function renderMediaPreview(asset: MediaAsset) {
-  return (
-    <>
-      <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
-      <MediaThumbnail asset={asset} />
-    </>
   );
 }
 

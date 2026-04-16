@@ -11,7 +11,6 @@ import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
 import { SplitPanel } from './features/workbench/split-panel';
 import { StatusBar } from './features/workbench/status-bar';
-import { useWorkbenchPanelToggles } from './features/workbench/use-workbench-panel-toggles';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
 import { WorkbenchScreenRouter } from './workbench-screen-router';
 
@@ -42,11 +41,6 @@ export function App() {
 
 function AppLayoutContent() {
   const { snapshot } = useCast();
-  const {
-    state: { outputState },
-    actions: { toggleAudienceOutput },
-  } = useNdi();
-  const panelToggles = useWorkbenchPanelToggles();
 
   if (!snapshot) {
     return (
@@ -59,11 +53,7 @@ function AppLayoutContent() {
   return (
     <div className="relative flex h-screen flex-col">
       <WindowsInlineMenuBar />
-      <AppToolbar
-        audienceOutputActive={outputState.audience}
-        onToggleAudienceOutput={toggleAudienceOutput}
-        panelToggles={panelToggles}
-      />
+      <AppToolbar />
       <main className="min-h-0 flex-1">
         <WorkbenchScreenRouter />
       </main>

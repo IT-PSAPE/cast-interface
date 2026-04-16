@@ -1,12 +1,12 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment } from 'react';
 import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
-import type { SlideElement, TextElementPayload } from '@core/types';
-import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
 import type { RenderNode, RenderScene, SceneSurface } from './scene-types';
 import { SceneNodeMedia } from './scene-node-media';
 import { SceneNodeShape } from './scene-node-shape';
 import { SceneNodeText } from './scene-node-text';
+import { InlineTextEditor } from './inline-text-editor';
 import { useSceneStageEditor } from './use-scene-stage-editor';
 import type { SceneViewportTransform } from './use-scene-stage-viewport';
 import { useSceneStageViewport } from './use-scene-stage-viewport';
@@ -33,6 +33,85 @@ function renderNodeContent(node: RenderNode, surface: SceneSurface) {
   return null;
 }
 
+// ─── SceneNode ──────────────────────────────────────────────────────
+
+interface SceneNodeProps {
+  node: RenderNode;
+  surface: SceneSurface;
+  editable: boolean;
+  isBeingEdited: boolean;
+  onSelect: (id: string, shiftKey: boolean) => void;
+  onDoubleClick: (id: string) => void;
+  onDragStart: (id: string) => void;
+  onDragMove: (id: string) => void;
+  onDragEnd: () => void;
+  onTransform: () => void;
+  onTransformEnd: () => void;
+  setNodeRef: (id: string, node: Konva.Group | null) => void;
+}
+
+const SceneNode = memo(function SceneNode({
+  node, surface, editable, isBeingEdited,
+  onSelect, onDoubleClick, onDragStart, onDragMove, onDragEnd,
+  onTransform, onTransformEnd, setNodeRef,
+}: SceneNodeProps) {
+  if (node.visual.visible === false) return null;
+
+  function handleClick(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    event.cancelBubble = true;
+    onSelect(node.id, event.evt.shiftKey);
+  }
+
+  function handleDblClick(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    event.cancelBubble = true;
+    onDoubleClick(node.id);
+  }
+
+  function handleDragStart() {
+    onDragStart(node.id);
+  }
+
+  function handleDragMove() {
+    onDragMove(node.id);
+  }
+
+  function handleRef(ref: Konva.Group | null) {
+    setNodeRef(node.id, ref);
+  }
+
+  return (
+    <Fragment>
+      <Group
+        ref={handleRef}
+        x={node.element.x}
+        y={node.element.y}
+        width={node.element.width}
+        height={node.element.height}
+        rotation={node.element.rotation}
+        opacity={isBeingEdited ? 0 : node.element.opacity}
+        scaleX={node.visual.flipX ? -1 : 1}
+        scaleY={node.visual.flipY ? -1 : 1}
+        offsetX={node.visual.flipX ? node.element.width : 0}
+        offsetY={node.visual.flipY ? node.element.height : 0}
+        draggable={editable && !node.visual.locked && !isBeingEdited}
+        onMouseDown={handleClick}
+        onTap={handleClick}
+        onDblClick={handleDblClick}
+        onDblTap={handleDblClick}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={onDragEnd}
+        onTransform={onTransform}
+        onTransformEnd={onTransformEnd}
+      >
+        {renderNodeContent(node, surface)}
+      </Group>
+    </Fragment>
+  );
+});
+
+// ─── SceneStage ─────────────────────────────────────────────────────
+
 export function SceneStage({ scene, surface = 'show', editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
@@ -51,66 +130,21 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
     });
   }, [onViewportChange, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale, viewport.viewportHeight, viewport.viewportWidth]);
 
-  function handleNodeClick(id: string, event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
-    editor.handleNodeSelect(id, event.evt.shiftKey);
-  }
+  const handleNodeSelect = useCallback((id: string, shiftKey: boolean) => {
+    editor.handleNodeSelect(id, shiftKey);
+  }, [editor]);
 
-  function handleNodeDblClick(id: string) {
+  const handleNodeDoubleClick = useCallback((id: string) => {
     editor.handleNodeDoubleClick(id);
-  }
+  }, [editor]);
 
-  function renderNode(node: RenderNode) {
-    if (node.visual.visible === false) return null;
-    const isBeingEdited = editor.editingTextId === node.id;
+  const handleNodeDragStart = useCallback((id: string) => {
+    editor.handleNodeDragStart(id);
+  }, [editor]);
 
-    function handleClick(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
-      event.cancelBubble = true;
-      handleNodeClick(node.id, event);
-    }
-
-    function handleDblClick(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
-      event.cancelBubble = true;
-      handleNodeDblClick(node.id);
-    }
-
-    function handleDragStart() {
-      editor.handleNodeDragStart(node.id);
-    }
-
-    function handleDragMove() {
-      editor.handleNodeDragMove(node.id);
-    }
-
-    return (
-      <Fragment key={node.id}>
-        <Group
-          ref={(nextNode) => editor.setNodeRef(node.id, nextNode)}
-          x={node.element.x}
-          y={node.element.y}
-          width={node.element.width}
-          height={node.element.height}
-          rotation={node.element.rotation}
-          opacity={isBeingEdited ? 0 : node.element.opacity}
-          scaleX={node.visual.flipX ? -1 : 1}
-          scaleY={node.visual.flipY ? -1 : 1}
-          offsetX={node.visual.flipX ? node.element.width : 0}
-          offsetY={node.visual.flipY ? node.element.height : 0}
-          draggable={editable && !node.visual.locked && !isBeingEdited}
-          onMouseDown={handleClick}
-          onTap={handleClick}
-          onDblClick={handleDblClick}
-          onDblTap={handleDblClick}
-          onDragStart={handleDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={editor.handleNodeDragEnd}
-          onTransform={editor.handleNodeTransform}
-          onTransformEnd={editor.handleNodeTransformEnd}
-        >
-          {renderNodeContent(node, surface)}
-        </Group>
-      </Fragment>
-    );
-  }
+  const handleNodeDragMove = useCallback((id: string) => {
+    editor.handleNodeDragMove(id);
+  }, [editor]);
 
   return (
     <div ref={viewport.containerRef} className={`relative h-full w-full overflow-hidden ${className}`} onDrop={onDrop} onDragOver={onDragOver}>
@@ -125,7 +159,23 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
       >
         <Layer listening={editable}>
           <Group name="scene-root" x={viewport.sceneOffsetX} y={viewport.sceneOffsetY} scaleX={viewport.sceneScale} scaleY={viewport.sceneScale}>
-            {scene.nodes.map(renderNode)}
+            {scene.nodes.map((node) => (
+              <SceneNode
+                key={node.id}
+                node={node}
+                surface={surface}
+                editable={editable}
+                isBeingEdited={editor.editingTextId === node.id}
+                onSelect={handleNodeSelect}
+                onDoubleClick={handleNodeDoubleClick}
+                onDragStart={handleNodeDragStart}
+                onDragMove={handleNodeDragMove}
+                onDragEnd={editor.handleNodeDragEnd}
+                onTransform={editor.handleNodeTransform}
+                onTransformEnd={editor.handleNodeTransformEnd}
+                setNodeRef={editor.setNodeRef}
+              />
+            ))}
             {editable ? (
               <>
                 {editor.guideLines.map((guide, index) => (
@@ -176,118 +226,5 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
         />
       ) : null}
     </div>
-  );
-}
-
-interface InlineTextEditorProps {
-  editingTextId: string;
-  effectiveElements: SlideElement[];
-  sceneOffsetX: number;
-  sceneOffsetY: number;
-  sceneScale: number;
-  onCommit: (text: string) => void;
-  onCancel: () => void;
-}
-
-function InlineTextEditor({ editingTextId, effectiveElements, sceneOffsetX, sceneOffsetY, sceneScale, onCommit, onCancel }: InlineTextEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [draft, setDraft] = useState('');
-  const initialTextRef = useRef('');
-
-  const element = effectiveElements.find((el) => el.id === editingTextId);
-  const payload = element?.type === 'text' ? (element.payload as unknown as TextElementPayload) : null;
-
-  useEffect(() => {
-    if (!payload) return;
-    const text = payload.text ?? '';
-    setDraft(text);
-    initialTextRef.current = text;
-    requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-      textarea.focus();
-      textarea.select();
-    });
-  }, [editingTextId]);
-
-  const handleBlur = useCallback(() => {
-    onCommit(draft);
-  }, [draft, onCommit]);
-
-  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onCancel();
-      return;
-    }
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      onCommit(draft);
-    }
-  }, [draft, onCommit, onCancel]);
-
-  function handleChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
-    setDraft(event.target.value);
-  }
-
-  if (!element || !payload) return null;
-
-  const left = sceneOffsetX + element.x * sceneScale;
-  const top = sceneOffsetY + element.y * sceneScale;
-  const width = element.width * sceneScale;
-  const height = element.height * sceneScale;
-  const fontSize = payload.fontSize * sceneScale;
-  const lineHeight = payload.lineHeight ?? 1.25;
-  const fontWeight = payload.weight ?? '400';
-  const fontStyle = payload.italic ? 'italic' : 'normal';
-  const textAlign = resolveInlineTextAlign(payload.alignment);
-  const verticalAlign = payload.verticalAlign ?? 'middle';
-  const contentHeight = measureInlineTextHeight({
-    text: draft,
-    width: Math.max(width - 4, 1),
-    fontSize,
-    lineHeight,
-    fontWeight,
-    fontStyle,
-    fontFamily: payload.fontFamily || 'sans-serif',
-  });
-  const innerHeight = Math.max(height - 4, 0);
-  const remainingVerticalSpace = Math.max(0, innerHeight - contentHeight);
-  const paddingTop = verticalAlign === 'top'
-    ? 0
-    : verticalAlign === 'bottom'
-      ? remainingVerticalSpace
-      : remainingVerticalSpace / 2;
-
-  return (
-    <textarea
-      ref={textareaRef}
-      value={draft}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      className="absolute z-10 resize-none overflow-hidden border-2 border-[#4DA3FF] bg-transparent outline-none"
-      style={{
-        left,
-        top,
-        width,
-        height,
-        boxSizing: 'border-box',
-        fontSize,
-        lineHeight,
-        fontWeight,
-        fontStyle,
-        fontFamily: payload.fontFamily || 'sans-serif',
-        color: payload.color,
-        textAlign,
-        transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
-        transformOrigin: 'top left',
-        paddingTop,
-        paddingRight: 0,
-        paddingBottom: 0,
-        paddingLeft: 0,
-        margin: 0,
-      }}
-    />
   );
 }
