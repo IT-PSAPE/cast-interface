@@ -5,31 +5,32 @@ import { NdiProvider, useNdi } from './contexts/ndi-context';
 import { NavigationProvider } from './contexts/navigation-context';
 import { PresentationLayerProvider } from './contexts/presentation-layer-context';
 import { SlideProvider } from './contexts/slide-context';
-import { SlideEditorProvider } from './contexts/slide-editor-context';
+import { DeckEditorProvider } from './contexts/deck-editor-context';
 import { ElementProvider } from './contexts/element/element-context';
 import { OverlayEditorProvider } from './contexts/overlay-editor/overlay-editor-context';
 import { TemplateEditorProvider } from './contexts/template-editor-context';
-import { InspectorProvider } from './features/inspector/inspector-context';
-import { ResourceDrawerProvider } from './features/resource-bin/resource-drawer-context';
-import { SlideBrowserProvider } from './features/show/slide-browser-context';
+import { InspectorProvider } from './features/canvas/inspector-context';
+import { ResourceDrawerProvider } from './features/workbench/resource-drawer-context';
+import { DeckBrowserProvider } from './features/deck/deck-browser-context';
 import { OverlayDefaultsProvider } from './contexts/overlay-defaults-context';
 import { WorkbenchProvider, useWorkbench } from './contexts/workbench-context';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { AppToolbar } from './features/workbench/app-toolbar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
-import { LibraryPanelProvider } from './features/show/library-panel-context';
+import { LibraryPanelProvider } from './features/library/library-panel-context';
 import { SplitPanel, usePanelRoute } from './features/workbench/split-panel';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { OverlayProvider } from './components/overlays/overlay-provider';
-import { RenderSceneProvider } from './features/stage/render-scene-provider';
+import { RenderSceneProvider } from './features/canvas/render-scene-provider';
 import { StatusBar } from './features/workbench/status-bar';
-import { ProgramOutputProvider } from './features/show/program-output-context';
-import { ShowAudioProvider } from './features/show/show-audio-context';
-import { NdiFrameCapture } from './features/show/ndi-frame-capture';
+import { ProgramOutputProvider } from './features/playback/program-output-context';
+import { ShowAudioProvider } from './features/playback/audio-playback-context';
+import { NdiFrameCapture } from './features/playback/ndi-frame-capture';
 import { OverlayEditorScreen } from './screens/overlay-editor/page';
 import { ShowScreen } from './screens/show/page';
-import { SlideEditorScreen } from './screens/slide-editor/page';
+import { DeckEditorScreen } from './screens/deck-editor/page';
 import { TemplateEditorScreen } from './screens/template-editor/page';
+import { SettingsScreen } from './screens/settings/page';
 
 // ─── Provider Groups ─────────────────────────────────────────────────
 // Organized by responsibility tier following moc-console patterns:
@@ -69,11 +70,11 @@ function EditorProviders({ children }: { children: ReactNode }) {
   return (
     <OverlayEditorProvider>
       <TemplateEditorProvider>
-        <SlideEditorProvider>
+        <DeckEditorProvider>
           <ElementProvider>
             {children}
           </ElementProvider>
-        </SlideEditorProvider>
+        </DeckEditorProvider>
       </TemplateEditorProvider>
     </OverlayEditorProvider>
   );
@@ -81,7 +82,7 @@ function EditorProviders({ children }: { children: ReactNode }) {
 
 function FeatureUIProviders({ children }: { children: ReactNode }) {
   return (
-    <SlideBrowserProvider>
+    <DeckBrowserProvider>
       <ResourceDrawerProvider>
         <InspectorProvider>
           <LibraryPanelProvider>
@@ -89,7 +90,7 @@ function FeatureUIProviders({ children }: { children: ReactNode }) {
           </LibraryPanelProvider>
         </InspectorProvider>
       </ResourceDrawerProvider>
-    </SlideBrowserProvider>
+    </DeckBrowserProvider>
   );
 }
 
@@ -202,9 +203,11 @@ function AppLayoutContent() {
 
   const panelToggles = workbenchMode === 'show'
     ? showPanelToggles
-    : workbenchMode === 'slide-editor'
+    : workbenchMode === 'deck-editor'
       ? editPanelToggles
-      : workbenchMode === 'template-editor'
+      : workbenchMode === 'settings'
+        ? []
+        : workbenchMode === 'template-editor'
         ? overlayPanelToggles
         : overlayPanelToggles;
 
@@ -214,9 +217,10 @@ function AppLayoutContent() {
       <AppToolbar audienceOutputActive={outputState.audience} onToggleAudienceOutput={toggleAudienceOutput} panelToggles={panelToggles} />
       <main className='flex-1 min-h-0'>
         {workbenchMode === 'show' ? <ShowScreen /> : null}
-        {workbenchMode === 'slide-editor' ? <SlideEditorScreen /> : null}
+        {workbenchMode === 'deck-editor' ? <DeckEditorScreen /> : null}
         {workbenchMode === 'overlay-editor' ? <OverlayEditorScreen /> : null}
         {workbenchMode === 'template-editor' ? <TemplateEditorScreen /> : null}
+        {workbenchMode === 'settings' ? <SettingsScreen /> : null}
       </main>
       <StatusBar />
     </div>

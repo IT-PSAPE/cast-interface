@@ -1,6 +1,5 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
-import { SettingsDialog } from '../settings/settings-dialog';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
 import { Button } from '@renderer/components/controls/button';
@@ -44,7 +43,6 @@ interface AppToolbarProps {
 
 export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panelToggles }: AppToolbarProps) {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
-  const [showSettings, setShowSettings] = useState(false);
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
     [panelToggles],
@@ -65,11 +63,9 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
   }
 
   function handleOpenSettings() {
-    setShowSettings(true);
-  }
-
-  function handleCloseSettings() {
-    setShowSettings(false);
+    if (workbenchMode !== 'settings') {
+      setWorkbenchMode('settings');
+    }
   }
 
   const dragRegionStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
@@ -85,7 +81,7 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
         <div className="flex items-center" style={noDragStyle}>
           <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
             <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
-            <SegmentedControl.Label value="slide-editor">Edit</SegmentedControl.Label>
+            <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
             <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
             <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
           </SegmentedControl>
@@ -117,7 +113,6 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
           </Button.Icon>
         </div>
       </div>
-      {showSettings ? <SettingsDialog onClose={handleCloseSettings} /> : null}
     </header>
   );
 }
@@ -132,7 +127,7 @@ function renderPanelToggleItem(toggle: PanelToggleButton) {
 }
 
 function isWorkbenchMode(value: string): value is WorkbenchMode {
-  return value === 'show' || value === 'slide-editor' || value === 'overlay-editor' || value === 'template-editor';
+  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'settings';
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {

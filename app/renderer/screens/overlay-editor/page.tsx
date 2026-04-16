@@ -8,13 +8,14 @@ import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useOverlayEditor } from '../../contexts/overlay-editor/overlay-editor-context';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { ObjectListPanel } from '../../features/editor/object-list-panel';
-import { InspectorTabsPanel } from '../../features/inspector/inspector-tabs-panel';
-import { useInspectorPanelPushAction } from '../../features/inspector/use-inspector-panel-push-action';
-import { buildRenderScene } from '../../features/stage/build-render-scene';
-import { SceneStage } from '../../features/stage/scene-stage';
-import { StagePanel } from '../../features/stage/stage-panel';
+import { ObjectListPanel } from '../../features/canvas/object-list-panel';
+import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
+import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
+import { buildRenderScene } from '../../features/canvas/build-render-scene';
+import { SceneStage } from '../../features/canvas/scene-stage';
+import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
+import { Label } from '@renderer/components/display/text';
 
 export function OverlayEditorScreen() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay } = useOverlayEditor();
@@ -47,7 +48,7 @@ export function OverlayEditorScreen() {
                 <Panel.Section>
                   <Panel.SectionHeader className="border-b border-primary">
                     <Panel.SectionTitle>
-                      <span className="truncate text-sm font-medium text-primary">Overlays</span>
+                      <Label.sm>Overlays</Label.sm>
                     </Panel.SectionTitle>
                     <Panel.SectionAction>
                       <Button.Icon label="Add overlay" onClick={handleAddOverlay}>
@@ -116,13 +117,13 @@ export function OverlayEditorScreen() {
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {inspectorState.isVisible ? (
+            {inspectorState.isVisible && (
               <Panel.Footer className="p-3">
                 <Button onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
                 </Button>
               </Panel.Footer>
-            ) : null}
+            )}
           </Panel>
         </SplitPanel.Segment>
       </SplitPanel.Panel>

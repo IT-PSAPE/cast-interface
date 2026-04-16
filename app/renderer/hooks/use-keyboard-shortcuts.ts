@@ -4,16 +4,16 @@ import { CANVAS_VIEW_LABELS, PLAYLIST_DISPLAY_MODE_LABELS } from '../utils/slide
 import { useCast } from '../contexts/cast-context';
 import { useSlides } from '../contexts/slide-context';
 import { useElements } from '../contexts/element/element-context';
-import { useSlideBrowser } from '../features/show/slide-browser-context';
+import { useDeckBrowser } from '../features/deck/deck-browser-context';
 import { useWorkbench } from '../contexts/workbench-context';
 
 export function useKeyboardShortcuts(): void {
   const { setStatusText } = useCast();
   const { slides, activateSlide, takeSlide, goNext, goPrev } = useSlides();
   const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
-  const { setSlideBrowserMode, setPlaylistBrowserMode } = useSlideBrowser();
+  const { setSlideBrowserMode, setPlaylistBrowserMode } = useDeckBrowser();
   const { state: { workbenchMode } } = useWorkbench();
-  const isEditSlideBrowser = workbenchMode === 'slide-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
+  const isEditSlideBrowser = workbenchMode === 'deck-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

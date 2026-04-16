@@ -7,7 +7,7 @@ import { sortElements } from '../../utils/slides';
 import { useCast } from '../cast-context';
 import { useNavigation } from '../navigation-context';
 import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
-import { useSlideEditor } from '../slide-editor-context';
+import { useDeckEditor } from '../deck-editor-context';
 import { useSlides } from '../slide-context';
 import { useTemplateEditor } from '../template-editor-context';
 import { useWorkbench } from '../workbench-context';
@@ -25,11 +25,11 @@ export function ElementProvider({ children }: { children: ReactNode }) {
   const { currentDeckItem } = useNavigation();
   const { currentSlide } = useSlides();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
-  const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { getSlideElements, replaceSlideElements } = useDeckEditor();
   const { currentTemplate, replaceTemplateElements } = useTemplateEditor();
   const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isSlideEdit = workbenchMode === 'slide-editor';
+  const isSlideEdit = workbenchMode === 'deck-editor';
   const isTemplateEdit = workbenchMode === 'template-editor';
 
   const [draftElements, setDraftElements] = useState<Record<Id, Partial<SlideElement>>>({});

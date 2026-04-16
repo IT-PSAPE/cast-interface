@@ -5,7 +5,7 @@ import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slid
 import { useOverlayDefaults } from '../overlay-defaults-context';
 import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
 import { useProjectContent } from '../use-project-content';
-import { useSlideEditor } from '../slide-editor-context';
+import { useDeckEditor } from '../deck-editor-context';
 import { useTemplateEditor } from '../template-editor-context';
 import { useWorkbench } from '../workbench-context';
 import {
@@ -30,12 +30,12 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
   const { overlayDefaults } = useOverlayDefaults();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
-  const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { getSlideElements, replaceSlideElements } = useDeckEditor();
   const { replaceTemplateElements } = useTemplateEditor();
   const { slideElementsBySlideId } = useProjectContent();
   const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isSlideEdit = workbenchMode === 'slide-editor';
+  const isSlideEdit = workbenchMode === 'deck-editor';
   const isTemplateEdit = workbenchMode === 'template-editor';
   const isLyricsTemplate = currentTemplate?.kind === 'lyrics';
   const existingTemplateTextElement = currentTemplate?.elements.find((element) => element.type === 'text') ?? null;

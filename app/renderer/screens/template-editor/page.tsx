@@ -8,12 +8,12 @@ import { ContextMenu, type ContextMenuItem } from '../../components/overlays/con
 import { useTemplateEditor } from '../../contexts/template-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { ObjectListPanel } from '../../features/editor/object-list-panel';
-import { InspectorTabsPanel } from '../../features/inspector/inspector-tabs-panel';
-import { useInspectorPanelPushAction } from '../../features/inspector/use-inspector-panel-push-action';
-import { buildRenderScene } from '../../features/stage/build-render-scene';
-import { SceneStage } from '../../features/stage/scene-stage';
-import { StagePanel } from '../../features/stage/stage-panel';
+import { ObjectListPanel } from '../../features/canvas/object-list-panel';
+import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
+import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
+import { buildRenderScene } from '../../features/canvas/build-render-scene';
+import { SceneStage } from '../../features/canvas/scene-stage';
+import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
 
 export function TemplateEditorScreen() {
@@ -108,8 +108,8 @@ export function TemplateEditorScreen() {
                 </Panel.Section>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            {menuState ? <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} /> : null}
-            {templateMenu.menuState ? <ContextMenu x={templateMenu.menuState.x} y={templateMenu.menuState.y} items={buildTemplateMenuItems(templateMenu.menuState.data)} onClose={templateMenu.close} /> : null}
+            {menuState && <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} />}
+            {templateMenu.menuState && <ContextMenu x={templateMenu.menuState.x} y={templateMenu.menuState.y} items={buildTemplateMenuItems(templateMenu.menuState.data)} onClose={templateMenu.close} />}
           </Panel>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
@@ -118,13 +118,13 @@ export function TemplateEditorScreen() {
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {inspectorState.isVisible ? (
+            {inspectorState.isVisible && (
               <Panel.Footer className="p-3">
                 <Button onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
                 </Button>
               </Panel.Footer>
-            ) : null}
+            )}
           </Panel>
         </SplitPanel.Segment>
       </SplitPanel.Panel>

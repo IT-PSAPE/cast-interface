@@ -13,7 +13,7 @@ type WorkbenchContextValue = {
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
 const STORAGE_KEY = 'recast.workbench-mode.v1';
-const VALID_MODES = new Set<WorkbenchMode>(['show', 'slide-editor', 'overlay-editor', 'template-editor']);
+const VALID_MODES = new Set<WorkbenchMode>(['show', 'deck-editor', 'overlay-editor', 'template-editor', 'settings']);
 
 function parseWorkbenchMode(raw: string): WorkbenchMode | null {
   return VALID_MODES.has(raw as WorkbenchMode) ? (raw as WorkbenchMode) : null;
