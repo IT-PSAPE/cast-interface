@@ -104,22 +104,45 @@ jobs:
 
       - name: Package (macOS)
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --publish ${{ env.PUBLISH_MODE }}
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
+          APPLE_CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
+          APPLE_ID_SECRET: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD_SECRET: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID_SECRET: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "${APPLE_CSC_LINK:-}" ]; then
+            export CSC_LINK="$APPLE_CSC_LINK"
+            export CSC_KEY_PASSWORD="$APPLE_CSC_KEY_PASSWORD"
+            export APPLE_ID="$APPLE_ID_SECRET"
+            export APPLE_APP_SPECIFIC_PASSWORD="$APPLE_APP_SPECIFIC_PASSWORD_SECRET"
+            export APPLE_TEAM_ID="$APPLE_TEAM_ID_SECRET"
+            echo "::notice::Signing macOS build with provided Apple Developer ID certificate."
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            echo "::warning::APPLE_CSC_LINK secret not set; building unsigned macOS artifacts. See docs/release-setup.md."
+          fi
+          npx electron-builder --mac --publish ${{ env.PUBLISH_MODE }}
 
       - name: Package (Windows)
         if: matrix.platform == 'win'
-        run: npx electron-builder --win --publish ${{ env.PUBLISH_MODE }}
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "${WIN_CSC_LINK:-}" ]; then
+            export CSC_LINK="$WIN_CSC_LINK"
+            export CSC_KEY_PASSWORD="$WIN_CSC_KEY_PASSWORD"
+            echo "::notice::Signing Windows build with provided code-signing certificate."
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            echo "::warning::WIN_CSC_LINK secret not set; building unsigned Windows artifacts. See docs/release-setup.md."
+          fi
+          npx electron-builder --win --publish ${{ env.PUBLISH_MODE }}
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
