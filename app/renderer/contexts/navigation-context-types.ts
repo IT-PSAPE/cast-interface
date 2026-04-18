@@ -3,9 +3,11 @@ import type { DeckItem, Id, LibraryPlaylistBundle } from '@core/types';
 export interface NavigationStateValue {
   currentLibraryId: Id | null;
   currentPlaylistId: Id | null;
+  currentPlaylistEntryId: Id | null;
   currentDeckItemId: Id | null;
   currentPlaylistDeckItemId: Id | null;
   currentDrawerDeckItemId: Id | null;
+  currentOutputPlaylistEntryId: Id | null;
   currentOutputDeckItemId: Id | null;
   currentLibraryBundle: LibraryPlaylistBundle | null;
   currentDeckItem: DeckItem | null;
@@ -18,8 +20,10 @@ export interface NavigationStateValue {
 
 export interface NavigationActionsValue {
   selectLibrary: (id: Id) => void;
+  selectPlaylistEntry: (entryId: Id) => void;
   selectPlaylistDeckItem: (id: Id) => void;
   browseDeckItem: (id: Id) => void;
+  armOutputPlaylistEntry: (entryId: Id) => void;
   armOutputDeckItem: (id: Id) => void;
   clearOutputDeckItem: () => void;
   setCurrentPlaylistId: (id: Id | null) => void;

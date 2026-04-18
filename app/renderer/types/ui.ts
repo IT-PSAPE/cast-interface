@@ -4,10 +4,11 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type SlideBrowserMode = 'grid' | 'list';
 export type ResourceDrawerViewMode = 'grid' | 'list';
 export type PlaylistBrowserMode = 'current' | 'tabs' | 'continuous';
-export type WorkbenchMode = 'show' | 'slide-editor' | 'overlay-editor' | 'template-editor';
+export type WorkbenchMode = 'show' | 'deck-editor' | 'overlay-editor' | 'template-editor' | 'settings';
 export type InteractionMode = 'move' | 'resize';
-export type DrawerTab = 'media' | 'overlays' | 'deck' | 'templates';
-export type InspectorTab = 'presentation' | 'slide' | 'shape' | 'text';
+export type DrawerTab = 'deck' | 'media' | 'audio' | 'templates';
+export type DrawerViewModeMap = Record<DrawerTab, ResourceDrawerViewMode>;
+export type InspectorTab = 'presentation' | 'slide' | 'shape' | 'text' | 'template';
 export type LibraryPanelView = 'libraries' | 'playlist';
 export type SlideVisualState = 'live' | 'queued' | 'selected' | 'warning';
 export type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
@@ -20,11 +21,6 @@ export interface InteractionState {
   aspectRatio: number;
   pointerStart: { x: number; y: number };
   elementStart: { x: number; y: number; width: number; height: number };
-}
-
-export interface ShortcutItem {
-  keys: string;
-  action: string;
 }
 
 export interface ElementInspectorDraft {

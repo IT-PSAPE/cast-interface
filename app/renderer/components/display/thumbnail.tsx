@@ -1,68 +1,148 @@
-import type { ReactNode } from 'react';
+import { Children, isValidElement, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
 const thumbnailStyles = cv({
-    base: 'group relative w-full overflow-hidden rounded-xs border bg-primary text-left transition-colors',
-    variants: {
-        selected: {
-            true: ['border-brand-400/70 ring-1 ring-brand-400/35'],
-            false: ['border-primary hover:border-secondary'],
-        },
+  base: 'group relative w-full min-w-0 overflow-hidden rounded-xs border bg-primary text-left transition-colors',
+  variants: {
+    selected: {
+      true: ['border-brand-400/70 ring-1 ring-brand-400/35'],
+      false: ['border-primary hover:border-secondary'],
     },
-    defaultVariants: {
-        selected: false,
-    },
+  },
+  defaultVariants: {
+    selected: false,
+  },
 });
 
-interface ThumbnailRowProps {
-    preview: ReactNode;
-    body: ReactNode;
-    className?: string;
-    previewClassName?: string;
-    bodyClassName?: string;
-    overlay?: ReactNode;
-    onClick?: () => void;
-    onDoubleClick?: () => void;
-    selected?: boolean;
+type ThumbnailOverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'cover';
+
+interface ThumbnailRootProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onDoubleClick'> {
+  children: ReactNode;
+  onDoubleClick?: () => void;
+  selected?: boolean;
 }
 
-interface ThumbnailTileProps {
-    body: ReactNode;
-    caption: ReactNode;
-    className?: string;
-    captionClassName?: string;
-    bodyClassName?: string;
-    overlay?: ReactNode;
-    onClick?: () => void;
-    onDoubleClick?: () => void;
-    selected?: boolean;
+interface ThumbnailSlotProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
 }
 
-function Row({ preview, body, className, previewClassName, bodyClassName, overlay, onClick, onDoubleClick, selected = false }: ThumbnailRowProps) {
-    return (
-        <div onClick={onClick} onDoubleClick={onDoubleClick} className={cn(thumbnailStyles({ selected }), 'flex', className)}>
-            <div className={cn('relative overflow-hidden border-r border-primary bg-tertiary max-w-3xs flex-1', previewClassName)}>
-                {preview}
-            </div>
-            <div className={cn('grid min-h-[84px] content-center gap-1 px-2.5 py-2', bodyClassName)}>
-                {body}
-            </div>
-            {overlay}
+interface ThumbnailOverlayProps extends ThumbnailSlotProps {
+  position?: ThumbnailOverlayPosition;
+}
+
+interface ThumbnailSlots {
+  body: ReactElement<ThumbnailSlotProps> | null;
+  caption: ReactElement<ThumbnailSlotProps> | null;
+  overlays: ReactElement<ThumbnailOverlayProps>[];
+  preview: ReactElement<ThumbnailSlotProps> | null;
+}
+
+function Preview(_props: ThumbnailSlotProps) {
+  return null;
+}
+
+function Body(_props: ThumbnailSlotProps) {
+  return null;
+}
+
+function Caption(_props: ThumbnailSlotProps) {
+  return null;
+}
+
+function Overlay(_props: ThumbnailOverlayProps) {
+  return null;
+}
+
+function Row({ children, className, onClick, onDoubleClick, selected = false, ...rest }: ThumbnailRootProps) {
+  const slots = collectThumbnailSlots(children);
+
+  return (
+    <div
+      {...rest}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className={cn(thumbnailStyles({ selected }), 'flex', className)}
+    >
+      <div className={cn('relative min-w-0 max-w-3xs flex-1 overflow-hidden border-r border-primary bg-tertiary', slots.preview?.props.className)}>
+        {slots.preview?.props.children ?? null}
+      </div>
+      <div className={cn('grid min-h-[84px] min-w-0 content-center gap-1 px-2.5 py-2', slots.body?.props.className)}>
+        {slots.body?.props.children ?? null}
+      </div>
+      {slots.overlays.map(renderOverlay)}
+    </div>
+  );
+}
+
+function Tile({ children, className, onClick, onDoubleClick, selected = false, ...rest }: ThumbnailRootProps) {
+  const slots = collectThumbnailSlots(children);
+
+  return (
+    <div
+      {...rest}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className={cn(thumbnailStyles({ selected }), className)}
+    >
+      <div className={cn('relative aspect-video min-w-0 overflow-hidden bg-primary', slots.body?.props.className)}>
+        {slots.body?.props.children ?? null}
+      </div>
+      {slots.overlays.map(renderOverlay)}
+      {slots.caption ? (
+        <div className={cn('min-w-0 truncate border-t border-primary bg-tertiary px-2 py-1 text-sm text-secondary transition-colors group-hover:text-primary', slots.caption.props.className)}>
+          {slots.caption.props.children}
         </div>
-    );
+      ) : null}
+    </div>
+  );
 }
 
-function Tile({ body, caption, className, bodyClassName, captionClassName, overlay, onClick, onDoubleClick, selected = false }: ThumbnailTileProps) {
-    return (
-        <div onClick={onClick} onDoubleClick={onDoubleClick} className={cn(thumbnailStyles({ selected }), className)}>
-            <div className={cn('relative aspect-video overflow-hidden bg-primary', bodyClassName)}>{body}</div>
-            {overlay}
-            <div className={cn('truncate border-t border-primary bg-tertiary px-2 py-1 text-sm text-secondary transition-colors group-hover:text-primary', captionClassName)}>
-                {caption}
-            </div>
-        </div>
-    );
+function collectThumbnailSlots(children: ReactNode): ThumbnailSlots {
+  const slots: ThumbnailSlots = { body: null, caption: null, overlays: [], preview: null };
+
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return;
+    if (child.type === Preview) {
+      slots.preview = child as ReactElement<ThumbnailSlotProps>;
+      return;
+    }
+    if (child.type === Body) {
+      slots.body = child as ReactElement<ThumbnailSlotProps>;
+      return;
+    }
+    if (child.type === Caption) {
+      slots.caption = child as ReactElement<ThumbnailSlotProps>;
+      return;
+    }
+    if (child.type === Overlay) {
+      slots.overlays.push(child as ReactElement<ThumbnailOverlayProps>);
+    }
+  });
+
+  return slots;
 }
 
-export const Thumbnail = { Row, Tile };
+function renderOverlay(overlay: ReactElement<ThumbnailOverlayProps>, index: number) {
+  const position = overlay.props.position ?? 'top-right';
+  const positionClassName = getOverlayPositionClassName(position);
+
+  return (
+    <div
+      key={`${position}-${index}`}
+      className={cn('absolute z-10', positionClassName, overlay.props.className)}
+    >
+      {overlay.props.children}
+    </div>
+  );
+}
+
+function getOverlayPositionClassName(position: ThumbnailOverlayPosition): string {
+  if (position === 'top-left') return 'left-1 top-1';
+  if (position === 'bottom-left') return 'bottom-1 left-1';
+  if (position === 'bottom-right') return 'bottom-1 right-1';
+  if (position === 'cover') return 'inset-0';
+  return 'right-1 top-1';
+}
+
+export const Thumbnail = { Row, Tile, Preview, Body, Caption, Overlay };

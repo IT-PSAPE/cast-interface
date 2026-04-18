@@ -104,15 +104,34 @@ function Root({ activationMode = 'automatic', children, defaultValue, onValueCha
   return <TabsContext.Provider value={context}>{children}</TabsContext.Provider>;
 }
 
+interface BarProps extends HTMLAttributes<HTMLElement> {
+  children: ReactNode;
+}
+
+function Bar({ children, className = '', ...rest }: BarProps) {
+  const { meta } = useTabs();
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 items-center gap-2',
+        meta.orientation === 'vertical' ? 'items-start' : '',
+        className,
+      )}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}
+
 interface ListProps extends HTMLAttributes<HTMLElement> {
-  actions?: ReactNode;
-  actionsClassName?: string;
   children: ReactNode;
   label: string;
   tabsClassName?: string;
 }
 
-function List({ actions, actionsClassName = '', children, className = '', label, tabsClassName = '', ...rest }: ListProps) {
+function List({ children, className = '', label, tabsClassName = '', ...rest }: ListProps) {
   const { meta } = useTabs();
   const tabsContainerClassName = meta.orientation === 'horizontal'
     ? 'flex w-max items-center gap-0.5'
@@ -127,8 +146,19 @@ function List({ actions, actionsClassName = '', children, className = '', label,
           </div>
         </div>
       </div>
-      {actions ? <div className={cn('flex shrink-0 items-center gap-1', actionsClassName)}>{actions}</div> : null}
     </nav>
+  );
+}
+
+interface ActionsProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+}
+
+function Actions({ children, className = '', ...rest }: ActionsProps) {
+  return (
+    <div className={cn('flex shrink-0 items-center gap-1', className)} {...rest}>
+      {children}
+    </div>
   );
 }
 
@@ -286,4 +316,4 @@ function Indicator({ className, style, ...rest }: IndicatorProps) {
   );
 }
 
-export const Tabs = { Root, List, Trigger, Panels, Panel, Indicator };
+export const Tabs = { Root, Bar, List, Actions, Trigger, Panels, Panel, Indicator };

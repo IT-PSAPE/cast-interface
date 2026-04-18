@@ -3,7 +3,7 @@ import { getSlideDeckItemId } from '@core/deck-items';
 import type { AppSnapshot, Id, Slide, SlideElement } from '@core/types';
 import { clamp, sortSlides } from '../utils/slides';
 import { useIndexedSelection } from '../hooks/use-indexed-selection';
-import { useCast } from './cast-context';
+import { useCast } from './app-context';
 import { useNavigation } from './navigation-context';
 import { useProjectContent } from './use-project-content';
 
@@ -15,6 +15,7 @@ interface SlideContextValue {
   liveSlide: Slide | null;
   liveElements: SlideElement[];
   slideElementsById: Map<Id, SlideElement[]>;
+  isOutputArmedOnCurrent: boolean;
   setCurrentSlideIndex: (idx: number) => void;
   clearCurrentSlideSelection: () => void;
   activateSlide: (idx: number) => void;
@@ -22,11 +23,14 @@ interface SlideContextValue {
   takeSlide: () => void;
   goNext: () => void;
   goPrev: () => void;
+  selectPlaylistEntry: (entryId: Id) => void;
   selectPlaylistDeckItem: (itemId: Id) => void;
-  focusDeckItemSlide: (itemId: Id, index: number) => void;
-  activateDeckItemSlide: (itemId: Id, index: number) => void;
+  focusPlaylistEntrySlide: (entryId: Id, itemId: Id, index: number) => void;
+  activatePlaylistEntrySlide: (entryId: Id, itemId: Id, index: number) => void;
   createSlide: () => Promise<void>;
+  duplicateSlide: (slideId: Id) => Promise<void>;
   deleteSlide: (slideId: Id) => Promise<void>;
+  moveSlide: (slideId: Id, direction: 'up' | 'down') => Promise<void>;
   updateCurrentSlideNotes: (notes: string) => Promise<void>;
 }
 
@@ -37,11 +41,14 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   const { mutate, runOperation, setStatusText } = useCast();
   const {
     currentDeckItemId,
+    currentPlaylistEntryId,
     currentPlaylistDeckItemId,
+    currentOutputPlaylistEntryId,
     currentOutputDeckItemId,
     currentDeckItem,
     isDetachedDeckBrowser,
-    armOutputDeckItem,
+    armOutputPlaylistEntry,
+    selectPlaylistEntry: selectPlaylistEntryInNavigation,
     selectPlaylistDeckItem: selectPlaylistDeckItemInNavigation,
   } = useNavigation();
   const { slidesByDeckItemId, slideElementsBySlideId } = useProjectContent();
@@ -64,9 +71,10 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const indicesByDeckItemId = isDetachedDeckBrowser
       ? drawerSelection.indices
       : playlistSelection.indices;
-    return resolveSlideIndex(currentDeckItemId, indicesByDeckItemId, slides.length);
+    return resolveSlideIndex(isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId, indicesByDeckItemId, slides.length);
   }, [
     currentDeckItemId,
+    currentPlaylistEntryId,
     drawerSelection.indices,
     isDetachedDeckBrowser,
     playlistSelection.indices,
@@ -74,8 +82,8 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   ]);
 
   const liveSlideIndex = useMemo(
-    () => resolveSlideIndex(currentOutputDeckItemId, liveSelection.indices, outputSlides.length),
-    [currentOutputDeckItemId, liveSelection.indices, outputSlides.length],
+    () => resolveSlideIndex(currentOutputPlaylistEntryId ?? currentOutputDeckItemId, liveSelection.indices, outputSlides.length),
+    [currentOutputDeckItemId, currentOutputPlaylistEntryId, liveSelection.indices, outputSlides.length],
   );
 
   const currentSlide = slides[currentSlideIndex] ?? null;
@@ -102,48 +110,63 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     playlistSelection.update(itemId, nextIndex);
   }, [isDetachedDeckBrowser, drawerSelection, playlistSelection]);
 
-  const activatePlaylistDeckItem = useCallback((itemId: Id, nextIndex: number | null) => {
-    selectPlaylistDeckItemInNavigation(itemId);
+  const activatePlaylistEntry = useCallback((entryId: Id, _itemId: Id, nextIndex: number | null) => {
+    selectPlaylistEntryInNavigation(entryId);
     if (nextIndex !== null) {
-      liveSelection.update(itemId, nextIndex);
+      liveSelection.update(entryId, nextIndex);
     }
-    armOutputDeckItem(itemId);
-  }, [armOutputDeckItem, selectPlaylistDeckItemInNavigation, liveSelection.update]);
+    armOutputPlaylistEntry(entryId);
+  }, [armOutputPlaylistEntry, selectPlaylistEntryInNavigation, liveSelection.update]);
+
+  const selectPlaylistEntry = useCallback((entryId: Id) => {
+    selectPlaylistEntryInNavigation(entryId);
+  }, [selectPlaylistEntryInNavigation]);
 
   const selectPlaylistDeckItem = useCallback((itemId: Id) => {
     selectPlaylistDeckItemInNavigation(itemId);
   }, [selectPlaylistDeckItemInNavigation]);
 
   const setCurrentSlideIndex = useCallback((index: number) => {
-    if (!currentDeckItemId || slides.length === 0) return;
-    updateVisibleSelectedSlideIndex(currentDeckItemId, clamp(index, 0, slides.length - 1));
-  }, [currentDeckItemId, slides.length, updateVisibleSelectedSlideIndex]);
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    if (!selectionKey || slides.length === 0) return;
+    updateVisibleSelectedSlideIndex(selectionKey, clamp(index, 0, slides.length - 1));
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, slides.length, updateVisibleSelectedSlideIndex]);
 
   const clearCurrentSlideSelection = useCallback(() => {
-    if (!currentDeckItemId) return;
-    updateVisibleSelectedSlideIndex(currentDeckItemId, NO_SLIDE_SELECTED);
-  }, [currentDeckItemId, updateVisibleSelectedSlideIndex]);
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    if (!selectionKey) return;
+    updateVisibleSelectedSlideIndex(selectionKey, NO_SLIDE_SELECTED);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, updateVisibleSelectedSlideIndex]);
 
-  const canControlOutput = Boolean(
-    currentDeckItemId
+  const canDriveOutput = Boolean(
+    !isDetachedDeckBrowser
+    && currentDeckItemId
     && currentPlaylistDeckItemId
-    && currentDeckItemId === currentPlaylistDeckItemId
-    && !isDetachedDeckBrowser,
+    && currentPlaylistEntryId
+    && currentDeckItemId === currentPlaylistDeckItemId,
+  );
+
+  const isOutputArmedOnCurrent = Boolean(
+    canDriveOutput
+    && currentPlaylistEntryId === currentOutputPlaylistEntryId
+    && currentDeckItemId === currentOutputDeckItemId,
   );
 
   const activateSlide = useCallback((index: number) => {
-    if (!currentDeckItemId || slides.length === 0) return;
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    if (!selectionKey || !currentDeckItemId || slides.length === 0) return;
     const nextIndex = clamp(index, 0, slides.length - 1);
-    updateVisibleSelectedSlideIndex(currentDeckItemId, nextIndex);
-    if (!canControlOutput || !currentPlaylistDeckItemId) return;
-    liveSelection.update(currentPlaylistDeckItemId, nextIndex);
-    armOutputDeckItem(currentPlaylistDeckItemId);
+    updateVisibleSelectedSlideIndex(selectionKey, nextIndex);
+    if (!canDriveOutput || !currentPlaylistEntryId) return;
+    liveSelection.update(currentPlaylistEntryId, nextIndex);
+    armOutputPlaylistEntry(currentPlaylistEntryId);
     setStatusText(`Live slide ${nextIndex + 1}`);
   }, [
-    armOutputDeckItem,
-    canControlOutput,
-    currentPlaylistDeckItemId,
+    armOutputPlaylistEntry,
+    canDriveOutput,
+    currentPlaylistEntryId,
     currentDeckItemId,
+    isDetachedDeckBrowser,
     setStatusText,
     slides.length,
     liveSelection.update,
@@ -151,14 +174,14 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   ]);
 
   const takeSlide = useCallback(() => {
-    if (!canControlOutput || !currentPlaylistDeckItemId || slides.length === 0 || currentSlideIndex < 0) return;
-    liveSelection.update(currentPlaylistDeckItemId, currentSlideIndex);
-    armOutputDeckItem(currentPlaylistDeckItemId);
+    if (!canDriveOutput || !currentPlaylistEntryId || slides.length === 0 || currentSlideIndex < 0) return;
+    liveSelection.update(currentPlaylistEntryId, currentSlideIndex);
+    armOutputPlaylistEntry(currentPlaylistEntryId);
     setStatusText(`Taken slide ${currentSlideIndex + 1}`);
   }, [
-    armOutputDeckItem,
-    canControlOutput,
-    currentPlaylistDeckItemId,
+    armOutputPlaylistEntry,
+    canDriveOutput,
+    currentPlaylistEntryId,
     currentSlideIndex,
     setStatusText,
     slides.length,
@@ -166,14 +189,14 @@ export function SlideProvider({ children }: { children: ReactNode }) {
   ]);
 
   const armCurrentPlaylistSelection = useCallback(() => {
-    if (!currentPlaylistDeckItemId) return;
+    if (!currentPlaylistDeckItemId || !currentPlaylistEntryId) return;
     const contentSlides = slidesByDeckItemId.get(currentPlaylistDeckItemId) ?? [];
-    const nextIndex = resolveSlideIndex(currentPlaylistDeckItemId, playlistSelection.indices, contentSlides.length);
+    const nextIndex = resolveSlideIndex(currentPlaylistEntryId, playlistSelection.indices, contentSlides.length);
     if (contentSlides.length > 0) {
-      liveSelection.update(currentPlaylistDeckItemId, nextIndex);
+      liveSelection.update(currentPlaylistEntryId, nextIndex);
     }
-    armOutputDeckItem(currentPlaylistDeckItemId);
-  }, [armOutputDeckItem, currentPlaylistDeckItemId, playlistSelection.indices, slidesByDeckItemId, liveSelection.update]);
+    armOutputPlaylistEntry(currentPlaylistEntryId);
+  }, [armOutputPlaylistEntry, currentPlaylistDeckItemId, currentPlaylistEntryId, playlistSelection.indices, slidesByDeckItemId, liveSelection.update]);
 
   const goNext = useCallback(() => {
     if (slides.length === 0) return;
@@ -194,21 +217,43 @@ export function SlideProvider({ children }: { children: ReactNode }) {
         lyricId: currentDeckItem.type === 'lyric' ? currentDeckItemId : null,
       }));
       const createdSlideIndex = findCreatedSlideIndex(nextSnapshot, currentDeckItemId, previousSlideIds);
-      if (createdSlideIndex !== null) updateVisibleSelectedSlideIndex(currentDeckItemId, createdSlideIndex);
+      const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+      if (selectionKey && createdSlideIndex !== null) updateVisibleSelectedSlideIndex(selectionKey, createdSlideIndex);
       setStatusText('Created slide');
     });
-  }, [currentDeckItem, currentDeckItemId, mutate, runOperation, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItem, currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, runOperation, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const deleteSlideAction = useCallback(async (slideId: Id) => {
-    if (!currentDeckItemId) return;
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    if (!selectionKey) return;
     const deletedIndex = slides.findIndex((slide) => slide.id === slideId);
     await mutate(() => window.castApi.deleteSlide(slideId));
     if (deletedIndex >= 0 && slides.length > 1) {
       const nextIndex = clamp(deletedIndex >= slides.length - 1 ? deletedIndex - 1 : deletedIndex, 0, slides.length - 2);
-      updateVisibleSelectedSlideIndex(currentDeckItemId, nextIndex);
+      updateVisibleSelectedSlideIndex(selectionKey, nextIndex);
     }
     setStatusText('Deleted slide');
-  }, [currentDeckItemId, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+
+  const duplicateSlideAction = useCallback(async (slideId: Id) => {
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
+    if (sourceIndex < 0) return;
+    await mutate(() => window.castApi.duplicateSlide(slideId));
+    if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, sourceIndex + 1);
+    setStatusText('Duplicated slide');
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+
+  const moveSlideAction = useCallback(async (slideId: Id, direction: 'up' | 'down') => {
+    const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
+    if (sourceIndex < 0) return;
+    const newOrder = direction === 'up' ? sourceIndex - 1 : sourceIndex + 1;
+    if (newOrder < 0 || newOrder >= slides.length) return;
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder }));
+    if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, newOrder);
+    setStatusText(direction === 'up' ? 'Moved slide up' : 'Moved slide down');
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;
@@ -216,22 +261,22 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     setStatusText('Saved slide notes');
   }, [currentSlide, mutate, setStatusText]);
 
-  const focusDeckItemSlide = useCallback((itemId: Id, index: number) => {
+  const focusPlaylistEntrySlide = useCallback((entryId: Id, itemId: Id, index: number) => {
     const contentSlides = slidesByDeckItemId.get(itemId) ?? [];
     if (contentSlides.length === 0) return;
     const nextIndex = clamp(index, 0, contentSlides.length - 1);
-    playlistSelection.update(itemId, nextIndex);
-    selectPlaylistDeckItemInNavigation(itemId);
-  }, [selectPlaylistDeckItemInNavigation, slidesByDeckItemId, playlistSelection.update]);
+    playlistSelection.update(entryId, nextIndex);
+    selectPlaylistEntryInNavigation(entryId);
+  }, [selectPlaylistEntryInNavigation, slidesByDeckItemId, playlistSelection.update]);
 
-  const activateDeckItemSlide = useCallback((itemId: Id, index: number) => {
+  const activatePlaylistEntrySlide = useCallback((entryId: Id, itemId: Id, index: number) => {
     const contentSlides = slidesByDeckItemId.get(itemId) ?? [];
     if (contentSlides.length === 0) return;
     const nextIndex = clamp(index, 0, contentSlides.length - 1);
-    playlistSelection.update(itemId, nextIndex);
-    activatePlaylistDeckItem(itemId, nextIndex);
+    playlistSelection.update(entryId, nextIndex);
+    activatePlaylistEntry(entryId, itemId, nextIndex);
     setStatusText(`Live slide ${nextIndex + 1}`);
-  }, [activatePlaylistDeckItem, setStatusText, slidesByDeckItemId, playlistSelection.update]);
+  }, [activatePlaylistEntry, setStatusText, slidesByDeckItemId, playlistSelection.update]);
 
   const value = useMemo<SlideContextValue>(() => ({
     slides,
@@ -241,6 +286,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     liveSlide,
     liveElements,
     slideElementsById,
+    isOutputArmedOnCurrent,
     setCurrentSlideIndex,
     clearCurrentSlideSelection,
     activateSlide,
@@ -248,27 +294,34 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     takeSlide,
     goNext,
     goPrev,
+    selectPlaylistEntry,
     selectPlaylistDeckItem,
-    focusDeckItemSlide,
-    activateDeckItemSlide,
+    focusPlaylistEntrySlide,
+    activatePlaylistEntrySlide,
     createSlide: createSlideAction,
+    duplicateSlide: duplicateSlideAction,
     deleteSlide: deleteSlideAction,
+    moveSlide: moveSlideAction,
     updateCurrentSlideNotes,
   }), [
-    activateDeckItemSlide,
+    activatePlaylistEntrySlide,
     activateSlide,
     armCurrentPlaylistSelection,
     createSlideAction,
     deleteSlideAction,
+    duplicateSlideAction,
+    moveSlideAction,
     currentSlide,
     currentSlideIndex,
     clearCurrentSlideSelection,
-    focusDeckItemSlide,
+    focusPlaylistEntrySlide,
     goNext,
     goPrev,
+    isOutputArmedOnCurrent,
     liveElements,
     liveSlide,
     liveSlideIndex,
+    selectPlaylistEntry,
     selectPlaylistDeckItem,
     setCurrentSlideIndex,
     slideElementsById,
@@ -295,7 +348,6 @@ export function findCreatedSlideIndex(snapshot: AppSnapshot, itemId: Id, previou
 function resolveSlideIndex(itemId: Id | null, indicesByItemId: Record<Id, number>, slideCount: number): number {
   if (!itemId || slideCount <= 0) return NO_SLIDE_SELECTED;
   const rawIndex = indicesByItemId[itemId];
-  if (rawIndex === NO_SLIDE_SELECTED) return NO_SLIDE_SELECTED;
-  if (rawIndex == null) return 0;
+  if (rawIndex == null || rawIndex === NO_SLIDE_SELECTED) return NO_SLIDE_SELECTED;
   return clamp(rawIndex, 0, slideCount - 1);
 }

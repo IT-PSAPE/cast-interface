@@ -22,10 +22,7 @@ function Root({ children, className, density = 'comfortable', bordered = true, .
 
   return (
     <SectionHeaderContext.Provider value={value}>
-      <div
-        {...divProps}
-        className={cn('flex items-center bg-primary text-secondary', bordered && 'border-b border-primary', className)}
-      >
+      <div {...divProps} className={cn('flex items-center bg-primary text-secondary', bordered && 'border-b border-primary', className)} >
         {children}
       </div>
     </SectionHeaderContext.Provider>

@@ -2,11 +2,8 @@ import { useCallback } from 'react';
 import { isLyricDeckItem } from '@core/deck-items';
 import type { AppSnapshot, DeckItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slides';
-import { useOverlayDefaults } from '../overlay-defaults-context';
-import { useOverlayEditor } from '../overlay-editor/overlay-editor-context';
+import { useOverlayEditor, useDeckEditor, useTemplateEditor } from '../asset-editor/asset-editor-context';
 import { useProjectContent } from '../use-project-content';
-import { useSlideEditor } from '../slide-editor-context';
-import { useTemplateEditor } from '../template-editor-context';
 import { useWorkbench } from '../workbench-context';
 import {
   newOverlayElement,
@@ -27,15 +24,15 @@ interface CommandsParams {
 }
 
 export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
-  const { overlayDefaults } = useOverlayDefaults();
+  const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
-  const { getSlideElements, replaceSlideElements } = useSlideEditor();
+  const { getSlideElements, replaceSlideElements } = useDeckEditor();
   const { replaceTemplateElements } = useTemplateEditor();
   const { slideElementsBySlideId } = useProjectContent();
   const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isSlideEdit = workbenchMode === 'slide-editor';
+  const isSlideEdit = workbenchMode === 'deck-editor';
   const isTemplateEdit = workbenchMode === 'template-editor';
   const isLyricsTemplate = currentTemplate?.kind === 'lyrics';
   const existingTemplateTextElement = currentTemplate?.elements.find((element) => element.type === 'text') ?? null;

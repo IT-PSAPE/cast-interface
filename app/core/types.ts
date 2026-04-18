@@ -334,7 +334,7 @@ export interface PlaybackState {
   slideIndex: number;
 }
 
-export type SlideBrowserMode = 'library' | 'playlist' | 'deck' | 'slide-editor';
+export type SlideBrowserMode = 'library' | 'playlist' | 'deck' | 'deck-editor';
 
 export interface SlideCreateInput {
   presentationId?: Id | null;

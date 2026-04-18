@@ -40,10 +40,12 @@ export interface MainApi {
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   addDeckItemToSegment: (segmentId: Id, itemId: Id) => Promise<AppSnapshot>;
   moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
+  movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<AppSnapshot>;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   createPresentation: (title: string) => Promise<AppSnapshot>;
   createLyric: (title: string) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
+  duplicateSlide: (slideId: Id) => Promise<AppSnapshot>;
   deleteSlide: (slideId: Id) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
   setSlideOrder: (input: SlideOrderUpdateInput) => Promise<AppSnapshot>;
@@ -64,7 +66,7 @@ export interface MainApi {
   updateTemplate: (input: TemplateUpdateInput) => Promise<AppSnapshot>;
   deleteTemplate: (templateId: Id) => Promise<AppSnapshot>;
   applyTemplateToDeckItem: (templateId: Id, itemId: Id) => Promise<AppSnapshot>;
-  resetDeckItemToTemplate: (itemId: Id) => Promise<AppSnapshot>;
+  detachTemplateFromDeckItem: (itemId: Id) => Promise<AppSnapshot>;
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<AppSnapshot>;
   renameLibrary: (id: Id, name: string) => Promise<AppSnapshot>;
   renamePlaylist: (id: Id, name: string) => Promise<AppSnapshot>;
@@ -82,6 +84,7 @@ export interface MainApi {
   getNdiDiagnostics: () => Promise<NdiDiagnostics>;
   sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
+  getAudioCoverArt: (src: string) => Promise<string | null>;
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
 }
 
@@ -108,10 +111,12 @@ export const IPC = {
   movePlaylist: 'cast:movePlaylist',
   addDeckItemToSegment: 'cast:addDeckItemToSegment',
   moveDeckItemToSegment: 'cast:moveDeckItemToSegment',
+  movePlaylistEntryToSegment: 'cast:movePlaylistEntryToSegment',
   moveDeckItem: 'cast:moveDeckItem',
   createPresentation: 'cast:createPresentation',
   createLyric: 'cast:createLyric',
   createSlide: 'cast:createSlide',
+  duplicateSlide: 'cast:duplicateSlide',
   deleteSlide: 'cast:deleteSlide',
   updateSlideNotes: 'cast:updateSlideNotes',
   setSlideOrder: 'cast:setSlideOrder',
@@ -132,7 +137,7 @@ export const IPC = {
   updateTemplate: 'cast:updateTemplate',
   deleteTemplate: 'cast:deleteTemplate',
   applyTemplateToDeckItem: 'cast:applyTemplateToDeckItem',
-  resetDeckItemToTemplate: 'cast:resetDeckItemToTemplate',
+  detachTemplateFromDeckItem: 'cast:detachTemplateFromDeckItem',
   applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
@@ -143,6 +148,7 @@ export const IPC = {
   deletePlaylistSegment: 'cast:deletePlaylistSegment',
   deletePresentation: 'cast:deletePresentation',
   deleteLyric: 'cast:deleteLyric',
+  getAudioCoverArt: 'cast:getAudioCoverArt',
   setNdiOutputEnabled: 'ndi:setOutputEnabled',
   getNdiOutputState: 'ndi:getOutputState',
   getNdiOutputConfigs: 'ndi:getOutputConfigs',

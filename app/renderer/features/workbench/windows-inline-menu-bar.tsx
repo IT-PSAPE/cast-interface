@@ -1,13 +1,23 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type MouseEventHandler, type ReactNode } from 'react';
 import type { InlineWindowMenuItem } from '@core/ipc';
+import { Button } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
 
-export function WindowsInlineMenuBar() {
+const isMac = window.castApi.platform === 'darwin';
+const isWindows = window.castApi.platform === 'win32';
+const dragRegionStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
+const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
+
+interface WindowsInlineMenuBarProps {
+  children: ReactNode;
+}
+
+export function WindowsInlineMenuBar({ children }: WindowsInlineMenuBarProps) {
   const [items, setItems] = useState<InlineWindowMenuItem[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (window.castApi.platform !== 'win32') return;
+    if (!isWindows) return;
     let cancelled = false;
 
     void window.castApi.getInlineWindowMenuItems().then((nextItems) => {
@@ -22,6 +32,8 @@ export function WindowsInlineMenuBar() {
     };
   }, []);
 
+  const hasMenuItems = isWindows && items.length > 0;
+
   async function handleOpenMenu(item: InlineWindowMenuItem, button: HTMLButtonElement) {
     const rect = button.getBoundingClientRect();
     const popupX = window.screenX + rect.left;
@@ -35,26 +47,57 @@ export function WindowsInlineMenuBar() {
     }
   }
 
-  if (window.castApi.platform !== 'win32' || items.length === 0) return null;
+  const handleMenuButtonClick: MouseEventHandler<HTMLButtonElement> = (event) => {
+    const itemId = event.currentTarget.dataset.menuId;
+    if (!itemId) return;
+    const item = items.find((menuItem) => menuItem.id === itemId);
+    if (!item) return;
+    void handleOpenMenu(item, event.currentTarget);
+  };
+
+  const headerStyle: CSSProperties = {
+    ...dragRegionStyle,
+    height: '36px',
+  };
+
+  if (!isWindows) {
+    return (
+      <header
+        data-ui-region="app-toolbar"
+        className="border-b border-primary bg-primary px-3 py-1.5"
+        style={isMac ? { ...headerStyle, paddingLeft: '78px', height: undefined } : { ...headerStyle, height: undefined }}
+      >
+        {children}
+      </header>
+    );
+  }
 
   return (
     <header
-      data-ui-region="windows-inline-menu-bar"
+      data-ui-region="app-toolbar"
       className="border-b border-primary bg-primary/95 px-3"
-      style={{ WebkitAppRegion: 'drag', height: '36px' } as CSSProperties}
+      style={headerStyle}
     >
-      <div className="flex h-full items-center gap-1 pr-36">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={(event) => { void handleOpenMenu(item, event.currentTarget); }}
-            className={cn('rounded-md px-2 py-1 text-sm text-secondary transition-colors hover:bg-tertiary hover:text-primary', activeMenuId === item.id && 'bg-tertiary text-primary')}
-            style={{ WebkitAppRegion: 'no-drag' } as CSSProperties}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="flex h-full items-center gap-3">
+        <div data-ui-region="windows-inline-menu-bar" className="flex shrink-0 items-center gap-1">
+          {hasMenuItems ? items.map((item) => (
+            <Button
+              key={item.id}
+              variant="ghost"
+              data-menu-id={item.id}
+              onClick={handleMenuButtonClick}
+              active={activeMenuId === item.id}
+              className={cn('rounded-md px-2 py-1 text-sm text-secondary hover:bg-tertiary hover:text-primary', activeMenuId === item.id && 'bg-tertiary text-primary')}
+              style={noDragStyle}
+            >
+              {item.label}
+            </Button>
+          )) : null}
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center pr-[138px]">
+          {children}
+        </div>
       </div>
     </header>
   );

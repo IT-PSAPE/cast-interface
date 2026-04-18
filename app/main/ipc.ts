@@ -139,6 +139,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.moveDeckItemToSegment, (_event, playlistId: Id, itemId: Id, segmentId: Id | null) =>
     repo.moveDeckItemToSegment(playlistId, itemId, segmentId)
   );
+  safeHandle(IPC.movePlaylistEntryToSegment, (_event, entryId: Id, segmentId: Id | null) =>
+    repo.movePlaylistEntryToSegment(entryId, segmentId)
+  );
   safeHandle(IPC.moveDeckItem, (_event, id: Id, direction: 'up' | 'down') =>
     repo.moveDeckItem(id, direction)
   );
@@ -147,6 +150,7 @@ export const registerIpcHandlers = (
     repo.createLyric(title)
   );
   safeHandle(IPC.createSlide, (_event, input: SlideCreateInput) => repo.createSlide(input));
+  safeHandle(IPC.duplicateSlide, (_event, slideId: Id) => repo.duplicateSlide(slideId));
   safeHandle(IPC.deleteSlide, (_event, slideId: Id) => repo.deleteSlide(slideId));
   safeHandle(IPC.updateSlideNotes, (_event, input: SlideNotesUpdateInput) => repo.updateSlideNotes(input));
   safeHandle(IPC.setSlideOrder, (_event, input: SlideOrderUpdateInput) => repo.setSlideOrder(input));
@@ -161,6 +165,20 @@ export const registerIpcHandlers = (
   );
   safeHandle(IPC.deleteMediaAsset, (_event, id: Id) => repo.deleteMediaAsset(id));
   safeHandle(IPC.updateMediaAssetSrc, (_event, id: Id, src: string) => repo.updateMediaAssetSrc(id, src));
+  safeHandle(IPC.getAudioCoverArt, async (_event, src: string) => {
+    const { resolveLocalMediaSourcePath } = await import('@database/media-source-utils');
+    const filePath = resolveLocalMediaSourcePath(src);
+    if (!filePath) return null;
+    try {
+      const { parseFile } = await import('music-metadata');
+      const metadata = await parseFile(filePath);
+      const picture = metadata.common.picture?.[0];
+      if (!picture) return null;
+      return `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
+    } catch {
+      return null;
+    }
+  });
   safeHandle(IPC.createOverlay, (_event, overlay: OverlayCreateInput) => repo.createOverlay(overlay));
   safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));
@@ -171,8 +189,8 @@ export const registerIpcHandlers = (
   safeHandle(IPC.applyTemplateToDeckItem, (_event, templateId: Id, itemId: Id) =>
     repo.applyTemplateToDeckItem(templateId, itemId)
   );
-  safeHandle(IPC.resetDeckItemToTemplate, (_event, itemId: Id) =>
-    repo.resetDeckItemToTemplate(itemId)
+  safeHandle(IPC.detachTemplateFromDeckItem, (_event, itemId: Id) =>
+    repo.detachTemplateFromDeckItem(itemId)
   );
   safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
     repo.applyTemplateToOverlay(templateId, overlayId)

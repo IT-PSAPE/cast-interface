@@ -227,7 +227,8 @@ function Item({ children, onClick, disabled = false, className }: ItemProps) {
   }
 
   return (
-    <div
+    <button
+      type="button"
       data-dropdown-item=""
       data-disabled={disabled || undefined}
       role="menuitem"
@@ -240,7 +241,7 @@ function Item({ children, onClick, disabled = false, className }: ItemProps) {
       )}
     >
       {children}
-    </div>
+    </button>
   );
 }
 

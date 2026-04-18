@@ -1,6 +1,11 @@
 import { isLyricDeckItem } from '@core/deck-items';
 import type { DeckItem, Id, PlaylistTree } from '@core/types';
 
+interface PlaylistEntryLookup {
+  entryId: Id;
+  itemId: Id;
+}
+
 export function resolveCurrentDeckItemId(currentDeckItemId: Id | null, itemIds: Iterable<Id>): Id | null {
   if (!currentDeckItemId) return null;
 
@@ -16,6 +21,44 @@ export function resolveCurrentPlaylistDeckItemId(currentDeckItemId: Id | null, s
   if (!currentDeckItemId) return null;
   if (itemIds.includes(currentDeckItemId)) return currentDeckItemId;
   return null;
+}
+
+export function findPlaylistEntryById(selectedTree: PlaylistTree | null, entryId: Id | null): PlaylistEntryLookup | null {
+  if (!selectedTree || !entryId) return null;
+
+  for (const segment of selectedTree.segments) {
+    for (const entry of segment.entries) {
+      if (entry.entry.id === entryId) {
+        return { entryId: entry.entry.id, itemId: entry.item.id };
+      }
+    }
+  }
+
+  return null;
+}
+
+export function findFirstPlaylistEntryByDeckItemId(selectedTree: PlaylistTree | null, deckItemId: Id | null): PlaylistEntryLookup | null {
+  if (!selectedTree || !deckItemId) return null;
+
+  for (const segment of selectedTree.segments) {
+    for (const entry of segment.entries) {
+      if (entry.item.id === deckItemId) {
+        return { entryId: entry.entry.id, itemId: entry.item.id };
+      }
+    }
+  }
+
+  return null;
+}
+
+export function resolveCurrentPlaylistEntryId(
+  currentEntryId: Id | null,
+  selectedTree: PlaylistTree | null,
+  currentDeckItemId: Id | null,
+): Id | null {
+  const matchingEntry = findPlaylistEntryById(selectedTree, currentEntryId);
+  if (matchingEntry && matchingEntry.itemId === currentDeckItemId) return matchingEntry.entryId;
+  return findFirstPlaylistEntryByDeckItemId(selectedTree, currentDeckItemId)?.entryId ?? null;
 }
 
 export function resolvePinnedLyricDeckItemId(

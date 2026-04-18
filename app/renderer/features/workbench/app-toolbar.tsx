@@ -1,30 +1,48 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
-import { SettingsDialog } from '../settings/settings-dialog';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { OutputToggle } from '../show/output-toggle';
 import type { WorkbenchMode } from '../../types/ui';
 import { Button } from '@renderer/components/controls/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
+import { cv } from '@renderer/utils/cv';
+import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
+import { useNdi } from '@renderer/contexts/app-context';
 
-const isMac = window.castApi.platform === 'darwin';
+const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
+const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
 
-interface PanelToggleButton {
+const outputDotStyles = cv({
+  base: 'inline-block h-2 w-2 rounded-full transition-colors',
+  variants: {
+    active: {
+      true: ['bg-green-500'],
+      false: ['bg-red-500'],
+    },
+  },
+});
+
+const outputBorderStyles = cv({
+  base: 'flex items-center gap-1.5 rounded border bg-tertiary px-2 py-1 text-sm cursor-pointer transition-colors hover:border-text-muted',
+  variants: {
+    active: {
+      true: ['border-green-500/40'],
+      false: ['border-red-500/40'],
+    },
+  },
+});
+
+export interface PanelToggleButton {
   id: 'left' | 'right' | 'bottom';
   label: string;
   active: boolean;
   onToggle: () => void;
 }
 
-interface AppToolbarProps {
-  audienceOutputActive: boolean;
-  onToggleAudienceOutput: () => void;
-  panelToggles: PanelToggleButton[];
-}
-
-export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panelToggles }: AppToolbarProps) {
+export function AppToolbar() {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
-  const [showSettings, setShowSettings] = useState(false);
+  const panelToggles = useWorkbenchPanelToggles();
+  const { state: { outputState }, actions: { toggleAudienceOutput } } = useNdi();
+
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
     [panelToggles],
@@ -45,51 +63,50 @@ export function AppToolbar({ audienceOutputActive, onToggleAudienceOutput, panel
   }
 
   function handleOpenSettings() {
-    setShowSettings(true);
+    if (workbenchMode !== 'settings') {
+      setWorkbenchMode('settings');
+    }
   }
-
-  function handleCloseSettings() {
-    setShowSettings(false);
-  }
-
-  const dragRegionStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
-  const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
 
   return (
-    <header
-      data-ui-region="app-toolbar"
-      className="border-b border-primary bg-primary px-3 py-1.5"
-      style={isMac ? { ...dragRegionStyle, paddingLeft: '78px' } : dragRegionStyle}
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center" style={noDragStyle}>
-          <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
-            <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
-            <SegmentedControl.Label value="slide-editor">Edit</SegmentedControl.Label>
-            <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
-            <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
-          </SegmentedControl>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2" style={noDragStyle}>
-          <OutputToggle label="Audience" active={audienceOutputActive} onClick={onToggleAudienceOutput} />
-
-          <SegmentedControl
-            label="Panel visibility"
-            selectionMode="multiple"
-            value={activePanelIds}
-            onValueChange={handlePanelToggleChange}
-          >
-            {panelToggles.map(renderPanelToggleItem)}
-          </SegmentedControl>
-
-          <Button.Icon label="Settings" onClick={handleOpenSettings}>
-            <Settings/>
-          </Button.Icon>
-        </div>
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div style={noDragStyle}>
+        <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
+          <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
+          <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
+          <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
+          <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
+        </SegmentedControl>
       </div>
-      {showSettings ? <SettingsDialog onClose={handleCloseSettings} /> : null}
-    </header>
+
+      <div aria-hidden="true" className="min-w-6 flex-1 self-stretch" style={dragStyle} />
+
+      <div className="flex items-center gap-2" style={noDragStyle}>
+        <Button
+          variant="ghost"
+          onClick={toggleAudienceOutput}
+          type="button"
+          className={outputBorderStyles({ active: outputState.audience })}
+          aria-pressed={outputState.audience}
+        >
+          <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
+          <span className="text-primary">Audience</span>
+        </Button>
+
+        <SegmentedControl
+          label="Panel visibility"
+          selectionMode="multiple"
+          value={activePanelIds}
+          onValueChange={handlePanelToggleChange}
+        >
+          {panelToggles.map(renderPanelToggleItem)}
+        </SegmentedControl>
+
+        <Button.Icon label="Settings" onClick={handleOpenSettings}>
+          <Settings />
+        </Button.Icon>
+      </div>
+    </div>
   );
 }
 
@@ -103,7 +120,7 @@ function renderPanelToggleItem(toggle: PanelToggleButton) {
 }
 
 function isWorkbenchMode(value: string): value is WorkbenchMode {
-  return value === 'show' || value === 'slide-editor' || value === 'overlay-editor' || value === 'template-editor';
+  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'settings';
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {

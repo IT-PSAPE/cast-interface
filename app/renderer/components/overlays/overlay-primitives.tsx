@@ -1,7 +1,7 @@
 import { cn } from '@renderer/utils/cn';
 import { createPortal } from 'react-dom';
 import { useEffect, useCallback, useRef, useState, type HTMLAttributes, type MouseEvent, type ReactNode, type RefObject } from 'react';
-import { useOverlayStack } from './overlay-provider';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 
 // ─── Portal ──────────────────────────────────────────────────────────
 
@@ -12,9 +12,9 @@ type OverlayPortalProps = {
 };
 
 export function OverlayPortal({ children, isOpen, zIndex }: OverlayPortalProps) {
-  const { state: overlayState } = useOverlayStack();
+  const { overlayStack } = useWorkbench();
 
-  if (!isOpen || !overlayState.rootElement) {
+  if (!isOpen || !overlayStack.rootElement) {
     return null;
   }
 
@@ -22,7 +22,7 @@ export function OverlayPortal({ children, isOpen, zIndex }: OverlayPortalProps) 
     <div className="pointer-events-none fixed inset-0" style={{ zIndex }}>
       {children}
     </div>,
-    overlayState.rootElement,
+    overlayStack.rootElement,
   );
 }
 

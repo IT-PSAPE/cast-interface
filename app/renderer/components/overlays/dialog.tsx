@@ -2,8 +2,8 @@ import { X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
 import { Button } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayBackdrop, OverlayClose, OverlayPortal, OverlayTrigger } from './overlay-primitives';
-import { useOverlayStack } from './overlay-provider';
 
 interface DialogContextValue {
   state: { isOpen: boolean; isTopmost: boolean; zIndex: number };
@@ -40,11 +40,11 @@ function Root({ children, closeOnBackdropClick = true, closeOnEscape = true, def
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const [titleId, setTitleId] = useState<string | undefined>(undefined);
   const [descriptionId, setDescriptionId] = useState<string | undefined>(undefined);
-  const { actions: overlayActions, meta: overlayMeta, state: overlayState } = useOverlayStack();
+  const { overlayStack } = useWorkbench();
   const isOpen = isControlled ? open : uncontrolledOpen;
-  const stackIndex = overlayState.stack.indexOf(dialogId);
-  const isTopmost = stackIndex === overlayState.stack.length - 1 && stackIndex >= 0;
-  const zIndex = overlayMeta.baseZIndex + Math.max(stackIndex, 0) * 10;
+  const stackIndex = overlayStack.stack.indexOf(dialogId);
+  const isTopmost = stackIndex === overlayStack.stack.length - 1 && stackIndex >= 0;
+  const zIndex = overlayStack.baseZIndex + Math.max(stackIndex, 0) * 10;
 
   const setOpenState = useCallback((nextOpen: boolean) => {
     if (!isControlled) setUncontrolledOpen(nextOpen);
@@ -59,13 +59,15 @@ function Root({ children, closeOnBackdropClick = true, closeOnEscape = true, def
     setOpenState(false);
   }, [setOpenState]);
 
+  const { register: registerOverlay, unregister: unregisterOverlay } = overlayStack;
+
   useEffect(() => {
     if (!isOpen) return undefined;
-    overlayActions.register(dialogId);
+    registerOverlay(dialogId);
     return () => {
-      overlayActions.unregister(dialogId);
+      unregisterOverlay(dialogId);
     };
-  }, [dialogId, isOpen, overlayActions]);
+  }, [dialogId, isOpen, registerOverlay, unregisterOverlay]);
 
   useEffect(() => {
     if (!closeOnEscape || !isOpen || !isTopmost) return undefined;
@@ -152,6 +154,14 @@ function Header({ children, className, ...props }: HTMLAttributes<HTMLDivElement
   );
 }
 
+function Body({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('min-h-0 flex-1', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 function Title({ children, className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   const generatedId = useId();
   const { meta } = useDialog();
@@ -198,4 +208,12 @@ function CloseButton({ className, label = 'Close', ...props }: Omit<ComponentPro
   );
 }
 
-export const Dialog = { Root, Trigger, Portal, Backdrop, Positioner, Content, Header, Title, Description, Close, CloseButton };
+function Footer({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('flex items-center justify-between border-t border-primary px-4 py-3', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const Dialog = { Root, Trigger, Portal, Backdrop, Positioner, Content, Header, Body, Footer, Title, Description, Close, CloseButton };

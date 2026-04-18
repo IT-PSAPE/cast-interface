@@ -5,7 +5,7 @@ import { cv } from '@renderer/utils/cv';
 export type ButtonVariant = 'default' | 'take' | 'danger' | 'ghost';
 
 const buttonVariants = cv({
-  base: 'cursor-pointer transition-colors px-1 py-px text-center text-xs leading-tight',
+  base: 'cursor-pointer transition-colors px-2.5 py-1 rounded-sm text-center label-xs',
   variants: {
     variant: {
       default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
@@ -93,7 +93,7 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   active?: boolean;
   children: ReactNode;
   className?: string;
-  label: string;
+  label?: string;
   variant?: ButtonVariant;
 }
 

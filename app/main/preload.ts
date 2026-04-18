@@ -45,10 +45,13 @@ const api = {
     ipcRenderer.invoke(IPC.addDeckItemToSegment, segmentId, itemId),
   moveDeckItemToSegment: (playlistId: Id, itemId: Id, segmentId: Id | null) =>
     ipcRenderer.invoke(IPC.moveDeckItemToSegment, playlistId, itemId, segmentId),
+  movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) =>
+    ipcRenderer.invoke(IPC.movePlaylistEntryToSegment, entryId, segmentId),
   moveDeckItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveDeckItem, id, direction),
   createPresentation: (title: string) => ipcRenderer.invoke(IPC.createPresentation, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
+  duplicateSlide: (slideId: Id) => ipcRenderer.invoke(IPC.duplicateSlide, slideId),
   deleteSlide: (slideId: Id) => ipcRenderer.invoke(IPC.deleteSlide, slideId),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
   setSlideOrder: (input: SlideOrderUpdateInput) => ipcRenderer.invoke(IPC.setSlideOrder, input),
@@ -61,6 +64,7 @@ const api = {
   createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
   deleteMediaAsset: (id: Id) => ipcRenderer.invoke(IPC.deleteMediaAsset, id),
   updateMediaAssetSrc: (id: Id, src: string) => ipcRenderer.invoke(IPC.updateMediaAssetSrc, id, src),
+  getAudioCoverArt: (src: string) => ipcRenderer.invoke(IPC.getAudioCoverArt, src) as Promise<string | null>,
   createOverlay: (overlay: OverlayCreateInput) => ipcRenderer.invoke(IPC.createOverlay, overlay),
   updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => ipcRenderer.invoke(IPC.setOverlayEnabled, overlayId, enabled),
@@ -70,8 +74,8 @@ const api = {
   deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
   applyTemplateToDeckItem: (templateId: Id, itemId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
-  resetDeckItemToTemplate: (itemId: Id) =>
-    ipcRenderer.invoke(IPC.resetDeckItemToTemplate, itemId),
+  detachTemplateFromDeckItem: (itemId: Id) =>
+    ipcRenderer.invoke(IPC.detachTemplateFromDeckItem, itemId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),

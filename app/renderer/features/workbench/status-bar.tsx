@@ -1,7 +1,6 @@
 import { cv } from '@renderer/utils/cv';
 import { LoaderCircle } from 'lucide-react';
-import { useCast } from '../../contexts/cast-context';
-import { useNdi } from '../../contexts/ndi-context';
+import { useCast, useNdi } from '../../contexts/app-context';
 
 const indicatorStyles = cv({
   base: 'inline-block size-1.5 rounded-full',
@@ -25,7 +24,7 @@ export function StatusBar() {
       className="border-t border-primary bg-primary/60 px-2 py-1 flex items-center gap-3 text-sm"
     >
       <span className="flex items-center gap-2 text-secondary">
-        {isRunningOperation ? <LoaderCircle size={14} className="animate-spin text-tertiary" /> : null}
+        {isRunningOperation && <LoaderCircle size={14} className="animate-spin text-tertiary" />}
         {displayText}
       </span>
 

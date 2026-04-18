@@ -1319,12 +1319,37 @@ export class CastRepository {
   }
 
   addDeckItemToSegment(segmentId: Id, itemId: Id): AppSnapshot {
-    const segment = this.db
-      .prepare('SELECT playlist_id FROM playlist_segments WHERE id = ?')
-      .get(segmentId) as { playlist_id: string } | undefined;
+    const owner = this.resolveDeckOwnerRow(itemId);
+    if (!owner) return this.getSnapshot();
 
-    if (!segment) return this.getSnapshot();
-    return this.moveDeckItemToSegment(segment.playlist_id, itemId, segmentId);
+    const exists = this.db
+      .prepare('SELECT id FROM playlist_segments WHERE id = ?')
+      .get(segmentId) as { id: string } | undefined;
+
+    if (!exists) return this.getSnapshot();
+
+    const now = nowIso();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlist_entries WHERE segment_id = ?').get(segmentId) as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
+
+    this.db
+      .prepare(
+        `INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        createId(),
+        segmentId,
+        owner.type === 'presentation' ? itemId : null,
+        owner.type === 'lyric' ? itemId : null,
+        currentOrder + 1,
+        now,
+        now,
+      );
+
+    return this.getSnapshot();
   }
 
   moveDeckItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): AppSnapshot {
@@ -1368,6 +1393,44 @@ export class CastRepository {
         now,
         now,
       );
+
+    return this.getSnapshot();
+  }
+
+  movePlaylistEntryToSegment(entryId: Id, segmentId: Id | null): AppSnapshot {
+    const entry = this.db
+      .prepare(
+        `SELECT pe.id, pe.segment_id, ps.playlist_id
+         FROM playlist_entries pe
+         JOIN playlist_segments ps ON ps.id = pe.segment_id
+         WHERE pe.id = ?`
+      )
+      .get(entryId) as { id: string; segment_id: string; playlist_id: string } | undefined;
+
+    if (!entry) return this.getSnapshot();
+
+    if (!segmentId) {
+      this.db
+        .prepare('DELETE FROM playlist_entries WHERE id = ?')
+        .run(entryId);
+      return this.getSnapshot();
+    }
+
+    const targetSegment = this.db
+      .prepare('SELECT id FROM playlist_segments WHERE id = ? AND playlist_id = ?')
+      .get(segmentId, entry.playlist_id) as { id: string } | undefined;
+
+    if (!targetSegment) return this.getSnapshot();
+
+    const now = nowIso();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlist_entries WHERE segment_id = ?').get(segmentId) as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
+
+    this.db
+      .prepare('UPDATE playlist_entries SET segment_id = ?, order_index = ?, updated_at = ? WHERE id = ?')
+      .run(segmentId, currentOrder + 1, now, entryId);
 
     return this.getSnapshot();
   }
@@ -1549,55 +1612,12 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  resetDeckItemToTemplate(itemId: Id): AppSnapshot {
+  detachTemplateFromDeckItem(itemId: Id): AppSnapshot {
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner?.templateId) return this.getSnapshot();
+    if (!owner || owner.templateId === null) return this.getSnapshot();
 
-    const template = this.getTemplateById(owner.templateId);
-    if (!template || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
-      return this.getSnapshot();
-    }
-
-    const ownerColumn = this.getDeckOwnerColumn(owner.type);
     const ownerTable = this.getDeckTableName(owner.type);
-    const slides = this.db
-      .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
-      .all(itemId) as Array<{ id: string }>;
-    const deleteElements = this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?');
-    const insertElement = this.db.prepare(
-      `INSERT INTO slide_elements
-        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    const now = nowIso();
-
-    const tx = this.db.transaction(() => {
-      this.db.prepare(`UPDATE ${ownerTable} SET updated_at = ? WHERE id = ?`).run(now, itemId);
-      for (const slide of slides) {
-        const resetElements = applyTemplateToElements(template, [], slide.id);
-        deleteElements.run(slide.id);
-        for (const element of resetElements) {
-          insertElement.run(
-            element.id,
-            slide.id,
-            element.type,
-            element.x,
-            element.y,
-            element.width,
-            element.height,
-            element.rotation,
-            element.opacity,
-            element.zIndex,
-            element.layer,
-            JSON.stringify(element.payload),
-            now,
-            now,
-          );
-        }
-      }
-    });
-
-    tx();
+    this.db.prepare(`UPDATE ${ownerTable} SET template_id = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), itemId);
     return this.getSnapshot();
   }
 
@@ -1800,6 +1820,82 @@ export class CastRepository {
     this.db
       .prepare('UPDATE slides SET notes = ?, updated_at = ? WHERE id = ?')
       .run(input.notes, now, input.slideId);
+    return this.getSnapshot();
+  }
+
+  duplicateSlide(slideId: Id): AppSnapshot {
+    const original = this.db
+      .prepare('SELECT id, presentation_id, lyric_id, width, height, notes, order_index FROM slides WHERE id = ?')
+      .get(slideId) as {
+        id: string;
+        presentation_id: string | null;
+        lyric_id: string | null;
+        width: number;
+        height: number;
+        notes: string | null;
+        order_index: number;
+      } | undefined;
+    if (!original) return this.getSnapshot();
+
+    const ownerColumn = original.presentation_id !== null ? 'presentation_id' : 'lyric_id';
+    const ownerValue = original.presentation_id ?? original.lyric_id;
+    if (!ownerValue) return this.getSnapshot();
+
+    const now = nowIso();
+    const newSlideId = createId();
+    const insertOrder = original.order_index + 1;
+
+    const elements = this.db
+      .prepare(
+        `SELECT type, x, y, width, height, rotation, opacity, z_index, layer, payload_json
+         FROM slide_elements WHERE slide_id = ? ORDER BY layer ASC, z_index ASC, created_at ASC`
+      )
+      .all(slideId) as Array<{
+        type: SlideElement['type'];
+        x: number; y: number; width: number; height: number;
+        rotation: number; opacity: number; z_index: number;
+        layer: SlideElement['layer']; payload_json: string;
+      }>;
+
+    const shiftOrder = this.db.prepare(
+      `UPDATE slides SET order_index = order_index + 1, updated_at = ? WHERE ${ownerColumn} = ? AND order_index >= ?`
+    );
+    const insertSlide = this.db.prepare(
+      'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    const insertElement = this.db.prepare(
+      `INSERT INTO slide_elements
+        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const tx = this.db.transaction(() => {
+      shiftOrder.run(now, ownerValue, insertOrder);
+      insertSlide.run(
+        newSlideId,
+        original.presentation_id,
+        original.lyric_id,
+        original.width,
+        original.height,
+        original.notes ?? '',
+        insertOrder,
+        now,
+        now,
+      );
+      for (const el of elements) {
+        insertElement.run(
+          createId(),
+          newSlideId,
+          el.type,
+          el.x, el.y, el.width, el.height,
+          el.rotation, el.opacity, el.z_index, el.layer,
+          el.payload_json,
+          now, now,
+        );
+      }
+    });
+    tx();
+
     return this.getSnapshot();
   }
 
