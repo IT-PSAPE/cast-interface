@@ -19,6 +19,7 @@ export function useAvailableInspectorTabs(): InspectorTabDefinition[] {
   return useMemo(() => {
     const tabs: InspectorTabDefinition[] = [];
     if (isTemplateEdit) {
+      if (!hasSelection) tabs.push({ name: 'template', label: 'Template' });
       if (hasSelection) tabs.push({ name: 'shape', label: 'Shape' });
       if (isTextSelected) tabs.push({ name: 'text', label: 'Text' });
       return tabs;

@@ -11,7 +11,7 @@ import { matchesShortcut } from './use-keyboard-shortcuts-match';
 
 export function useKeyboardShortcuts(): void {
   const { setStatusText } = useCast();
-  const { slides, currentSlide, activateSlide, takeSlide, goNext, goPrev, deleteSlide } = useSlides();
+  const { slides, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, deleteSlide, setCurrentSlideIndex } = useSlides();
   const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
   const { setSlideBrowserMode, setPlaylistBrowserMode } = useDeckBrowser();
   const { state: { workbenchMode } } = useWorkbench();
@@ -50,12 +50,20 @@ export function useKeyboardShortcuts(): void {
         },
         clearSelection: () => clearSelection(),
         nudgeOrGoNext: (e) => {
-          if (isEditSlideBrowser && selectedElementId) void nudgeSelection(e.shiftKey ? 10 : 1, 0);
-          else goNext();
+          if (isEditSlideBrowser) {
+            if (selectedElementId) void nudgeSelection(e.shiftKey ? 10 : 1, 0);
+            return;
+          }
+          if (isOutputArmedOnCurrent) goNext();
+          else setCurrentSlideIndex(currentSlideIndex + 1);
         },
         nudgeOrGoPrev: (e) => {
-          if (isEditSlideBrowser && selectedElementId) void nudgeSelection(e.shiftKey ? -10 : -1, 0);
-          else goPrev();
+          if (isEditSlideBrowser) {
+            if (selectedElementId) void nudgeSelection(e.shiftKey ? -10 : -1, 0);
+            return;
+          }
+          if (isOutputArmedOnCurrent) goPrev();
+          else setCurrentSlideIndex(currentSlideIndex - 1);
         },
         nudgeUp: (e) => { void nudgeSelection(0, e.shiftKey ? -10 : -1); },
         nudgeDown: (e) => { void nudgeSelection(0, e.shiftKey ? 10 : 1); },
@@ -78,5 +86,5 @@ export function useKeyboardShortcuts(): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, activateSlide, takeSlide, goNext, goPrev, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo]);
+  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, setCurrentSlideIndex, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo]);
 }

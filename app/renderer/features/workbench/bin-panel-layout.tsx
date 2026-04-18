@@ -23,7 +23,7 @@ export function BinPanelLayout({ children, gridItemSize, mode = 'grid', menuStat
           {children}
         </ThumbnailGrid>
       ) : (
-        <div className={cn('flex flex-col gap-2', listClassName)}>
+        <div className={cn('flex flex-col gap-0.5', listClassName)}>
           {children}
         </div>
       )}

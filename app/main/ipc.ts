@@ -150,6 +150,7 @@ export const registerIpcHandlers = (
     repo.createLyric(title)
   );
   safeHandle(IPC.createSlide, (_event, input: SlideCreateInput) => repo.createSlide(input));
+  safeHandle(IPC.duplicateSlide, (_event, slideId: Id) => repo.duplicateSlide(slideId));
   safeHandle(IPC.deleteSlide, (_event, slideId: Id) => repo.deleteSlide(slideId));
   safeHandle(IPC.updateSlideNotes, (_event, input: SlideNotesUpdateInput) => repo.updateSlideNotes(input));
   safeHandle(IPC.setSlideOrder, (_event, input: SlideOrderUpdateInput) => repo.setSlideOrder(input));

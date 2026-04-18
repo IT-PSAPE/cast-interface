@@ -1823,6 +1823,82 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  duplicateSlide(slideId: Id): AppSnapshot {
+    const original = this.db
+      .prepare('SELECT id, presentation_id, lyric_id, width, height, notes, order_index FROM slides WHERE id = ?')
+      .get(slideId) as {
+        id: string;
+        presentation_id: string | null;
+        lyric_id: string | null;
+        width: number;
+        height: number;
+        notes: string | null;
+        order_index: number;
+      } | undefined;
+    if (!original) return this.getSnapshot();
+
+    const ownerColumn = original.presentation_id !== null ? 'presentation_id' : 'lyric_id';
+    const ownerValue = original.presentation_id ?? original.lyric_id;
+    if (!ownerValue) return this.getSnapshot();
+
+    const now = nowIso();
+    const newSlideId = createId();
+    const insertOrder = original.order_index + 1;
+
+    const elements = this.db
+      .prepare(
+        `SELECT type, x, y, width, height, rotation, opacity, z_index, layer, payload_json
+         FROM slide_elements WHERE slide_id = ? ORDER BY layer ASC, z_index ASC, created_at ASC`
+      )
+      .all(slideId) as Array<{
+        type: SlideElement['type'];
+        x: number; y: number; width: number; height: number;
+        rotation: number; opacity: number; z_index: number;
+        layer: SlideElement['layer']; payload_json: string;
+      }>;
+
+    const shiftOrder = this.db.prepare(
+      `UPDATE slides SET order_index = order_index + 1, updated_at = ? WHERE ${ownerColumn} = ? AND order_index >= ?`
+    );
+    const insertSlide = this.db.prepare(
+      'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    const insertElement = this.db.prepare(
+      `INSERT INTO slide_elements
+        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const tx = this.db.transaction(() => {
+      shiftOrder.run(now, ownerValue, insertOrder);
+      insertSlide.run(
+        newSlideId,
+        original.presentation_id,
+        original.lyric_id,
+        original.width,
+        original.height,
+        original.notes ?? '',
+        insertOrder,
+        now,
+        now,
+      );
+      for (const el of elements) {
+        insertElement.run(
+          createId(),
+          newSlideId,
+          el.type,
+          el.x, el.y, el.width, el.height,
+          el.rotation, el.opacity, el.z_index, el.layer,
+          el.payload_json,
+          now, now,
+        );
+      }
+    });
+    tx();
+
+    return this.getSnapshot();
+  }
+
   setSlideOrder(input: SlideOrderUpdateInput): AppSnapshot {
     const now = nowIso();
     

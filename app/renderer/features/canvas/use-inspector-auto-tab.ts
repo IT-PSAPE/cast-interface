@@ -13,7 +13,10 @@ export function useInspectorAutoTab() {
 
   useEffect(() => {
     if (isTemplateEdit) {
-      if (!hasSelection) return;
+      if (!hasSelection) {
+        if (inspectorTab !== 'template') setInspectorTab('template');
+        return;
+      }
       if (selectedElement?.type === 'text') {
         if (inspectorTab !== 'shape' && inspectorTab !== 'text') setInspectorTab('shape');
         return;

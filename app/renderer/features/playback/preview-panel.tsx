@@ -8,7 +8,6 @@ import { IconGroup } from '@renderer/components/icon-group';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useAudio, usePresentationLayers } from '../../contexts/playback/playback-context';
-import { useSlides } from '../../contexts/slide-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useGridSize } from '../../hooks/use-grid-size';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
@@ -18,7 +17,6 @@ import { SceneStage } from '../canvas/scene-stage';
 export function PreviewPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
   const { currentOutputDeckItemId } = useNavigation();
-  const { clearCurrentSlideSelection } = useSlides();
   const audio = useAudio();
   const { scene, background } = useProgramOutput();
   const { createOverlay } = useOverlayEditor();
@@ -38,7 +36,6 @@ export function PreviewPanel() {
   function handleClearAll() {
     audio.clearAudio();
     clearAllLayers();
-    clearCurrentSlideSelection();
   }
 
   function handleModeToggle() {

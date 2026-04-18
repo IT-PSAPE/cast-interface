@@ -1,6 +1,6 @@
 import type { Id } from '@core/types';
 import { overlayToLayerElements } from '@core/presentation-layers';
-import { Ellipsis, Plus, Trash2 } from 'lucide-react';
+import { Copy, Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
@@ -18,7 +18,7 @@ import { SplitPanel } from '../../features/workbench/split-panel';
 import { Label } from '@renderer/components/display/text';
 
 export function OverlayEditorScreen() {
-  const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay } = useOverlayEditor();
+  const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay, duplicateOverlay, requestNameFocus } = useOverlayEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const menu = useContextMenuState<Id>();
 
@@ -34,6 +34,8 @@ export function OverlayEditorScreen() {
 
   function buildMenuItems(overlayId: Id): ContextMenuItem[] {
     return [
+      { id: 'rename', label: 'Rename', icon: <Pencil size={14} />, onSelect: () => requestNameFocus(overlayId) },
+      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => duplicateOverlay(overlayId) },
       { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteOverlay(overlayId) },
     ];
   }
@@ -70,8 +72,12 @@ export function OverlayEditorScreen() {
                           menu.openFromButton(event.currentTarget, overlay.id);
                         }
 
+                        function handleContextMenu(event: React.MouseEvent) {
+                          menu.openFromEvent(event, overlay.id);
+                        }
+
                         return (
-                          <Thumbnail.Tile key={overlay.id} onClick={handleSelect} selected={currentOverlayId === overlay.id}>
+                          <Thumbnail.Tile key={overlay.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={currentOverlayId === overlay.id}>
                             <Thumbnail.Body>
                               <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                 <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />

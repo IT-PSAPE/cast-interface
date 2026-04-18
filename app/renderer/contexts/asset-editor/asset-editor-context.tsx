@@ -23,10 +23,13 @@ interface OverlayEditorValue {
   currentOverlay: Overlay | null;
   hasPendingChanges: boolean;
   isPushingChanges: boolean;
+  nameFocusRequest: number;
   setCurrentOverlayId: (overlayId: Id | null) => void;
   updateOverlayDraft: (input: OverlayUpdateInput) => void;
   createOverlay: () => Promise<void>;
+  duplicateOverlay: (overlayId: Id) => void;
   deleteCurrentOverlay: () => Promise<void>;
+  requestNameFocus: (overlayId: Id) => void;
   pushChanges: () => Promise<void>;
 }
 
@@ -36,6 +39,7 @@ interface TemplateEditorValue {
   currentTemplate: Template | null;
   hasPendingChanges: boolean;
   isPushingChanges: boolean;
+  nameFocusRequest: number;
   setCurrentTemplateId: (templateId: Id | null) => void;
   openTemplateEditor: (templateId: Id) => void;
   updateTemplateDraft: (input: { id: Id; name?: string; kind?: TemplateKind; elements?: SlideElement[] }) => void;
@@ -46,6 +50,7 @@ interface TemplateEditorValue {
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
+  requestNameFocus: (templateId: Id) => void;
   pushChanges: () => Promise<Id | null>;
 }
 
@@ -89,6 +94,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
   });
 
   const overlays = overlayStaged.items;
+  const [overlayNameFocusRequest, setOverlayNameFocusRequest] = useState(0);
 
   const updateOverlayDraft = useCallback((input: OverlayUpdateInput) => {
     overlayStaged.setStagedItems((current) => {
@@ -134,6 +140,27 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     });
     setStatusText('Deleted overlay');
   }, [overlayStaged, persistedOverlays, setStatusText]);
+
+  const duplicateOverlayAction = useCallback((overlayId: Id) => {
+    const source = overlays.find((overlay) => overlay.id === overlayId);
+    if (!source) return;
+    const now = new Date().toISOString();
+    const duplicate: Overlay = {
+      ...cloneOverlay(source),
+      id: createId(),
+      name: `${source.name} Copy`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    overlayStaged.setStagedItems((current) => [...(current ?? persistedOverlays), duplicate]);
+    overlayStaged.setCurrentItemId(duplicate.id);
+    setStatusText('Duplicated overlay');
+  }, [overlays, overlayStaged, persistedOverlays, setStatusText]);
+
+  const requestOverlayNameFocus = useCallback((overlayId: Id) => {
+    overlayStaged.setCurrentItemId(overlayId);
+    setOverlayNameFocusRequest((v) => v + 1);
+  }, [overlayStaged]);
 
   const pushOverlayChanges = useCallback(async () => {
     if (!overlayStaged.stagedItems || overlayStaged.isPushingChanges) return;
@@ -200,12 +227,15 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     currentOverlay: overlayStaged.currentItem,
     hasPendingChanges: overlayStaged.hasPendingChanges,
     isPushingChanges: overlayStaged.isPushingChanges,
+    nameFocusRequest: overlayNameFocusRequest,
     setCurrentOverlayId: overlayStaged.setCurrentItemId,
     updateOverlayDraft,
     createOverlay: createOverlayAction,
+    duplicateOverlay: duplicateOverlayAction,
     deleteCurrentOverlay,
+    requestNameFocus: requestOverlayNameFocus,
     pushChanges: pushOverlayChanges,
-  }), [createOverlayAction, overlayStaged.currentItem, overlayStaged.currentItemId, deleteCurrentOverlay, overlayStaged.hasPendingChanges, overlayStaged.isPushingChanges, overlays, pushOverlayChanges, overlayStaged.setCurrentItemId, updateOverlayDraft]);
+  }), [createOverlayAction, duplicateOverlayAction, overlayStaged.currentItem, overlayStaged.currentItemId, deleteCurrentOverlay, overlayStaged.hasPendingChanges, overlayStaged.isPushingChanges, overlayNameFocusRequest, overlays, pushOverlayChanges, overlayStaged.setCurrentItemId, requestOverlayNameFocus, updateOverlayDraft]);
 
   // ── Template editor ──
 
@@ -217,6 +247,12 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
   });
 
   const templates = templateStaged.items;
+  const [templateNameFocusRequest, setTemplateNameFocusRequest] = useState(0);
+
+  const requestTemplateNameFocus = useCallback((templateId: Id) => {
+    templateStaged.setCurrentItemId(templateId);
+    setTemplateNameFocusRequest((v) => v + 1);
+  }, [templateStaged]);
 
   const updateTemplateDraft = useCallback((input: { id: Id; name?: string; kind?: TemplateKind; elements?: SlideElement[] }) => {
     templateStaged.setStagedItems((current) => {
@@ -380,6 +416,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     currentTemplate: templateStaged.currentItem,
     hasPendingChanges: templateStaged.hasPendingChanges,
     isPushingChanges: templateStaged.isPushingChanges,
+    nameFocusRequest: templateNameFocusRequest,
     setCurrentTemplateId: templateStaged.setCurrentItemId,
     openTemplateEditor,
     updateTemplateDraft,
@@ -390,12 +427,13 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
+    requestNameFocus: requestTemplateNameFocus,
     pushChanges: pushTemplateChanges,
   }), [
     applyTemplateToTarget, createTemplate, templateStaged.currentItem, templateStaged.currentItemId,
     deleteTemplate, detachTemplateFromDeckItem, duplicateTemplate, templateStaged.hasPendingChanges, templateStaged.isPushingChanges,
-    openTemplateEditor, pushTemplateChanges, renameTemplate, replaceTemplateElements,
-    templateStaged.setCurrentItemId, templates, updateTemplateDraft,
+    openTemplateEditor, pushTemplateChanges, renameTemplate, replaceTemplateElements, requestTemplateNameFocus,
+    templateStaged.setCurrentItemId, templateNameFocusRequest, templates, updateTemplateDraft,
   ]);
 
   // ── Deck editor ──
@@ -518,6 +556,10 @@ export function useDeckEditor(): DeckEditorValue {
 
 function toOverlayCreateInput(overlay: Overlay): OverlayCreateInput {
   return { name: overlay.name, elements: cloneElements(overlay.elements), animation: overlay.animation };
+}
+
+function cloneOverlay(overlay: Overlay): Overlay {
+  return JSON.parse(JSON.stringify(overlay)) as Overlay;
 }
 
 function overlaySignature(overlay: Overlay): string {

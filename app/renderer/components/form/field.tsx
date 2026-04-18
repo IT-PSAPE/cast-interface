@@ -39,7 +39,7 @@ function FieldIcon({ children, className, ...rest }: HTMLAttributes<HTMLSpanElem
   );
 }
 
-function FieldInput({ children, disabled = false, type = 'text', value, onChange, onBlur, min, max, step, label, wide }: { children?: ReactNode; disabled?: boolean; type?: 'number' | 'text'; value: string | number; onChange: (value: string) => void; onBlur?: () => void; min?: number; max?: number; step?: number; label?: string; wide?: boolean }) {
+function FieldInput({ children, disabled = false, type = 'text', value, onChange, onBlur, min, max, step, label, wide, inputRef }: { children?: ReactNode; disabled?: boolean; type?: 'number' | 'text'; value: string | number; onChange: (value: string) => void; onBlur?: () => void; min?: number; max?: number; step?: number; label?: string; wide?: boolean; inputRef?: Ref<HTMLInputElement> }) {
   function handleValueChange(event: React.ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value);
   }
@@ -49,6 +49,7 @@ function FieldInput({ children, disabled = false, type = 'text', value, onChange
     <div className="flex min-w-0 w-full items-center min-h-8 rounded bg-tertiary text-sm text-primary transition-colors focus-within:border-brand">
       {icon ? <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">{icon}</span> : null}
       <input
+        ref={inputRef}
         type={type}
         value={value}
         disabled={disabled}

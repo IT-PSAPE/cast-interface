@@ -1,10 +1,12 @@
+import type { Id } from '@core/types';
 import { useMemo, useState } from 'react';
-import { ChevronsUpDown, Play, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, Play, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { FieldTextarea } from '../../components/form/field';
+import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -21,18 +23,12 @@ import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { SceneStage } from '@renderer/features/canvas/scene-stage';
 
-interface SlideMenuState {
-  x: number;
-  y: number;
-  slideId: string;
-}
-
 export function DeckEditorScreen() {
   const { browseDeckItem, currentDeckItem } = useNavigation();
   const { effectiveElements } = useElements();
   const { deckItems } = useProjectContent();
   const { getSlideElements } = useDeckEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide } = useSlides();
+  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const {
@@ -46,7 +42,7 @@ export function DeckEditorScreen() {
     handleResetNotes,
   } = useSlideNotesPanel();
   const [presentationMenuPosition, setPresentationMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const [slideMenuState, setSlideMenuState] = useState<SlideMenuState | null>(null);
+  const slideMenu = useContextMenuState<Id>();
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
     return deckItems.map((item) => ({
@@ -71,12 +67,17 @@ export function DeckEditorScreen() {
     void deleteSlide(slideId);
   }
 
-  const slideMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!slideMenuState) return [];
+  function buildSlideMenuItems(slideId: Id): ContextMenuItem[] {
+    const slideIndex = slides.findIndex((slide) => slide.id === slideId);
+    const canMoveUp = slideIndex > 0;
+    const canMoveDown = slideIndex >= 0 && slideIndex < slides.length - 1;
     return [
-      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteSlide(slideMenuState.slideId) },
+      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => void duplicateSlide(slideId) },
+      { id: 'move-up', label: 'Move Up', icon: <ArrowUp size={14} />, disabled: !canMoveUp, onSelect: () => void moveSlide(slideId, 'up') },
+      { id: 'move-down', label: 'Move Down', icon: <ArrowDown size={14} />, disabled: !canMoveDown, onSelect: () => void moveSlide(slideId, 'down') },
+      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteSlide(slideId) },
     ];
-  }, [slideMenuState]);
+  }
 
   const titleElement = (
     <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
@@ -95,7 +96,7 @@ export function DeckEditorScreen() {
       {presentationMenuPosition && (
         <ContextMenu x={presentationMenuPosition.x} y={presentationMenuPosition.y} items={presentationMenuItems} onClose={() => setPresentationMenuPosition(null)} />
       )}
-      {slideMenuState && <ContextMenu x={slideMenuState.x} y={slideMenuState.y} items={slideMenuItems} onClose={() => setSlideMenuState(null)} />}
+      {slideMenu.menuState && <ContextMenu x={slideMenu.menuState.x} y={slideMenu.menuState.y} items={buildSlideMenuItems(slideMenu.menuState.data)} onClose={slideMenu.close} />}
     </>
   );
 
@@ -128,6 +129,11 @@ export function DeckEditorScreen() {
                         setCurrentSlideIndex(index);
                       }
 
+                      function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
+                        event.stopPropagation();
+                        slideMenu.openFromButton(event.currentTarget, slide.id);
+                      }
+
                       const isLive = state === 'live';
                       const isEmpty = state === 'warning';
 
@@ -154,6 +160,11 @@ export function DeckEditorScreen() {
                               </span>
                             </Thumbnail.Overlay>
                           )}
+                          <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+                            <Button.Icon label="Slide options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+                              <Ellipsis />
+                            </Button.Icon>
+                          </Thumbnail.Overlay>
                           <Thumbnail.Caption>
                             <div className="flex min-w-0 items-center gap-2">
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>

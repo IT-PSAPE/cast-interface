@@ -17,12 +17,7 @@
   },
   "main": "out/main/index.js",
   "scripts": {
-    "setup:windows-native": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1",
-    "setup:windows-native:tools": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -ToolsOnly",
-    "check:windows-native": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -CheckOnly",
-    "check:windows-native:build": "powershell.exe -ExecutionPolicy Bypass -File scripts/setup-windows-native-dev.ps1 -CheckOnly -BuildNativeAddon",
-    "dev": "node scripts/run-electron-dev.mjs",
-    "dev:raw": "electron-vite dev",
+    "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",

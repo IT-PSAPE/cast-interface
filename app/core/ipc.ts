@@ -45,6 +45,7 @@ export interface MainApi {
   createPresentation: (title: string) => Promise<AppSnapshot>;
   createLyric: (title: string) => Promise<AppSnapshot>;
   createSlide: (input: SlideCreateInput) => Promise<AppSnapshot>;
+  duplicateSlide: (slideId: Id) => Promise<AppSnapshot>;
   deleteSlide: (slideId: Id) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
   setSlideOrder: (input: SlideOrderUpdateInput) => Promise<AppSnapshot>;
@@ -115,6 +116,7 @@ export const IPC = {
   createPresentation: 'cast:createPresentation',
   createLyric: 'cast:createLyric',
   createSlide: 'cast:createSlide',
+  duplicateSlide: 'cast:duplicateSlide',
   deleteSlide: 'cast:deleteSlide',
   updateSlideNotes: 'cast:updateSlideNotes',
   setSlideOrder: 'cast:setSlideOrder',

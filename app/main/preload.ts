@@ -51,6 +51,7 @@ const api = {
   createPresentation: (title: string) => ipcRenderer.invoke(IPC.createPresentation, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
   createSlide: (input: SlideCreateInput) => ipcRenderer.invoke(IPC.createSlide, input),
+  duplicateSlide: (slideId: Id) => ipcRenderer.invoke(IPC.duplicateSlide, slideId),
   deleteSlide: (slideId: Id) => ipcRenderer.invoke(IPC.deleteSlide, slideId),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
   setSlideOrder: (input: SlideOrderUpdateInput) => ipcRenderer.invoke(IPC.setSlideOrder, input),

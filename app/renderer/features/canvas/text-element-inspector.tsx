@@ -14,7 +14,6 @@ import {
   Strikethrough, Sun, Type, Underline,
 } from 'lucide-react';
 import { Section } from './inspector-section';
-import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { EmptyState } from '../../components/display/empty-state';
 import { Label } from '@renderer/components/display/text';

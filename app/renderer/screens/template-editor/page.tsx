@@ -1,5 +1,5 @@
 import type { Id, Template } from '@core/types';
-import { Ellipsis, Layers, Music, Plus, Presentation, Trash2 } from 'lucide-react';
+import { Copy, Ellipsis, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
@@ -17,7 +17,7 @@ import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
 
 export function TemplateEditorScreen() {
-  const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate } = useTemplateEditor();
+  const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus } = useTemplateEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateTemplateMenu({ createTemplate });
   const templateMenu = useContextMenuState<Id>();
@@ -33,6 +33,8 @@ export function TemplateEditorScreen() {
 
   function buildTemplateMenuItems(templateId: Id): ContextMenuItem[] {
     return [
+      { id: 'rename', label: 'Rename', icon: <Pencil size={14} />, onSelect: () => requestNameFocus(templateId) },
+      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => duplicateTemplate(templateId) },
       { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteTemplate(templateId) },
     ];
   }
@@ -69,8 +71,17 @@ export function TemplateEditorScreen() {
                           templateMenu.openFromButton(event.currentTarget, template.id);
                         }
 
+                        function handleContextMenu(event: React.MouseEvent) {
+                          templateMenu.openFromEvent(event, template.id);
+                        }
+
+                        function handleCaptionDoubleClick(event: React.MouseEvent) {
+                          event.stopPropagation();
+                          requestNameFocus(template.id);
+                        }
+
                         return (
-                          <Thumbnail.Tile key={template.id} onClick={handleSelect} selected={template.id === currentTemplateId}>
+                          <Thumbnail.Tile key={template.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={template.id === currentTemplateId}>
                             <Thumbnail.Body>
                               <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                 <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
@@ -82,7 +93,7 @@ export function TemplateEditorScreen() {
                               </Button.Icon>
                             </Thumbnail.Overlay>
                             <Thumbnail.Caption>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
                                 <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
                                 <TemplateKindIcon kind={template.kind} />
                                 <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>

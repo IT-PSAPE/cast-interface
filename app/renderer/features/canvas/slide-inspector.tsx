@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FieldInput, FieldSelect } from '../../components/form/field';
 import { useCast } from '../../contexts/app-context';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
@@ -12,13 +12,20 @@ const TRANSITION_OPTIONS = [
 
 export function SlideInspector() {
   const { setStatusText } = useCast();
-  const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
+  const { currentOverlay, updateOverlayDraft, nameFocusRequest } = useOverlayEditor();
   const { state: { workbenchMode } } = useWorkbench();
   const isOverlayEdit = workbenchMode === 'overlay-editor';
   const [overlayNameDraft, setOverlayNameDraft] = useState('');
   const [transitionKindDraft, setTransitionKindDraft] = useState('none');
   const [transitionDurationDraft, setTransitionDurationDraft] = useState('0');
   const [autoClearDurationDraft, setAutoClearDurationDraft] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!nameFocusRequest || !nameInputRef.current) return;
+    nameInputRef.current.focus();
+    nameInputRef.current.select();
+  }, [nameFocusRequest]);
 
   useEffect(() => {
     if (!currentOverlay) {
@@ -103,6 +110,7 @@ export function SlideInspector() {
               onBlur={handleOverlaySettingsBlur}
               label="Overlay Name"
               wide
+              inputRef={nameInputRef}
             />
           </Section.Body>
         </Section.Root>

@@ -193,6 +193,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     }
     if (layer === 'content') {
       setContentLayerVisible(false);
+      clearOutputDeckItem();
       setStatusText('Content layer cleared');
       return;
     }
@@ -200,7 +201,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setPlaybackNow(now);
     setOverlayEntries((current) => clearAllOverlayPlayback(current, overlaysById, now));
     setStatusText('Overlay layer cleared');
-  }, [overlaysById, setStatusText]);
+  }, [clearOutputDeckItem, overlaysById, setStatusText]);
 
   const clearAllLayers = useCallback(() => {
     setMediaLayerAssetId(null);
