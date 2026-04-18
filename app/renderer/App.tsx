@@ -52,8 +52,9 @@ function AppLayoutContent() {
 
   return (
     <div className="relative flex h-screen flex-col">
-      <WindowsInlineMenuBar />
-      <AppToolbar />
+      <WindowsInlineMenuBar>
+        <AppToolbar />
+      </WindowsInlineMenuBar>
       <main className="min-h-0 flex-1">
         <WorkbenchScreenRouter />
       </main>

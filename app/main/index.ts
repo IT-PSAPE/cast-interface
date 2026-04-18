@@ -96,7 +96,7 @@ function createRendererWindowOptions(view: RendererView, width: number, height: 
       ? {
         titleBarStyle: 'hidden' as const,
         titleBarOverlay: {
-          color: '#111111',
+          color: '#00000000',
           symbolColor: '#d4d4d4',
           height: 36,
         },

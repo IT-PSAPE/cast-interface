@@ -8,7 +8,8 @@ import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
 import { useNdi } from '@renderer/contexts/app-context';
 
-const isMac = window.castApi.platform === 'darwin';
+const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
+const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
 
 const outputDotStyles = cv({
   base: 'inline-block h-2 w-2 rounded-full transition-colors',
@@ -67,52 +68,45 @@ export function AppToolbar() {
     }
   }
 
-  const dragRegionStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
-  const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
-
   return (
-    <header
-      data-ui-region="app-toolbar"
-      className="border-b border-primary bg-primary px-3 py-1.5"
-      style={isMac ? { ...dragRegionStyle, paddingLeft: '78px' } : dragRegionStyle}
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center" style={noDragStyle}>
-          <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
-            <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
-            <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
-            <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
-            <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
-          </SegmentedControl>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2" style={noDragStyle}>
-          <Button
-            variant="ghost"
-            onClick={toggleAudienceOutput}
-            type="button"
-            className={outputBorderStyles({ active: outputState.audience })}
-            aria-pressed={outputState.audience}
-          >
-            <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
-            <span className="text-primary">Audience</span>
-          </Button>
-
-          <SegmentedControl
-            label="Panel visibility"
-            selectionMode="multiple"
-            value={activePanelIds}
-            onValueChange={handlePanelToggleChange}
-          >
-            {panelToggles.map(renderPanelToggleItem)}
-          </SegmentedControl>
-
-          <Button.Icon label="Settings" onClick={handleOpenSettings}>
-            <Settings />
-          </Button.Icon>
-        </div>
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div style={noDragStyle}>
+        <SegmentedControl value={workbenchMode} onValueChange={handleWorkbenchModeChange} label="Application views">
+          <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
+          <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
+          <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
+          <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
+        </SegmentedControl>
       </div>
-    </header>
+
+      <div aria-hidden="true" className="min-w-6 flex-1 self-stretch" style={dragStyle} />
+
+      <div className="flex items-center gap-2" style={noDragStyle}>
+        <Button
+          variant="ghost"
+          onClick={toggleAudienceOutput}
+          type="button"
+          className={outputBorderStyles({ active: outputState.audience })}
+          aria-pressed={outputState.audience}
+        >
+          <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
+          <span className="text-primary">Audience</span>
+        </Button>
+
+        <SegmentedControl
+          label="Panel visibility"
+          selectionMode="multiple"
+          value={activePanelIds}
+          onValueChange={handlePanelToggleChange}
+        >
+          {panelToggles.map(renderPanelToggleItem)}
+        </SegmentedControl>
+
+        <Button.Icon label="Settings" onClick={handleOpenSettings}>
+          <Settings />
+        </Button.Icon>
+      </div>
+    </div>
   );
 }
 
