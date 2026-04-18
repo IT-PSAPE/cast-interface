@@ -23,11 +23,6 @@ export interface InteractionState {
   elementStart: { x: number; y: number; width: number; height: number };
 }
 
-export interface ShortcutItem {
-  keys: string;
-  action: string;
-}
-
 export interface ElementInspectorDraft {
   x: number;
   y: number;

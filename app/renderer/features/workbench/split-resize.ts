@@ -256,32 +256,27 @@ function buildSnapState(
   const upIndexes = buildUpIndexes(handleIndex);
   const downIndexes = buildDownIndexes(handleIndex, state.items.length);
 
-  const minDeltaUp = upIndexes.reduce((sum, index) => sum + (state.items[index].minimumSize - state.sizes[index]), 0);
-  const maxDeltaUp = upIndexes.reduce((sum, index) => sum + (state.items[index].viewMaximumSize - state.sizes[index]), 0);
-  const maxDeltaDown = downIndexes.length === 0
-    ? Number.POSITIVE_INFINITY
-    : downIndexes.reduce((sum, index) => sum + (state.sizes[index] - state.items[index].minimumSize), 0);
-  const minDeltaDown = downIndexes.length === 0
-    ? Number.NEGATIVE_INFINITY
-    : downIndexes.reduce((sum, index) => sum + (state.sizes[index] - state.items[index].viewMaximumSize), 0);
-
-  const minDelta = Math.max(minDeltaUp, minDeltaDown);
-  const maxDelta = Math.min(maxDeltaDown, maxDeltaUp);
-
   const item = state.items[snapIndex];
   const halfSize = Math.floor(item.viewMinimumSize / 2);
 
+  // Use the snap pane's own side-specific bound so that a constraint on the
+  // opposite side (e.g. a maxSize blocking growth) does not trigger this
+  // pane to collapse/expand prematurely.
   if (direction === 'before') {
+    const minDeltaUp = upIndexes.reduce((sum, index) => sum + (state.items[index].minimumSize - state.sizes[index]), 0);
     return {
       index: snapIndex,
-      limitDelta: item.visible ? minDelta - halfSize : minDelta + halfSize,
+      limitDelta: item.visible ? minDeltaUp - halfSize : minDeltaUp + halfSize,
       size: state.sizes[snapIndex],
     };
   }
 
+  const maxDeltaDown = downIndexes.length === 0
+    ? Number.POSITIVE_INFINITY
+    : downIndexes.reduce((sum, index) => sum + (state.sizes[index] - state.items[index].minimumSize), 0);
   return {
     index: snapIndex,
-    limitDelta: item.visible ? maxDelta + halfSize : maxDelta - halfSize,
+    limitDelta: item.visible ? maxDeltaDown + halfSize : maxDeltaDown - halfSize,
     size: state.sizes[snapIndex],
   };
 }

@@ -548,13 +548,6 @@ body,
   background: var(--color-gray-600);
 }
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--color-border-brand);
-  outline-offset: 1px;
-}
-
 /* DARK MODE OVERRIDES */
 @layer base {
     [data-theme="dark"] {

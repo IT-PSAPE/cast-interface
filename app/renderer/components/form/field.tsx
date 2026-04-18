@@ -73,7 +73,7 @@ function FieldSelect({ children, value, onChange, onBlur, options, label, wide }
   const select = (
     <div className="flex min-w-0 items-center">
       {icon ? <span className="flex justify-center items-center shrink-0 size-6 ml-1 text-secondary">{icon}</span> : null}
-      <Dropdown>
+      <Dropdown className="w-full">
         <Dropdown.Trigger className="flex min-w-0 w-full items-center min-h-8 rounded-md bg-tertiary text-sm text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer">
           <span className="truncate flex-1 px-1.5 text-left">{selectedLabel}</span>
           <ChevronDown className="shrink-0 size-3.5 mr-1.5 text-tertiary" />

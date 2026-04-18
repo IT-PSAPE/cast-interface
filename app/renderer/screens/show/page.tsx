@@ -172,7 +172,7 @@ function ShowScreenContent() {
             </SplitPanel.Segment>
           </SplitPanel.Panel>
         </SplitPanel.Segment>
-        <SplitPanel.Segment id="show-right" defaultSize={320} minSize={140} collapsible>
+        <SplitPanel.Segment id="show-right" defaultSize={320} minSize={140} maxSize={360} collapsible>
           <PreviewPanel />
         </SplitPanel.Segment>
       </SplitPanel.Panel>

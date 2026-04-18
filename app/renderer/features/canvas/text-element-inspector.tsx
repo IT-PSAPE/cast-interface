@@ -1,4 +1,4 @@
-import type { TextCaseTransform } from '@core/types';
+import type { StrokePosition, TextCaseTransform } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { ColorPicker } from '../../components/form/color-picker';
 import { FieldIcon, FieldInput, FieldSelect } from '../../components/form/field';
@@ -8,17 +8,28 @@ import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
   AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart,
   Baseline, Bold, Italic,
-  Strikethrough, Type, Underline,
+  MoveHorizontal,
+  MoveVertical,
+  RulerDimensionLine,
+  Strikethrough, Sun, Type, Underline,
 } from 'lucide-react';
 import { Section } from './inspector-section';
 import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { EmptyState } from '../../components/display/empty-state';
+import { Label } from '@renderer/components/display/text';
+import { parseNumber } from '@renderer/utils/slides';
 
 const CASE_OPTIONS: Array<{ value: TextCaseTransform; label: string }> = [
   { value: 'none', label: 'None' },
   { value: 'uppercase', label: 'Uppercase' },
   { value: 'sentence', label: 'Sentence' },
+];
+
+const STROKE_POSITION_OPTIONS = [
+  { value: 'inside', label: 'Inside' },
+  { value: 'center', label: 'Center' },
+  { value: 'outside', label: 'Outside' },
 ];
 
 export function TextElementInspector() {
@@ -41,7 +52,7 @@ export function TextElementInspector() {
     <fieldset className={cn('m-0 min-w-0 border-0 p-0', textPayload.locked && 'opacity-50')} disabled={textPayload.locked}>
       <Section.Root>
         <Section.Header>
-          <span>Content</span>
+          <Label.xs>Content</Label.xs>
         </Section.Header>
         <Section.Body>
           <FieldInput value={textPayload.text} onChange={handleTextChange} />
@@ -50,7 +61,7 @@ export function TextElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <span>Typography</span>
+          <Label.xs>Typography</Label.xs>
         </Section.Header>
         <Section.Body>
           <Section.Row>
@@ -70,7 +81,7 @@ export function TextElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <span>Formatting</span>
+          <Label.xs>Formatting</Label.xs>
         </Section.Header>
         <Section.Body>
           <SegmentedControl label="Text formatting" selectionMode="multiple" value={activeFormattingStyles} onValueChange={handleTextStyleToggle} className="w-full [&>button]:flex-1">
@@ -96,7 +107,7 @@ export function TextElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <span>Alignment</span>
+          <Label.xs>Alignment</Label.xs>
         </Section.Header>
         <Section.Body>
           <div className="flex gap-2">
@@ -130,26 +141,52 @@ export function TextElementInspector() {
         </Section.Body>
       </Section.Root>
 
-      <StrokeSectionFields
-        label="Text Stroke"
-        enabled={textVisual.strokeEnabled}
-        color={textVisual.strokeColor}
-        width={textVisual.strokeWidth}
-        position={textVisual.strokePosition}
-        onToggle={(enabled) => updateTextVisual({ strokeEnabled: enabled })}
-        onUpdate={updateTextVisual}
-      />
+      <Section.Root>
+        <Section.Header>
+          <Label.xs>Text Stroke</Label.xs>
+          <Section.Checkbox className='ml-auto' checked={textVisual.strokeEnabled} onChange={(enabled) => updateTextVisual({ strokeEnabled: enabled })} />
+        </Section.Header>
+        {textVisual.strokeEnabled ? (
+          <Section.Body>
+            <Section.Row lead>
+              <ColorPicker value={textVisual.strokeColor} onChange={(value: string) => { updateTextVisual({ strokeColor: value }); }} />
+            </Section.Row>
+            <Section.Row>
+              <FieldSelect value={textVisual.strokePosition} onChange={(value: string) => { updateTextVisual({ strokePosition: value as StrokePosition }); }} options={STROKE_POSITION_OPTIONS} />
+              <FieldInput type="number" value={textVisual.strokeWidth} onChange={(value: string) => { updateTextVisual({ strokeWidth: Math.max(0, parseNumber(value, textVisual.strokeWidth)) }); }}>
+                <FieldIcon><RulerDimensionLine size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+          </Section.Body>
+        ) : null}
+      </Section.Root>
 
-      <ShadowSectionFields
-        label="Text Shadow"
-        enabled={textVisual.shadowEnabled}
-        color={textVisual.shadowColor}
-        blur={textVisual.shadowBlur}
-        offsetX={textVisual.shadowOffsetX}
-        offsetY={textVisual.shadowOffsetY}
-        onToggle={(enabled) => updateTextVisual({ shadowEnabled: enabled })}
-        onUpdate={updateTextVisual}
-      />
+      <Section.Root>
+        <Section.Header>
+          <Label.xs>Text Shadow</Label.xs>
+          <Section.Checkbox className='ml-auto' checked={textVisual.shadowEnabled} onChange={(enabled) => updateTextVisual({ shadowEnabled: enabled })} />
+        </Section.Header>
+        {textVisual.shadowEnabled ? (
+          <Section.Body>
+            <Section.Row>
+              <FieldInput type="number" value={textVisual.shadowOffsetX} onChange={(value: string) => { updateTextVisual({ shadowOffsetX: parseNumber(value, textVisual.shadowOffsetX) }); }}>
+                <FieldIcon><MoveHorizontal size={14} /></FieldIcon>
+              </FieldInput>
+              <FieldInput type="number" value={textVisual.shadowOffsetY} onChange={(value: string) => { updateTextVisual({ shadowOffsetX: parseNumber(value, textVisual.shadowOffsetY) }); }}>
+                <FieldIcon><MoveVertical size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+            <Section.Row>
+              <FieldInput type="number" value={textVisual.shadowBlur} onChange={(value: string) => { updateTextVisual({ shadowBlur: Math.max(0, parseNumber(value, textVisual.shadowBlur)) }); }}>
+                <FieldIcon><Sun size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+            <Section.Row lead>
+              <ColorPicker value={textVisual.shadowColor} onChange={(value: string) => { updateTextVisual({ shadowColor: value }); }} />
+            </Section.Row>
+          </Section.Body>
+        ) : null}
+      </Section.Root>
     </fieldset>
   );
 }

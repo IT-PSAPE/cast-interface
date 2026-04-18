@@ -73,6 +73,8 @@ const api = {
   deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
   applyTemplateToDeckItem: (templateId: Id, itemId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
+  detachTemplateFromDeckItem: (itemId: Id) =>
+    ipcRenderer.invoke(IPC.detachTemplateFromDeckItem, itemId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),

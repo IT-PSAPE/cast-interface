@@ -14,11 +14,11 @@ const rootStyles = cv({
 });
 
 const itemStyles = cv({
-  base: 'inline-flex items-center justify-center rounded-sm border transition-colors disabled:pointer-events-none disabled:opacity-50',
+  base: 'inline-flex items-center justify-center rounded-sm transition-colors disabled:pointer-events-none disabled:opacity-50',
   variants: {
     active: {
-      true: 'border-primary bg-primary text-primary',
-      false: 'border-transparent text-tertiary hover:border-secondary hover:text-secondary',
+      true: 'bg-primary text-primary',
+      false: 'text-tertiary hover:text-secondary',
     },
     fill: { true: 'w-full', false: 'w-fit' },
     variant: {

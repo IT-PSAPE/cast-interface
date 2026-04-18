@@ -1,17 +1,7 @@
 import type { MediaAsset, OverlayAnimation, Slide, SlideElement } from '@core/types';
-import type { SlideBrowserMode, PlaylistBrowserMode, ShortcutItem, SlideVisualState } from '../types/ui';
+import type { SlideBrowserMode, PlaylistBrowserMode, SlideVisualState } from '../types/ui';
 import { LAYER_ORDER } from '../types/ui';
 export { clamp } from './math';
-
-export const SHORTCUTS: ShortcutItem[] = [
-  { keys: 'Arrow Right', action: 'Next live slide' },
-  { keys: 'Arrow Left', action: 'Previous live slide' },
-  { keys: '1-9', action: 'Take slide by index' },
-  { keys: 'Enter / Space', action: 'Take selected slide' },
-  { keys: 'Delete / Backspace', action: 'Delete selected element' },
-  { keys: 'Alt + 1..2', action: 'Switch slide view (grid/list)' },
-  { keys: 'Shift + Alt + 1..3', action: 'Switch playlist view (current/tabs/continuous)' },
-];
 
 export const CANVAS_VIEW_LABELS: Record<SlideBrowserMode, string> = {
   grid: 'Grid',

@@ -1612,6 +1612,15 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  detachTemplateFromDeckItem(itemId: Id): AppSnapshot {
+    const owner = this.resolveDeckOwnerRow(itemId);
+    if (!owner || owner.templateId === null) return this.getSnapshot();
+
+    const ownerTable = this.getDeckTableName(owner.type);
+    this.db.prepare(`UPDATE ${ownerTable} SET template_id = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), itemId);
+    return this.getSnapshot();
+  }
+
   applyTemplateToOverlay(templateId: Id, overlayId: Id): AppSnapshot {
     const template = this.getTemplateById(templateId);
     if (!template || template.kind !== 'overlays') return this.getSnapshot();

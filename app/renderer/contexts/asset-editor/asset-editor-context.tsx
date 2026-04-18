@@ -42,6 +42,7 @@ interface TemplateEditorValue {
   replaceTemplateElements: (elements: SlideElement[]) => void;
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
+  detachTemplateFromDeckItem: (itemId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -364,6 +365,11 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     setStatusText('Applied template to overlay');
   }, [mutate, resolveTemplateIdForMutation, setStatusText]);
 
+  const detachTemplateFromDeckItem = useCallback(async (itemId: Id) => {
+    await mutate(() => window.castApi.detachTemplateFromDeckItem(itemId));
+    setStatusText('Detached template from item');
+  }, [mutate, setStatusText]);
+
   useEffect(() => {
     templateStaged.registerAutoPush(() => void pushTemplateChanges());
   }, [templateStaged, pushTemplateChanges]);
@@ -380,13 +386,14 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     replaceTemplateElements,
     createTemplate,
     applyTemplateToTarget,
+    detachTemplateFromDeckItem,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
     pushChanges: pushTemplateChanges,
   }), [
     applyTemplateToTarget, createTemplate, templateStaged.currentItem, templateStaged.currentItemId,
-    deleteTemplate, duplicateTemplate, templateStaged.hasPendingChanges, templateStaged.isPushingChanges,
+    deleteTemplate, detachTemplateFromDeckItem, duplicateTemplate, templateStaged.hasPendingChanges, templateStaged.isPushingChanges,
     openTemplateEditor, pushTemplateChanges, renameTemplate, replaceTemplateElements,
     templateStaged.setCurrentItemId, templates, updateTemplateDraft,
   ]);

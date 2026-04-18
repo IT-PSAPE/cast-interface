@@ -1,17 +1,26 @@
 import { cn } from '@renderer/utils/cn';
 import { ColorPicker } from '../../components/form/color-picker';
-import { FieldIcon, FieldInput } from '../../components/form/field';
+import { FieldIcon, FieldInput, FieldSelect } from '../../components/form/field';
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal,
   AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
   CornerUpRight, Eye, FlipHorizontal2, MoveHorizontal, MoveVertical,
-  RotateCcw, Square,
+  RotateCcw, RulerDimensionLine, Square,
+  Sun,
 } from 'lucide-react';
 import { IconGroup } from '@renderer/components/icon-group';
 import { useShapeInspector } from './use-shape-inspector';
 import { Section } from './inspector-section';
-import { StrokeSectionFields, ShadowSectionFields } from './effect-section-fields';
 import { EmptyState } from '../../components/display/empty-state';
+import { StrokePosition } from '@core/types';
+import { parseNumber } from '@renderer/utils/slides';
+import { Label } from '@renderer/components/display/text';
+
+const STROKE_POSITION_OPTIONS = [
+  { value: 'inside', label: 'Inside' },
+  { value: 'center', label: 'Center' },
+  { value: 'outside', label: 'Outside' },
+];
 
 export function ShapeElementInspector() {
   const result = useShapeInspector();
@@ -35,7 +44,7 @@ export function ShapeElementInspector() {
     <fieldset className={cn('m-0 min-w-0 border-0 p-0', locked && 'opacity-50')} disabled={locked}>
       <Section.Root>
         <Section.Header>
-          <span>Position</span>
+          <Label.xs>Position</Label.xs>
         </Section.Header>
         <Section.Body>
           <Section.Row>
@@ -91,7 +100,7 @@ export function ShapeElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <span>Layout</span>
+          <Label.xs>Layout</Label.xs>
         </Section.Header>
         <Section.Body>
           <Section.Row>
@@ -107,7 +116,7 @@ export function ShapeElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <span>Appearance</span>
+          <Label.xs>Appearance</Label.xs>
         </Section.Header>
         <Section.Body>
           <Section.Row>
@@ -123,8 +132,8 @@ export function ShapeElementInspector() {
 
       <Section.Root>
         <Section.Header>
-          <Section.Checkbox checked={visual.fillEnabled} onChange={handleFillToggle} />
-          <span className='font-medium ml-2'>{`${styleLabelPrefix}Fill`}</span>
+          <Label.xs>{`${styleLabelPrefix}Fill`}</Label.xs>
+          <Section.Checkbox className='ml-auto' checked={visual.fillEnabled} onChange={handleFillToggle} />
         </Section.Header>
         {visual.fillEnabled ? (
           <Section.Body>
@@ -135,27 +144,52 @@ export function ShapeElementInspector() {
         ) : null}
       </Section.Root>
 
-      <StrokeSectionFields
-        label={`${styleLabelPrefix}Stroke`}
-        enabled={visual.strokeEnabled}
-        color={visual.strokeColor}
-        width={visual.strokeWidth}
-        position={visual.strokePosition}
-        onToggle={(enabled) => updateVisual({ strokeEnabled: enabled })}
-        onUpdate={updateVisual}
-      />
+      <Section.Root>
+        <Section.Header>
+          <Label.xs>Text Stroke</Label.xs>
+          <Section.Checkbox className='ml-auto' checked={visual.strokeEnabled} onChange={(enabled) => updateVisual({ strokeEnabled: enabled })} />
+        </Section.Header>
+        {visual.strokeEnabled ? (
+          <Section.Body>
+            <Section.Row lead>
+              <ColorPicker value={visual.strokeColor} onChange={(value: string) => { updateVisual({ strokeColor: value }); }} />
+            </Section.Row>
+            <Section.Row>
+              <FieldSelect value={visual.strokePosition} onChange={(value: string) => { updateVisual({ strokePosition: value as StrokePosition }); }} options={STROKE_POSITION_OPTIONS} />
+              <FieldInput type="number" value={visual.strokeWidth} onChange={(value: string) => { updateVisual({ strokeWidth: Math.max(0, parseNumber(value, visual.strokeWidth)) }); }}>
+                <FieldIcon><RulerDimensionLine size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+          </Section.Body>
+        ) : null}
+      </Section.Root>
 
-      <ShadowSectionFields
-        label={`${styleLabelPrefix}Shadow`}
-        enabled={visual.shadowEnabled}
-        color={visual.shadowColor}
-        blur={visual.shadowBlur}
-        offsetX={visual.shadowOffsetX}
-        offsetY={visual.shadowOffsetY}
-        onToggle={(enabled) => updateVisual({ shadowEnabled: enabled })}
-        onUpdate={updateVisual}
-      />
-
+      <Section.Root>
+        <Section.Header>
+          <Label.xs>Text Shadow</Label.xs>
+          <Section.Checkbox className='ml-auto' checked={visual.shadowEnabled} onChange={(enabled) => updateVisual({ shadowEnabled: enabled })} />
+        </Section.Header>
+        {visual.shadowEnabled ? (
+          <Section.Body>
+            <Section.Row>
+              <FieldInput type="number" value={visual.shadowOffsetX} onChange={(value: string) => { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetX) }); }}>
+                <FieldIcon><MoveHorizontal size={14} /></FieldIcon>
+              </FieldInput>
+              <FieldInput type="number" value={visual.shadowOffsetY} onChange={(value: string) => { updateVisual({ shadowOffsetX: parseNumber(value, visual.shadowOffsetY) }); }}>
+                <FieldIcon><MoveVertical size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+            <Section.Row>
+              <FieldInput type="number" value={visual.shadowBlur} onChange={(value: string) => { updateVisual({ shadowBlur: Math.max(0, parseNumber(value, visual.shadowBlur)) }); }}>
+                <FieldIcon><Sun size={14} /></FieldIcon>
+              </FieldInput>
+            </Section.Row>
+            <Section.Row lead>
+              <ColorPicker value={visual.shadowColor} onChange={(value: string) => { updateVisual({ shadowColor: value }); }} />
+            </Section.Row>
+          </Section.Body>
+        ) : null}
+      </Section.Root>
     </fieldset>
   );
 }

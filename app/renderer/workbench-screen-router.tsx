@@ -7,9 +7,7 @@ import { ShowScreen } from './screens/show/page';
 import { TemplateEditorScreen } from './screens/template-editor/page';
 
 export function WorkbenchScreenRouter() {
-  const {
-    state: { workbenchMode },
-  } = useWorkbench();
+  const { state: { workbenchMode } } = useWorkbench();
 
   useKeyboardShortcuts();
 
