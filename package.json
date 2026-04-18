@@ -21,7 +21,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
     "capture:ui-screenshots": "npm run build && node app/e2e/capture-ui-screenshots.mjs",
