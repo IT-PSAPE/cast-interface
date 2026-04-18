@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { SortableBlock } from './doc-sortable-block'
+import { BlockMenu } from './doc-block-menu'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
@@ -19,15 +20,23 @@ type DocEditorProps = {
     onChange?: (blocks: Block[]) => void
 }
 
+type MenuState = { x: number; y: number; anchorBlockId: string }
+
 export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
     const [blocks, setBlocks] = useState<Block[]>(
         () => initialBlocks ?? [{ id: uid(), content: '' }],
     )
-    const [openMenu, setOpenMenu] = useState<string | null>(null)
+    const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(() => new Set())
+    const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
+    const [menuState, setMenuState] = useState<MenuState | null>(null)
+    const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
     const contentRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
     const blocksRef = useRef(blocks)
+    const selectedRef = useRef(selectedBlockIds)
+    const rootRef = useRef<HTMLDivElement | null>(null)
     useEffect(() => { blocksRef.current = blocks }, [blocks])
+    useEffect(() => { selectedRef.current = selectedBlockIds }, [selectedBlockIds])
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -46,15 +55,6 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             el.focus()
             const end = el.value.length
             el.setSelectionRange(end, end)
-        })
-    }, [])
-
-    const focusStart = useCallback((id: string) => {
-        requestAnimationFrame(() => {
-            const el = contentRefs.current[id]
-            if (!el) return
-            el.focus()
-            el.setSelectionRange(0, 0)
         })
     }, [])
 
@@ -155,64 +155,251 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         })
     }, [])
 
-    const handleMenuAction = useCallback((blockId: string, action: string) => {
-        if (action === 'delete') {
-            deleteBlock(blockId)
-        } else if (action === 'duplicate') {
-            const block = blocksRef.current.find(b => b.id === blockId)
-            if (block) addBlockAfter(blockId, block.content)
-        } else if (action === 'move-top' || action === 'move-bottom') {
-            setBlocks(prev => {
-                const idx = prev.findIndex(b => b.id === blockId)
-                if (idx === -1) return prev
-                const next = [...prev]
-                const [moved] = next.splice(idx, 1)
-                return action === 'move-top' ? [moved, ...next] : [...next, moved]
+    // ── Selection ───────────────────────────────────────────────────
+
+    const clearSelection = useCallback(() => {
+        setSelectedBlockIds(prev => (prev.size === 0 ? prev : new Set()))
+        setLastSelectedId(null)
+    }, [])
+
+    const selectBlock = useCallback((blockId: string, modifiers: { shift?: boolean; meta?: boolean }) => {
+        const curr = blocksRef.current
+        setSelectedBlockIds(prev => {
+            if (modifiers.shift && lastSelectedId) {
+                const startIdx = curr.findIndex(b => b.id === lastSelectedId)
+                const endIdx = curr.findIndex(b => b.id === blockId)
+                if (startIdx === -1 || endIdx === -1) return new Set([blockId])
+                const [lo, hi] = startIdx <= endIdx ? [startIdx, endIdx] : [endIdx, startIdx]
+                return new Set(curr.slice(lo, hi + 1).map(b => b.id))
+            }
+            if (modifiers.meta) {
+                const next = new Set(prev)
+                if (next.has(blockId)) next.delete(blockId)
+                else next.add(blockId)
+                return next
+            }
+            if (prev.size === 1 && prev.has(blockId)) return new Set()
+            return new Set([blockId])
+        })
+        setLastSelectedId(blockId)
+    }, [lastSelectedId])
+
+    const deleteSelectedBlocks = useCallback(() => {
+        const selected = selectedRef.current
+        if (selected.size === 0) return
+        const curr = blocksRef.current
+        if (curr.length <= selected.size) {
+            // Don't allow deleting all — keep one empty block
+            const keepId = uid()
+            setBlocks([{ id: keepId, content: '' }])
+            clearSelection()
+            requestAnimationFrame(() => {
+                const el = contentRefs.current[keepId]
+                el?.focus()
             })
+            return
         }
-    }, [deleteBlock, addBlockAfter])
+        const firstSelectedIdx = curr.findIndex(b => selected.has(b.id))
+        const focusTargetIdx = Math.max(0, firstSelectedIdx - 1)
+        const focusTargetId = curr.filter(b => !selected.has(b.id))[Math.min(focusTargetIdx, curr.length - selected.size - 1)]?.id
+        setBlocks(prev => prev.filter(b => !selected.has(b.id)))
+        clearSelection()
+        if (focusTargetId) focusEnd(focusTargetId)
+    }, [clearSelection, focusEnd])
+
+    const moveSelectedBlocks = useCallback((direction: 'up' | 'down') => {
+        const selected = selectedRef.current
+        if (selected.size === 0) return
+        setBlocks(prev => {
+            const selectedIndices = prev
+                .map((b, i) => (selected.has(b.id) ? i : -1))
+                .filter(i => i >= 0)
+            if (selectedIndices.length === 0) return prev
+            if (direction === 'up' && selectedIndices[0] === 0) return prev
+            if (direction === 'down' && selectedIndices[selectedIndices.length - 1] === prev.length - 1) return prev
+            const next = [...prev]
+            const ordered = direction === 'up' ? selectedIndices : [...selectedIndices].reverse()
+            const delta = direction === 'up' ? -1 : 1
+            for (const idx of ordered) {
+                const swap = idx + delta
+                ;[next[swap], next[idx]] = [next[idx], next[swap]]
+            }
+            return next
+        })
+    }, [])
+
+    // Focus the root when selection becomes active so keyboard handlers receive events.
+    useEffect(() => {
+        if (selectedBlockIds.size === 0) return
+        if (document.activeElement instanceof HTMLTextAreaElement) return
+        rootRef.current?.focus()
+    }, [selectedBlockIds])
+
+    const handleRootKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (selectedBlockIds.size === 0) return
+        if (event.target instanceof HTMLTextAreaElement) return
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault()
+            event.stopPropagation()
+            deleteSelectedBlocks()
+            return
+        }
+        if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            event.stopPropagation()
+            moveSelectedBlocks('up')
+            return
+        }
+        if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            event.stopPropagation()
+            moveSelectedBlocks('down')
+            return
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            clearSelection()
+        }
+    }, [clearSelection, deleteSelectedBlocks, moveSelectedBlocks, selectedBlockIds.size])
+
+    // ── Menu ────────────────────────────────────────────────────────
+
+    const openMenuForBlock = useCallback((event: React.MouseEvent, blockId: string) => {
+        event.preventDefault()
+        // If the block isn't already part of the selection, make it the sole selection.
+        setSelectedBlockIds(prev => (prev.has(blockId) ? prev : new Set([blockId])))
+        setLastSelectedId(blockId)
+        setMenuState({ x: event.clientX, y: event.clientY, anchorBlockId: blockId })
+    }, [])
+
+    const closeMenu = useCallback(() => {
+        setMenuState(null)
+    }, [])
+
+    const duplicateSelected = useCallback(() => {
+        const selected = selectedRef.current
+        if (selected.size === 0) return
+        setBlocks(prev => {
+            const next: Block[] = []
+            for (const block of prev) {
+                next.push(block)
+                if (selected.has(block.id)) {
+                    next.push({ id: uid(), content: block.content })
+                }
+            }
+            return next
+        })
+    }, [])
+
+    const handleMenuAction = useCallback((action: string) => {
+        closeMenu()
+        if (action === 'delete') {
+            deleteSelectedBlocks()
+        } else if (action === 'duplicate') {
+            duplicateSelected()
+        } else if (action === 'move-up') {
+            moveSelectedBlocks('up')
+        } else if (action === 'move-down') {
+            moveSelectedBlocks('down')
+        }
+    }, [closeMenu, deleteSelectedBlocks, duplicateSelected, moveSelectedBlocks])
+
+    const handleGripClick = useCallback((event: React.MouseEvent, blockId: string) => {
+        event.preventDefault()
+        selectBlock(blockId, { shift: event.shiftKey, meta: event.metaKey || event.ctrlKey })
+    }, [selectBlock])
+
+    const handleTextareaFocus = useCallback(() => {
+        clearSelection()
+    }, [clearSelection])
+
+    function handleDragStart(event: DragStartEvent) {
+        closeMenu()
+        setActiveDragId(String(event.active.id))
+    }
 
     function handleDragEnd(event: DragEndEvent) {
-        setOpenMenu(null)
         const { active, over } = event
+        const activeId = String(active.id)
+        const selectedAtDragStart = selectedRef.current
+        const wasGroupDrag = selectedAtDragStart.has(activeId) && selectedAtDragStart.size > 1
+        setActiveDragId(null)
         if (!over || active.id === over.id) return
+        const overId = String(over.id)
+
         setBlocks(prev => {
-            const oldIndex = prev.findIndex(b => b.id === active.id)
-            const newIndex = prev.findIndex(b => b.id === over.id)
-            return arrayMove(prev, oldIndex, newIndex)
+            const oldIndex = prev.findIndex(b => b.id === activeId)
+            const newIndex = prev.findIndex(b => b.id === overId)
+            if (oldIndex === -1 || newIndex === -1) return prev
+            if (!wasGroupDrag) return arrayMove(prev, oldIndex, newIndex)
+            // Group drag: drop the entire selection around the drop target,
+            // preserving the group's internal order.
+            if (selectedAtDragStart.has(overId)) return prev
+            const selectedBlocks = prev.filter(b => selectedAtDragStart.has(b.id))
+            const unselected = prev.filter(b => !selectedAtDragStart.has(b.id))
+            const insertAtInUnselected = unselected.findIndex(b => b.id === overId)
+            if (insertAtInUnselected === -1) return prev
+            const draggingDown = oldIndex < newIndex
+            const insertIdx = draggingDown ? insertAtInUnselected + 1 : insertAtInUnselected
+            return [
+                ...unselected.slice(0, insertIdx),
+                ...selectedBlocks,
+                ...unselected.slice(insertIdx),
+            ]
         })
     }
 
     // ── Render ──────────────────────────────────────────────────────
 
     return (
-        <div className="w-full max-w-[680px]">
+        <div
+            ref={rootRef}
+            tabIndex={-1}
+            onKeyDown={handleRootKeyDown}
+            className="w-full max-w-[680px] outline-none"
+        >
             <div className="">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext
                         items={blocks.map(b => b.id)}
                         strategy={verticalListSortingStrategy}
                     >
-                        {blocks.map((block, index) => (
-                            <SortableBlock
-                                key={block.id}
-                                block={block}
-                                isMenuOpen={openMenu === block.id}
-                                contentRef={el => { contentRefs.current[block.id] = el }}
-                                onUpdate={content => updateBlock(block.id, content)}
-                                onSplit={(before, after) => splitBlock(block.id, before, after)}
-                                onDelete={() => deleteBlock(block.id)}
-                                onMergeWithPrev={text => mergeWithPrev(block.id, text)}
-                                onMenuToggle={() => setOpenMenu(prev => prev === block.id ? null : block.id)}
-                                onMenuClose={() => setOpenMenu(null)}
-                                onMenuAction={action => handleMenuAction(block.id, action)}
-                                onAddBelow={() => addBlockAfter(block.id)}
-                                onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
-                            />
-                        ))}
+                        {blocks.map((block) => {
+                            const isGroupDragging = activeDragId !== null
+                                && selectedBlockIds.size > 1
+                                && selectedBlockIds.has(activeDragId)
+                                && selectedBlockIds.has(block.id)
+                            return (
+                                <SortableBlock
+                                    key={block.id}
+                                    block={block}
+                                    isSelected={selectedBlockIds.has(block.id)}
+                                    isGroupDragging={isGroupDragging}
+                                    contentRef={el => { contentRefs.current[block.id] = el }}
+                                    onUpdate={content => updateBlock(block.id, content)}
+                                    onSplit={(before, after) => splitBlock(block.id, before, after)}
+                                    onDelete={() => deleteBlock(block.id)}
+                                    onMergeWithPrev={text => mergeWithPrev(block.id, text)}
+                                    onGripClick={event => handleGripClick(event, block.id)}
+                                    onContextMenu={event => openMenuForBlock(event, block.id)}
+                                    onAddBelow={() => addBlockAfter(block.id)}
+                                    onTextareaFocus={handleTextareaFocus}
+                                    onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
+                                />
+                            )
+                        })}
                     </SortableContext>
                 </DndContext>
             </div>
+            {menuState ? (
+                <BlockMenu
+                    x={menuState.x}
+                    y={menuState.y}
+                    onAction={handleMenuAction}
+                    onClose={closeMenu}
+                />
+            ) : null}
         </div>
     )
 }

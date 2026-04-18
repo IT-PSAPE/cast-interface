@@ -59,13 +59,15 @@ function Root({ children, closeOnBackdropClick = true, closeOnEscape = true, def
     setOpenState(false);
   }, [setOpenState]);
 
+  const { register: registerOverlay, unregister: unregisterOverlay } = overlayStack;
+
   useEffect(() => {
     if (!isOpen) return undefined;
-    overlayStack.register(dialogId);
+    registerOverlay(dialogId);
     return () => {
-      overlayStack.unregister(dialogId);
+      unregisterOverlay(dialogId);
     };
-  }, [dialogId, isOpen, overlayStack]);
+  }, [dialogId, isOpen, registerOverlay, unregisterOverlay]);
 
   useEffect(() => {
     if (!closeOnEscape || !isOpen || !isTopmost) return undefined;

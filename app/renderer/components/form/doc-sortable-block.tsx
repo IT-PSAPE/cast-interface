@@ -3,21 +3,21 @@ import { GripHorizontal, Plus } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@renderer/utils/cn'
-import { BlockMenu } from './doc-block-menu'
 import type { Block } from './doc-editor'
 
 export type SortableBlockProps = {
     block: Block
-    isMenuOpen: boolean
+    isSelected: boolean
+    isGroupDragging: boolean
     contentRef: (el: HTMLTextAreaElement | null) => void
     onUpdate: (content: string) => void
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
-    onMenuToggle: () => void
-    onMenuClose: () => void
-    onMenuAction: (action: string) => void
+    onGripClick: (event: React.MouseEvent) => void
+    onContextMenu: (event: React.MouseEvent) => void
     onAddBelow: () => void
+    onTextareaFocus: () => void
     onPaste: (before: string, segments: string[], after: string) => void
 }
 
@@ -32,7 +32,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onMenuToggle, onMenuClose, onMenuAction, onAddBelow, onPaste }: SortableBlockProps) {
+export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onGripClick, onContextMenu, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
     const style = { transform: CSS.Transform.toString(transform), transition }
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -83,19 +83,25 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onSplit
         onUpdate(e.currentTarget.value)
     }
 
+    const handleRowContextMenu = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).tagName === 'TEXTAREA') return
+        onContextMenu(e)
+    }
+
     return (
         <div
             ref={setNodeRef}
             style={style}
+            onContextMenu={handleRowContextMenu}
             className={cn(
                 'group relative flex items-start rounded-md',
-                isDragging ? 'opacity-25' : 'hover:bg-secondary',
-                isMenuOpen && 'bg-secondary',
+                isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-secondary',
+                isSelected && 'bg-brand/10 ring-1 ring-brand/40',
             )}
         >
             <div className={cn(
                 'absolute -left-13 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity',
-                isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
             )}>
                 <button
                     type="button"
@@ -106,26 +112,18 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onSplit
                     <Plus size={12} />
                 </button>
 
-                <div className="relative">
-                    <button
-                        type="button"
-                        className="flex size-5.5 cursor-grab items-center justify-center rounded text-quaternary hover:bg-tertiary hover:text-secondary"
-                        onClick={onMenuToggle}
-                        {...listeners}
-                        {...attributes}
-                    >
-                        <GripHorizontal size={12} />
-                    </button>
-                    {isMenuOpen ? (
-                        <BlockMenu
-                            onAction={action => {
-                                onMenuClose()
-                                onMenuAction(action)
-                            }}
-                            onClose={onMenuClose}
-                        />
-                    ) : null}
-                </div>
+                <button
+                    type="button"
+                    className={cn(
+                        'flex size-5.5 cursor-grab items-center justify-center rounded hover:bg-tertiary hover:text-secondary',
+                        isSelected ? 'text-brand' : 'text-quaternary',
+                    )}
+                    onClick={onGripClick}
+                    {...listeners}
+                    {...attributes}
+                >
+                    <GripHorizontal size={12} />
+                </button>
             </div>
 
             <textarea
@@ -138,6 +136,7 @@ export function SortableBlock({ block, isMenuOpen, contentRef, onUpdate, onSplit
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 onChange={handleChange}
+                onFocus={onTextareaFocus}
             />
         </div>
     )
