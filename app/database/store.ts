@@ -47,6 +47,7 @@ import type {
   TemplateUpdateInput,
 } from '@core/types';
 import { isBrokenMediaSource, toCastMediaSource } from './media-source-utils';
+import type { SnapshotPatch } from '@core/snapshot-patch';
 
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
@@ -172,6 +173,7 @@ function legacyOverlayElement(row: {
 
 export class CastRepository {
   private db: SqliteDatabase;
+  private patchVersion = 0;
 
   constructor() {
     const userData = app.getPath('userData');
@@ -1934,43 +1936,43 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  setSlideOrder(input: SlideOrderUpdateInput): AppSnapshot {
+  setSlideOrder(input: SlideOrderUpdateInput): SnapshotPatch {
     const now = nowIso();
-    
+
     // Get the current slide to find its parent
     const slide = this.db
       .prepare('SELECT id, presentation_id, lyric_id FROM slides WHERE id = ?')
       .get(input.slideId) as { id: string; presentation_id: string | null; lyric_id: string | null } | undefined;
-    
-    if (!slide) return this.getSnapshot();
-    
+
+    if (!slide) return this.buildPatch({});
+
     // Determine parent column and value
     const isDecksSlide = slide.presentation_id !== null;
     const ownerColumn = isDecksSlide ? 'presentation_id' : 'lyric_id';
     const ownerId = isDecksSlide ? slide.presentation_id : slide.lyric_id;
-    
-    if (!ownerId) return this.getSnapshot();
-    
+
+    if (!ownerId) return this.buildPatch({});
+
     // Get all sibling slides sorted by current order_index
     const siblings = this.db
       .prepare(`SELECT id, order_index FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
       .all(ownerId) as { id: string; order_index: number }[];
-    
+
     // Find current position
     const currentIndex = siblings.findIndex(s => s.id === input.slideId);
-    if (currentIndex === -1) return this.getSnapshot();
-    
+    if (currentIndex === -1) return this.buildPatch({});
+
     // Clamp newOrder to valid range
     const maxOrder = siblings.length - 1;
     const targetOrder = Math.max(0, Math.min(input.newOrder, maxOrder));
-    
+
     // No-op if already at target position
-    if (currentIndex === targetOrder) return this.getSnapshot();
-    
+    if (currentIndex === targetOrder) return this.buildPatch({});
+
     // Reorder siblings by removing current and inserting at newOrder
     const reordered = siblings.filter((_, i) => i !== currentIndex);
     reordered.splice(targetOrder, 0, siblings[currentIndex]);
-    
+
     // Update all siblings with new order_index values
     const tx = this.db.transaction(() => {
       reordered.forEach((sibling, index) => {
@@ -1979,13 +1981,15 @@ export class CastRepository {
           .run(index, now, sibling.id);
       });
     });
-    
+
     tx();
-    return this.getSnapshot();
+    // Every sibling's order_index (and updated_at) changed, so upsert all of them.
+    return this.buildPatch({ upsertSlideIds: reordered.map((sibling) => sibling.id) });
   }
 
-  createElement(input: ElementCreateInput): AppSnapshot {
+  createElement(input: ElementCreateInput): SnapshotPatch {
     const now = nowIso();
+    const newId = input.id ?? createId();
     this.db
       .prepare(
         `INSERT INTO slide_elements
@@ -1993,7 +1997,7 @@ export class CastRepository {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        input.id ?? createId(),
+        newId,
         input.slideId,
         input.type,
         input.x,
@@ -2008,21 +2012,24 @@ export class CastRepository {
         now,
         now
       );
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: [newId] });
   }
 
-  createElementsBatch(inputs: ElementCreateInput[]): AppSnapshot {
-    if (inputs.length === 0) return this.getSnapshot();
+  createElementsBatch(inputs: ElementCreateInput[]): SnapshotPatch {
+    if (inputs.length === 0) return this.buildPatch({});
     const now = nowIso();
     const insert = this.db.prepare(
       `INSERT INTO slide_elements
         (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
+    const newIds: Id[] = [];
     const tx = this.db.transaction((batchInputs: ElementCreateInput[]) => {
       for (const input of batchInputs) {
+        const newId = input.id ?? createId();
+        newIds.push(newId);
         insert.run(
-          input.id ?? createId(),
+          newId,
           input.slideId,
           input.type,
           input.x,
@@ -2040,10 +2047,10 @@ export class CastRepository {
       }
     });
     tx(inputs);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: newIds });
   }
 
-  updateElement(input: ElementUpdateInput): AppSnapshot {
+  updateElement(input: ElementUpdateInput): SnapshotPatch {
     const now = nowIso();
     const existing = this.db
       .prepare('SELECT * FROM slide_elements WHERE id = ?')
@@ -2062,7 +2069,7 @@ export class CastRepository {
         }
       | undefined;
 
-    if (!existing) return this.getSnapshot();
+    if (!existing) return this.buildPatch({});
 
     this.db
       .prepare(
@@ -2084,17 +2091,18 @@ export class CastRepository {
         input.id
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: [input.id] });
   }
 
-  updateElementsBatch(inputs: ElementUpdateInput[]): AppSnapshot {
-    if (inputs.length === 0) return this.getSnapshot();
+  updateElementsBatch(inputs: ElementUpdateInput[]): SnapshotPatch {
+    if (inputs.length === 0) return this.buildPatch({});
     const selectExisting = this.db.prepare('SELECT * FROM slide_elements WHERE id = ?');
     const update = this.db.prepare(
       `UPDATE slide_elements
        SET x = ?, y = ?, width = ?, height = ?, rotation = ?, opacity = ?, z_index = ?, layer = ?, payload_json = ?, updated_at = ?
        WHERE id = ?`
     );
+    const updatedIds: Id[] = [];
     const tx = this.db.transaction((batchInputs: ElementUpdateInput[]) => {
       for (const input of batchInputs) {
         const existing = selectExisting.get(input.id) as
@@ -2125,25 +2133,26 @@ export class CastRepository {
           nowIso(),
           input.id
         );
+        updatedIds.push(input.id);
       }
     });
     tx(inputs);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: updatedIds });
   }
 
-  deleteElement(id: Id): AppSnapshot {
+  deleteElement(id: Id): SnapshotPatch {
     this.db.prepare('DELETE FROM slide_elements WHERE id = ?').run(id);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedSlideElementIds: [id] });
   }
 
-  deleteElementsBatch(ids: Id[]): AppSnapshot {
-    if (ids.length === 0) return this.getSnapshot();
+  deleteElementsBatch(ids: Id[]): SnapshotPatch {
+    if (ids.length === 0) return this.buildPatch({});
     const del = this.db.prepare('DELETE FROM slide_elements WHERE id = ?');
     const tx = this.db.transaction((batchIds: Id[]) => {
       for (const id of batchIds) del.run(id);
     });
     tx(ids);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedSlideElementIds: [...ids] });
   }
 
   createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): AppSnapshot {
@@ -2595,6 +2604,120 @@ export class CastRepository {
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
     };
+  }
+
+  // ─── Patch helpers (Stage 3 of perf plan) ─────────────────────────
+  //
+  // Build a SnapshotPatch from ids touched by a mutation. The resulting
+  // patch carries just the rows that changed, not the entire snapshot.
+  // Version is monotonically increasing for de-dup / ordering at the
+  // renderer. See app/core/snapshot-patch.ts.
+
+  private nextPatchVersion(): number {
+    this.patchVersion += 1;
+    return this.patchVersion;
+  }
+
+  private buildPatch(spec: {
+    upsertSlideIds?: Id[];
+    upsertSlideElementIds?: Id[];
+    deletedSlideIds?: Id[];
+    deletedSlideElementIds?: Id[];
+  }): SnapshotPatch {
+    const patch: SnapshotPatch = {
+      version: this.nextPatchVersion(),
+      upserts: {},
+      deletes: {},
+    };
+    if (spec.upsertSlideIds && spec.upsertSlideIds.length > 0) {
+      patch.upserts.slides = this.getSlidesByIds(spec.upsertSlideIds);
+    }
+    if (spec.upsertSlideElementIds && spec.upsertSlideElementIds.length > 0) {
+      patch.upserts.slideElements = this.getSlideElementsByIds(spec.upsertSlideElementIds);
+    }
+    if (spec.deletedSlideIds && spec.deletedSlideIds.length > 0) {
+      patch.deletes.slides = [...spec.deletedSlideIds];
+    }
+    if (spec.deletedSlideElementIds && spec.deletedSlideElementIds.length > 0) {
+      patch.deletes.slideElements = [...spec.deletedSlideElementIds];
+    }
+    return patch;
+  }
+
+  private getSlidesByIds(ids: Id[]): Slide[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at
+         FROM slides
+         WHERE id IN (${placeholders})`
+      )
+      .all(...ids) as Array<{
+        id: string;
+        presentation_id: string | null;
+        lyric_id: string | null;
+        width: number;
+        height: number;
+        notes: string;
+        order_index: number;
+        created_at: string;
+        updated_at: string;
+      }>;
+    return rows.map((row) => ({
+      id: row.id,
+      presentationId: row.presentation_id,
+      lyricId: row.lyric_id,
+      width: row.width,
+      height: row.height,
+      notes: row.notes,
+      order: row.order_index,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getSlideElementsByIds(ids: Id[]): SlideElement[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at
+         FROM slide_elements
+         WHERE id IN (${placeholders})`
+      )
+      .all(...ids) as Array<{
+        id: string;
+        slide_id: string;
+        type: SlideElement['type'];
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        rotation: number;
+        opacity: number;
+        z_index: number;
+        layer: SlideElement['layer'];
+        payload_json: string;
+        created_at: string;
+        updated_at: string;
+      }>;
+    return rows.map((row) => ({
+      id: row.id,
+      slideId: row.slide_id,
+      type: row.type,
+      x: row.x,
+      y: row.y,
+      width: row.width,
+      height: row.height,
+      rotation: row.rotation,
+      opacity: row.opacity,
+      zIndex: row.z_index,
+      layer: row.layer,
+      payload: parseJson<SlideElementPayload>(row.payload_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
   }
 
   private getSlideElementsBySlideId(slideId: Id): SlideElement[] {

@@ -15,7 +15,7 @@ interface SlideOutlineTextEditingResult {
 }
 
 export function useSlideOutlineTextEditing(): SlideOutlineTextEditingResult {
-  const { mutate, setStatusText } = useCast();
+  const { mutatePatch, setStatusText } = useCast();
 
   const updateText = useCallback((input: UpdateSlideOutlineTextInput) => {
     if (!input.textEditable || !input.textElementId) return;
@@ -26,7 +26,7 @@ export function useSlideOutlineTextEditing(): SlideOutlineTextEditingResult {
     const currentText = String(textElement.payload.text ?? '');
     if (input.nextText === currentText) return;
 
-    void mutate(() => window.castApi.updateElement({
+    void mutatePatch(() => window.castApi.updateElement({
       id: textElement.id,
       payload: {
         ...textElement.payload,
@@ -35,7 +35,7 @@ export function useSlideOutlineTextEditing(): SlideOutlineTextEditingResult {
     }));
 
     setStatusText(`Updated slide ${input.slideIndex + 1} text`);
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   return { updateText };
 }

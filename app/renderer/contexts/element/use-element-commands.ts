@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { isLyricDeckItem } from '@core/deck-items';
 import type { AppSnapshot, DeckItem, ElementCreateInput, Id, MediaAsset, Slide, SlideElement } from '@core/types';
+import type { SnapshotPatch } from '@core/snapshot-patch';
 import { castMediaSrc, getOverlayDefaults, typeFromFile } from '../../utils/slides';
 import { useOverlayEditor, useDeckEditor, useTemplateEditor } from '../asset-editor/asset-editor-context';
 import { useProjectContent } from '../use-project-content';
@@ -20,10 +21,11 @@ interface CommandsParams {
   currentDeckItem: DeckItem | null;
   currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+  mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText }: CommandsParams) {
   const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
@@ -89,12 +91,12 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
       setStatusText('Added text element');
       return;
     }
-    await mutate(() => window.castApi.createElement({
+    await mutatePatch(() => window.castApi.createElement({
       slideId: currentSlide.id, type: 'text', x: 210, y: 460, width: 1500, height: 120,
       zIndex: 20, layer: 'content', payload: newTextPayload('New Text Element', 72, 'center', '700'),
     }));
     setStatusText('Added text element');
-  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricItem, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId, updateOverlayDraft]);
+  }, [currentOverlay, currentSlide, currentTemplate, existingTemplateTextElement, getSlideElements, isLyricItem, isLyricsTemplate, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, setStatusText, slideElementsBySlideId, updateOverlayDraft]);
 
   const createShape = useCallback(async () => {
     if (isOverlayEdit) {
@@ -115,12 +117,12 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
       setStatusText('Added shape element');
       return;
     }
-    await mutate(() => window.castApi.createElement({
+    await mutatePatch(() => window.castApi.createElement({
       slideId: currentSlide.id, type: 'shape', x: 260, y: 260, width: 1400, height: 560,
       zIndex: 2, layer: 'background', payload: newShapePayload(),
     }));
     setStatusText('Added shape element');
-  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
 
   const createFromMedia = useCallback(async (asset: MediaAsset, x: number, y: number) => {
     if (isOverlayEdit) {
@@ -165,9 +167,9 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
         payload: newTextPayload(`[AUDIO] ${asset.name}`, 42, 'left', '600'),
       };
     }
-    await mutate(() => window.castApi.createElement(input));
+    await mutatePatch(() => window.castApi.createElement(input));
     setStatusText(`Added ${asset.type} element`);
-  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
+  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
 
   const createOverlay = useCallback(async () => {
     await mutate(() => window.castApi.createOverlay(getOverlayDefaults({

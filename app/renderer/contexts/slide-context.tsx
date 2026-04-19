@@ -38,7 +38,7 @@ const SlideContext = createContext<SlideContextValue | null>(null);
 const NO_SLIDE_SELECTED = -1;
 
 export function SlideProvider({ children }: { children: ReactNode }) {
-  const { mutate, runOperation, setStatusText } = useCast();
+  const { mutate, mutatePatch, runOperation, setStatusText } = useCast();
   const {
     currentDeckItemId,
     currentPlaylistEntryId,
@@ -250,10 +250,10 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const newOrder = direction === 'up' ? sourceIndex - 1 : sourceIndex + 1;
     if (newOrder < 0 || newOrder >= slides.length) return;
     const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
-    await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder }));
+    await mutatePatch(() => window.castApi.setSlideOrder({ slideId, newOrder }));
     if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, newOrder);
     setStatusText(direction === 'up' ? 'Moved slide up' : 'Moved slide down');
-  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;

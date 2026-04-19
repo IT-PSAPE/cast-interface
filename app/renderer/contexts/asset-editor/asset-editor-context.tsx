@@ -75,7 +75,7 @@ const AssetEditorContext = createContext<AssetEditorContextValue | null>(null);
 // ─── Provider ───────────────────────────────────────────────────────
 
 export function AssetEditorProvider({ children }: { children: ReactNode }) {
-  const { mutate, setStatusText } = useCast();
+  const { mutate, mutatePatch, setStatusText } = useCast();
   const { state: { workbenchMode, overlayDefaults } } = useWorkbench();
   const { currentSlide } = useSlides();
   const {
@@ -478,33 +478,36 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
 
     setIsDeckPushingChanges(true);
     try {
-      await mutate(async () => {
-        let snapshot: AppSnapshot | null = null;
-        for (const slideId of pendingSlideIds) {
-          const persisted = persistedElementsBySlideId.get(slideId) ?? [];
-          const staged = stagedSlides[slideId] ?? [];
-          const diff = buildSnapshotDiff(persisted, staged);
-          if (diff.deletes.length > 0) snapshot = await window.castApi.deleteElementsBatch(diff.deletes);
-          if (diff.updates.length > 0) {
-            snapshot = diff.updates.length === 1
-              ? await window.castApi.updateElement(diff.updates[0])
-              : await window.castApi.updateElementsBatch(diff.updates);
-          }
-          if (diff.creates.length > 0) {
-            snapshot = diff.creates.length === 1
-              ? await window.castApi.createElement(diff.creates[0])
-              : await window.castApi.createElementsBatch(diff.creates);
-          }
+      // Each mutatePatch call applies its patch before the next runs,
+      // keeping the renderer snapshot in sync across the sequence.
+      for (const slideId of pendingSlideIds) {
+        const persisted = persistedElementsBySlideId.get(slideId) ?? [];
+        const staged = stagedSlides[slideId] ?? [];
+        const diff = buildSnapshotDiff(persisted, staged);
+        if (diff.deletes.length > 0) {
+          await mutatePatch(() => window.castApi.deleteElementsBatch(diff.deletes));
         }
-        if (snapshot) return snapshot;
-        return window.castApi.getSnapshot();
-      });
+        if (diff.updates.length > 0) {
+          await mutatePatch(() =>
+            diff.updates.length === 1
+              ? window.castApi.updateElement(diff.updates[0])
+              : window.castApi.updateElementsBatch(diff.updates),
+          );
+        }
+        if (diff.creates.length > 0) {
+          await mutatePatch(() =>
+            diff.creates.length === 1
+              ? window.castApi.createElement(diff.creates[0])
+              : window.castApi.createElementsBatch(diff.creates),
+          );
+        }
+      }
       setStagedSlides({});
       setStatusText('Slide changes pushed');
     } finally {
       setIsDeckPushingChanges(false);
     }
-  }, [isDeckPushingChanges, mutate, persistedElementsBySlideId, setStatusText, stagedSlides]);
+  }, [isDeckPushingChanges, mutatePatch, persistedElementsBySlideId, setStatusText, stagedSlides]);
 
   useEffect(() => {
     const previousMode = previousDeckModeRef.current;

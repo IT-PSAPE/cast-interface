@@ -16,7 +16,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
   const { currentDeckItem } = useNavigation();
   const { slides } = useSlides();
   const { slideElementsBySlideId } = useProjectContent();
-  const { mutate, runOperation, setStatusText } = useCast();
+  const { mutate, mutatePatch, runOperation, setStatusText } = useCast();
   const [isSaving, setIsSaving] = useState(false);
 
   const initialBlocks = useMemo<Block[]>(() => {
@@ -34,15 +34,15 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
     if (textElement && 'text' in textElement.payload) {
       const currentText = String(textElement.payload.text ?? '');
       if (currentText !== text) {
-        await mutate(() => window.castApi.updateElement({
+        await mutatePatch(() => window.castApi.updateElement({
           id: textElement.id,
           payload: { ...textElement.payload, text },
         }));
       }
       return;
     }
-    await mutate(() => window.castApi.createElement(buildLyricTextElement(slideId, text)));
-  }, [mutate]);
+    await mutatePatch(() => window.castApi.createElement(buildLyricTextElement(slideId, text)));
+  }, [mutatePatch]);
 
   const createSlideForRow = useCallback(async (lyricId: Id, text: string) => {
     const snapshot = await mutate(() => window.castApi.createSlide({ lyricId }));
@@ -86,7 +86,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
         }
 
         for (const [index, slideId] of orderedSlideIds.entries()) {
-          await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder: index }));
+          await mutatePatch(() => window.castApi.setSlideOrder({ slideId, newOrder: index }));
         }
 
         setStatusText('Saved lyrics');
@@ -98,7 +98,7 @@ export function useLyricEditorSave({ isOpen, onClose }: { isOpen: boolean; onClo
     } finally {
       setIsSaving(false);
     }
-  }, [createSlideForRow, currentDeckItem, mutate, onClose, runOperation, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
+  }, [createSlideForRow, currentDeckItem, mutate, mutatePatch, onClose, runOperation, saveRowText, setStatusText, slideElementsBySlideId, slideIds, slides]);
 
   return { initialBlocks, saveBlocks, isSaving };
 }

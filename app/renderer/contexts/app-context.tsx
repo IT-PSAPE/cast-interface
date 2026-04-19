@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createDefaultNdiOutputConfigs } from '@core/ndi';
 import type { AppSnapshot, NdiDiagnostics, NdiOutputConfig, NdiOutputConfigMap, NdiOutputName, NdiOutputState } from '@core/types';
+import { applyPatch, type SnapshotPatch } from '@core/snapshot-patch';
 import type { ThemeMode } from '../types/ui';
 import { useLocalStorage } from '../hooks/use-local-storage';
 
@@ -20,6 +21,7 @@ interface AppContextValue {
   };
   actions: {
     mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+    mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
     runOperation: <T>(text: string, action: () => Promise<T>) => Promise<T>;
     setStatusText: (text: string) => void;
     setThemeMode: (mode: ThemeMode) => void;
@@ -37,6 +39,7 @@ interface CastSlice {
   operationText: string | null;
   statusText: string;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+  mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
   runOperation: <T>(text: string, action: () => Promise<T>) => Promise<T>;
   setStatusText: (text: string) => void;
 }
@@ -82,9 +85,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [statusText, setStatusText] = useState('Ready');
   const mutateQueueRef = useRef<Promise<void>>(Promise.resolve());
   const operationDepthRef = useRef(0);
+  // Mirrors the `snapshot` React state synchronously so `mutatePatch` can
+  // apply a patch to the post-state and return the up-to-date AppSnapshot
+  // to its caller without waiting for the React commit.
+  const snapshotRef = useRef<AppSnapshot | null>(null);
+  const setSnapshotBoth = useCallback((value: AppSnapshot) => {
+    snapshotRef.current = value;
+    setSnapshot(value);
+  }, []);
 
   useEffect(() => {
-    void window.castApi.getSnapshot().then(setSnapshot).catch((error) => {
+    void window.castApi.getSnapshot().then((loaded) => {
+      snapshotRef.current = loaded;
+      setSnapshot(loaded);
+    }).catch((error) => {
       console.error('[AppProvider] Failed to load snapshot:', error);
       setStatusText('Failed to load data');
     });
@@ -94,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const run = async () => {
       try {
         const next = await action();
-        setSnapshot(next);
+        setSnapshotBoth(next);
         return next;
       } catch (error) {
         console.error('[AppProvider] Mutation failed:', error);
@@ -108,7 +122,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       () => undefined,
     );
     return queued;
-  }, []);
+  }, [setSnapshotBoth]);
+
+  // Like `mutate` but the action returns a `SnapshotPatch` instead of a
+  // full AppSnapshot. Applies the patch to the current snapshot and
+  // returns the updated AppSnapshot so existing callers that do
+  // `const next = await mutate(() => castApi.fooAction())` keep working.
+  const mutatePatch = useCallback((action: () => Promise<SnapshotPatch>) => {
+    const run = async (): Promise<AppSnapshot> => {
+      try {
+        const patch = await action();
+        const prev = snapshotRef.current;
+        if (!prev) throw new Error('Snapshot not loaded before mutatePatch call');
+        const next = applyPatch(prev, patch);
+        setSnapshotBoth(next);
+        return next;
+      } catch (error) {
+        console.error('[AppProvider] Patch mutation failed:', error);
+        setStatusText('Operation failed');
+        throw error;
+      }
+    };
+    const queued = mutateQueueRef.current.then(run, run);
+    mutateQueueRef.current = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    return queued;
+  }, [setSnapshotBoth]);
 
   const runOperation = useCallback(async <T,>(text: string, action: () => Promise<T>) => {
     operationDepthRef.current += 1;
@@ -200,13 +241,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const actions = useMemo<AppContextValue['actions']>(() => ({
     mutate,
+    mutatePatch,
     runOperation,
     setStatusText,
     setThemeMode,
     setNdiOutputEnabled,
     toggleAudienceOutput,
     updateNdiOutputConfig,
-  }), [mutate, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, updateNdiOutputConfig]);
+  }), [mutate, mutatePatch, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, updateNdiOutputConfig]);
 
   const value = useMemo<AppContextValue>(() => ({ state, actions }), [state, actions]);
 
@@ -229,6 +271,7 @@ export function useCast(): CastSlice {
     operationText: state.operationText,
     statusText: state.statusText,
     mutate: actions.mutate,
+    mutatePatch: actions.mutatePatch,
     runOperation: actions.runOperation,
     setStatusText: actions.setStatusText,
   };

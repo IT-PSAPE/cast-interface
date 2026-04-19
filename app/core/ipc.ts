@@ -19,6 +19,7 @@ import type {
   SlideNotesUpdateInput,
   SlideOrderUpdateInput
 } from './types';
+import type { SnapshotPatch } from './snapshot-patch';
 
 export interface MainApi {
   platform: NodeJS.Platform;
@@ -49,13 +50,13 @@ export interface MainApi {
   duplicateSlide: (slideId: Id) => Promise<AppSnapshot>;
   deleteSlide: (slideId: Id) => Promise<AppSnapshot>;
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<AppSnapshot>;
-  setSlideOrder: (input: SlideOrderUpdateInput) => Promise<AppSnapshot>;
-  createElement: (input: ElementCreateInput) => Promise<AppSnapshot>;
-  createElementsBatch: (inputs: ElementCreateInput[]) => Promise<AppSnapshot>;
-  updateElement: (input: ElementUpdateInput) => Promise<AppSnapshot>;
-  updateElementsBatch: (inputs: ElementUpdateInput[]) => Promise<AppSnapshot>;
-  deleteElement: (id: Id) => Promise<AppSnapshot>;
-  deleteElementsBatch: (ids: Id[]) => Promise<AppSnapshot>;
+  setSlideOrder: (input: SlideOrderUpdateInput) => Promise<SnapshotPatch>;
+  createElement: (input: ElementCreateInput) => Promise<SnapshotPatch>;
+  createElementsBatch: (inputs: ElementCreateInput[]) => Promise<SnapshotPatch>;
+  updateElement: (input: ElementUpdateInput) => Promise<SnapshotPatch>;
+  updateElementsBatch: (inputs: ElementUpdateInput[]) => Promise<SnapshotPatch>;
+  deleteElement: (id: Id) => Promise<SnapshotPatch>;
+  deleteElementsBatch: (ids: Id[]) => Promise<SnapshotPatch>;
   createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<AppSnapshot>;
   deleteMediaAsset: (id: Id) => Promise<AppSnapshot>;
   updateMediaAssetSrc: (id: Id, src: string) => Promise<AppSnapshot>;

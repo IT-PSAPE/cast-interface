@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
+import { Button } from '../controls/button'
 
 export type SortableBlockProps = {
     block: Block
@@ -94,36 +95,21 @@ export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, 
             style={style}
             onContextMenu={handleRowContextMenu}
             className={cn(
-                'group relative flex items-start rounded-md',
-                isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-secondary',
-                isSelected && 'bg-brand/10 ring-1 ring-brand/40',
+                'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25',
+                isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary',
+                isSelected && '!bg-brand_solid/10',
             )}
         >
             <div className={cn(
                 'absolute -left-13 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity',
-                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                'opacity-0 group-hover:opacity-100',
             )}>
-                <button
-                    type="button"
-                    className="flex size-5.5 items-center justify-center rounded text-quaternary hover:bg-tertiary hover:text-secondary"
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={onAddBelow}
-                >
-                    <Plus size={12} />
-                </button>
-
-                <button
-                    type="button"
-                    className={cn(
-                        'flex size-5.5 cursor-grab items-center justify-center rounded hover:bg-tertiary hover:text-secondary',
-                        isSelected ? 'text-brand' : 'text-quaternary',
-                    )}
-                    onClick={onGripClick}
-                    {...listeners}
-                    {...attributes}
-                >
-                    <GripHorizontal size={12} />
-                </button>
+                <Button.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
+                    <Plus />
+                </Button.Icon>
+                <Button.Icon variant='ghost' onClick={onGripClick} {...listeners} {...attributes}>
+                    <GripHorizontal />
+                </Button.Icon>
             </div>
 
             <textarea
