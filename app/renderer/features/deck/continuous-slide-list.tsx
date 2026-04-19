@@ -9,6 +9,7 @@ import type { OutlineSlideRow } from './use-slide-list-view';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { SlideOutlineRow } from './slide-list-row';
 import { EmptyState } from '../../components/display/empty-state';
+import { ScrollArea } from '../../components/layout/scroll-area';
 import type { RenderScene, SceneSurface } from '../canvas/scene-types';
 
 interface ContinuousSlideListProps {
@@ -92,7 +93,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
   }
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto p-2">
+    <ScrollArea className="p-2">
       <div className="flex flex-col gap-5" role="list" aria-label="Continuous playlist outline">
         {items.map((item) => (
           <OutlineSection
@@ -109,6 +110,6 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
           />
         ))}
       </div>
-    </section>
+    </ScrollArea>
   );
 }

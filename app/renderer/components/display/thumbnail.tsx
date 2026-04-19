@@ -1,4 +1,4 @@
-import { Children, isValidElement, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, type HTMLAttributes, type ReactElement, type ReactNode, type Ref } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -21,6 +21,7 @@ interface ThumbnailRootProps extends Omit<HTMLAttributes<HTMLDivElement>, 'child
   children: ReactNode;
   onDoubleClick?: () => void;
   selected?: boolean;
+  ref?: Ref<HTMLDivElement>;
 }
 
 interface ThumbnailSlotProps extends HTMLAttributes<HTMLDivElement> {
@@ -54,11 +55,12 @@ function Overlay(_props: ThumbnailOverlayProps) {
   return null;
 }
 
-function Row({ children, className, onClick, onDoubleClick, selected = false, ...rest }: ThumbnailRootProps) {
+function Row({ children, className, onClick, onDoubleClick, selected = false, ref, ...rest }: ThumbnailRootProps) {
   const slots = collectThumbnailSlots(children);
 
   return (
     <div
+      ref={ref}
       {...rest}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
@@ -75,11 +77,12 @@ function Row({ children, className, onClick, onDoubleClick, selected = false, ..
   );
 }
 
-function Tile({ children, className, onClick, onDoubleClick, selected = false, ...rest }: ThumbnailRootProps) {
+function Tile({ children, className, onClick, onDoubleClick, selected = false, ref, ...rest }: ThumbnailRootProps) {
   const slots = collectThumbnailSlots(children);
 
   return (
     <div
+      ref={ref}
       {...rest}
       onClick={onClick}
       onDoubleClick={onDoubleClick}

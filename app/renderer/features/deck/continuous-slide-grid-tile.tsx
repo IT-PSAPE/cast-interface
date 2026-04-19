@@ -3,6 +3,7 @@ import { Play } from 'lucide-react';
 import type { Id } from '@core/types';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
+import { useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { SceneStage } from '../canvas/scene-stage';
 import type { RenderScene } from '../canvas/scene-types';
 
@@ -20,6 +21,8 @@ interface ContinuousSlideGridTileProps {
 }
 
 function ContinuousSlideGridTileImpl({ entryId, itemId, index, scene, selected, isLive, isEmpty, textPreview, onActivate, onEdit }: ContinuousSlideGridTileProps) {
+  const ref = useScrollAreaActiveItem(selected);
+
   function handleClick() {
     onActivate(entryId, itemId, index);
   }
@@ -29,7 +32,7 @@ function ContinuousSlideGridTileImpl({ entryId, itemId, index, scene, selected, 
   }
 
   return (
-    <Thumbnail.Tile onClick={handleClick} onDoubleClick={handleDoubleClick} selected={selected}>
+    <Thumbnail.Tile ref={ref} onClick={handleClick} onDoubleClick={handleDoubleClick} selected={selected}>
       <Thumbnail.Body>
         <SceneFrame
           width={scene.width}
