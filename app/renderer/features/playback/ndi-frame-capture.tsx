@@ -10,12 +10,26 @@ import { SceneNodeText } from '../canvas/scene-node-text';
 import type { RenderNode } from '../canvas/scene-types';
 
 const FRAME_INTERVAL_MS = 1000 / 30;
+// If the scene doesn't change for this long, send a heartbeat frame so
+// NDI receivers don't flag the stream as stale.
+const HEARTBEAT_MS = 500;
 
 function renderNodeContent(node: RenderNode, onImageLoad?: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
   if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} surface="show" onLoad={onImageLoad} />;
   return null;
+}
+
+// Cheap signature used to decide whether the output has visibly changed
+// since the last capture. Video nodes are excluded because their contents
+// tick forward every frame without any RenderNode field changing.
+function sceneSignature(nodes: readonly RenderNode[], withAlpha: boolean): string {
+  let out = withAlpha ? 'a1' : 'a0';
+  for (const node of nodes) {
+    out += '|' + node.id + ':' + node.element.updatedAt + ':' + (node.visual.visible === false ? '0' : '1');
+  }
+  return out;
 }
 
 export function NdiFrameCapture() {
@@ -97,49 +111,45 @@ export function NdiFrameCapture() {
     captureFrame();
   }, [captureFrame]);
 
+  // Single RAF loop driving capture at ~30fps. Skips the capture/send when
+  // the scene hasn't changed and there are no video nodes, so an idle output
+  // costs ~zero IPC traffic. Sends a heartbeat frame every HEARTBEAT_MS so
+  // NDI receivers don't think the source died.
+  const withAlpha = outputConfigs.audience.withAlpha;
   useEffect(() => {
     if (!enabled) return;
-
-    const rafId = requestAnimationFrame(() => {
-      stageRef.current?.batchDraw();
-      captureFrame();
-    });
-
-    return () => {
-      cancelAnimationFrame(rafId);
-    };
-  }, [captureFrame, enabled, programScene, outputConfigs.audience.withAlpha]);
-
-  useEffect(() => {
-    if (!enabled || !hasVideoNodes) return;
 
     let rafId: number | null = null;
     let running = true;
     let lastCaptureTime = 0;
+    let lastSentTime = 0;
+    let lastSignature = '';
 
     function tick(timestamp: number) {
       if (!running) return;
-
       if (timestamp - lastCaptureTime >= FRAME_INTERVAL_MS) {
         lastCaptureTime = timestamp;
-        captureFrame();
+        const currentSignature = sceneSignature(programScene.nodes, withAlpha);
+        const signatureChanged = currentSignature !== lastSignature;
+        const heartbeatDue = timestamp - lastSentTime >= HEARTBEAT_MS;
+        if (signatureChanged || hasVideoNodes || heartbeatDue) {
+          stageRef.current?.batchDraw();
+          captureFrame();
+          lastSignature = currentSignature;
+          lastSentTime = timestamp;
+        }
       }
-
       rafId = requestAnimationFrame(tick);
     }
 
     rafId = requestAnimationFrame(tick);
     return () => {
       running = false;
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [captureFrame, enabled, hasVideoNodes]);
+  }, [captureFrame, enabled, hasVideoNodes, programScene, withAlpha]);
 
   if (!enabled) return null;
-
-  const withAlpha = outputConfigs.audience.withAlpha;
 
   return (
     <div
