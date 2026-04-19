@@ -4,6 +4,7 @@ import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
 import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useDeckBrowser } from './deck-browser-context';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
+import { ScrollArea } from '../../components/layout/scroll-area';
 import { SlideGridTile } from './slide-grid-tile';
 
 export function SlideGrid() {
@@ -14,7 +15,7 @@ export function SlideGrid() {
   const showLiveState = !isDetachedDeckBrowser && currentDeckItemId === currentOutputDeckItemId;
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto p-2">
+    <ScrollArea className="p-2">
       <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label="Slides">
         {slides.map((slide, idx) => {
           const elements = slideElementsById.get(slide.id) ?? [];
@@ -38,6 +39,6 @@ export function SlideGrid() {
           );
         })}
       </ThumbnailGrid>
-    </section>
+    </ScrollArea>
   );
 }

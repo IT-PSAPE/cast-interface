@@ -3,6 +3,7 @@ import { Play } from 'lucide-react';
 import type { Id } from '@core/types';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
+import { useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { SceneStage } from '../canvas/scene-stage';
 import type { RenderScene } from '../canvas/scene-types';
 
@@ -19,6 +20,8 @@ interface SlideGridTileProps {
 }
 
 function SlideGridTileImpl({ index, scene, selected, isLive, isEmpty, textPreview, onActivate, onFocus }: SlideGridTileProps) {
+  const ref = useScrollAreaActiveItem(selected);
+
   function handleClick() {
     onActivate(index);
   }
@@ -28,7 +31,7 @@ function SlideGridTileImpl({ index, scene, selected, isLive, isEmpty, textPrevie
   }
 
   return (
-    <Thumbnail.Tile onClick={handleClick} onDoubleClick={handleDoubleClick} selected={selected}>
+    <Thumbnail.Tile ref={ref} onClick={handleClick} onDoubleClick={handleDoubleClick} selected={selected}>
       <Thumbnail.Body>
         <SceneFrame
           width={scene.width}

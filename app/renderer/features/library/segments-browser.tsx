@@ -1,6 +1,7 @@
 import { FolderPlus } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { Panel } from '../../components/layout/panel';
+import { ScrollArea } from '../../components/layout/scroll-area';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useLibraryBrowser } from './library-browser-context';
 import { useLibraryPanelState } from './library-panel-context';
@@ -30,10 +31,12 @@ export function SegmentsBrowser() {
         </Button.Icon>
       </Panel.Header>
 
-      <Panel.Body>
-        <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
-          {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
-        </Accordion>
+      <Panel.Body scroll={false}>
+        <ScrollArea>
+          <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
+            {state.selectedTree.segments.map((segment) => <PlaylistSegmentGroup key={segment.segment.id} segment={segment} />)}
+          </Accordion>
+        </ScrollArea>
       </Panel.Body>
     </Panel>
   );

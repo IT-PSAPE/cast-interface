@@ -5,6 +5,7 @@ import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useDeckBrowser } from './deck-browser-context';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
+import { ScrollArea } from '../../components/layout/scroll-area';
 import { EmptyState } from '../../components/display/empty-state';
 import { ContinuousSlideGridTile } from './continuous-slide-grid-tile';
 import type { RenderScene, SceneSurface } from '../canvas/scene-types';
@@ -74,7 +75,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
   }
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto p-2">
+    <ScrollArea className="p-2">
       <div className="flex flex-col gap-2" role="list" aria-label="Continuous playlist grid">
         {items.map((item) => (
           <GridSection
@@ -92,6 +93,6 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
           />
         ))}
       </div>
-    </section>
+    </ScrollArea>
   );
 }
