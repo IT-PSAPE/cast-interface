@@ -47,6 +47,8 @@ const api = {
     ipcRenderer.invoke(IPC.moveDeckItemToSegment, playlistId, itemId, segmentId),
   movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) =>
     ipcRenderer.invoke(IPC.movePlaylistEntryToSegment, entryId, segmentId),
+  movePlaylistEntry: (entryId: Id, direction: 'up' | 'down') =>
+    ipcRenderer.invoke(IPC.movePlaylistEntry, entryId, direction),
   moveDeckItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveDeckItem, id, direction),
   createPresentation: (title: string) => ipcRenderer.invoke(IPC.createPresentation, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),

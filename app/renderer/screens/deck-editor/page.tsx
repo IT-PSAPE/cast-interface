@@ -17,11 +17,13 @@ import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
+import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { useSlideNotesPanel } from '../../features/deck/use-slide-notes-panel';
 import { ObjectListPanel } from '@renderer/features/canvas/object-list-panel';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { SceneStage } from '@renderer/features/canvas/scene-stage';
+import { EmptyState } from '@renderer/components/display/empty-state';
 
 export function DeckEditorScreen() {
   const { browseDeckItem, currentDeckItem } = useNavigation();
@@ -43,6 +45,12 @@ export function DeckEditorScreen() {
   } = useSlideNotesPanel();
   const [presentationMenuPosition, setPresentationMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const slideMenu = useContextMenuState<Id>();
+
+  useEditorLeftPanelNav({
+    items: slides,
+    currentId: currentSlide?.id ?? null,
+    activate: (_id, index) => setCurrentSlideIndex(index),
+  });
 
   const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
     return deckItems.map((item) => ({
@@ -118,7 +126,18 @@ export function DeckEditorScreen() {
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody className="overflow-y-auto p-2">
-                  <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
+                  {!currentDeckItem ? (
+                    <EmptyState.Root>
+                      <EmptyState.Title>No item selected</EmptyState.Title>
+                      <EmptyState.Description>Pick a presentation or lyric from the menu above to start editing.</EmptyState.Description>
+                    </EmptyState.Root>
+                  ) : slides.length === 0 ? (
+                    <EmptyState.Root>
+                      <EmptyState.Title>No slides yet</EmptyState.Title>
+                      <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
+                    </EmptyState.Root>
+                  ) : (
+                  <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
                     {slides.map((slide, index) => {
                       const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
                       const scene = getThumbnailScene(slide.id, 'deck-editor');
@@ -175,6 +194,7 @@ export function DeckEditorScreen() {
                       );
                     })}
                   </div>
+                  )}
                   </Panel.SectionBody>
                 </Panel.Section>
               </SplitPanel.Segment>

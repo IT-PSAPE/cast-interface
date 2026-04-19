@@ -15,12 +15,20 @@ import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
+import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
+import { EmptyState } from '@renderer/components/display/empty-state';
 
 export function TemplateEditorScreen() {
   const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus } = useTemplateEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateTemplateMenu({ createTemplate });
   const templateMenu = useContextMenuState<Id>();
+
+  useEditorLeftPanelNav({
+    items: templates,
+    currentId: currentTemplateId,
+    activate: (id) => openTemplateEditor(id),
+  });
 
   function handleOpenCreateMenu(event: React.MouseEvent<HTMLButtonElement>) {
     openMenuFromButton(event.currentTarget);
@@ -58,6 +66,12 @@ export function TemplateEditorScreen() {
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody className="overflow-y-auto p-2">
+                    {templates.length === 0 ? (
+                      <EmptyState.Root>
+                        <EmptyState.Title>No templates yet</EmptyState.Title>
+                        <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
+                      </EmptyState.Root>
+                    ) : (
                     <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
                       {templates.map((template, index) => {
                         const scene = buildRenderScene(null, template.elements);
@@ -103,6 +117,7 @@ export function TemplateEditorScreen() {
                         );
                       })}
                     </div>
+                    )}
                   </Panel.SectionBody>
                 </Panel.Section>
               </SplitPanel.Segment>

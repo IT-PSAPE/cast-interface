@@ -116,6 +116,11 @@ export function useLibraryPanelManagement() {
     setStatusText(direction === 'up' ? 'Moved item up' : 'Moved item down');
   }, [mutate, setStatusText]);
 
+  const movePlaylistEntry = useCallback(async (entryId: Id, direction: 'up' | 'down') => {
+    await mutate(() => window.castApi.movePlaylistEntry(entryId, direction));
+    setStatusText(direction === 'up' ? 'Moved entry up' : 'Moved entry down');
+  }, [mutate, setStatusText]);
+
   const addDeckItemToSegment = useCallback(async (segmentId: Id, itemId: Id) => {
     const previousEntryIds = new Set(getSegmentEntryIds(snapshot, segmentId));
     const nextSnapshot = await mutate(() => window.castApi.addDeckItemToSegment(segmentId, itemId));
@@ -175,6 +180,7 @@ export function useLibraryPanelManagement() {
     movePlaylistEntryToSegment,
     movePlaylist,
     moveDeckItem,
+    movePlaylistEntry,
     addDeckItemToSegment,
     createPresentationInSegment,
     createLyricInSegment

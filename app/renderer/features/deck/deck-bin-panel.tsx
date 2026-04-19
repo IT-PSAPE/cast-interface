@@ -139,11 +139,7 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
 
   return (
     <div className="group cursor-pointer" onContextMenu={handleContextMenu}>
-      <Thumbnail.Tile
-        onClick={handleOpen}
-        selected={isSelected}
-        className={isSelected ? 'ring-1 ring-brand-400 ring-offset-1 ring-offset-background-primary' : ''}
-      >
+      <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
         <Thumbnail.Body>
           <>
             <ScenePreview scene={scene} />

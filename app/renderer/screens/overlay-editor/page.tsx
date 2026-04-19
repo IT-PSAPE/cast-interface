@@ -15,12 +15,20 @@ import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
+import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { Label } from '@renderer/components/display/text';
+import { EmptyState } from '@renderer/components/display/empty-state';
 
 export function OverlayEditorScreen() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay, duplicateOverlay, requestNameFocus } = useOverlayEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const menu = useContextMenuState<Id>();
+
+  useEditorLeftPanelNav({
+    items: overlays,
+    currentId: currentOverlayId,
+    activate: (id) => setCurrentOverlayId(id),
+  });
 
   function handleAddOverlay() {
     void createOverlay();
@@ -59,6 +67,12 @@ export function OverlayEditorScreen() {
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody className="overflow-y-auto p-2">
+                    {overlays.length === 0 ? (
+                      <EmptyState.Root>
+                        <EmptyState.Title>No overlays yet</EmptyState.Title>
+                        <EmptyState.Description>Click the + button to create your first overlay.</EmptyState.Description>
+                      </EmptyState.Root>
+                    ) : (
                     <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
                       {overlays.map((overlay, index) => {
                         const scene = buildRenderScene(null, overlayToLayerElements(overlay));
@@ -98,6 +112,7 @@ export function OverlayEditorScreen() {
                         );
                       })}
                     </div>
+                    )}
                   </Panel.SectionBody>
                 </Panel.Section>
               </SplitPanel.Segment>

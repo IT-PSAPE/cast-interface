@@ -6,7 +6,7 @@ const thumbnailStyles = cv({
   base: 'group relative w-full min-w-0 overflow-hidden rounded-xs border bg-primary text-left transition-colors',
   variants: {
     selected: {
-      true: ['border-brand-400/70 ring-1 ring-brand-400/35'],
+      true: ['border-brand-400/70 bg-brand-400/15'],
       false: ['border-primary hover:border-secondary'],
     },
   },
