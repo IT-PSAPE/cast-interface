@@ -3129,7 +3129,35 @@ export class CastRepository {
   }
 
   private getTemplateById(templateId: Id): Template | null {
-    return this.getTemplates().find((template) => template.id === templateId) ?? null;
+    const row = this.db
+      .prepare(
+        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+         FROM templates
+         WHERE id = ?`
+      )
+      .get(templateId) as {
+        id: string;
+        name: string;
+        kind: string;
+        width: number;
+        height: number;
+        order_index: number;
+        elements_json: string;
+        created_at: string;
+        updated_at: string;
+      } | undefined;
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      kind: this.normalizeTemplateKind(row.kind),
+      width: row.width,
+      height: row.height,
+      order: row.order_index,
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
   }
 
   private normalizePlaylistOrder(libraryId: Id): void {

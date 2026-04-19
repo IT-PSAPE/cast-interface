@@ -1,8 +1,10 @@
+import { memo } from 'react';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { EditableField } from '../../components/form/editable-field';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
+import { useScrollAreaActiveItem } from '../../components/layout/scroll-area';
 import { Play } from 'lucide-react';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { SceneStage } from '../canvas/scene-stage';
@@ -17,7 +19,8 @@ interface SlideOutlineRowProps {
   onTextCommit: (slideId: Id, nextText: string) => void;
 }
 
-export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
+function SlideOutlineRowImpl({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
+  const ref = useScrollAreaActiveItem(isFocused);
   const rowStateClass = isFocused
     ? 'border-brand-400/80 bg-brand-400/8'
     : 'border-primary bg-primary/40';
@@ -57,6 +60,7 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
 
   return (
     <Thumbnail.Row
+      ref={ref}
       onClick={handleSelect}
       onDoubleClick={row.textEditable ? undefined : handleOpen}
       className={rowStateClass}
@@ -95,3 +99,5 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
     </Thumbnail.Row>
   );
 }
+
+export const SlideOutlineRow = memo(SlideOutlineRowImpl);

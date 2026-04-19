@@ -1,4 +1,4 @@
-import { Children, isValidElement, type ButtonHTMLAttributes, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, type ButtonHTMLAttributes, type HTMLAttributes, type ReactElement, type ReactNode, type Ref } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -24,6 +24,7 @@ interface PanelSectionPartProps extends HTMLAttributes<HTMLDivElement> {
 interface PanelItemProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   selected?: boolean;
+  ref?: Ref<HTMLDivElement>;
 }
 
 interface PanelItemPartProps extends HTMLAttributes<HTMLDivElement> {
@@ -146,12 +147,12 @@ function SectionBody(_props: PanelSectionPartProps) {
   return null;
 }
 
-function Item({ children, className, selected, ...rest }: PanelItemProps) {
+function Item({ children, className, selected, ref, ...rest }: PanelItemProps) {
   const slots = collectItemSlots(children);
   const content = slots.body?.props.children ?? slots.looseChildren;
 
   return (
-    <div className={itemStyles({ selected, className })} data-layer="panel-item" {...rest}>
+    <div ref={ref} className={itemStyles({ selected, className })} data-layer="panel-item" {...rest}>
       {slots.leading ? (
         <span className={cn('mr-2 shrink-0 text-tertiary', slots.leading.props.className)}>
           {slots.leading.props.children}

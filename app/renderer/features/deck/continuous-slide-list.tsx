@@ -4,11 +4,13 @@ import type { Id, Slide, SlideElement } from '@core/types';
 import { getSlideVisualState, slideTextDetails } from '../../utils/slides';
 import type { PlaylistDeckSequenceItem } from './use-playlist-deck-sequence';
 import { useSlideOutlineTextEditing } from './use-slide-outline-text-editing';
-import { buildThumbnailScene } from '../canvas/build-render-scene';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { SlideOutlineRow } from './slide-list-row';
 import { EmptyState } from '../../components/display/empty-state';
+import { ScrollArea } from '../../components/layout/scroll-area';
+import type { RenderScene, SceneSurface } from '../canvas/scene-types';
 
 interface ContinuousSlideListProps {
   items: PlaylistDeckSequenceItem[];
@@ -21,11 +23,12 @@ interface OutlineSectionProps {
   currentSlideIndex: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
+  getThumbnailScene: (slideId: Id, surface: SceneSurface) => RenderScene | null;
   onSelectSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
   onOpenSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
 }
 
-function OutlineSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, liveSlideIndex, slideElementsById, onSelectSlide, onOpenSlide }: OutlineSectionProps) {
+function OutlineSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, liveSlideIndex, slideElementsById, getThumbnailScene, onSelectSlide, onOpenSlide }: OutlineSectionProps) {
   const { updateText } = useSlideOutlineTextEditing();
   const isCurrentPresentation = item.entryId === currentPlaylistEntryId;
   const isLivePresentation = item.entryId === currentOutputPlaylistEntryId;
@@ -34,7 +37,8 @@ function OutlineSection({ item, currentPlaylistEntryId, currentOutputPlaylistEnt
   const renderRow = useCallback((slide: Slide, index: number) => {
     const elements = slideElementsById.get(slide.id) ?? [];
     const details = slideTextDetails(elements);
-    const scene = buildThumbnailScene(slide, elements);
+    const scene = getThumbnailScene(slide.id, 'list');
+    if (!scene) return null;
     const row = {
       slide,
       index,
@@ -78,6 +82,7 @@ function OutlineSection({ item, currentPlaylistEntryId, currentOutputPlaylistEnt
 
 export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
   const { currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
+  const { getThumbnailScene } = useRenderScenes();
 
   if (items.length === 0) {
     return (
@@ -88,7 +93,7 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
   }
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto p-2">
+    <ScrollArea className="p-2">
       <div className="flex flex-col gap-5" role="list" aria-label="Continuous playlist outline">
         {items.map((item) => (
           <OutlineSection
@@ -99,11 +104,12 @@ export function ContinuousSlideList({ items }: ContinuousSlideListProps) {
             currentSlideIndex={currentSlideIndex}
             liveSlideIndex={liveSlideIndex}
             slideElementsById={slideElementsBySlideId}
+            getThumbnailScene={getThumbnailScene}
             onSelectSlide={handleActivateSlide}
             onOpenSlide={handleEditSlide}
           />
         ))}
       </div>
-    </section>
+    </ScrollArea>
   );
 }

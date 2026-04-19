@@ -2,6 +2,7 @@ import { useOutlineView } from './use-slide-list-view';
 import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { SlideOutlineRow } from './slide-list-row';
 import { EmptyState } from '../../components/display/empty-state';
+import { ScrollArea } from '../../components/layout/scroll-area';
 
 export function SlideList() {
   const { rows, currentSlideIndex, selectSlide, openSlide, updateText } = useOutlineView();
@@ -32,10 +33,10 @@ export function SlideList() {
   }
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto p-2">
+    <ScrollArea className="p-2">
       <div className="flex flex-col gap-1" role="list" aria-label="Slide outline">
         {rows.map(renderRow)}
       </div>
-    </section>
+    </ScrollArea>
   );
 }
