@@ -17,6 +17,7 @@ import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
 import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { EmptyState } from '@renderer/components/display/empty-state';
+import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function TemplateEditorScreen() {
   const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus } = useTemplateEditor();
@@ -65,13 +66,14 @@ export function TemplateEditorScreen() {
                       </Button.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                  <Panel.SectionBody>
                     {templates.length === 0 ? (
                       <EmptyState.Root>
                         <EmptyState.Title>No templates yet</EmptyState.Title>
                         <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
                       </EmptyState.Root>
                     ) : (
+                    <ScrollArea className="p-2">
                     <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
                       {templates.map((template, index) => {
                         const scene = buildRenderScene(null, template.elements);
@@ -95,7 +97,7 @@ export function TemplateEditorScreen() {
                         }
 
                         return (
-                          <Thumbnail.Tile key={template.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={template.id === currentTemplateId}>
+                          <ActiveTemplateTile key={template.id} isActive={template.id === currentTemplateId} onClick={handleSelect} onContextMenu={handleContextMenu} selected={template.id === currentTemplateId}>
                             <Thumbnail.Body>
                               <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                 <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
@@ -113,10 +115,11 @@ export function TemplateEditorScreen() {
                                 <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
                               </div>
                             </Thumbnail.Caption>
-                          </Thumbnail.Tile>
+                          </ActiveTemplateTile>
                         );
                       })}
                     </div>
+                    </ScrollArea>
                     )}
                   </Panel.SectionBody>
                 </Panel.Section>
@@ -156,6 +159,11 @@ export function TemplateEditorScreen() {
       </SplitPanel.Panel>
     </section>
   );
+}
+
+function ActiveTemplateTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
+  const ref = useScrollAreaActiveItem(isActive);
+  return <Thumbnail.Tile ref={ref} {...props} />;
 }
 
 function TemplateKindIcon({ kind }: { kind: Template['kind'] }) {

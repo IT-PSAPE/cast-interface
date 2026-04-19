@@ -24,6 +24,7 @@ import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { SceneStage } from '@renderer/features/canvas/scene-stage';
 import { EmptyState } from '@renderer/components/display/empty-state';
+import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function DeckEditorScreen() {
   const { browseDeckItem, currentDeckItem } = useNavigation();
@@ -125,7 +126,7 @@ export function DeckEditorScreen() {
                       </Button.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                  <Panel.SectionBody>
                   {!currentDeckItem ? (
                     <EmptyState.Root>
                       <EmptyState.Title>No item selected</EmptyState.Title>
@@ -137,6 +138,7 @@ export function DeckEditorScreen() {
                       <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
                     </EmptyState.Root>
                   ) : (
+                  <ScrollArea className="p-2">
                   <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
                     {slides.map((slide, index) => {
                       const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
@@ -157,7 +159,9 @@ export function DeckEditorScreen() {
                       const isEmpty = state === 'warning';
 
                       return (
-                        <Thumbnail.Tile
+                        <ActiveSlideTile
+                          key={slide.id}
+                          isActive={index === currentSlideIndex}
                           onClick={handleSelect}
                           onDoubleClick={handleSelect}
                           selected={index === currentSlideIndex}
@@ -190,10 +194,11 @@ export function DeckEditorScreen() {
                               <span className="min-w-0 truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
                             </div>
                           </Thumbnail.Caption>
-                        </Thumbnail.Tile>
+                        </ActiveSlideTile>
                       );
                     })}
                   </div>
+                  </ScrollArea>
                   )}
                   </Panel.SectionBody>
                 </Panel.Section>
@@ -263,4 +268,9 @@ export function DeckEditorScreen() {
       </SplitPanel.Panel>
     </section>
   );
+}
+
+function ActiveSlideTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
+  const ref = useScrollAreaActiveItem(isActive);
+  return <Thumbnail.Tile ref={ref} {...props} />;
 }
