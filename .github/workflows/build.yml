@@ -185,12 +185,29 @@ jobs:
       - name: Promote draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           VERSION: ${{ needs.detect-release.outputs.version }}
         run: |
           set -euo pipefail
           echo "Publishing v$VERSION"
+          release_notes_file="$(mktemp)"
+          release_title="$(
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$REPOSITORY/releases/generate-notes" \
+              -f tag_name="v$VERSION" \
+              --jq '.name'
+          )"
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$REPOSITORY/releases/generate-notes" \
+            -f tag_name="v$VERSION" \
+            --jq '.body' > "$release_notes_file"
           gh release edit "v$VERSION" \
             --draft=false \
             --latest \
-            --generate-notes
+            --title "$release_title" \
+            --notes-file "$release_notes_file"
           echo "::notice::Release v$VERSION published at $(gh release view v$VERSION --json url -q .url)"
