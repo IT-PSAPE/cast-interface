@@ -1,16 +1,13 @@
-import { useCallback } from 'react';
 import type { Id, Slide, SlideElement } from '@core/types';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
 import type { PlaylistDeckSequenceItem } from './use-playlist-deck-sequence';
-import { buildThumbnailScene } from '../canvas/build-render-scene';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useDeckBrowser } from './deck-browser-context';
 import { useContinuousSlideSections } from './use-continuous-slide-sections';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
-import { SceneFrame } from '@renderer/components/display/scene-frame';
-import { SceneStage } from '../canvas/scene-stage';
-import { Play } from 'lucide-react';
-import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { EmptyState } from '../../components/display/empty-state';
+import { ContinuousSlideGridTile } from './continuous-slide-grid-tile';
+import type { RenderScene, SceneSurface } from '../canvas/scene-types';
 
 interface ContinuousSlideGridProps {
   items: PlaylistDeckSequenceItem[];
@@ -24,63 +21,37 @@ interface GridSectionProps {
   gridItemSize: number;
   liveSlideIndex: number;
   slideElementsById: ReadonlyMap<Id, SlideElement[]>;
+  getThumbnailScene: (slideId: Id, surface: SceneSurface) => RenderScene | null;
   onActivateSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
   onEditSlide: (entryId: Id, itemId: Id, slideIndex: number) => void;
 }
 
-function GridSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, onActivateSlide, onEditSlide }: GridSectionProps) {
+function GridSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, gridItemSize, liveSlideIndex, slideElementsById, getThumbnailScene, onActivateSlide, onEditSlide }: GridSectionProps) {
   const isCurrentPresentation = item.entryId === currentPlaylistEntryId;
   const isLivePresentation = item.entryId === currentOutputPlaylistEntryId;
 
-  const renderSlideCard = useCallback((slide: Slide, index: number) => {
+  function renderSlideCard(slide: Slide, index: number) {
     const elements = slideElementsById.get(slide.id) ?? [];
     const state = getSlideVisualState(index, isLivePresentation ? liveSlideIndex : -1, isCurrentPresentation ? currentSlideIndex : -1, elements);
-    const scene = buildThumbnailScene(slide, elements);
-
-    function handleActivate() {
-      onActivateSlide(item.entryId, item.item.id, index);
-    }
-
-    function handleEdit() {
-      onEditSlide(item.entryId, item.item.id, index);
-    }
-
-    const isLive = state === 'live';
-    const isEmpty = state === 'warning';
+    const scene = getThumbnailScene(slide.id, 'list');
+    if (!scene) return null;
 
     return (
-      <Thumbnail.Tile
+      <ContinuousSlideGridTile
         key={slide.id}
-        onClick={handleActivate}
-        onDoubleClick={handleEdit}
+        entryId={item.entryId}
+        itemId={item.item.id}
+        index={index}
+        scene={scene}
         selected={isCurrentPresentation && index === currentSlideIndex}
-      >
-        <Thumbnail.Body>
-          <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-            {isEmpty ? (
-              <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
-                Empty
-              </div>
-            ) : null}
-            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-          </SceneFrame>
-        </Thumbnail.Body>
-        {isLive ? (
-          <Thumbnail.Overlay position="top-left">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
-              <Play size={12} strokeWidth={1.9} />
-            </span>
-          </Thumbnail.Overlay>
-        ) : null}
-        <Thumbnail.Caption>
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-            <span className="min-w-0 truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
-          </div>
-        </Thumbnail.Caption>
-      </Thumbnail.Tile>
+        isLive={state === 'live'}
+        isEmpty={state === 'warning'}
+        textPreview={slideTextPreview(elements)}
+        onActivate={onActivateSlide}
+        onEdit={onEditSlide}
+      />
     );
-  }, [currentSlideIndex, isCurrentPresentation, isLivePresentation, item.item.id, liveSlideIndex, onActivateSlide, onEditSlide, slideElementsById]);
+  }
 
   return (
     <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
@@ -92,6 +63,7 @@ function GridSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryI
 export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
   const { currentPlaylistEntryId, currentOutputPlaylistEntryId, currentSlideIndex, liveSlideIndex, slideElementsBySlideId, handleActivateSlide, handleEditSlide } = useContinuousSlideSections();
   const { gridItemSize } = useDeckBrowser();
+  const { getThumbnailScene } = useRenderScenes();
 
   if (items.length === 0) {
     return (
@@ -114,6 +86,7 @@ export function ContinuousSlideGrid({ items }: ContinuousSlideGridProps) {
             gridItemSize={gridItemSize}
             liveSlideIndex={liveSlideIndex}
             slideElementsById={slideElementsBySlideId}
+            getThumbnailScene={getThumbnailScene}
             onActivateSlide={handleActivateSlide}
             onEditSlide={handleEditSlide}
           />

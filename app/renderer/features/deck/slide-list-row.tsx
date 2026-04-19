@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { EditableField } from '../../components/form/editable-field';
@@ -17,7 +18,7 @@ interface SlideOutlineRowProps {
   onTextCommit: (slideId: Id, nextText: string) => void;
 }
 
-export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
+function SlideOutlineRowImpl({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
   const rowStateClass = isFocused
     ? 'border-brand-400/80 bg-brand-400/8'
     : 'border-primary bg-primary/40';
@@ -95,3 +96,5 @@ export function SlideOutlineRow({ row, scene, isFocused, onSelect, onOpen, onTex
     </Thumbnail.Row>
   );
 }
+
+export const SlideOutlineRow = memo(SlideOutlineRowImpl);

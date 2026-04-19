@@ -130,21 +130,16 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
     });
   }, [onViewportChange, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale, viewport.viewportHeight, viewport.viewportWidth]);
 
-  const handleNodeSelect = useCallback((id: string, shiftKey: boolean) => {
-    editor.handleNodeSelect(id, shiftKey);
-  }, [editor]);
-
-  const handleNodeDoubleClick = useCallback((id: string) => {
-    editor.handleNodeDoubleClick(id);
-  }, [editor]);
-
-  const handleNodeDragStart = useCallback((id: string) => {
-    editor.handleNodeDragStart(id);
-  }, [editor]);
-
-  const handleNodeDragMove = useCallback((id: string) => {
-    editor.handleNodeDragMove(id);
-  }, [editor]);
+  // The editor object itself is a fresh reference per render, but each of
+  // these callbacks is internally `useCallback`-stable, so passing them
+  // directly preserves identity across renders and lets `SceneNode`'s
+  // `React.memo` skip re-renders when node data hasn't changed.
+  const {
+    handleNodeSelect,
+    handleNodeDoubleClick,
+    handleNodeDragStart,
+    handleNodeDragMove,
+  } = editor;
 
   return (
     <div ref={viewport.containerRef} className={`relative h-full w-full overflow-hidden ${className}`} onDrop={onDrop} onDragOver={onDragOver}>

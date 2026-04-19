@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { overlayToLayerElements } from '@core/presentation-layers';
 import { isLyricDeckItem } from '@core/deck-items';
-import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, SlideElement } from '@core/types';
+import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, Slide, SlideElement } from '@core/types';
 import { applyVisualPayload, readVisualPayload } from '@core/element-payload';
 import { sortElements } from '../../utils/slides';
 import { useCast } from '../app-context';
@@ -271,7 +271,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
 
   const editScene = useMemo(() => {
     return buildRenderScene(isOverlayEdit || isTemplateEdit ? null : currentSlide, effectiveElements);
-  }, [currentSlide, effectiveElements, isOverlayEdit, isTemplateEdit, currentOverlay?.id]);
+  }, [currentSlide, effectiveElements, isOverlayEdit, isTemplateEdit]);
 
   const showScene = useMemo(() => {
     const currentElements = currentSlide ? (slideElementsById.get(currentSlide.id) ?? []) : [];
@@ -325,6 +325,20 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     return map;
   }, [slides]);
 
+  // Thumbnail scene cache keyed by slide id. Each entry remembers the slide
+  // and elements references it was built from; returns the cached scene when
+  // both references match. `stableArray` in useProjectContent keeps refs
+  // stable when content is unchanged, so this avoids rebuilding the Konva
+  // scene tree on every render of the slide grid.
+  const thumbnailCacheRef = useRef<Map<Id, { slide: Slide; elements: SlideElement[]; scene: RenderScene }>>(new Map());
+
+  useEffect(() => {
+    const cache = thumbnailCacheRef.current;
+    for (const id of cache.keys()) {
+      if (!slidesById.has(id)) cache.delete(id);
+    }
+  }, [slidesById]);
+
   const getThumbnailScene = useCallback((slideId: Id, surface: SceneSurface): RenderScene | null => {
     const slide = slidesById.get(slideId);
     if (!slide) return null;
@@ -332,7 +346,14 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     const elements = policy === 'draft'
       ? (currentSlide?.id === slideId ? effectiveElements : getSlideElements(slideId))
       : (slideElementsById.get(slideId) ?? []);
-    return buildThumbnailScene(slide, elements);
+    const cache = thumbnailCacheRef.current;
+    const cached = cache.get(slideId);
+    if (cached && cached.slide === slide && cached.elements === elements) {
+      return cached.scene;
+    }
+    const scene = buildThumbnailScene(slide, elements);
+    cache.set(slideId, { slide, elements, scene });
+    return scene;
   }, [currentSlide?.id, effectiveElements, getSlideElements, slideElementsById, slidesById]);
 
   const scenesValue = useMemo<RenderSceneValue>(() => ({
