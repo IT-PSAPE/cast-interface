@@ -22,7 +22,7 @@ function getSegmentEntryIds(snapshot: AppSnapshot | null | undefined, segmentId:
 }
 
 export function useLibraryPanelManagement() {
-  const { snapshot, mutatePatch, setStatusText } = useCast();
+  const { snapshot, mutate, mutatePatch, setStatusText } = useCast();
 
   function getDeckItems(nextSnapshot: AppSnapshot | null | undefined) {
     return [...(nextSnapshot?.presentations ?? []), ...(nextSnapshot?.lyrics ?? [])];
