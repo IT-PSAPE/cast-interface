@@ -69,6 +69,7 @@ export interface MainApi {
   deleteTemplate: (templateId: Id) => Promise<SnapshotPatch>;
   applyTemplateToDeckItem: (templateId: Id, itemId: Id) => Promise<SnapshotPatch>;
   detachTemplateFromDeckItem: (itemId: Id) => Promise<SnapshotPatch>;
+  syncTemplateToLinkedDeckItems: (templateId: Id) => Promise<SnapshotPatch>;
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<SnapshotPatch>;
   renameLibrary: (id: Id, name: string) => Promise<SnapshotPatch>;
   renamePlaylist: (id: Id, name: string) => Promise<SnapshotPatch>;
@@ -141,6 +142,7 @@ export const IPC = {
   deleteTemplate: 'cast:deleteTemplate',
   applyTemplateToDeckItem: 'cast:applyTemplateToDeckItem',
   detachTemplateFromDeckItem: 'cast:detachTemplateFromDeckItem',
+  syncTemplateToLinkedDeckItems: 'cast:syncTemplateToLinkedDeckItems',
   applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',

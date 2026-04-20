@@ -47,6 +47,7 @@ interface TemplateEditorValue {
   createTemplate: (kind: TemplateKind) => void;
   applyTemplateToTarget: (templateId: Id, target: TemplateApplyTarget) => Promise<void>;
   detachTemplateFromDeckItem: (itemId: Id) => Promise<void>;
+  syncLinkedDeckItems: (templateId: Id) => Promise<void>;
   deleteTemplate: (templateId: Id) => void;
   duplicateTemplate: (templateId: Id) => void;
   renameTemplate: (templateId: Id, name: string) => void;
@@ -399,6 +400,11 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     setStatusText('Detached template from item');
   }, [mutatePatch, setStatusText]);
 
+  const syncLinkedDeckItems = useCallback(async (templateId: Id) => {
+    await mutatePatch(() => window.castApi.syncTemplateToLinkedDeckItems(templateId));
+    setStatusText('Synced linked items to template');
+  }, [mutatePatch, setStatusText]);
+
   useEffect(() => {
     templateStaged.registerAutoPush(() => void pushTemplateChanges());
   }, [templateStaged, pushTemplateChanges]);
@@ -417,6 +423,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     createTemplate,
     applyTemplateToTarget,
     detachTemplateFromDeckItem,
+    syncLinkedDeckItems,
     deleteTemplate,
     duplicateTemplate,
     renameTemplate,
@@ -424,7 +431,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     pushChanges: pushTemplateChanges,
   }), [
     applyTemplateToTarget, createTemplate, templateStaged.currentItem, templateStaged.currentItemId,
-    deleteTemplate, detachTemplateFromDeckItem, duplicateTemplate, templateStaged.hasPendingChanges, templateStaged.isPushingChanges,
+    deleteTemplate, detachTemplateFromDeckItem, syncLinkedDeckItems, duplicateTemplate, templateStaged.hasPendingChanges, templateStaged.isPushingChanges,
     openTemplateEditor, pushTemplateChanges, renameTemplate, replaceTemplateElements, requestTemplateNameFocus,
     templateStaged.setCurrentItemId, templateNameFocusRequest, templates, updateTemplateDraft,
   ]);

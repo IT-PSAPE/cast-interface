@@ -6,7 +6,7 @@ import {
   readElementMediaReference,
 } from '@core/deck-bundles';
 import { buildDeckItem } from '@core/deck-items';
-import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithDeckItem } from '@core/templates';
+import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithDeckItem, syncTemplateToElements } from '@core/templates';
 import { createId, nowIso } from '@core/utils';
 import { SqliteDatabase } from './sqlite';
 import type {
@@ -1669,6 +1669,114 @@ export class CastRepository {
       upsertPresentationIds: owner.type === 'presentation' ? [itemId] : undefined,
       upsertLyricIds: owner.type === 'lyric' ? [itemId] : undefined,
       upsertSlideElementIds: this.getSlideElementIdsBySlideIds(slides.map((slide) => slide.id)),
+      replaceLibraryBundles: true,
+    });
+  }
+
+  syncTemplateToLinkedDeckItems(templateId: Id): SnapshotPatch {
+    const template = this.getTemplateById(templateId);
+    if (!template) return this.buildPatch({});
+
+    const presentations = this.db
+      .prepare('SELECT id FROM presentations WHERE template_id = ?')
+      .all(templateId) as Array<{ id: string }>;
+    const lyrics = this.db
+      .prepare('SELECT id FROM lyrics WHERE template_id = ?')
+      .all(templateId) as Array<{ id: string }>;
+
+    const linkedItems: Array<{ id: string; type: DeckItemType }> = [
+      ...(template.kind === 'slides' ? presentations.map((row) => ({ id: row.id, type: 'presentation' as DeckItemType })) : []),
+      ...(template.kind === 'lyrics' ? lyrics.map((row) => ({ id: row.id, type: 'lyric' as DeckItemType })) : []),
+    ];
+
+    if (linkedItems.length === 0) return this.buildPatch({});
+
+    const selectElements = this.db.prepare(
+      `SELECT id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at
+       FROM slide_elements
+       WHERE slide_id = ?
+       ORDER BY layer ASC, z_index ASC, created_at ASC`
+    );
+    const deleteElements = this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?');
+    const insertElement = this.db.prepare(
+      `INSERT INTO slide_elements
+        (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const touchedSlideIds: string[] = [];
+    const tx = this.db.transaction(() => {
+      for (const item of linkedItems) {
+        const ownerColumn = this.getDeckOwnerColumn(item.type);
+        const slides = this.db
+          .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
+          .all(item.id) as Array<{ id: string }>;
+        for (const slide of slides) {
+          const currentElements = (selectElements.all(slide.id) as Array<{
+            id: string;
+            slide_id: string;
+            type: SlideElement['type'];
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            rotation: number;
+            opacity: number;
+            z_index: number;
+            layer: SlideElement['layer'];
+            payload_json: string;
+            created_at: string;
+            updated_at: string;
+          }>).map((row) => ({
+            id: row.id,
+            slideId: row.slide_id,
+            type: row.type,
+            x: row.x,
+            y: row.y,
+            width: row.width,
+            height: row.height,
+            rotation: row.rotation,
+            opacity: row.opacity,
+            zIndex: row.z_index,
+            layer: row.layer,
+            payload: parseJson<SlideElementPayload>(row.payload_json),
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }));
+          const syncedElements = syncTemplateToElements(template, currentElements, slide.id);
+          deleteElements.run(slide.id);
+          for (const element of syncedElements) {
+            insertElement.run(
+              element.id,
+              slide.id,
+              element.type,
+              element.x,
+              element.y,
+              element.width,
+              element.height,
+              element.rotation,
+              element.opacity,
+              element.zIndex,
+              element.layer,
+              JSON.stringify(element.payload),
+              element.createdAt,
+              nowIso(),
+            );
+          }
+          touchedSlideIds.push(slide.id);
+        }
+      }
+    });
+
+    tx();
+
+    const presentationIds = linkedItems.filter((item) => item.type === 'presentation').map((item) => item.id);
+    const lyricIds = linkedItems.filter((item) => item.type === 'lyric').map((item) => item.id);
+
+    return this.buildPatch({
+      upsertPresentationIds: presentationIds.length > 0 ? presentationIds : undefined,
+      upsertLyricIds: lyricIds.length > 0 ? lyricIds : undefined,
+      upsertSlideElementIds: this.getSlideElementIdsBySlideIds(touchedSlideIds),
       replaceLibraryBundles: true,
     });
   }

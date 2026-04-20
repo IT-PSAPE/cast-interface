@@ -80,6 +80,31 @@ export function applyTemplateToElements(template: Template, contentElements: Sli
   });
 }
 
+export function syncTemplateToElements(template: Template, contentElements: SlideElement[], slideId: Id): SlideElement[] {
+  const matchesByType = consumeTypedMatches(contentElements);
+
+  const merged = cloneElements(template.elements).map((templateElement) => {
+    const match = matchesByType.get(templateElement.type)?.shift() ?? null;
+    return {
+      ...templateElement,
+      id: match?.id ?? `${slideId}:${templateElement.id}`,
+      slideId,
+      payload: mergeTemplatePayload(templateElement, match),
+      createdAt: match?.createdAt ?? templateElement.createdAt,
+      updatedAt: match?.updatedAt ?? templateElement.updatedAt,
+    };
+  });
+
+  const extras: SlideElement[] = [];
+  for (const bucket of matchesByType.values()) {
+    for (const remaining of bucket) {
+      extras.push({ ...remaining, slideId });
+    }
+  }
+
+  return [...merged, ...extras];
+}
+
 export function createDefaultTemplateElements(kind: TemplateKind, ownerId: Id, now: string): SlideElement[] {
   if (kind === 'lyrics') {
     return [{

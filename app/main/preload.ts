@@ -78,6 +78,8 @@ const api = {
     ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
   detachTemplateFromDeckItem: (itemId: Id) =>
     ipcRenderer.invoke(IPC.detachTemplateFromDeckItem, itemId),
+  syncTemplateToLinkedDeckItems: (templateId: Id) =>
+    ipcRenderer.invoke(IPC.syncTemplateToLinkedDeckItems, templateId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),

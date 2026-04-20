@@ -47,11 +47,11 @@ interface ItemSlots {
 }
 
 const panelStyles = cv({
-  base: 'flex h-full min-h-0 flex-col overflow-hidden',
+  base: 'flex h-full min-h-0 flex-col overflow-hidden border-primary bg-primary',
   variants: {
     bordered: {
-      left: ['border-l border-primary bg-primary'],
-      right: ['border-r border-primary bg-primary'],
+      left: ['border-l'],
+      right: ['border-r'],
       none: [''],
     },
   },

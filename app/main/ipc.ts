@@ -195,6 +195,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.detachTemplateFromDeckItem, (_event, itemId: Id) =>
     repo.detachTemplateFromDeckItem(itemId)
   );
+  safeHandle(IPC.syncTemplateToLinkedDeckItems, (_event, templateId: Id) =>
+    repo.syncTemplateToLinkedDeckItems(templateId)
+  );
   safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
     repo.applyTemplateToOverlay(templateId, overlayId)
   );

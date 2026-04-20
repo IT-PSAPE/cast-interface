@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Id, Template } from '@core/types';
 import { Copy, Ellipsis, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
 import { Button } from '../../components/controls/button';
@@ -8,9 +9,10 @@ import { ContextMenu, type ContextMenuItem } from '../../components/overlays/con
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
+import { useProjectContent } from '../../contexts/use-project-content';
+import { isTemplateCompatibleWithDeckItem } from '@core/templates';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
-import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
@@ -20,10 +22,25 @@ import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function TemplateEditorScreen() {
-  const { templates, currentTemplateId, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus } = useTemplateEditor();
-  const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
+  const { templates, currentTemplateId, currentTemplate, hasPendingChanges: hasTemplateDraftChanges, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus, syncLinkedDeckItems } = useTemplateEditor();
   const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateTemplateMenu({ createTemplate });
   const templateMenu = useContextMenuState<Id>();
+  const { deckItems } = useProjectContent();
+
+  const linkedItemCount = currentTemplate
+    ? deckItems.filter((item) => item.templateId === currentTemplate.id && isTemplateCompatibleWithDeckItem(currentTemplate, item.type)).length
+    : 0;
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  async function handleSyncLinkedItems() {
+    if (!currentTemplate || linkedItemCount === 0) return;
+    setIsSyncing(true);
+    try {
+      await syncLinkedDeckItems(currentTemplate.id);
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   useEditorLeftPanelNav({
     items: templates,
@@ -147,13 +164,19 @@ export function TemplateEditorScreen() {
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {inspectorState.isVisible && (
+            {currentTemplate ? (
               <Panel.Footer className="p-3">
-                <Button onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
-                  {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
+                <Button
+                  variant="ghost"
+                  onClick={handleSyncLinkedItems}
+                  disabled={linkedItemCount === 0 || isSyncing || hasTemplateDraftChanges}
+                  title={hasTemplateDraftChanges ? 'Push template changes first' : linkedItemCount === 0 ? 'No deck items use this template' : undefined}
+                  className="w-full"
+                >
+                  {isSyncing ? 'Syncing…' : `Sync ${linkedItemCount} linked ${linkedItemCount === 1 ? 'item' : 'items'}`}
                 </Button>
               </Panel.Footer>
-            )}
+            ) : null}
           </Panel>
         </SplitPanel.Segment>
       </SplitPanel.Panel>
