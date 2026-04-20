@@ -359,7 +359,7 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             onKeyDown={handleRootKeyDown}
             className="w-full max-w-[680px] outline-none"
         >
-            <div className="">
+            <div className="space-y-0.5">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext
                         items={blocks.map(b => b.id)}

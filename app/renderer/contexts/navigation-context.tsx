@@ -12,7 +12,7 @@ const NavigationStateContext = createContext<NavigationStateValue | null>(null);
 const NavigationActionsContext = createContext<NavigationActionsValue | null>(null);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const { snapshot, mutate, runOperation, setStatusText } = useCast();
+  const { snapshot, mutatePatch, runOperation, setStatusText } = useCast();
   const { deckItems, deckItemsById, slides } = useProjectContent();
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
@@ -226,16 +226,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const createLibrary = useCallback(async () => {
     const previousIds = new Set(snapshot?.libraries.map((library) => library.id) ?? []);
-    const next = await mutate(() => window.castApi.createLibrary('New Library'));
+    const next = await mutatePatch(() => window.castApi.createLibrary('New Library'));
     setStatusText('Created library');
     const createdId = findCreatedId(previousIds, next.libraries.map((library) => library.id));
     if (createdId) setRecentlyCreatedId(createdId);
-  }, [mutate, setStatusText, snapshot]);
+  }, [mutatePatch, setStatusText, snapshot]);
 
   const createPlaylist = useCallback(async () => {
     if (!currentLibraryId) return;
     const previousIds = new Set(currentLibraryBundle?.playlists.map((tree) => tree.playlist.id) ?? []);
-    const next = await mutate(() => window.castApi.createPlaylist(currentLibraryId, 'New Playlist'));
+    const next = await mutatePatch(() => window.castApi.createPlaylist(currentLibraryId, 'New Playlist'));
     setStatusText('Created playlist');
     const updatedBundle = next.libraryBundles.find((bundle) => bundle.library.id === currentLibraryId);
     const createdId = findCreatedId(previousIds, updatedBundle?.playlists.map((tree) => tree.playlist.id) ?? []);
@@ -243,80 +243,80 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setCurrentPlaylistId(createdId);
       setRecentlyCreatedId(createdId);
     }
-  }, [currentLibraryBundle, currentLibraryId, mutate, setCurrentPlaylistId, setStatusText]);
+  }, [currentLibraryBundle, currentLibraryId, mutatePatch, setCurrentPlaylistId, setStatusText]);
 
   const createPresentation = useCallback(async () => {
     await runOperation('Creating deck...', async () => {
       const previousIds = new Set(deckItems.map((item) => item.id));
-      const next = await mutate(() => window.castApi.createPresentation('New Presentation'));
+      const next = await mutatePatch(() => window.castApi.createPresentation('New Presentation'));
       const createdId = findCreatedId(previousIds, [...next.presentations, ...next.lyrics].map((item) => item.id));
       if (!createdId) return;
-      await mutate(() => window.castApi.createSlide({ presentationId: createdId }));
+      await mutatePatch(() => window.castApi.createSlide({ presentationId: createdId }));
       setCurrentDrawerDeckItemId(createdId);
       setContentBrowseSource('project');
       setRecentlyCreatedId(createdId);
       setStatusText('Created deck');
     });
-  }, [deckItems, mutate, runOperation, setStatusText]);
+  }, [deckItems, mutatePatch, runOperation, setStatusText]);
 
   const createEmptyLyric = useCallback(async () => {
     await runOperation('Creating lyric...', async () => {
       const previousIds = new Set(deckItems.map((item) => item.id));
-      const next = await mutate(() => window.castApi.createLyric('New Lyric'));
+      const next = await mutatePatch(() => window.castApi.createLyric('New Lyric'));
       const createdId = findCreatedId(previousIds, [...next.presentations, ...next.lyrics].map((item) => item.id));
       if (!createdId) return;
-      await mutate(() => window.castApi.createSlide({ lyricId: createdId }));
+      await mutatePatch(() => window.castApi.createSlide({ lyricId: createdId }));
       setCurrentDrawerDeckItemId(createdId);
       setContentBrowseSource('project');
       setRecentlyCreatedId(createdId);
       setStatusText('Created lyric');
     });
-  }, [deckItems, mutate, runOperation, setStatusText]);
+  }, [deckItems, mutatePatch, runOperation, setStatusText]);
 
   const createSegment = useCallback(async () => {
     if (!currentPlaylistId) return;
     const currentTree = currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId);
     const previousIds = new Set(currentTree?.segments.map((segment) => segment.segment.id) ?? []);
-    const next = await mutate(() => window.castApi.createPlaylistSegment(currentPlaylistId, 'New Segment'));
+    const next = await mutatePatch(() => window.castApi.createPlaylistSegment(currentPlaylistId, 'New Segment'));
     setStatusText('Created segment');
     const updatedBundle = next.libraryBundles.find((bundle) => bundle.library.id === currentLibraryId);
     const updatedTree = updatedBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId);
     const createdId = findCreatedId(previousIds, updatedTree?.segments.map((segment) => segment.segment.id) ?? []);
     if (createdId) setRecentlyCreatedId(createdId);
-  }, [currentLibraryBundle, currentLibraryId, currentPlaylistId, mutate, setStatusText]);
+  }, [currentLibraryBundle, currentLibraryId, currentPlaylistId, mutatePatch, setStatusText]);
 
   const addDeckItemToSegment = useCallback(async (segmentId: Id) => {
     if (!currentDeckItemId || !currentPlaylistId) return;
-    await mutate(() => window.castApi.addDeckItemToSegment(segmentId, currentDeckItemId));
+    await mutatePatch(() => window.castApi.addDeckItemToSegment(segmentId, currentDeckItemId));
     setStatusText('Added item to segment');
-  }, [currentDeckItemId, currentPlaylistId, mutate, setStatusText]);
+  }, [currentDeckItemId, currentPlaylistId, mutatePatch, setStatusText]);
 
   const moveCurrentDeckItemToSegment = useCallback(async (segmentId: Id | null) => {
     if (!currentDeckItemId || !currentPlaylistId) return;
-    await mutate(() => window.castApi.moveDeckItemToSegment(currentPlaylistId, currentDeckItemId, segmentId));
+    await mutatePatch(() => window.castApi.moveDeckItemToSegment(currentPlaylistId, currentDeckItemId, segmentId));
     setStatusText(segmentId ? 'Moved item to segment' : 'Removed item from playlist');
-  }, [currentDeckItemId, currentPlaylistId, mutate, setStatusText]);
+  }, [currentDeckItemId, currentPlaylistId, mutatePatch, setStatusText]);
 
   const renameLibrary = useCallback(async (id: Id, name: string) => {
-    await mutate(() => window.castApi.renameLibrary(id, name));
+    await mutatePatch(() => window.castApi.renameLibrary(id, name));
     setStatusText(`Renamed library: ${name}`);
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   const renamePlaylist = useCallback(async (id: Id, name: string) => {
-    await mutate(() => window.castApi.renamePlaylist(id, name));
+    await mutatePatch(() => window.castApi.renamePlaylist(id, name));
     setStatusText(`Renamed playlist: ${name}`);
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   const renameDeckItem = useCallback(async (id: Id, title: string) => {
     const item = deckItemsById.get(id);
     if (!item) return;
     if (item.type === 'presentation') {
-      await mutate(() => window.castApi.renamePresentation(id, title));
+      await mutatePatch(() => window.castApi.renamePresentation(id, title));
     } else {
-      await mutate(() => window.castApi.renameLyric(id, title));
+      await mutatePatch(() => window.castApi.renameLyric(id, title));
     }
     setStatusText(`Renamed item: ${title}`);
-  }, [deckItemsById, mutate, setStatusText]);
+  }, [deckItemsById, mutatePatch, setStatusText]);
 
   const stateValue = useMemo<NavigationStateValue>(() => ({
     currentLibraryId,

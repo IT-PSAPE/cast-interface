@@ -99,7 +99,7 @@ function SegmentEntryRow({ item, isSelected, onSelect, onContextMenu, onMenuClic
     <Panel.Item ref={ref} className='!rounded-none' selected={isSelected} onContextMenu={onContextMenu}>
       <Panel.ItemButton onClick={onSelect}>
         <DeckItemIcon entity={item} className="shrink-0 text-tertiary" />
-        <Paragraph.xs>{item.title}</Paragraph.xs>
+        <Paragraph.xs className="line-clamp-1">{item.title}</Paragraph.xs>
       </Panel.ItemButton>
       <Panel.ItemActions>
         <Button.Icon label={`Open ${item.title} menu`} onClick={onMenuClick}>

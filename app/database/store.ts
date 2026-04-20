@@ -26,6 +26,7 @@ import type {
   ElementUpdateInput,
   Id,
   Library,
+  LibraryPlaylistBundle,
   Lyric,
   MediaAsset,
   Overlay,
@@ -47,6 +48,7 @@ import type {
   TemplateUpdateInput,
 } from '@core/types';
 import { isBrokenMediaSource, toCastMediaSource } from './media-source-utils';
+import type { SnapshotPatch } from '@core/snapshot-patch';
 
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
@@ -172,6 +174,7 @@ function legacyOverlayElement(row: {
 
 export class CastRepository {
   private db: SqliteDatabase;
+  private patchVersion = 0;
 
   constructor() {
     const userData = app.getPath('userData');
@@ -1268,15 +1271,16 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  createLibrary(name: string): AppSnapshot {
+  createLibrary(name: string): SnapshotPatch {
     const now = nowIso();
+    const libraryId = createId();
     this.db
       .prepare('INSERT INTO libraries (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)')
-      .run(createId(), name, now, now);
-    return this.getSnapshot();
+      .run(libraryId, name, now, now);
+    return this.buildPatch({ upsertLibraryIds: [libraryId], replaceLibraryBundles: true });
   }
 
-  createPlaylist(libraryId: Id, name: string): AppSnapshot {
+  createPlaylist(libraryId: Id, name: string): SnapshotPatch {
     const now = nowIso();
     const currentOrder =
       (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlists WHERE library_id = ?').get(libraryId) as {
@@ -1285,10 +1289,10 @@ export class CastRepository {
     this.db
       .prepare('INSERT INTO playlists (id, library_id, name, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run(createId(), libraryId, name, currentOrder + 1, now, now);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  createPlaylistSegment(playlistId: Id, name: string): AppSnapshot {
+  createPlaylistSegment(playlistId: Id, name: string): SnapshotPatch {
     const now = nowIso();
     const currentOrder =
       (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM playlist_segments WHERE playlist_id = ?').get(playlistId) as {
@@ -1301,32 +1305,32 @@ export class CastRepository {
       )
       .run(createId(), playlistId, name, currentOrder + 1, now, now);
 
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  renamePlaylistSegment(id: Id, name: string): AppSnapshot {
+  renamePlaylistSegment(id: Id, name: string): SnapshotPatch {
     this.db
       .prepare('UPDATE playlist_segments SET name = ?, updated_at = ? WHERE id = ?')
       .run(name, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  setPlaylistSegmentColor(id: Id, colorKey: string | null): AppSnapshot {
+  setPlaylistSegmentColor(id: Id, colorKey: string | null): SnapshotPatch {
     this.db
       .prepare('UPDATE playlist_segments SET color_key = ?, updated_at = ? WHERE id = ?')
       .run(colorKey, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  addDeckItemToSegment(segmentId: Id, itemId: Id): AppSnapshot {
+  addDeckItemToSegment(segmentId: Id, itemId: Id): SnapshotPatch {
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner) return this.getSnapshot();
+    if (!owner) return this.buildPatch({});
 
     const exists = this.db
       .prepare('SELECT id FROM playlist_segments WHERE id = ?')
       .get(segmentId) as { id: string } | undefined;
 
-    if (!exists) return this.getSnapshot();
+    if (!exists) return this.buildPatch({});
 
     const now = nowIso();
     const currentOrder =
@@ -1349,12 +1353,12 @@ export class CastRepository {
         now,
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  moveDeckItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): AppSnapshot {
+  moveDeckItemToSegment(playlistId: Id, itemId: Id, segmentId: Id | null): SnapshotPatch {
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner) return this.getSnapshot();
+    if (!owner) return this.buildPatch({});
     const ownerColumn = this.getDeckOwnerColumn(owner.type);
 
     this.db
@@ -1365,13 +1369,13 @@ export class CastRepository {
       )
       .run(itemId, playlistId);
 
-    if (!segmentId) return this.getSnapshot();
+    if (!segmentId) return this.buildPatch({ replaceLibraryBundles: true });
 
     const exists = this.db
       .prepare('SELECT id FROM playlist_segments WHERE id = ? AND playlist_id = ?')
       .get(segmentId, playlistId) as { id: string } | undefined;
 
-    if (!exists) return this.getSnapshot();
+    if (!exists) return this.buildPatch({ replaceLibraryBundles: true });
 
     const now = nowIso();
     const currentOrder =
@@ -1394,7 +1398,7 @@ export class CastRepository {
         now,
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
   movePlaylistEntry(entryId: Id, direction: 'up' | 'down'): AppSnapshot {
@@ -1432,7 +1436,7 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  movePlaylistEntryToSegment(entryId: Id, segmentId: Id | null): AppSnapshot {
+  movePlaylistEntryToSegment(entryId: Id, segmentId: Id | null): SnapshotPatch {
     const entry = this.db
       .prepare(
         `SELECT pe.id, pe.segment_id, ps.playlist_id
@@ -1442,20 +1446,20 @@ export class CastRepository {
       )
       .get(entryId) as { id: string; segment_id: string; playlist_id: string } | undefined;
 
-    if (!entry) return this.getSnapshot();
+    if (!entry) return this.buildPatch({});
 
     if (!segmentId) {
       this.db
         .prepare('DELETE FROM playlist_entries WHERE id = ?')
         .run(entryId);
-      return this.getSnapshot();
+      return this.buildPatch({ replaceLibraryBundles: true });
     }
 
     const targetSegment = this.db
       .prepare('SELECT id FROM playlist_segments WHERE id = ? AND playlist_id = ?')
       .get(segmentId, entry.playlist_id) as { id: string } | undefined;
 
-    if (!targetSegment) return this.getSnapshot();
+    if (!targetSegment) return this.buildPatch({});
 
     const now = nowIso();
     const currentOrder =
@@ -1467,28 +1471,30 @@ export class CastRepository {
       .prepare('UPDATE playlist_entries SET segment_id = ?, order_index = ?, updated_at = ? WHERE id = ?')
       .run(segmentId, currentOrder + 1, now, entryId);
 
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  createPresentation(title: string): AppSnapshot {
+  createPresentation(title: string): SnapshotPatch {
     const now = nowIso();
+    const presentationId = createId();
     const currentOrder = this.getMaxDeckOrder();
     this.db
       .prepare('INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(createId(), title, null, currentOrder + 1, now, now);
-    return this.getSnapshot();
+      .run(presentationId, title, null, currentOrder + 1, now, now);
+    return this.buildPatch({ upsertPresentationIds: [presentationId] });
   }
 
-  createLyric(title: string): AppSnapshot {
+  createLyric(title: string): SnapshotPatch {
     const now = nowIso();
+    const lyricId = createId();
     const currentOrder = this.getMaxDeckOrder();
     this.db
       .prepare('INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(createId(), title, null, currentOrder + 1, now, now);
-    return this.getSnapshot();
+      .run(lyricId, title, null, currentOrder + 1, now, now);
+    return this.buildPatch({ upsertLyricIds: [lyricId] });
   }
 
-  createTemplate(input: TemplateCreateInput): AppSnapshot {
+  createTemplate(input: TemplateCreateInput): SnapshotPatch {
     const now = nowIso();
     const templateId = createId();
     const currentOrder =
@@ -1512,10 +1518,10 @@ export class CastRepository {
         now,
         now,
       );
-    return this.getSnapshot();
+    return this.buildPatch({ upsertTemplateIds: [templateId] });
   }
 
-  updateTemplate(input: TemplateUpdateInput): AppSnapshot {
+  updateTemplate(input: TemplateUpdateInput): SnapshotPatch {
     const existing = this.db
       .prepare('SELECT id, name, kind, width, height, elements_json FROM templates WHERE id = ?')
       .get(input.id) as {
@@ -1527,7 +1533,7 @@ export class CastRepository {
       elements_json: string;
     } | undefined;
 
-    if (!existing) return this.getSnapshot();
+    if (!existing) return this.buildPatch({});
 
     this.db
       .prepare(
@@ -1544,10 +1550,18 @@ export class CastRepository {
         nowIso(),
         input.id,
       );
-    return this.getSnapshot();
+    return this.buildPatch({ upsertTemplateIds: [input.id] });
   }
 
-  deleteTemplate(templateId: Id): AppSnapshot {
+  deleteTemplate(templateId: Id): SnapshotPatch {
+    const affectedPresentationIds = (this.db
+      .prepare('SELECT id FROM presentations WHERE template_id = ?')
+      .all(templateId) as Array<{ id: string }>)
+      .map((row) => row.id);
+    const affectedLyricIds = (this.db
+      .prepare('SELECT id FROM lyrics WHERE template_id = ?')
+      .all(templateId) as Array<{ id: string }>)
+      .map((row) => row.id);
     const tx = this.db.transaction(() => {
       this.db.prepare('UPDATE presentations SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
       this.db.prepare('UPDATE lyrics SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
@@ -1555,15 +1569,22 @@ export class CastRepository {
     });
     tx();
     this.normalizeTemplateOrder();
-    return this.getSnapshot();
+    const remainingTemplateIds = (this.db.prepare('SELECT id FROM templates ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    return this.buildPatch({
+      upsertPresentationIds: affectedPresentationIds,
+      upsertLyricIds: affectedLyricIds,
+      upsertTemplateIds: remainingTemplateIds,
+      deletedTemplateIds: [templateId],
+      replaceLibraryBundles: true,
+    });
   }
 
-  applyTemplateToDeckItem(templateId: Id, itemId: Id): AppSnapshot {
+  applyTemplateToDeckItem(templateId: Id, itemId: Id): SnapshotPatch {
     const template = this.getTemplateById(templateId);
-    if (!template) return this.getSnapshot();
+    if (!template) return this.buildPatch({});
     const owner = this.resolveDeckOwnerRow(itemId);
     if (!owner || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
-      return this.getSnapshot();
+      return this.buildPatch({});
     }
 
     const ownerColumn = this.getDeckOwnerColumn(owner.type);
@@ -1644,26 +1665,35 @@ export class CastRepository {
     });
 
     tx();
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertPresentationIds: owner.type === 'presentation' ? [itemId] : undefined,
+      upsertLyricIds: owner.type === 'lyric' ? [itemId] : undefined,
+      upsertSlideElementIds: this.getSlideElementIdsBySlideIds(slides.map((slide) => slide.id)),
+      replaceLibraryBundles: true,
+    });
   }
 
-  detachTemplateFromDeckItem(itemId: Id): AppSnapshot {
+  detachTemplateFromDeckItem(itemId: Id): SnapshotPatch {
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner || owner.templateId === null) return this.getSnapshot();
+    if (!owner || owner.templateId === null) return this.buildPatch({});
 
     const ownerTable = this.getDeckTableName(owner.type);
     this.db.prepare(`UPDATE ${ownerTable} SET template_id = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), itemId);
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertPresentationIds: owner.type === 'presentation' ? [itemId] : undefined,
+      upsertLyricIds: owner.type === 'lyric' ? [itemId] : undefined,
+      replaceLibraryBundles: true,
+    });
   }
 
-  applyTemplateToOverlay(templateId: Id, overlayId: Id): AppSnapshot {
+  applyTemplateToOverlay(templateId: Id, overlayId: Id): SnapshotPatch {
     const template = this.getTemplateById(templateId);
-    if (!template || template.kind !== 'overlays') return this.getSnapshot();
+    if (!template || template.kind !== 'overlays') return this.buildPatch({});
     const existing = this.db
       .prepare('SELECT elements_json FROM overlays WHERE id = ?')
       .get(overlayId) as { elements_json: string } | undefined;
 
-    if (!existing) return this.getSnapshot();
+    if (!existing) return this.buildPatch({});
 
     const currentElements = parseJson<SlideElement[]>(existing.elements_json);
     const appliedElements = applyTemplateToElements(template, currentElements, overlayId);
@@ -1687,15 +1717,15 @@ export class CastRepository {
         nowIso(),
         overlayId,
       );
-    return this.getSnapshot();
+    return this.buildPatch({ upsertOverlayIds: [overlayId] });
   }
 
-  movePlaylist(id: Id, direction: 'up' | 'down'): AppSnapshot {
+  movePlaylist(id: Id, direction: 'up' | 'down'): SnapshotPatch {
     const current = this.db
       .prepare('SELECT id, library_id, order_index FROM playlists WHERE id = ?')
       .get(id) as { id: string; library_id: string; order_index: number } | undefined;
 
-    if (!current) return this.getSnapshot();
+    if (!current) return this.buildPatch({});
 
     const neighbor = direction === 'up'
       ? this.db
@@ -1709,7 +1739,7 @@ export class CastRepository {
         )
         .get(current.library_id, current.order_index);
 
-    if (!neighbor) return this.getSnapshot();
+    if (!neighbor) return this.buildPatch({});
 
     const now = nowIso();
     const tx = this.db.transaction(() => {
@@ -1722,18 +1752,18 @@ export class CastRepository {
     });
 
     tx();
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  moveDeckItem(id: Id, direction: 'up' | 'down'): AppSnapshot {
+  moveDeckItem(id: Id, direction: 'up' | 'down'): SnapshotPatch {
     const orderedItems = this.getOrderedContentReferences();
     const currentIndex = orderedItems.findIndex((item) => item.id === id);
-    if (currentIndex === -1) return this.getSnapshot();
+    if (currentIndex === -1) return this.buildPatch({});
 
     const neighborIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     const neighbor = orderedItems[neighborIndex] ?? null;
     const current = orderedItems[currentIndex];
-    if (!current || !neighbor) return this.getSnapshot();
+    if (!current || !neighbor) return this.buildPatch({});
 
     const now = nowIso();
     const tx = this.db.transaction(() => {
@@ -1746,12 +1776,16 @@ export class CastRepository {
     });
 
     tx();
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertPresentationIds: [current, neighbor].filter((item) => item.type === 'presentation').map((item) => item.id),
+      upsertLyricIds: [current, neighbor].filter((item) => item.type === 'lyric').map((item) => item.id),
+      replaceLibraryBundles: true,
+    });
   }
 
-  createSlide(input: SlideCreateInput): AppSnapshot {
+  createSlide(input: SlideCreateInput): SnapshotPatch {
     const owner = this.resolveSlideOwnerInput(input);
-    if (!owner) return this.getSnapshot();
+    if (!owner) return this.buildPatch({});
 
     const now = nowIso();
     const slideId = createId();
@@ -1826,19 +1860,23 @@ export class CastRepository {
       );
     }
 
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertSlideIds: [slideId],
+      upsertSlideElementIds: initialElements.map((element) => element.id),
+    });
   }
 
-  deleteSlide(slideId: Id): AppSnapshot {
+  deleteSlide(slideId: Id): SnapshotPatch {
     const slide = this.db
       .prepare('SELECT presentation_id, lyric_id FROM slides WHERE id = ?')
       .get(slideId) as { presentation_id: string | null; lyric_id: string | null } | undefined;
 
-    if (!slide) return this.getSnapshot();
+    if (!slide) return this.buildPatch({});
 
     const ownerColumn = slide.presentation_id ? 'presentation_id' : 'lyric_id';
     const ownerId = slide.presentation_id ?? slide.lyric_id;
-    if (!ownerId) return this.getSnapshot();
+    if (!ownerId) return this.buildPatch({});
+    const deletedElementIds = this.getSlideElementIdsBySlideIds([slideId]);
 
     const tx = this.db.transaction(() => {
       this.db.prepare('DELETE FROM slide_elements WHERE slide_id = ?').run(slideId);
@@ -1847,18 +1885,22 @@ export class CastRepository {
     });
 
     tx();
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertSlideIds: this.getSlideIdsForOwner(ownerColumn, ownerId),
+      deletedSlideIds: [slideId],
+      deletedSlideElementIds: deletedElementIds,
+    });
   }
 
-  updateSlideNotes(input: SlideNotesUpdateInput): AppSnapshot {
+  updateSlideNotes(input: SlideNotesUpdateInput): SnapshotPatch {
     const now = nowIso();
     this.db
       .prepare('UPDATE slides SET notes = ?, updated_at = ? WHERE id = ?')
       .run(input.notes, now, input.slideId);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideIds: [input.slideId] });
   }
 
-  duplicateSlide(slideId: Id): AppSnapshot {
+  duplicateSlide(slideId: Id): SnapshotPatch {
     const original = this.db
       .prepare('SELECT id, presentation_id, lyric_id, width, height, notes, order_index FROM slides WHERE id = ?')
       .get(slideId) as {
@@ -1870,11 +1912,11 @@ export class CastRepository {
         notes: string | null;
         order_index: number;
       } | undefined;
-    if (!original) return this.getSnapshot();
+    if (!original) return this.buildPatch({});
 
     const ownerColumn = original.presentation_id !== null ? 'presentation_id' : 'lyric_id';
     const ownerValue = original.presentation_id ?? original.lyric_id;
-    if (!ownerValue) return this.getSnapshot();
+    if (!ownerValue) return this.buildPatch({});
 
     const now = nowIso();
     const newSlideId = createId();
@@ -1904,6 +1946,7 @@ export class CastRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
 
+    const newElementIds: Id[] = [];
     const tx = this.db.transaction(() => {
       shiftOrder.run(now, ownerValue, insertOrder);
       insertSlide.run(
@@ -1918,8 +1961,10 @@ export class CastRepository {
         now,
       );
       for (const el of elements) {
+        const elementId = createId();
+        newElementIds.push(elementId);
         insertElement.run(
-          createId(),
+          elementId,
           newSlideId,
           el.type,
           el.x, el.y, el.width, el.height,
@@ -1931,46 +1976,49 @@ export class CastRepository {
     });
     tx();
 
-    return this.getSnapshot();
+    return this.buildPatch({
+      upsertSlideIds: this.getSlideIdsForOwner(ownerColumn, ownerValue),
+      upsertSlideElementIds: newElementIds,
+    });
   }
 
-  setSlideOrder(input: SlideOrderUpdateInput): AppSnapshot {
+  setSlideOrder(input: SlideOrderUpdateInput): SnapshotPatch {
     const now = nowIso();
-    
+
     // Get the current slide to find its parent
     const slide = this.db
       .prepare('SELECT id, presentation_id, lyric_id FROM slides WHERE id = ?')
       .get(input.slideId) as { id: string; presentation_id: string | null; lyric_id: string | null } | undefined;
-    
-    if (!slide) return this.getSnapshot();
-    
+
+    if (!slide) return this.buildPatch({});
+
     // Determine parent column and value
     const isDecksSlide = slide.presentation_id !== null;
     const ownerColumn = isDecksSlide ? 'presentation_id' : 'lyric_id';
     const ownerId = isDecksSlide ? slide.presentation_id : slide.lyric_id;
-    
-    if (!ownerId) return this.getSnapshot();
-    
+
+    if (!ownerId) return this.buildPatch({});
+
     // Get all sibling slides sorted by current order_index
     const siblings = this.db
       .prepare(`SELECT id, order_index FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
       .all(ownerId) as { id: string; order_index: number }[];
-    
+
     // Find current position
     const currentIndex = siblings.findIndex(s => s.id === input.slideId);
-    if (currentIndex === -1) return this.getSnapshot();
-    
+    if (currentIndex === -1) return this.buildPatch({});
+
     // Clamp newOrder to valid range
     const maxOrder = siblings.length - 1;
     const targetOrder = Math.max(0, Math.min(input.newOrder, maxOrder));
-    
+
     // No-op if already at target position
-    if (currentIndex === targetOrder) return this.getSnapshot();
-    
+    if (currentIndex === targetOrder) return this.buildPatch({});
+
     // Reorder siblings by removing current and inserting at newOrder
     const reordered = siblings.filter((_, i) => i !== currentIndex);
     reordered.splice(targetOrder, 0, siblings[currentIndex]);
-    
+
     // Update all siblings with new order_index values
     const tx = this.db.transaction(() => {
       reordered.forEach((sibling, index) => {
@@ -1979,13 +2027,15 @@ export class CastRepository {
           .run(index, now, sibling.id);
       });
     });
-    
+
     tx();
-    return this.getSnapshot();
+    // Every sibling's order_index (and updated_at) changed, so upsert all of them.
+    return this.buildPatch({ upsertSlideIds: reordered.map((sibling) => sibling.id) });
   }
 
-  createElement(input: ElementCreateInput): AppSnapshot {
+  createElement(input: ElementCreateInput): SnapshotPatch {
     const now = nowIso();
+    const newId = input.id ?? createId();
     this.db
       .prepare(
         `INSERT INTO slide_elements
@@ -1993,7 +2043,7 @@ export class CastRepository {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        input.id ?? createId(),
+        newId,
         input.slideId,
         input.type,
         input.x,
@@ -2008,21 +2058,24 @@ export class CastRepository {
         now,
         now
       );
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: [newId] });
   }
 
-  createElementsBatch(inputs: ElementCreateInput[]): AppSnapshot {
-    if (inputs.length === 0) return this.getSnapshot();
+  createElementsBatch(inputs: ElementCreateInput[]): SnapshotPatch {
+    if (inputs.length === 0) return this.buildPatch({});
     const now = nowIso();
     const insert = this.db.prepare(
       `INSERT INTO slide_elements
         (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
+    const newIds: Id[] = [];
     const tx = this.db.transaction((batchInputs: ElementCreateInput[]) => {
       for (const input of batchInputs) {
+        const newId = input.id ?? createId();
+        newIds.push(newId);
         insert.run(
-          input.id ?? createId(),
+          newId,
           input.slideId,
           input.type,
           input.x,
@@ -2040,10 +2093,10 @@ export class CastRepository {
       }
     });
     tx(inputs);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: newIds });
   }
 
-  updateElement(input: ElementUpdateInput): AppSnapshot {
+  updateElement(input: ElementUpdateInput): SnapshotPatch {
     const now = nowIso();
     const existing = this.db
       .prepare('SELECT * FROM slide_elements WHERE id = ?')
@@ -2062,7 +2115,7 @@ export class CastRepository {
         }
       | undefined;
 
-    if (!existing) return this.getSnapshot();
+    if (!existing) return this.buildPatch({});
 
     this.db
       .prepare(
@@ -2084,17 +2137,18 @@ export class CastRepository {
         input.id
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: [input.id] });
   }
 
-  updateElementsBatch(inputs: ElementUpdateInput[]): AppSnapshot {
-    if (inputs.length === 0) return this.getSnapshot();
+  updateElementsBatch(inputs: ElementUpdateInput[]): SnapshotPatch {
+    if (inputs.length === 0) return this.buildPatch({});
     const selectExisting = this.db.prepare('SELECT * FROM slide_elements WHERE id = ?');
     const update = this.db.prepare(
       `UPDATE slide_elements
        SET x = ?, y = ?, width = ?, height = ?, rotation = ?, opacity = ?, z_index = ?, layer = ?, payload_json = ?, updated_at = ?
        WHERE id = ?`
     );
+    const updatedIds: Id[] = [];
     const tx = this.db.transaction((batchInputs: ElementUpdateInput[]) => {
       for (const input of batchInputs) {
         const existing = selectExisting.get(input.id) as
@@ -2125,51 +2179,54 @@ export class CastRepository {
           nowIso(),
           input.id
         );
+        updatedIds.push(input.id);
       }
     });
     tx(inputs);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertSlideElementIds: updatedIds });
   }
 
-  deleteElement(id: Id): AppSnapshot {
+  deleteElement(id: Id): SnapshotPatch {
     this.db.prepare('DELETE FROM slide_elements WHERE id = ?').run(id);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedSlideElementIds: [id] });
   }
 
-  deleteElementsBatch(ids: Id[]): AppSnapshot {
-    if (ids.length === 0) return this.getSnapshot();
+  deleteElementsBatch(ids: Id[]): SnapshotPatch {
+    if (ids.length === 0) return this.buildPatch({});
     const del = this.db.prepare('DELETE FROM slide_elements WHERE id = ?');
     const tx = this.db.transaction((batchIds: Id[]) => {
       for (const id of batchIds) del.run(id);
     });
     tx(ids);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedSlideElementIds: [...ids] });
   }
 
-  createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): AppSnapshot {
+  createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): SnapshotPatch {
     this.assertMediaSource(asset.src);
     const now = nowIso();
+    const assetId = createId();
     this.db
       .prepare(
         'INSERT INTO media_assets (id, name, type, src, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
       )
-      .run(createId(), asset.name, asset.type, asset.src, now, now);
-    return this.getSnapshot();
+      .run(assetId, asset.name, asset.type, asset.src, now, now);
+    return this.buildPatch({ upsertMediaAssetIds: [assetId] });
   }
 
-  deleteMediaAsset(id: Id): AppSnapshot {
+  deleteMediaAsset(id: Id): SnapshotPatch {
     this.db.prepare('DELETE FROM media_assets WHERE id = ?').run(id);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedMediaAssetIds: [id] });
   }
 
-  updateMediaAssetSrc(id: Id, src: string): AppSnapshot {
+  updateMediaAssetSrc(id: Id, src: string): SnapshotPatch {
     this.assertMediaSource(src);
     this.db.prepare('UPDATE media_assets SET src = ?, updated_at = ? WHERE id = ?').run(src, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertMediaAssetIds: [id] });
   }
 
-  createOverlay(input: OverlayCreateInput): AppSnapshot {
+  createOverlay(input: OverlayCreateInput): SnapshotPatch {
     const now = nowIso();
+    const overlayId = createId();
     const elements = input.elements ?? [];
     const summary = summarizeOverlayElements(elements);
     this.db
@@ -2179,7 +2236,7 @@ export class CastRepository {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        createId(),
+        overlayId,
         input.name,
         summary.type,
         summary.x,
@@ -2196,10 +2253,10 @@ export class CastRepository {
         now
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ upsertOverlayIds: [overlayId] });
   }
 
-  updateOverlay(input: OverlayUpdateInput): AppSnapshot {
+  updateOverlay(input: OverlayUpdateInput): SnapshotPatch {
     const existing = this.db
       .prepare('SELECT * FROM overlays WHERE id = ?')
       .get(input.id) as
@@ -2219,7 +2276,7 @@ export class CastRepository {
       }
       | undefined;
 
-    if (!existing) return this.getSnapshot();
+    if (!existing) return this.buildPatch({});
 
     const nextElements = input.elements ?? parseJson<SlideElement[]>(existing.elements_json);
     const summary = summarizeOverlayElements(nextElements);
@@ -2246,38 +2303,38 @@ export class CastRepository {
         input.id,
       );
 
-    return this.getSnapshot();
+    return this.buildPatch({ upsertOverlayIds: [input.id] });
   }
 
-  renameLibrary(id: Id, name: string): AppSnapshot {
+  renameLibrary(id: Id, name: string): SnapshotPatch {
     this.db
       .prepare('UPDATE libraries SET name = ?, updated_at = ? WHERE id = ?')
       .run(name, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertLibraryIds: [id], replaceLibraryBundles: true });
   }
 
-  renamePlaylist(id: Id, name: string): AppSnapshot {
+  renamePlaylist(id: Id, name: string): SnapshotPatch {
     this.db
       .prepare('UPDATE playlists SET name = ?, updated_at = ? WHERE id = ?')
       .run(name, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  renamePresentation(id: Id, title: string): AppSnapshot {
+  renamePresentation(id: Id, title: string): SnapshotPatch {
     this.db
       .prepare('UPDATE presentations SET title = ?, updated_at = ? WHERE id = ?')
       .run(title, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertPresentationIds: [id], replaceLibraryBundles: true });
   }
 
-  renameLyric(id: Id, title: string): AppSnapshot {
+  renameLyric(id: Id, title: string): SnapshotPatch {
     this.db
       .prepare('UPDATE lyrics SET title = ?, updated_at = ? WHERE id = ?')
       .run(title, nowIso(), id);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertLyricIds: [id], replaceLibraryBundles: true });
   }
 
-  deleteLibrary(id: Id): AppSnapshot {
+  deleteLibrary(id: Id): SnapshotPatch {
     const tx = this.db.transaction((libraryId: Id) => {
       this.db
         .prepare(
@@ -2308,10 +2365,10 @@ export class CastRepository {
     });
 
     tx(id);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedLibraryIds: [id], replaceLibraryBundles: true });
   }
 
-  deletePlaylist(id: Id): AppSnapshot {
+  deletePlaylist(id: Id): SnapshotPatch {
     const row = this.db
       .prepare('SELECT library_id FROM playlists WHERE id = ?')
       .get(id) as { library_id: string } | undefined;
@@ -2333,10 +2390,10 @@ export class CastRepository {
 
     tx(id);
     if (row) this.normalizePlaylistOrder(row.library_id);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  deletePlaylistSegment(id: Id): AppSnapshot {
+  deletePlaylistSegment(id: Id): SnapshotPatch {
     const tx = this.db.transaction((segmentId: Id) => {
       this.db
         .prepare('DELETE FROM playlist_entries WHERE segment_id = ?')
@@ -2347,10 +2404,15 @@ export class CastRepository {
     });
 
     tx(id);
-    return this.getSnapshot();
+    return this.buildPatch({ replaceLibraryBundles: true });
   }
 
-  deletePresentation(id: Id): AppSnapshot {
+  deletePresentation(id: Id): SnapshotPatch {
+    const deletedSlideIds = (this.db
+      .prepare('SELECT id FROM slides WHERE presentation_id = ?')
+      .all(id) as Array<{ id: string }>)
+      .map((row) => row.id);
+    const deletedSlideElementIds = this.getSlideElementIdsBySlideIds(deletedSlideIds);
     const tx = this.db.transaction((presentationId: Id) => {
       this.db
         .prepare(
@@ -2371,10 +2433,24 @@ export class CastRepository {
 
     tx(id);
     this.normalizeDeckItemOrder();
-    return this.getSnapshot();
+    const remainingPresentationIds = (this.db.prepare('SELECT id FROM presentations ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    const remainingLyricIds = (this.db.prepare('SELECT id FROM lyrics ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    return this.buildPatch({
+      upsertPresentationIds: remainingPresentationIds,
+      upsertLyricIds: remainingLyricIds,
+      deletedPresentationIds: [id],
+      deletedSlideIds,
+      deletedSlideElementIds,
+      replaceLibraryBundles: true,
+    });
   }
 
-  deleteLyric(id: Id): AppSnapshot {
+  deleteLyric(id: Id): SnapshotPatch {
+    const deletedSlideIds = (this.db
+      .prepare('SELECT id FROM slides WHERE lyric_id = ?')
+      .all(id) as Array<{ id: string }>)
+      .map((row) => row.id);
+    const deletedSlideElementIds = this.getSlideElementIdsBySlideIds(deletedSlideIds);
     const tx = this.db.transaction((lyricId: Id) => {
       this.db
         .prepare(
@@ -2395,19 +2471,28 @@ export class CastRepository {
 
     tx(id);
     this.normalizeDeckItemOrder();
-    return this.getSnapshot();
+    const remainingPresentationIds = (this.db.prepare('SELECT id FROM presentations ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    const remainingLyricIds = (this.db.prepare('SELECT id FROM lyrics ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    return this.buildPatch({
+      upsertPresentationIds: remainingPresentationIds,
+      upsertLyricIds: remainingLyricIds,
+      deletedLyricIds: [id],
+      deletedSlideIds,
+      deletedSlideElementIds,
+      replaceLibraryBundles: true,
+    });
   }
 
-  setOverlayEnabled(overlayId: Id, enabled: boolean): AppSnapshot {
+  setOverlayEnabled(overlayId: Id, enabled: boolean): SnapshotPatch {
     this.db
       .prepare('UPDATE overlays SET enabled = ?, updated_at = ? WHERE id = ?')
       .run(enabled ? 1 : 0, nowIso(), overlayId);
-    return this.getSnapshot();
+    return this.buildPatch({ upsertOverlayIds: [overlayId] });
   }
 
-  deleteOverlay(overlayId: Id): AppSnapshot {
+  deleteOverlay(overlayId: Id): SnapshotPatch {
     this.db.prepare('DELETE FROM overlays WHERE id = ?').run(overlayId);
-    return this.getSnapshot();
+    return this.buildPatch({ deletedOverlayIds: [overlayId] });
   }
 
   private newLyricsTextPayload() {
@@ -2597,6 +2682,375 @@ export class CastRepository {
     };
   }
 
+  // ─── Patch helpers (Stage 3 of perf plan) ─────────────────────────
+  //
+  // Build a SnapshotPatch from ids touched by a mutation. The resulting
+  // patch carries just the rows that changed, not the entire snapshot.
+  // Version is monotonically increasing for de-dup / ordering at the
+  // renderer. See app/core/snapshot-patch.ts.
+
+  private nextPatchVersion(): number {
+    this.patchVersion += 1;
+    return this.patchVersion;
+  }
+
+  private buildPatch(spec: {
+    upsertLibraryIds?: Id[];
+    upsertPresentationIds?: Id[];
+    upsertLyricIds?: Id[];
+    upsertSlideIds?: Id[];
+    upsertSlideElementIds?: Id[];
+    upsertMediaAssetIds?: Id[];
+    upsertOverlayIds?: Id[];
+    upsertTemplateIds?: Id[];
+    deletedLibraryIds?: Id[];
+    deletedPresentationIds?: Id[];
+    deletedLyricIds?: Id[];
+    deletedSlideIds?: Id[];
+    deletedSlideElementIds?: Id[];
+    deletedMediaAssetIds?: Id[];
+    deletedOverlayIds?: Id[];
+    deletedTemplateIds?: Id[];
+    replaceLibraryBundles?: boolean;
+  }): SnapshotPatch {
+    const patch: SnapshotPatch = {
+      version: this.nextPatchVersion(),
+      upserts: {},
+      deletes: {},
+    };
+    if (spec.upsertLibraryIds && spec.upsertLibraryIds.length > 0) {
+      patch.upserts.libraries = this.getLibrariesByIds(spec.upsertLibraryIds);
+    }
+    if (spec.upsertPresentationIds && spec.upsertPresentationIds.length > 0) {
+      patch.upserts.presentations = this.getPresentationsByIds(spec.upsertPresentationIds);
+    }
+    if (spec.upsertLyricIds && spec.upsertLyricIds.length > 0) {
+      patch.upserts.lyrics = this.getLyricsByIds(spec.upsertLyricIds);
+    }
+    if (spec.upsertSlideIds && spec.upsertSlideIds.length > 0) {
+      patch.upserts.slides = this.getSlidesByIds(spec.upsertSlideIds);
+    }
+    if (spec.upsertSlideElementIds && spec.upsertSlideElementIds.length > 0) {
+      patch.upserts.slideElements = this.getSlideElementsByIds(spec.upsertSlideElementIds);
+    }
+    if (spec.upsertMediaAssetIds && spec.upsertMediaAssetIds.length > 0) {
+      patch.upserts.mediaAssets = this.getMediaAssetsByIds(spec.upsertMediaAssetIds);
+    }
+    if (spec.upsertOverlayIds && spec.upsertOverlayIds.length > 0) {
+      patch.upserts.overlays = this.getOverlaysByIds(spec.upsertOverlayIds);
+    }
+    if (spec.upsertTemplateIds && spec.upsertTemplateIds.length > 0) {
+      patch.upserts.templates = this.getTemplatesByIds(spec.upsertTemplateIds);
+    }
+    if (spec.deletedLibraryIds && spec.deletedLibraryIds.length > 0) {
+      patch.deletes.libraries = [...spec.deletedLibraryIds];
+    }
+    if (spec.deletedPresentationIds && spec.deletedPresentationIds.length > 0) {
+      patch.deletes.presentations = [...spec.deletedPresentationIds];
+    }
+    if (spec.deletedLyricIds && spec.deletedLyricIds.length > 0) {
+      patch.deletes.lyrics = [...spec.deletedLyricIds];
+    }
+    if (spec.deletedSlideIds && spec.deletedSlideIds.length > 0) {
+      patch.deletes.slides = [...spec.deletedSlideIds];
+    }
+    if (spec.deletedSlideElementIds && spec.deletedSlideElementIds.length > 0) {
+      patch.deletes.slideElements = [...spec.deletedSlideElementIds];
+    }
+    if (spec.deletedMediaAssetIds && spec.deletedMediaAssetIds.length > 0) {
+      patch.deletes.mediaAssets = [...spec.deletedMediaAssetIds];
+    }
+    if (spec.deletedOverlayIds && spec.deletedOverlayIds.length > 0) {
+      patch.deletes.overlays = [...spec.deletedOverlayIds];
+    }
+    if (spec.deletedTemplateIds && spec.deletedTemplateIds.length > 0) {
+      patch.deletes.templates = [...spec.deletedTemplateIds];
+    }
+    if (spec.replaceLibraryBundles) {
+      patch.upserts.libraryBundles = this.buildLibraryBundles();
+    }
+    return patch;
+  }
+
+  private buildLibraryBundles(): LibraryPlaylistBundle[] {
+    const libraries = this.getLibraries();
+    const presentations = this.getPresentations();
+    const lyrics = this.getLyrics();
+    const itemsById = new Map<Id, DeckItem>([
+      ...presentations.map((deck) => [deck.id, deck] as const),
+      ...lyrics.map((lyric) => [lyric.id, lyric] as const),
+    ]);
+    return libraries.map((library) => ({
+      library,
+      playlists: this.getPlaylistTreesByLibrary(library.id, itemsById),
+    }));
+  }
+
+  private getLibrariesByIds(ids: Id[]): Library[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, created_at, updated_at
+         FROM libraries
+         WHERE id IN (${placeholders})
+         ORDER BY created_at ASC`
+      )
+      .all(...ids) as Array<{ id: string; name: string; created_at: string; updated_at: string }>;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getPresentationsByIds(ids: Id[]): Presentation[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, title, template_id, order_index, created_at, updated_at
+         FROM presentations
+         WHERE id IN (${placeholders})
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      title: string;
+      template_id: string | null;
+      order_index: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+    return rows.map((row) => buildDeckItem({
+      id: row.id,
+      title: row.title,
+      type: 'presentation',
+      templateId: row.template_id,
+      order: row.order_index,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) as Presentation[];
+  }
+
+  private getLyricsByIds(ids: Id[]): Lyric[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, title, template_id, order_index, created_at, updated_at
+         FROM lyrics
+         WHERE id IN (${placeholders})
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      title: string;
+      template_id: string | null;
+      order_index: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+    return rows.map((row) => buildDeckItem({
+      id: row.id,
+      title: row.title,
+      type: 'lyric',
+      templateId: row.template_id,
+      order: row.order_index,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) as Lyric[];
+  }
+
+  private getSlidesByIds(ids: Id[]): Slide[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT s.id, s.presentation_id, s.lyric_id, s.width, s.height, s.notes, s.order_index, s.created_at, s.updated_at,
+                COALESCE(d.order_index, l.order_index) AS content_order
+         FROM slides s
+         LEFT JOIN presentations d ON d.id = s.presentation_id
+         LEFT JOIN lyrics l ON l.id = s.lyric_id
+         WHERE s.id IN (${placeholders})
+         ORDER BY content_order ASC, s.order_index ASC`
+      )
+      .all(...ids) as Array<{
+        id: string;
+        presentation_id: string | null;
+        lyric_id: string | null;
+        width: number;
+        height: number;
+        notes: string;
+        order_index: number;
+        created_at: string;
+        updated_at: string;
+      }>;
+    return rows.map((row) => ({
+      id: row.id,
+      presentationId: row.presentation_id,
+      lyricId: row.lyric_id,
+      width: row.width,
+      height: row.height,
+      notes: row.notes,
+      order: row.order_index,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getMediaAssetsByIds(ids: Id[]): MediaAsset[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, type, src, created_at, updated_at
+         FROM media_assets
+         WHERE id IN (${placeholders})
+         ORDER BY created_at ASC, id ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      name: string;
+      type: MediaAsset['type'];
+      src: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      src: row.src,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getOverlaysByIds(ids: Id[]): Overlay[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
+         FROM overlays
+         WHERE id IN (${placeholders})
+         ORDER BY created_at ASC, id ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      name: string;
+      type: Overlay['type'];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      opacity: number;
+      z_index: number;
+      enabled: number;
+      payload_json: string;
+      elements_json: string;
+      animation_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      x: row.x,
+      y: row.y,
+      width: row.width,
+      height: row.height,
+      opacity: row.opacity,
+      zIndex: row.z_index,
+      enabled: row.enabled === 1,
+      payload: parseJson(row.payload_json),
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      animation: normalizeOverlayAnimation(parseJson(row.animation_json)),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getTemplatesByIds(ids: Id[]): Template[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+         FROM templates
+         WHERE id IN (${placeholders})
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      name: string;
+      kind: string;
+      width: number;
+      height: number;
+      order_index: number;
+      elements_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      kind: this.normalizeTemplateKind(row.kind),
+      width: row.width,
+      height: row.height,
+      order: row.order_index,
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getSlideElementsByIds(ids: Id[]): SlideElement[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at
+         FROM slide_elements
+         WHERE id IN (${placeholders})`
+      )
+      .all(...ids) as Array<{
+        id: string;
+        slide_id: string;
+        type: SlideElement['type'];
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        rotation: number;
+        opacity: number;
+        z_index: number;
+        layer: SlideElement['layer'];
+        payload_json: string;
+        created_at: string;
+        updated_at: string;
+      }>;
+    return rows.map((row) => ({
+      id: row.id,
+      slideId: row.slide_id,
+      type: row.type,
+      x: row.x,
+      y: row.y,
+      width: row.width,
+      height: row.height,
+      rotation: row.rotation,
+      opacity: row.opacity,
+      zIndex: row.z_index,
+      layer: row.layer,
+      payload: parseJson<SlideElementPayload>(row.payload_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
   private getSlideElementsBySlideId(slideId: Id): SlideElement[] {
     const rows = this.db
       .prepare(
@@ -2638,6 +3092,22 @@ export class CastRepository {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+  }
+
+  private getSlideIdsForOwner(ownerColumn: 'presentation_id' | 'lyric_id', ownerId: Id): Id[] {
+    return (this.db
+      .prepare(`SELECT id FROM slides WHERE ${ownerColumn} = ? ORDER BY order_index ASC`)
+      .all(ownerId) as Array<{ id: string }>)
+      .map((row) => row.id);
+  }
+
+  private getSlideElementIdsBySlideIds(slideIds: Id[]): Id[] {
+    if (slideIds.length === 0) return [];
+    const placeholders = slideIds.map(() => '?').join(',');
+    return (this.db
+      .prepare(`SELECT id FROM slide_elements WHERE slide_id IN (${placeholders}) ORDER BY created_at ASC, id ASC`)
+      .all(...slideIds) as Array<{ id: string }>)
+      .map((row) => row.id);
   }
 
   private assertValidDeckBundleManifest(manifest: DeckBundleManifest): void {
