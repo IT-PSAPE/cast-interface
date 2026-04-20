@@ -227,7 +227,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   }, [effectiveElements, inspector, saveElementUpdate, selection.primarySelectedElementId]);
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
-    currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText,
+    currentSlide, currentDeckItem, currentTemplate, mutatePatch, setStatusText,
   });
 
   const elementsValue = useMemo<ElementContextValue>(() => ({

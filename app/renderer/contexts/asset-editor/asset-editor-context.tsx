@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createDefaultTemplateElements } from '@core/templates';
-import type { AppSnapshot, Id, Overlay, OverlayCreateInput, OverlayUpdateInput, SlideElement, Template, TemplateKind } from '@core/types';
+import type { Id, Overlay, OverlayCreateInput, OverlayUpdateInput, SlideElement, Template, TemplateKind } from '@core/types';
 import { cloneElements, slideElementsSignature } from '../../utils/staged-editor-utils';
 import { getOverlayDefaults } from '../../utils/slides';
 import { createId } from '../../utils/create-id';
@@ -75,7 +75,7 @@ const AssetEditorContext = createContext<AssetEditorContextValue | null>(null);
 // ─── Provider ───────────────────────────────────────────────────────
 
 export function AssetEditorProvider({ children }: { children: ReactNode }) {
-  const { mutate, mutatePatch, setStatusText } = useCast();
+  const { mutatePatch, setStatusText } = useCast();
   const { state: { workbenchMode, overlayDefaults } } = useWorkbench();
   const { currentSlide } = useSlides();
   const {
@@ -175,22 +175,20 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     overlayStaged.setIsPushingChanges(true);
     try {
       let resolvedCurrentOverlayId = overlayStaged.currentItemId;
-      const next = await mutate(async () => {
-        let snapshot: AppSnapshot | null = null;
-        let knownOverlays = persistedOverlays;
+      let knownOverlays = persistedOverlays;
         const persistedById = new Map(persistedOverlays.map((o) => [o.id, o]));
         const stagedById = new Map(stagedOverlays.map((o) => [o.id, o]));
 
         for (const overlay of persistedOverlays) {
           if (stagedById.has(overlay.id)) continue;
-          snapshot = await window.castApi.deleteOverlay(overlay.id);
-          knownOverlays = snapshot.overlays;
+          const next = await mutatePatch(() => window.castApi.deleteOverlay(overlay.id));
+          knownOverlays = next.overlays;
         }
         for (const overlay of stagedOverlays) {
           if (persistedById.has(overlay.id)) continue;
           const previousIds = new Set(knownOverlays.map((item) => item.id));
-          snapshot = await window.castApi.createOverlay(toOverlayCreateInput(overlay));
-          knownOverlays = snapshot.overlays;
+          const next = await mutatePatch(() => window.castApi.createOverlay(toOverlayCreateInput(overlay)));
+          knownOverlays = next.overlays;
           const createdOverlay = knownOverlays.find((item) => !previousIds.has(item.id)) ?? null;
           if (createdOverlay && resolvedCurrentOverlayId === overlay.id) resolvedCurrentOverlayId = createdOverlay.id;
         }
@@ -198,16 +196,17 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
           if (!persistedById.has(overlay.id)) continue;
           const persisted = persistedById.get(overlay.id);
           if (!persisted || overlaySignature(overlay) === overlaySignature(persisted)) continue;
-          snapshot = await window.castApi.updateOverlay({ id: overlay.id, name: overlay.name, elements: cloneElements(overlay.elements), animation: overlay.animation });
-          knownOverlays = snapshot.overlays;
+          const next = await mutatePatch(() => window.castApi.updateOverlay({
+            id: overlay.id,
+            name: overlay.name,
+            elements: cloneElements(overlay.elements),
+            animation: overlay.animation,
+          }));
+          knownOverlays = next.overlays;
         }
 
-        if (snapshot) return snapshot;
-        return window.castApi.getSnapshot();
-      });
-
       overlayStaged.setStagedItems(null);
-      const nextOverlays = next.overlays;
+      const nextOverlays = knownOverlays;
       const stillExists = resolvedCurrentOverlayId ? nextOverlays.some((o) => o.id === resolvedCurrentOverlayId) : false;
       if (!resolvedCurrentOverlayId || !stillExists) resolvedCurrentOverlayId = nextOverlays[0]?.id ?? null;
       overlayStaged.setCurrentItemId(resolvedCurrentOverlayId);
@@ -215,7 +214,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     } finally {
       overlayStaged.setIsPushingChanges(false);
     }
-  }, [overlayStaged, mutate, persistedOverlays, setStatusText]);
+  }, [overlayStaged, mutatePatch, persistedOverlays, setStatusText]);
 
   useEffect(() => {
     overlayStaged.registerAutoPush(() => void pushOverlayChanges());
@@ -335,25 +334,23 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     templateStaged.setIsPushingChanges(true);
     try {
       let resolvedCurrentTemplateId = templateStaged.currentItemId;
-      const next = await mutate(async () => {
-        let snapshot: AppSnapshot | null = null;
-        let knownTemplates = persistedTemplates;
+      let knownTemplates = persistedTemplates;
         const persistedById = new Map(persistedTemplates.map((t) => [t.id, t]));
         const stagedById = new Map(stagedTemplates.map((t) => [t.id, t]));
 
         for (const template of persistedTemplates) {
           if (stagedById.has(template.id)) continue;
-          snapshot = await window.castApi.deleteTemplate(template.id);
-          knownTemplates = snapshot.templates;
+          const next = await mutatePatch(() => window.castApi.deleteTemplate(template.id));
+          knownTemplates = next.templates;
         }
         for (const template of stagedTemplates) {
           if (persistedById.has(template.id)) continue;
           const previousIds = new Set(knownTemplates.map((item) => item.id));
-          snapshot = await window.castApi.createTemplate({
+          const next = await mutatePatch(() => window.castApi.createTemplate({
             name: template.name, kind: template.kind, width: template.width, height: template.height,
             elements: cloneElements(template.elements),
-          });
-          knownTemplates = snapshot.templates;
+          }));
+          knownTemplates = next.templates;
           const createdTemplate = knownTemplates.find((item) => !previousIds.has(item.id)) ?? null;
           if (createdTemplate && resolvedCurrentTemplateId === template.id) resolvedCurrentTemplateId = createdTemplate.id;
         }
@@ -361,27 +358,23 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
           if (!persistedById.has(template.id)) continue;
           const persisted = persistedById.get(template.id);
           if (!persisted || templateSignature(template) === templateSignature(persisted)) continue;
-          snapshot = await window.castApi.updateTemplate({
+          const next = await mutatePatch(() => window.castApi.updateTemplate({
             id: template.id, name: template.name, kind: template.kind, width: template.width, height: template.height,
             elements: cloneElements(template.elements),
-          });
-          knownTemplates = snapshot.templates;
+          }));
+          knownTemplates = next.templates;
         }
 
-        if (snapshot) return snapshot;
-        return window.castApi.getSnapshot();
-      });
-
       templateStaged.setStagedItems(null);
-      const currentStillExists = resolvedCurrentTemplateId ? next.templates.some((t) => t.id === resolvedCurrentTemplateId) : false;
-      if (!resolvedCurrentTemplateId || !currentStillExists) resolvedCurrentTemplateId = next.templates[0]?.id ?? null;
+      const currentStillExists = resolvedCurrentTemplateId ? knownTemplates.some((t) => t.id === resolvedCurrentTemplateId) : false;
+      if (!resolvedCurrentTemplateId || !currentStillExists) resolvedCurrentTemplateId = knownTemplates[0]?.id ?? null;
       templateStaged.setCurrentItemId(resolvedCurrentTemplateId);
       setStatusText('Template changes pushed');
       return resolvedCurrentTemplateId;
     } finally {
       templateStaged.setIsPushingChanges(false);
     }
-  }, [templateStaged, mutate, persistedTemplates, setStatusText]);
+  }, [templateStaged, mutatePatch, persistedTemplates, setStatusText]);
 
   const resolveTemplateIdForMutation = useCallback(async (templateId: Id): Promise<Id | null> => {
     if (templateStaged.currentItemId === templateId) return await pushTemplateChanges() ?? templateId;
@@ -393,18 +386,18 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     const resolvedTemplateId = await resolveTemplateIdForMutation(templateId);
     if (!resolvedTemplateId) return;
     if (target.type === 'deck-item') {
-      await mutate(() => window.castApi.applyTemplateToDeckItem(resolvedTemplateId, target.itemId));
+      await mutatePatch(() => window.castApi.applyTemplateToDeckItem(resolvedTemplateId, target.itemId));
       setStatusText('Applied template to item');
       return;
     }
-    await mutate(() => window.castApi.applyTemplateToOverlay(resolvedTemplateId, target.overlayId));
+    await mutatePatch(() => window.castApi.applyTemplateToOverlay(resolvedTemplateId, target.overlayId));
     setStatusText('Applied template to overlay');
-  }, [mutate, resolveTemplateIdForMutation, setStatusText]);
+  }, [mutatePatch, resolveTemplateIdForMutation, setStatusText]);
 
   const detachTemplateFromDeckItem = useCallback(async (itemId: Id) => {
-    await mutate(() => window.castApi.detachTemplateFromDeckItem(itemId));
+    await mutatePatch(() => window.castApi.detachTemplateFromDeckItem(itemId));
     setStatusText('Detached template from item');
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   useEffect(() => {
     templateStaged.registerAutoPush(() => void pushTemplateChanges());

@@ -20,12 +20,11 @@ interface CommandsParams {
   currentSlide: Slide | null;
   currentDeckItem: DeckItem | null;
   currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
-  mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutatePatch, setStatusText }: CommandsParams) {
   const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
@@ -172,18 +171,18 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
   }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, setStatusText, updateOverlayDraft]);
 
   const createOverlay = useCallback(async () => {
-    await mutate(() => window.castApi.createOverlay(getOverlayDefaults({
+    await mutatePatch(() => window.castApi.createOverlay(getOverlayDefaults({
       animationKind: overlayDefaults.animationKind,
       durationMs: overlayDefaults.durationMs,
       autoClearDurationMs: overlayDefaults.autoClearDurationMs,
     })));
     setStatusText('Created overlay');
-  }, [mutate, overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, setStatusText]);
+  }, [mutatePatch, overlayDefaults.autoClearDurationMs, overlayDefaults.animationKind, overlayDefaults.durationMs, setStatusText]);
 
   const toggleOverlay = useCallback(async (overlayId: Id, enabled: boolean) => {
-    await mutate(() => window.castApi.setOverlayEnabled(overlayId, enabled));
+    await mutatePatch(() => window.castApi.setOverlayEnabled(overlayId, enabled));
     setStatusText(enabled ? 'Overlay enabled' : 'Overlay disabled');
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   const importMedia = useCallback(async (files: FileList) => {
     if (files.length === 0) return;
@@ -195,7 +194,7 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
         skippedCount += 1;
         continue;
       }
-      await mutate(() => window.castApi.createMediaAsset({
+      await mutatePatch(() => window.castApi.createMediaAsset({
         name: file.name, type: typeFromFile(file), src,
       }));
       importedCount += 1;
@@ -209,12 +208,12 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
       return;
     }
     setStatusText('No media imported. Selected files did not expose absolute file paths.');
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   const deleteMedia = useCallback(async (id: Id) => {
-    await mutate(() => window.castApi.deleteMediaAsset(id));
+    await mutatePatch(() => window.castApi.deleteMediaAsset(id));
     setStatusText('Media removed');
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   const changeMediaSrc = useCallback(async (id: Id, file: File) => {
     const src = resolvePersistentMediaSource(file);
@@ -222,9 +221,9 @@ export function useElementCommands({ currentSlide, currentDeckItem, currentTempl
       setStatusText('Media source not updated. Selected file did not expose an absolute file path.');
       return;
     }
-    await mutate(() => window.castApi.updateMediaAssetSrc(id, src));
+    await mutatePatch(() => window.castApi.updateMediaAssetSrc(id, src));
     setStatusText('Media source updated');
-  }, [mutate, setStatusText]);
+  }, [mutatePatch, setStatusText]);
 
   return { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc };
 }
