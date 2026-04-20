@@ -15,12 +15,21 @@ import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
+import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { Label } from '@renderer/components/display/text';
+import { EmptyState } from '@renderer/components/display/empty-state';
+import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function OverlayEditorScreen() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay, duplicateOverlay, requestNameFocus } = useOverlayEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const menu = useContextMenuState<Id>();
+
+  useEditorLeftPanelNav({
+    items: overlays,
+    currentId: currentOverlayId,
+    activate: (id) => setCurrentOverlayId(id),
+  });
 
   function handleAddOverlay() {
     void createOverlay();
@@ -58,7 +67,14 @@ export function OverlayEditorScreen() {
                       </Button.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                  <Panel.SectionBody>
+                    {overlays.length === 0 ? (
+                      <EmptyState.Root>
+                        <EmptyState.Title>No overlays yet</EmptyState.Title>
+                        <EmptyState.Description>Click the + button to create your first overlay.</EmptyState.Description>
+                      </EmptyState.Root>
+                    ) : (
+                    <ScrollArea className="p-2">
                     <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
                       {overlays.map((overlay, index) => {
                         const scene = buildRenderScene(null, overlayToLayerElements(overlay));
@@ -77,7 +93,7 @@ export function OverlayEditorScreen() {
                         }
 
                         return (
-                          <Thumbnail.Tile key={overlay.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={currentOverlayId === overlay.id}>
+                          <ActiveOverlayTile key={overlay.id} isActive={currentOverlayId === overlay.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={currentOverlayId === overlay.id}>
                             <Thumbnail.Body>
                               <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                 <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
@@ -94,10 +110,12 @@ export function OverlayEditorScreen() {
                                 <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
                               </div>
                             </Thumbnail.Caption>
-                          </Thumbnail.Tile>
+                          </ActiveOverlayTile>
                         );
                       })}
                     </div>
+                    </ScrollArea>
+                    )}
                   </Panel.SectionBody>
                 </Panel.Section>
               </SplitPanel.Segment>
@@ -135,4 +153,9 @@ export function OverlayEditorScreen() {
       </SplitPanel.Panel>
     </section>
   );
+}
+
+function ActiveOverlayTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
+  const ref = useScrollAreaActiveItem(isActive);
+  return <Thumbnail.Tile ref={ref} {...props} />;
 }

@@ -1397,6 +1397,41 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
+  movePlaylistEntry(entryId: Id, direction: 'up' | 'down'): AppSnapshot {
+    const current = this.db
+      .prepare('SELECT id, segment_id, order_index FROM playlist_entries WHERE id = ?')
+      .get(entryId) as { id: string; segment_id: string; order_index: number } | undefined;
+
+    if (!current) return this.getSnapshot();
+
+    const neighbor = direction === 'up'
+      ? this.db
+        .prepare(
+          'SELECT id, order_index FROM playlist_entries WHERE segment_id = ? AND order_index < ? ORDER BY order_index DESC LIMIT 1'
+        )
+        .get(current.segment_id, current.order_index)
+      : this.db
+        .prepare(
+          'SELECT id, order_index FROM playlist_entries WHERE segment_id = ? AND order_index > ? ORDER BY order_index ASC LIMIT 1'
+        )
+        .get(current.segment_id, current.order_index);
+
+    if (!neighbor) return this.getSnapshot();
+
+    const now = nowIso();
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare('UPDATE playlist_entries SET order_index = ?, updated_at = ? WHERE id = ?')
+        .run((neighbor as { order_index: number }).order_index, now, current.id);
+      this.db
+        .prepare('UPDATE playlist_entries SET order_index = ?, updated_at = ? WHERE id = ?')
+        .run(current.order_index, now, (neighbor as { id: string }).id);
+    });
+
+    tx();
+    return this.getSnapshot();
+  }
+
   movePlaylistEntryToSegment(entryId: Id, segmentId: Id | null): AppSnapshot {
     const entry = this.db
       .prepare(

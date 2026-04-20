@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, type ChangeEvent, type ReactNode } from 'react';
-import { ContextMenu } from '../../components/overlays/context-menu';
-import { Grid2x2, List, Plus } from 'lucide-react';
+import { createContext, useContext, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
+import { ArrowDownUp, Grid2x2, List, Plus } from 'lucide-react';
 import { Button } from '../../components/controls/button';
 import { SegmentedControl } from '../../components/controls/segmented-control';
 import { Tabs } from '../../components/display/tabs';
@@ -9,6 +9,7 @@ import { SelectableRow } from '../../components/display/selectable-row';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { useCreateMenu } from '../../hooks/use-create-menu';
+import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { useElements } from '../../contexts/canvas/canvas-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useResourceDrawer } from './resource-drawer-context';
@@ -23,6 +24,7 @@ import { useAudio } from '../../contexts/playback/playback-context';
 import { useAudioCoverArt } from '../../hooks/use-audio-cover-art';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
+import { useDeckBinSort, type DeckBinSortKey, type SortDirection } from '../deck/use-deck-bin-sort';
 import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
 import { EmptyState } from '../../components/display/empty-state';
@@ -301,6 +303,31 @@ function ResourceDrawerContent() {
   const { actions, meta, state } = useDrawer();
   const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
   const audio = useAudio();
+  const { sort, setSort } = useDeckBinSort();
+  const sortMenu = useContextMenuState<null>();
+
+  const sortMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const keyOption = (id: DeckBinSortKey, label: string): ContextMenuItem => ({
+      id: `sort-${id}`,
+      label,
+      selected: sort.key === id,
+      onSelect: () => setSort({ ...sort, key: id }),
+    });
+    const directionOption = (direction: SortDirection, label: string): ContextMenuItem => ({
+      id: `sort-direction-${direction}`,
+      label,
+      selected: sort.direction === direction,
+      onSelect: () => setSort({ ...sort, direction }),
+    });
+    return [
+      keyOption('name', 'Name'),
+      keyOption('created', 'Date created'),
+      keyOption('modified', 'Date modified'),
+      keyOption('slides', 'Slide count'),
+      directionOption('asc', 'Ascending'),
+      directionOption('desc', 'Descending'),
+    ];
+  }, [sort, setSort]);
 
   function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     actions.handleImport(event);
@@ -316,6 +343,12 @@ function ResourceDrawerContent() {
     setDrawerViewMode(nextValue);
   }
 
+  function handleOpenSortMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    sortMenu.openFromButton(event.currentTarget, null);
+  }
+
+  const showSortControl = state.drawerTab === 'deck';
+
   return (
     <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
       <div className="h-8 flex border-b border-primary px-1 items-end">
@@ -326,6 +359,11 @@ function ResourceDrawerContent() {
           <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
         </Tabs.List>
         <div className={cn('flex shrink-0 items-center gap-0.5 py-0.5')}>
+          {showSortControl ? (
+            <Button.Icon label="Sort" variant="ghost" onClick={handleOpenSortMenu}>
+              <ArrowDownUp />
+            </Button.Icon>
+          ) : null}
           {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
           {meta.showImportAction &&
             <FileTrigger.Root accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media} multiple onSelect={handleImportSelect} className="relative inline-flex">
@@ -379,6 +417,9 @@ function ResourceDrawerContent() {
           <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />
         </Tabs.Panel>
       </Tabs.Panels>
+      {sortMenu.menuState ? (
+        <ContextMenu x={sortMenu.menuState.x} y={sortMenu.menuState.y} items={sortMenuItems} onClose={sortMenu.close} />
+      ) : null}
     </Tabs.Root>
   );
 }

@@ -34,7 +34,7 @@ export function SlideList() {
 
   return (
     <ScrollArea className="p-2">
-      <div className="flex flex-col gap-1" role="list" aria-label="Slide outline">
+      <div className="flex flex-col gap-3" role="list" aria-label="Slide outline">
         {rows.map(renderRow)}
       </div>
     </ScrollArea>
