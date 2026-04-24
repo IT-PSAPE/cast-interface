@@ -1,6 +1,6 @@
 import type { Id } from '@core/types';
-import { useMemo } from 'react';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, Play, Plus, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, FilePlus, Play, Plus, Trash2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -10,12 +10,16 @@ import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { FieldTextarea } from '../../components/form/field';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
+import { useCreateMenu } from '../../hooks/use-create-menu';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useDeckEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useSlides } from '../../contexts/slide-context';
+import { useWorkbench } from '../../contexts/workbench-context';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
+import { CreateLyricDialog } from '../../features/deck/create-lyric-dialog';
+import { LyricEditorModal } from '../../features/deck/lyric-editor-modal';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { StagePanel } from '../../features/canvas/stage-panel';
@@ -31,15 +35,21 @@ import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { Label } from '@renderer/components/display/text';
 
+type CreateDeckItemAction = 'presentation' | 'lyric-edit' | 'lyric-empty';
+
 export function DeckEditorScreen() {
-  const { browseDeckItem, currentDeckItem } = useNavigation();
+  const { browseDeckItem, currentDeckItem, createPresentation, createEmptyLyric } = useNavigation();
   const { effectiveElements } = useElements();
   const { deckItems } = useProjectContent();
   const { getSlideElements } = useDeckEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide, reorderSlide } = useSlides();
+  const { actions: { setWorkbenchMode } } = useWorkbench();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const { getThumbnailScene } = useRenderScenes();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
+  const [activeCreateAction, setActiveCreateAction] = useState<CreateDeckItemAction | null>(null);
+  const [isCreateLyricDialogOpen, setIsCreateLyricDialogOpen] = useState(false);
+  const [isLyricEditorOpen, setIsLyricEditorOpen] = useState(false);
   const {
     canEdit,
     notesDraft,
@@ -51,6 +61,84 @@ export function DeckEditorScreen() {
     handleResetNotes,
   } = useSlideNotesPanel();
   const slideMenu = useContextMenuState<Id>();
+
+  function handleOpenCreateLyricDialog() {
+    closeCreateMenu();
+    setIsCreateLyricDialogOpen(true);
+  }
+
+  async function handleCreatePresentation() {
+    setActiveCreateAction('presentation');
+    try {
+      await createPresentation();
+      setWorkbenchMode('deck-editor');
+    } finally {
+      setActiveCreateAction(null);
+    }
+  }
+
+  async function handleCreateEmptyLyricFromDialog() {
+    setActiveCreateAction('lyric-empty');
+    try {
+      await createEmptyLyric();
+      setIsCreateLyricDialogOpen(false);
+      setWorkbenchMode('deck-editor');
+    } finally {
+      setActiveCreateAction(null);
+    }
+  }
+
+  async function handleCreateEditableLyricFromDialog() {
+    setActiveCreateAction('lyric-edit');
+    try {
+      await createEmptyLyric();
+      setIsCreateLyricDialogOpen(false);
+      setIsLyricEditorOpen(true);
+    } finally {
+      setActiveCreateAction(null);
+    }
+  }
+
+  function handleCloseCreateLyricDialog() {
+    if (activeCreateAction) return;
+    setIsCreateLyricDialogOpen(false);
+  }
+
+  function handleCloseLyricEditor() {
+    setIsLyricEditorOpen(false);
+  }
+
+  const {
+    menuItems: createMenuItems,
+    menuState: createMenuState,
+    openMenuFromButton: openCreateMenuFromButton,
+    closeMenu: closeCreateMenu,
+  } = useCreateMenu(
+    () => [
+      {
+        id: 'create-presentation',
+        label: 'Presentation',
+        icon: <DeckItemIcon entity="presentation" size={14} strokeWidth={1.75} />,
+        onSelect: () => { void handleCreatePresentation(); },
+      },
+      {
+        id: 'create-lyric',
+        label: 'Lyric',
+        icon: <DeckItemIcon entity="lyric" size={14} strokeWidth={1.75} />,
+        onSelect: handleOpenCreateLyricDialog,
+      },
+    ],
+    [createPresentation],
+  );
+
+  function handleOpenCreateMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    openCreateMenuFromButton(event.currentTarget);
+  }
+
+  function handleCreateMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    closeCreateMenu();
+  }
 
   useEditorLeftPanelNav({
     items: slides,
@@ -98,8 +186,8 @@ export function DeckEditorScreen() {
 
   const titleElement = (
     <ContextMenu.Root>
-      <ContextMenu.ButtonTrigger>
-        <Button variant="ghost" className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+      <ContextMenu.ButtonTrigger className="flex w-full min-w-0">
+        <Button variant="ghost" className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
           <span className="flex min-w-0 items-center gap-2">
             {currentDeckItem && <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" />}
             <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
@@ -137,9 +225,12 @@ export function DeckEditorScreen() {
                 <Panel.Section>
                   <Panel.SectionHeader className="border-b border-primary">
                     <Panel.SectionTitle>{titleElement}</Panel.SectionTitle>
-                    <Panel.SectionAction>
+                    <Panel.SectionAction className='flex gap-1'>
                       <Button.Icon label={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
                         <Plus />
+                      </Button.Icon>
+                      <Button.Icon label="Create deck item" onClick={handleOpenCreateMenu}>
+                        <FilePlus />
                       </Button.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
@@ -219,6 +310,23 @@ export function DeckEditorScreen() {
                 </ContextMenu.Positioner>
               </ContextMenu.Portal>
             </ContextMenu.Root>
+            <ContextMenu.Root open={Boolean(createMenuState)} position={createMenuState} onOpenChange={handleCreateMenuOpenChange}>
+              <ContextMenu.Portal>
+                <ContextMenu.Positioner>
+                  <ContextMenu.Popup>
+                    <ContextMenu.Items items={createMenuItems} />
+                  </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+              </ContextMenu.Portal>
+            </ContextMenu.Root>
+            <CreateLyricDialog
+              isOpen={isCreateLyricDialogOpen}
+              isBusy={activeCreateAction !== null}
+              onClose={handleCloseCreateLyricDialog}
+              onCreateEmptyLyric={handleCreateEmptyLyricFromDialog}
+              onCreateEditableLyric={handleCreateEditableLyricFromDialog}
+            />
+            <LyricEditorModal isOpen={isLyricEditorOpen} onClose={handleCloseLyricEditor} />
           </Panel>
         </SplitPanel.Segment>
 

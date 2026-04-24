@@ -8,6 +8,7 @@ const VIEWPORT_PADDING = 8;
 export interface ContextMenuPoint {
   x: number;
   y: number;
+  width?: number;
 }
 
 export interface ContextMenuItem {
@@ -174,7 +175,7 @@ function ButtonTrigger({ children, className, disabled = false, onClick, ...prop
     event.preventDefault();
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
-    actions.openAt({ x: rect.left, y: rect.bottom + 4 });
+    actions.openAt({ x: rect.left, y: rect.bottom + 4, width: rect.width });
   }
 
   return (
@@ -232,13 +233,15 @@ function Positioner({ children, className, ...props }: HTMLAttributes<HTMLDivEle
   );
 }
 
-function Popup({ children, className, minWidthClassName = 'min-w-[180px]', ...props }: PopupProps) {
-  const { meta } = useContextMenu();
+function Popup({ children, className, minWidthClassName = 'min-w-[180px]', style, ...props }: PopupProps) {
+  const { meta, state } = useContextMenu();
+  const anchorWidth = state.position?.width;
   return (
     <div
       ref={meta.popupRef}
       role="menu"
-      className={cn(minWidthClassName, 'rounded-md border border-primary bg-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]', className)}
+      className={cn(anchorWidth == null && minWidthClassName, 'rounded-md border border-primary bg-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]', className)}
+      style={anchorWidth != null ? { ...style, width: anchorWidth } : style}
       {...props}
     >
       {children}
