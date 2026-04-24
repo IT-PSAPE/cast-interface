@@ -137,7 +137,7 @@ export function ShapeElementInspector() {
         </Section.Header>
         {visual.fillEnabled ? (
           <Section.Body>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.fillColor} onChange={handleFillColorChange} />
             </Section.Row>
           </Section.Body>
@@ -151,7 +151,7 @@ export function ShapeElementInspector() {
         </Section.Header>
         {visual.strokeEnabled ? (
           <Section.Body>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.strokeColor} onChange={(value: string) => { updateVisual({ strokeColor: value }); }} />
             </Section.Row>
             <Section.Row>
@@ -184,7 +184,7 @@ export function ShapeElementInspector() {
                 <FieldIcon><Sun size={14} /></FieldIcon>
               </FieldInput>
             </Section.Row>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.shadowColor} onChange={(value: string) => { updateVisual({ shadowColor: value }); }} />
             </Section.Row>
           </Section.Body>

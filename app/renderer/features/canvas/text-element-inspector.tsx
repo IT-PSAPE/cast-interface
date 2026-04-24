@@ -147,7 +147,7 @@ export function TextElementInspector() {
         </Section.Header>
         {textVisual.strokeEnabled ? (
           <Section.Body>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={textVisual.strokeColor} onChange={(value: string) => { updateTextVisual({ strokeColor: value }); }} />
             </Section.Row>
             <Section.Row>
@@ -180,7 +180,7 @@ export function TextElementInspector() {
                 <FieldIcon><Sun size={14} /></FieldIcon>
               </FieldInput>
             </Section.Row>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={textVisual.shadowColor} onChange={(value: string) => { updateTextVisual({ shadowColor: value }); }} />
             </Section.Row>
           </Section.Body>

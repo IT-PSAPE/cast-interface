@@ -28,21 +28,16 @@ function Body({ children }: { children: ReactNode }) {
 }
 
 const rowStyles = cv({
-  base: 'grid gap-2',
-  variants: {
-    lead: {
-      true: ['grid-cols-[1fr_repeat(2,24px)]'],
-      false: ['grid-cols-[repeat(2,1fr)_24px]'],
-    },
-  },
+  base: 'flex gap-1',
+  variants: {},
   defaultVariants: {
     lead: false,
   },
 });
 
-function Row({ children, lead }: { children: ReactNode; lead?: boolean }) {
+function Row({ children }: { children: ReactNode;}) {
   return (
-    <div className={rowStyles({ lead })}>
+    <div className={rowStyles()}>
       {children}
     </div>
   );
