@@ -7,7 +7,7 @@ import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { filterByText } from '../../utils/filter-by-text';
 import { buildDeckItemMenuItems } from './build-deck-menu-items';
 import { useLibraryPanelManagement } from '../library/use-library-panel-management';
-import { useDeckBinSort, type DeckBinSort } from './use-deck-bin-sort';
+import { useDeckBinSort, compareByKey, type BinSort, type DeckBinSortKey } from '../workbench/use-bin-sort';
 
 export function useDeckBin(filterText: string) {
   const {
@@ -69,23 +69,16 @@ export function useDeckBin(filterText: string) {
   };
 }
 
-function sortDeckItems(items: DeckItem[], sort: DeckBinSort, slidesByDeckItemId: ReadonlyMap<Id, unknown[]>): DeckItem[] {
+function sortDeckItems(items: DeckItem[], sort: BinSort<DeckBinSortKey>, slidesByDeckItemId: ReadonlyMap<Id, unknown[]>): DeckItem[] {
   const direction = sort.direction === 'asc' ? 1 : -1;
   const sorted = [...items];
   sorted.sort((a, b) => {
-    switch (sort.key) {
-      case 'name':
-        return direction * a.title.localeCompare(b.title);
-      case 'created':
-        return direction * a.createdAt.localeCompare(b.createdAt);
-      case 'modified':
-        return direction * a.updatedAt.localeCompare(b.updatedAt);
-      case 'slides': {
-        const aCount = slidesByDeckItemId.get(a.id)?.length ?? 0;
-        const bCount = slidesByDeckItemId.get(b.id)?.length ?? 0;
-        return direction * (aCount - bCount);
-      }
+    if (sort.key === 'slides') {
+      const aCount = slidesByDeckItemId.get(a.id)?.length ?? 0;
+      const bCount = slidesByDeckItemId.get(b.id)?.length ?? 0;
+      return direction * (aCount - bCount);
     }
+    return direction * compareByKey(a, b, sort.key, (item) => item.title);
   });
   return sorted;
 }

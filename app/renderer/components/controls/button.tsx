@@ -11,7 +11,7 @@ const buttonVariants = cv({
       default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
       take: 'bg-success_primary text-primary',
       danger: 'bg-error_primary text-primary',
-      ghost: 'bg-transparent text-secondary hover:text-primary',
+      ghost: 'bg-transparent text-secondary hover:bg-quaternary hover:text-primary',
     },
     disabled: {
       true: 'opacity-50 cursor-not-allowed pointer-events-none',
@@ -42,7 +42,7 @@ const iconButtonVariants = cv({
       default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
       take: 'bg-success_primary text-primary',
       danger: 'bg-error_primary text-primary',
-      ghost: 'bg-transparent text-secondary hover:text-primary',
+      ghost: 'bg-transparent text-tertiary hover:bg-quaternary hover:text-primary',
     },
     disabled: {
       true: 'opacity-50 cursor-not-allowed pointer-events-none',

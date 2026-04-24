@@ -1,5 +1,8 @@
 import { useRef } from 'react';
 import { ChevronLeft, Folder, LayoutTemplate, Plus } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useCast } from '@renderer/contexts/app-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { Button } from '@renderer/components/controls/button';
@@ -33,10 +36,19 @@ export function ShowScreen() {
 function ShowScreenContent() {
   const { snapshot } = useCast();
   const { state: libraryBrowserState, actions: libraryBrowserActions } = useLibraryBrowser();
-  const { currentLibraryBundle, selectLibrary, createLibrary, renameLibrary, recentlyCreatedId, clearRecentlyCreated } = useNavigation();
+  const { currentLibraryBundle, selectLibrary, createLibrary, renameLibrary, recentlyCreatedId, clearRecentlyCreated, reorderLibrary } = useNavigation();
   const { libraryPanelView } = useLibraryPanelState();
   const state = useDeckBrowserView();
   const clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const librarySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function handleLibraryDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !snapshot) return;
+    const newIndex = snapshot.libraryBundles.findIndex((bundle) => bundle.library.id === over.id);
+    if (newIndex < 0) return;
+    void reorderLibrary(String(active.id), newIndex);
+  }
 
   function handleCreateLibrary() {
     void createLibrary();
@@ -44,6 +56,11 @@ function ShowScreenContent() {
 
   function handleBackToLibraries() {
     libraryBrowserActions.setLibrariesView();
+  }
+
+  function handleLibraryMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    libraryBrowserActions.closeMenu();
   }
 
   return (
@@ -61,53 +78,48 @@ function ShowScreenContent() {
                 </Panel.Header>
                 <Panel.Section>
                   <Panel.SectionBody className="space-y-1 px-1.5 py-2">
-                    {snapshot.libraryBundles.map((bundle) => {
-                      const isEditing = bundle.library.id === recentlyCreatedId || libraryBrowserActions.isEditing('library', bundle.library.id);
+                    <DndContext sensors={librarySensors} collisionDetection={closestCenter} onDragEnd={handleLibraryDragEnd}>
+                      <SortableContext items={snapshot.libraryBundles.map((bundle) => bundle.library.id)} strategy={verticalListSortingStrategy}>
+                        {snapshot.libraryBundles.map((bundle) => {
+                          const isEditing = bundle.library.id === recentlyCreatedId || libraryBrowserActions.isEditing('library', bundle.library.id);
 
-                      function handleSelect() {
-                        clearTimeout(clickTimer.current);
-                        selectLibrary(bundle.library.id);
-                        clickTimer.current = setTimeout(() => {
-                          libraryBrowserActions.setPlaylistView();
-                        }, 250);
-                      }
+                          function handleSelect() {
+                            clearTimeout(clickTimer.current);
+                            selectLibrary(bundle.library.id);
+                            clickTimer.current = setTimeout(() => {
+                              libraryBrowserActions.setPlaylistView();
+                            }, 250);
+                          }
 
-                      function handleDoubleClick() {
-                        clearTimeout(clickTimer.current);
-                      }
+                          function handleDoubleClick() {
+                            clearTimeout(clickTimer.current);
+                          }
 
-                      function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-                        libraryBrowserActions.handleLibraryContextMenu(event, bundle.library.id);
-                      }
+                          function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+                            libraryBrowserActions.handleLibraryContextMenu(event, bundle.library.id);
+                          }
 
-                      function handleRename(name: string) {
-                        void renameLibrary(bundle.library.id, name);
-                        clearRecentlyCreated();
-                        libraryBrowserActions.clearEditing();
-                      }
+                          function handleRename(name: string) {
+                            void renameLibrary(bundle.library.id, name);
+                            clearRecentlyCreated();
+                            libraryBrowserActions.clearEditing();
+                          }
 
-                      return (
-                        <Panel.Item
-                          key={bundle.library.id}
-                          role="button"
-                          onClick={handleSelect}
-                          onDoubleClick={handleDoubleClick}
-                          onContextMenu={handleContextMenu}
-                        >
-                          <Panel.ItemLeading>
-                            <Folder size={14} strokeWidth={1.75} />
-                          </Panel.ItemLeading>
-                          <Panel.ItemBody>
-                            <EditableField
-                              value={bundle.library.name}
-                              onCommit={handleRename}
-                              editing={isEditing}
-                              className="text-md font-medium"
+                          return (
+                            <SortableLibraryRow
+                              key={bundle.library.id}
+                              id={bundle.library.id}
+                              name={bundle.library.name}
+                              isEditing={isEditing}
+                              onSelect={handleSelect}
+                              onDoubleClick={handleDoubleClick}
+                              onContextMenu={handleContextMenu}
+                              onRename={handleRename}
                             />
-                          </Panel.ItemBody>
-                        </Panel.Item>
-                      );
-                    })}
+                          );
+                        })}
+                      </SortableContext>
+                    </DndContext>
                   </Panel.SectionBody>
                 </Panel.Section>
               </>
@@ -133,14 +145,15 @@ function ShowScreenContent() {
               </>
             )}
 
-            {libraryBrowserState.menuState && (
-              <ContextMenu
-                x={libraryBrowserState.menuState.x}
-                y={libraryBrowserState.menuState.y}
-                items={libraryBrowserState.menuItems}
-                onClose={libraryBrowserActions.closeMenu}
-              />
-            )}
+            <ContextMenu.Root open={Boolean(libraryBrowserState.menuState)} position={libraryBrowserState.menuState} onOpenChange={handleLibraryMenuOpenChange}>
+              <ContextMenu.Portal>
+                <ContextMenu.Positioner>
+                  <ContextMenu.Popup>
+                    <ContextMenu.Items items={libraryBrowserState.menuItems} />
+                  </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+              </ContextMenu.Portal>
+            </ContextMenu.Root>
           </Panel>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="show-center" defaultSize={840} minSize={360}>
@@ -177,5 +190,47 @@ function ShowScreenContent() {
         </SplitPanel.Segment>
       </SplitPanel.Panel>
     </section>
+  );
+}
+
+interface SortableLibraryRowProps {
+  id: string;
+  name: string;
+  isEditing: boolean;
+  onSelect: () => void;
+  onDoubleClick: () => void;
+  onContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
+  onRename: (name: string) => void;
+}
+
+function SortableLibraryRow({ id, name, isEditing, onSelect, onDoubleClick, onContextMenu, onRename }: SortableLibraryRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Panel.Item
+        role="button"
+        onClick={onSelect}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+      >
+        <Panel.ItemLeading>
+          <Folder size={14} strokeWidth={1.75} />
+        </Panel.ItemLeading>
+        <Panel.ItemBody>
+          <EditableField
+            value={name}
+            onCommit={onRename}
+            editing={isEditing}
+            className="text-md font-medium"
+          />
+        </Panel.ItemBody>
+      </Panel.Item>
+    </div>
   );
 }

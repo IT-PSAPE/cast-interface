@@ -302,6 +302,26 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText(`Renamed library: ${name}`);
   }, [mutatePatch, setStatusText]);
 
+  const reorderLibrary = useCallback(async (libraryId: Id, newOrder: number) => {
+    await mutatePatch(() => window.castApi.setLibraryOrder(libraryId, newOrder));
+    setStatusText('Reordered library');
+  }, [mutatePatch, setStatusText]);
+
+  const reorderPlaylist = useCallback(async (playlistId: Id, newOrder: number) => {
+    await mutatePatch(() => window.castApi.setPlaylistOrder(playlistId, newOrder));
+    setStatusText('Reordered playlist');
+  }, [mutatePatch, setStatusText]);
+
+  const reorderSegment = useCallback(async (segmentId: Id, newOrder: number) => {
+    await mutatePatch(() => window.castApi.setPlaylistSegmentOrder(segmentId, newOrder));
+    setStatusText('Reordered segment');
+  }, [mutatePatch, setStatusText]);
+
+  const movePlaylistEntry = useCallback(async (entryId: Id, segmentId: Id, newOrder: number) => {
+    await mutatePatch(() => window.castApi.movePlaylistEntryTo(entryId, segmentId, newOrder));
+    setStatusText('Moved item');
+  }, [mutatePatch, setStatusText]);
+
   const renamePlaylist = useCallback(async (id: Id, name: string) => {
     await mutatePatch(() => window.castApi.renamePlaylist(id, name));
     setStatusText(`Renamed playlist: ${name}`);
@@ -372,6 +392,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renameLibrary,
     renamePlaylist,
     renameDeckItem,
+    reorderLibrary,
+    reorderPlaylist,
+    reorderSegment,
+    movePlaylistEntry,
   }), [
     addDeckItemToSegment,
     armOutputPlaylistEntry,
@@ -388,6 +412,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     renameDeckItem,
     renameLibrary,
     renamePlaylist,
+    reorderLibrary,
+    reorderPlaylist,
+    reorderSegment,
+    movePlaylistEntry,
     selectLibrary,
     selectPlaylistEntry,
     selectPlaylistDeckItem,

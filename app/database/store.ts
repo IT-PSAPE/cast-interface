@@ -54,7 +54,8 @@ const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
 const TEMPLATES_SCHEMA_VERSION = 4;
 const DECK_ITEMS_SCHEMA_VERSION = 6;
-const LATEST_SCHEMA_VERSION = DECK_ITEMS_SCHEMA_VERSION;
+const REORDER_SCHEMA_VERSION = 7;
+const LATEST_SCHEMA_VERSION = REORDER_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
 
@@ -215,8 +216,49 @@ export class CastRepository {
 
     if (this.getUserVersion() < DECK_ITEMS_SCHEMA_VERSION) {
       this.migratePresentationSchemaToDeckItems();
-      this.setUserVersion(LATEST_SCHEMA_VERSION);
+      this.setUserVersion(DECK_ITEMS_SCHEMA_VERSION);
     }
+
+    if (this.getUserVersion() < REORDER_SCHEMA_VERSION) {
+      this.ensureReorderColumns();
+      this.setUserVersion(REORDER_SCHEMA_VERSION);
+    }
+  }
+
+  /**
+   * Schema v7 — add `order_index` to `libraries` and `media_assets` so they
+   * can be reordered via drag-and-drop. Back-fills the column from the
+   * existing `created_at` order so nothing appears to move after upgrade.
+   */
+  private ensureReorderColumns(): void {
+    const tx = this.db.transaction(() => {
+      if (!this.hasColumn('libraries', 'order_index')) {
+        this.db.exec('ALTER TABLE libraries ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0');
+        this.db.exec(`
+          WITH ranked AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) - 1 AS rank FROM libraries
+          )
+          UPDATE libraries SET order_index = (SELECT rank FROM ranked WHERE ranked.id = libraries.id);
+        `);
+      }
+      if (!this.hasColumn('media_assets', 'order_index')) {
+        this.db.exec('ALTER TABLE media_assets ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0');
+        this.db.exec(`
+          WITH ranked AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) - 1 AS rank FROM media_assets
+          )
+          UPDATE media_assets SET order_index = (SELECT rank FROM ranked WHERE ranked.id = media_assets.id);
+        `);
+      }
+    });
+    tx();
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_libraries_order_index ON libraries(order_index);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_media_assets_order_index ON media_assets(order_index);');
+  }
+
+  private hasColumn(tableName: string, columnName: string): boolean {
+    const rows = this.db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+    return rows.some((row) => row.name === columnName);
   }
 
   private getUserVersion(): number {
@@ -240,6 +282,7 @@ export class CastRepository {
       CREATE TABLE IF NOT EXISTS libraries (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -377,6 +420,7 @@ export class CastRepository {
       CREATE TABLE IF NOT EXISTS libraries (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -470,6 +514,7 @@ export class CastRepository {
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         src TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -1274,9 +1319,13 @@ export class CastRepository {
   createLibrary(name: string): SnapshotPatch {
     const now = nowIso();
     const libraryId = createId();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM libraries').get() as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
     this.db
-      .prepare('INSERT INTO libraries (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)')
-      .run(libraryId, name, now, now);
+      .prepare('INSERT INTO libraries (id, name, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+      .run(libraryId, name, currentOrder + 1, now, now);
     return this.buildPatch({ upsertLibraryIds: [libraryId], replaceLibraryBundles: true });
   }
 
@@ -1607,6 +1656,7 @@ export class CastRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
 
+    const deletedElementIds: Id[] = [];
     const tx = this.db.transaction(() => {
       this.db.prepare(`UPDATE ${ownerTable} SET template_id = ?, updated_at = ? WHERE id = ?`).run(templateId, nowIso(), itemId);
       for (const slide of slides) {
@@ -1642,6 +1692,7 @@ export class CastRepository {
           updatedAt: row.updated_at,
         }));
         const appliedElements = applyTemplateToElements(template, currentElements, slide.id);
+        deletedElementIds.push(...currentElements.map((element) => element.id));
         deleteElements.run(slide.id);
         for (const element of appliedElements) {
           insertElement.run(
@@ -1669,6 +1720,7 @@ export class CastRepository {
       upsertPresentationIds: owner.type === 'presentation' ? [itemId] : undefined,
       upsertLyricIds: owner.type === 'lyric' ? [itemId] : undefined,
       upsertSlideElementIds: this.getSlideElementIdsBySlideIds(slides.map((slide) => slide.id)),
+      deletedSlideElementIds: deletedElementIds,
       replaceLibraryBundles: true,
     });
   }
@@ -1705,6 +1757,7 @@ export class CastRepository {
     );
 
     const touchedSlideIds: string[] = [];
+    const deletedElementIds: Id[] = [];
     const tx = this.db.transaction(() => {
       for (const item of linkedItems) {
         const ownerColumn = this.getDeckOwnerColumn(item.type);
@@ -1744,6 +1797,7 @@ export class CastRepository {
             updatedAt: row.updated_at,
           }));
           const syncedElements = syncTemplateToElements(template, currentElements, slide.id);
+          deletedElementIds.push(...currentElements.map((element) => element.id));
           deleteElements.run(slide.id);
           for (const element of syncedElements) {
             insertElement.run(
@@ -1777,6 +1831,7 @@ export class CastRepository {
       upsertPresentationIds: presentationIds.length > 0 ? presentationIds : undefined,
       upsertLyricIds: lyricIds.length > 0 ? lyricIds : undefined,
       upsertSlideElementIds: this.getSlideElementIdsBySlideIds(touchedSlideIds),
+      deletedSlideElementIds: deletedElementIds,
       replaceLibraryBundles: true,
     });
   }
@@ -2141,6 +2196,176 @@ export class CastRepository {
     return this.buildPatch({ upsertSlideIds: reordered.map((sibling) => sibling.id) });
   }
 
+  setLibraryOrder(libraryId: Id, newOrder: number): SnapshotPatch {
+    const now = nowIso();
+    const siblings = this.db
+      .prepare('SELECT id, order_index FROM libraries ORDER BY order_index ASC, created_at ASC')
+      .all() as { id: string; order_index: number }[];
+
+    const currentIndex = siblings.findIndex((s) => s.id === libraryId);
+    if (currentIndex === -1) return this.buildPatch({});
+
+    const maxOrder = siblings.length - 1;
+    const targetOrder = Math.max(0, Math.min(newOrder, maxOrder));
+    if (currentIndex === targetOrder) return this.buildPatch({});
+
+    const reordered = siblings.filter((_, i) => i !== currentIndex);
+    reordered.splice(targetOrder, 0, siblings[currentIndex]);
+
+    const tx = this.db.transaction(() => {
+      reordered.forEach((sibling, index) => {
+        this.db
+          .prepare('UPDATE libraries SET order_index = ?, updated_at = ? WHERE id = ?')
+          .run(index, now, sibling.id);
+      });
+    });
+
+    tx();
+    return this.buildPatch({
+      upsertLibraryIds: reordered.map((sibling) => sibling.id),
+      replaceLibraryBundles: true,
+    });
+  }
+
+  setPlaylistOrder(playlistId: Id, newOrder: number): SnapshotPatch {
+    const now = nowIso();
+    const current = this.db
+      .prepare('SELECT id, library_id, order_index FROM playlists WHERE id = ?')
+      .get(playlistId) as { id: string; library_id: string; order_index: number } | undefined;
+
+    if (!current) return this.buildPatch({});
+
+    const siblings = this.db
+      .prepare('SELECT id, order_index FROM playlists WHERE library_id = ? ORDER BY order_index ASC')
+      .all(current.library_id) as { id: string; order_index: number }[];
+
+    const currentIndex = siblings.findIndex((s) => s.id === playlistId);
+    if (currentIndex === -1) return this.buildPatch({});
+
+    const maxOrder = siblings.length - 1;
+    const targetOrder = Math.max(0, Math.min(newOrder, maxOrder));
+    if (currentIndex === targetOrder) return this.buildPatch({});
+
+    const reordered = siblings.filter((_, i) => i !== currentIndex);
+    reordered.splice(targetOrder, 0, siblings[currentIndex]);
+
+    const tx = this.db.transaction(() => {
+      reordered.forEach((sibling, index) => {
+        this.db
+          .prepare('UPDATE playlists SET order_index = ?, updated_at = ? WHERE id = ?')
+          .run(index, now, sibling.id);
+      });
+    });
+
+    tx();
+    return this.buildPatch({ replaceLibraryBundles: true });
+  }
+
+  movePlaylistEntryTo(entryId: Id, segmentId: Id, newOrder: number): SnapshotPatch {
+    const entry = this.db
+      .prepare(
+        `SELECT pe.id, pe.segment_id, ps.playlist_id
+         FROM playlist_entries pe
+         JOIN playlist_segments ps ON ps.id = pe.segment_id
+         WHERE pe.id = ?`
+      )
+      .get(entryId) as { id: string; segment_id: string; playlist_id: string } | undefined;
+    if (!entry) return this.buildPatch({});
+
+    const targetSegment = this.db
+      .prepare('SELECT id FROM playlist_segments WHERE id = ? AND playlist_id = ?')
+      .get(segmentId, entry.playlist_id) as { id: string } | undefined;
+    if (!targetSegment) return this.buildPatch({});
+
+    const now = nowIso();
+    const isSameSegment = entry.segment_id === segmentId;
+
+    const tx = this.db.transaction(() => {
+      if (isSameSegment) {
+        const siblings = this.db
+          .prepare('SELECT id FROM playlist_entries WHERE segment_id = ? ORDER BY order_index ASC')
+          .all(segmentId) as { id: string }[];
+        const currentIndex = siblings.findIndex((s) => s.id === entryId);
+        if (currentIndex === -1) return;
+        const maxOrder = siblings.length - 1;
+        const targetOrder = Math.max(0, Math.min(newOrder, maxOrder));
+        if (currentIndex === targetOrder) return;
+        const reordered = siblings.filter((_, i) => i !== currentIndex);
+        reordered.splice(targetOrder, 0, siblings[currentIndex]);
+        reordered.forEach((sibling, index) => {
+          this.db
+            .prepare('UPDATE playlist_entries SET order_index = ?, updated_at = ? WHERE id = ?')
+            .run(index, now, sibling.id);
+        });
+        return;
+      }
+
+      const targetSiblings = this.db
+        .prepare('SELECT id FROM playlist_entries WHERE segment_id = ? ORDER BY order_index ASC')
+        .all(segmentId) as { id: string }[];
+      const clampedOrder = Math.max(0, Math.min(newOrder, targetSiblings.length));
+      const newTargetList = [...targetSiblings];
+      newTargetList.splice(clampedOrder, 0, { id: entryId });
+      newTargetList.forEach((item, index) => {
+        if (item.id === entryId) {
+          this.db
+            .prepare('UPDATE playlist_entries SET segment_id = ?, order_index = ?, updated_at = ? WHERE id = ?')
+            .run(segmentId, index, now, item.id);
+        } else {
+          this.db
+            .prepare('UPDATE playlist_entries SET order_index = ?, updated_at = ? WHERE id = ?')
+            .run(index, now, item.id);
+        }
+      });
+
+      const sourceSiblings = this.db
+        .prepare('SELECT id FROM playlist_entries WHERE segment_id = ? ORDER BY order_index ASC')
+        .all(entry.segment_id) as { id: string }[];
+      sourceSiblings.forEach((sibling, index) => {
+        this.db
+          .prepare('UPDATE playlist_entries SET order_index = ?, updated_at = ? WHERE id = ?')
+          .run(index, now, sibling.id);
+      });
+    });
+
+    tx();
+    return this.buildPatch({ replaceLibraryBundles: true });
+  }
+
+  setPlaylistSegmentOrder(segmentId: Id, newOrder: number): SnapshotPatch {
+    const now = nowIso();
+    const current = this.db
+      .prepare('SELECT id, playlist_id, order_index FROM playlist_segments WHERE id = ?')
+      .get(segmentId) as { id: string; playlist_id: string; order_index: number } | undefined;
+
+    if (!current) return this.buildPatch({});
+
+    const siblings = this.db
+      .prepare('SELECT id, order_index FROM playlist_segments WHERE playlist_id = ? ORDER BY order_index ASC')
+      .all(current.playlist_id) as { id: string; order_index: number }[];
+
+    const currentIndex = siblings.findIndex((s) => s.id === segmentId);
+    if (currentIndex === -1) return this.buildPatch({});
+
+    const maxOrder = siblings.length - 1;
+    const targetOrder = Math.max(0, Math.min(newOrder, maxOrder));
+    if (currentIndex === targetOrder) return this.buildPatch({});
+
+    const reordered = siblings.filter((_, i) => i !== currentIndex);
+    reordered.splice(targetOrder, 0, siblings[currentIndex]);
+
+    const tx = this.db.transaction(() => {
+      reordered.forEach((sibling, index) => {
+        this.db
+          .prepare('UPDATE playlist_segments SET order_index = ?, updated_at = ? WHERE id = ?')
+          .run(index, now, sibling.id);
+      });
+    });
+
+    tx();
+    return this.buildPatch({ replaceLibraryBundles: true });
+  }
+
   createElement(input: ElementCreateInput): SnapshotPatch {
     const now = nowIso();
     const newId = input.id ?? createId();
@@ -2309,15 +2534,19 @@ export class CastRepository {
     return this.buildPatch({ deletedSlideElementIds: [...ids] });
   }
 
-  createMediaAsset(asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>): SnapshotPatch {
+  createMediaAsset(asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>): SnapshotPatch {
     this.assertMediaSource(asset.src);
     const now = nowIso();
     const assetId = createId();
+    const currentOrder =
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM media_assets').get() as {
+        maxOrder: number | null;
+      }).maxOrder ?? -1;
     this.db
       .prepare(
-        'INSERT INTO media_assets (id, name, type, src, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       )
-      .run(assetId, asset.name, asset.type, asset.src, now, now);
+      .run(assetId, asset.name, asset.type, asset.src, currentOrder + 1, now, now);
     return this.buildPatch({ upsertMediaAssetIds: [assetId] });
   }
 
@@ -2899,15 +3128,16 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, created_at, updated_at
+        `SELECT id, name, order_index, created_at, updated_at
          FROM libraries
          WHERE id IN (${placeholders})
-         ORDER BY created_at ASC`
+         ORDER BY order_index ASC, created_at ASC`
       )
-      .all(...ids) as Array<{ id: string; name: string; created_at: string; updated_at: string }>;
+      .all(...ids) as Array<{ id: string; name: string; order_index: number; created_at: string; updated_at: string }>;
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
+      order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -3013,16 +3243,17 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, type, src, created_at, updated_at
+        `SELECT id, name, type, src, order_index, created_at, updated_at
          FROM media_assets
          WHERE id IN (${placeholders})
-         ORDER BY created_at ASC, id ASC`
+         ORDER BY order_index ASC, created_at ASC, id ASC`
       )
       .all(...ids) as Array<{
       id: string;
       name: string;
       type: MediaAsset['type'];
       src: string;
+      order_index: number;
       created_at: string;
       updated_at: string;
     }>;
@@ -3031,6 +3262,7 @@ export class CastRepository {
       name: row.name,
       type: row.type,
       src: row.src,
+      order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -3410,12 +3642,13 @@ export class CastRepository {
 
   private getLibraries(): Library[] {
     const rows = this.db
-      .prepare('SELECT id, name, created_at, updated_at FROM libraries ORDER BY created_at ASC')
-      .all() as Array<{ id: string; name: string; created_at: string; updated_at: string }>;
+      .prepare('SELECT id, name, order_index, created_at, updated_at FROM libraries ORDER BY order_index ASC, created_at ASC')
+      .all() as Array<{ id: string; name: string; order_index: number; created_at: string; updated_at: string }>;
 
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
+      order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));
@@ -3644,13 +3877,14 @@ export class CastRepository {
   private getMediaAssets(): MediaAsset[] {
     const rows = this.db
       .prepare(
-        'SELECT id, name, type, src, created_at, updated_at FROM media_assets ORDER BY created_at ASC, id ASC'
+        'SELECT id, name, type, src, order_index, created_at, updated_at FROM media_assets ORDER BY order_index ASC, created_at ASC, id ASC'
       )
       .all() as Array<{
       id: string;
       name: string;
       type: MediaAsset['type'];
       src: string;
+      order_index: number;
       created_at: string;
       updated_at: string;
     }>;
@@ -3660,6 +3894,7 @@ export class CastRepository {
       name: row.name,
       type: row.type,
       src: row.src,
+      order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));

@@ -38,6 +38,10 @@ export interface NavigationActionsValue {
   renameLibrary: (id: Id, name: string) => Promise<void>;
   renamePlaylist: (id: Id, name: string) => Promise<void>;
   renameDeckItem: (id: Id, title: string) => Promise<void>;
+  reorderLibrary: (libraryId: Id, newOrder: number) => Promise<void>;
+  reorderPlaylist: (playlistId: Id, newOrder: number) => Promise<void>;
+  reorderSegment: (segmentId: Id, newOrder: number) => Promise<void>;
+  movePlaylistEntry: (entryId: Id, segmentId: Id, newOrder: number) => Promise<void>;
 }
 
 export type NavigationContextValue = NavigationStateValue & NavigationActionsValue;

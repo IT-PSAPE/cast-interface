@@ -20,11 +20,12 @@ interface CommandsParams {
   currentSlide: Slide | null;
   currentDeckItem: DeckItem | null;
   currentTemplate: { id: Id; kind: 'slides' | 'lyrics' | 'overlays'; elements: SlideElement[] } | null;
+  mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutatePatch, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText }: CommandsParams) {
   const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();

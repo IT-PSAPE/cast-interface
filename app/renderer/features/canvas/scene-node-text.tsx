@@ -4,6 +4,7 @@ import type { Shape as KonvaShape } from 'konva/lib/Shape';
 import type { StrokePosition, TextCaseTransform, TextHorizontalAlign } from '@core/types';
 import type { RenderNode } from './scene-types';
 import { resolveKonvaTextStyle } from './resolve-konva-text-style';
+import { measureTextBlockHeight, measureTextLayoutHeight, measureTextLineStackHeight, textLineBleedPadding, textOverflowOffset } from './text-layout';
 
 function transformTextCase(text: string, mode: TextCaseTransform): string {
   if (mode === 'uppercase') return text.toUpperCase();
@@ -86,7 +87,7 @@ function drawTextOnCanvas(
   ctx.textBaseline = 'top';
 
   const lines = wrapText(ctx, text, width);
-  const totalTextHeight = lines.length * lineHeightPx;
+  const totalTextHeight = measureTextLineStackHeight(lines.length, fontSize, lineHeight);
 
   let startY = 0;
   if (verticalAlign === 'middle') startY = Math.max(0, (height - totalTextHeight) / 2);
@@ -148,6 +149,26 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
   const lineHeight = payload.lineHeight ?? 1.25;
   const verticalAlign = payload.verticalAlign ?? 'middle';
   const text = transformTextCase(payload.text ?? '', payload.caseTransform ?? 'none');
+  const textBleedPadding = textLineBleedPadding(payload.fontSize, lineHeight);
+  const textContentHeight = measureTextBlockHeight({
+    text,
+    width: element.width,
+    fontFamily: payload.fontFamily || 'sans-serif',
+    fontSize: payload.fontSize,
+    fontStyle,
+    lineHeight,
+  });
+  const textLayoutHeight = measureTextLayoutHeight({
+    text,
+    width: element.width,
+    fontFamily: payload.fontFamily || 'sans-serif',
+    fontSize: payload.fontSize,
+    fontStyle,
+    lineHeight,
+  });
+  const textFrameContentHeight = Math.max(element.height, textContentHeight, textLayoutHeight);
+  const textFrameY = textOverflowOffset(verticalAlign, element.height, textFrameContentHeight) - textBleedPadding;
+  const textFrameHeight = textFrameContentHeight + textBleedPadding * 2;
   const textStrokeWidth = payload.textStrokeWidth ?? 0;
   const textStrokePosition = payload.textStrokePosition ?? 'outside';
   const textStrokeEnabled = Boolean(payload.textStrokeEnabled) && textStrokeWidth > 0;
@@ -163,11 +184,11 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
 
   function insideStrokeSceneFunc(ctx: Context, shape: KonvaShape) {
     const w = element.width;
-    const h = element.height;
+    const h = textFrameHeight;
 
     const offscreen = document.createElement('canvas');
-    offscreen.width = w;
-    offscreen.height = h;
+    offscreen.width = Math.max(1, Math.ceil(w));
+    offscreen.height = Math.max(1, Math.ceil(h));
     const offCtx = offscreen.getContext('2d');
     if (!offCtx) return;
 
@@ -197,6 +218,7 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
   return (
     <>
       <Rect
+        name="element-bounds"
         x={0}
         y={0}
         width={element.width}
@@ -214,9 +236,9 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
       {useInsideStroke ? (
         <Shape
           x={0}
-          y={0}
+          y={textFrameY}
           width={element.width}
-          height={element.height}
+          height={textFrameHeight}
           sceneFunc={insideStrokeSceneFunc}
           shadowEnabled={payload.textShadowEnabled}
           shadowColor={payload.textShadowColor}
@@ -228,9 +250,9 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
       ) : (
         <Text
           x={0}
-          y={0}
+          y={textFrameY}
           width={element.width}
-          height={element.height}
+          height={textFrameHeight}
           verticalAlign={verticalAlign}
           text={text}
           fontFamily={payload.fontFamily || 'sans-serif'}

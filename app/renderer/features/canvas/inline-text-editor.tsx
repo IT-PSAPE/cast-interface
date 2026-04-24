@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SlideElement, TextElementPayload } from '@core/types';
 import { measureInlineTextHeight, resolveInlineTextAlign } from './inline-text-editor-utils';
+import { textLineBleedPadding, textOverflowOffset } from './text-layout';
 
 interface InlineTextEditorProps {
   editingTextId: string;
@@ -15,7 +16,6 @@ interface InlineTextEditorProps {
 export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffsetX, sceneOffsetY, sceneScale, onCommit, onCancel }: InlineTextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState('');
-  const initialTextRef = useRef('');
 
   const element = effectiveElements.find((el) => el.id === editingTextId);
   const payload = element?.type === 'text' ? (element.payload as unknown as TextElementPayload) : null;
@@ -24,7 +24,6 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
     if (!payload) return;
     const text = payload.text ?? '';
     setDraft(text);
-    initialTextRef.current = text;
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
@@ -55,12 +54,12 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
 
   if (!element || !payload) return null;
 
-  const left = sceneOffsetX + element.x * sceneScale;
-  const top = sceneOffsetY + element.y * sceneScale;
-  const width = element.width * sceneScale;
-  const height = element.height * sceneScale;
   const fontSize = payload.fontSize * sceneScale;
   const lineHeight = payload.lineHeight ?? 1.25;
+  const bleedPadding = textLineBleedPadding(fontSize, lineHeight);
+  const elementHeight = element.height * sceneScale;
+  const left = sceneOffsetX + element.x * sceneScale;
+  const width = element.width * sceneScale;
   const fontWeight = payload.weight ?? '400';
   const fontStyle = payload.italic ? 'italic' : 'normal';
   const textAlign = resolveInlineTextAlign(payload.alignment);
@@ -74,6 +73,9 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
     fontStyle,
     fontFamily: payload.fontFamily || 'sans-serif',
   });
+  const frameContentHeight = Math.max(elementHeight, contentHeight);
+  const top = sceneOffsetY + element.y * sceneScale + textOverflowOffset(verticalAlign, elementHeight, frameContentHeight) - bleedPadding;
+  const height = frameContentHeight + bleedPadding * 2;
   const innerHeight = Math.max(height - 4, 0);
   const remainingVerticalSpace = Math.max(0, innerHeight - contentHeight);
   const paddingTop = verticalAlign === 'top'

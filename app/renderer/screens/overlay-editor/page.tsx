@@ -7,7 +7,6 @@ import { SceneFrame } from '../../components/display/scene-frame';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
@@ -23,7 +22,6 @@ import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout
 export function OverlayEditorScreen() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay, duplicateOverlay, requestNameFocus } = useOverlayEditor();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
-  const menu = useContextMenuState<Id>();
 
   useEditorLeftPanelNav({
     items: overlays,
@@ -83,34 +81,38 @@ export function OverlayEditorScreen() {
                           setCurrentOverlayId(overlay.id);
                         }
 
-                        function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-                          event.stopPropagation();
-                          menu.openFromButton(event.currentTarget, overlay.id);
-                        }
-
-                        function handleContextMenu(event: React.MouseEvent) {
-                          menu.openFromEvent(event, overlay.id);
-                        }
-
                         return (
-                          <ActiveOverlayTile key={overlay.id} isActive={currentOverlayId === overlay.id} onClick={handleSelect} onContextMenu={handleContextMenu} selected={currentOverlayId === overlay.id}>
-                            <Thumbnail.Body>
-                              <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                                <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-                              </SceneFrame>
-                            </Thumbnail.Body>
-                            <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-                              <Button.Icon label="Overlay options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                                <Ellipsis />
-                              </Button.Icon>
-                            </Thumbnail.Overlay>
-                            <Thumbnail.Caption>
-                              <div className="flex items-center gap-2">
-                                <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                                <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
-                              </div>
-                            </Thumbnail.Caption>
-                          </ActiveOverlayTile>
+                          <ContextMenu.Root key={overlay.id}>
+                            <ContextMenu.Trigger>
+                              <ActiveOverlayTile isActive={currentOverlayId === overlay.id} onClick={handleSelect} selected={currentOverlayId === overlay.id}>
+                                <Thumbnail.Body>
+                                  <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+                                    <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+                                  </SceneFrame>
+                                </Thumbnail.Body>
+                                <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+                                  <ContextMenu.ButtonTrigger>
+                                    <Button.Icon label="Overlay options" className="border-primary bg-tertiary/80">
+                                      <Ellipsis />
+                                    </Button.Icon>
+                                  </ContextMenu.ButtonTrigger>
+                                </Thumbnail.Overlay>
+                                <Thumbnail.Caption>
+                                  <div className="flex items-center gap-2">
+                                    <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+                                    <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
+                                  </div>
+                                </Thumbnail.Caption>
+                              </ActiveOverlayTile>
+                            </ContextMenu.Trigger>
+                            <ContextMenu.Portal>
+                              <ContextMenu.Positioner>
+                                <ContextMenu.Popup>
+                                  <ContextMenu.Items items={buildMenuItems(overlay.id)} />
+                                </ContextMenu.Popup>
+                              </ContextMenu.Positioner>
+                            </ContextMenu.Portal>
+                          </ContextMenu.Root>
                         );
                       })}
                     </div>
@@ -132,7 +134,6 @@ export function OverlayEditorScreen() {
                 </Panel.Section>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            {menu.menuState && <ContextMenu x={menu.menuState.x} y={menu.menuState.y} items={buildMenuItems(menu.menuState.data)} onClose={menu.close} />}
           </Panel>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>

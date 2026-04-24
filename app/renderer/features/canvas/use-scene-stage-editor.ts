@@ -9,6 +9,7 @@ import { mapSnapBoxes } from './scene-stage-editor-utils';
 import { useSceneStageShift } from './use-scene-stage-shift';
 import { useSceneStageMarquee } from './use-scene-stage-marquee';
 import { useSceneStageDraftBuffer } from './use-scene-stage-draft-buffer';
+import { bindFixedClientRect } from './scene-node-bounds';
 
 interface UseSceneStageEditorParams {
   scene: RenderScene;
@@ -53,6 +54,7 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
       nodeRefs.current.delete(id);
       return;
     }
+    bindFixedClientRect(node);
     nodeRefs.current.set(id, node);
   }, []);
 
@@ -64,6 +66,7 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
       .map((id) => nodeRefs.current.get(id))
       .filter((node): node is Konva.Group => Boolean(node));
     transformer.nodes(nodes);
+    transformer.forceUpdate();
     transformer.getLayer()?.batchDraw();
   }, [editable, selectedElementIds]);
 
@@ -188,6 +191,8 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
     for (const id of selectedElementIds) {
       const node = nodeRefs.current.get(id);
       if (!node) continue;
+      const activeElement = effectiveElements.find((element) => element.id === id);
+      if (!activeElement) continue;
       const shouldSnapTransform = canSnapTransform;
 
       const scaleX = node.scaleX();
@@ -224,6 +229,10 @@ export function useSceneStageEditor({ scene, editable }: UseSceneStageEditorPara
       });
 
       for (const child of node.children ?? []) {
+        if (activeElement.type === 'text' && !child.hasName('element-bounds')) {
+          child.setAttrs({ width });
+          continue;
+        }
         child.setAttrs({ width, height });
       }
 

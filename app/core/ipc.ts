@@ -51,13 +51,17 @@ export interface MainApi {
   updateSlideNotes: (input: SlideNotesUpdateInput) => Promise<SnapshotPatch>;
   movePlaylistEntry: (entryId: Id, direction: 'up' | 'down') => Promise<AppSnapshot>;
   setSlideOrder: (input: SlideOrderUpdateInput) => Promise<SnapshotPatch>;
+  setLibraryOrder: (libraryId: Id, newOrder: number) => Promise<SnapshotPatch>;
+  setPlaylistOrder: (playlistId: Id, newOrder: number) => Promise<SnapshotPatch>;
+  setPlaylistSegmentOrder: (segmentId: Id, newOrder: number) => Promise<SnapshotPatch>;
+  movePlaylistEntryTo: (entryId: Id, segmentId: Id, newOrder: number) => Promise<SnapshotPatch>;
   createElement: (input: ElementCreateInput) => Promise<SnapshotPatch>;
   createElementsBatch: (inputs: ElementCreateInput[]) => Promise<SnapshotPatch>;
   updateElement: (input: ElementUpdateInput) => Promise<SnapshotPatch>;
   updateElementsBatch: (inputs: ElementUpdateInput[]) => Promise<SnapshotPatch>;
   deleteElement: (id: Id) => Promise<SnapshotPatch>;
   deleteElementsBatch: (ids: Id[]) => Promise<SnapshotPatch>;
-  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<SnapshotPatch>;
+  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) => Promise<SnapshotPatch>;
   deleteMediaAsset: (id: Id) => Promise<SnapshotPatch>;
   updateMediaAssetSrc: (id: Id, src: string) => Promise<SnapshotPatch>;
   createOverlay: (overlay: OverlayCreateInput) => Promise<SnapshotPatch>;
@@ -124,6 +128,10 @@ export const IPC = {
   deleteSlide: 'cast:deleteSlide',
   updateSlideNotes: 'cast:updateSlideNotes',
   setSlideOrder: 'cast:setSlideOrder',
+  setLibraryOrder: 'cast:setLibraryOrder',
+  setPlaylistOrder: 'cast:setPlaylistOrder',
+  setPlaylistSegmentOrder: 'cast:setPlaylistSegmentOrder',
+  movePlaylistEntryTo: 'cast:movePlaylistEntryTo',
   createElement: 'cast:createElement',
   createElementsBatch: 'cast:createElementsBatch',
   updateElement: 'cast:updateElement',

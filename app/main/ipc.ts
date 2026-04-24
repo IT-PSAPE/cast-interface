@@ -157,13 +157,17 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deleteSlide, (_event, slideId: Id) => repo.deleteSlide(slideId));
   safeHandle(IPC.updateSlideNotes, (_event, input: SlideNotesUpdateInput) => repo.updateSlideNotes(input));
   safeHandle(IPC.setSlideOrder, (_event, input: SlideOrderUpdateInput) => repo.setSlideOrder(input));
+  safeHandle(IPC.setLibraryOrder, (_event, libraryId: Id, newOrder: number) => repo.setLibraryOrder(libraryId, newOrder));
+  safeHandle(IPC.setPlaylistOrder, (_event, playlistId: Id, newOrder: number) => repo.setPlaylistOrder(playlistId, newOrder));
+  safeHandle(IPC.setPlaylistSegmentOrder, (_event, segmentId: Id, newOrder: number) => repo.setPlaylistSegmentOrder(segmentId, newOrder));
+  safeHandle(IPC.movePlaylistEntryTo, (_event, entryId: Id, segmentId: Id, newOrder: number) => repo.movePlaylistEntryTo(entryId, segmentId, newOrder));
   safeHandle(IPC.createElement, (_event, input: ElementCreateInput) => repo.createElement(input));
   safeHandle(IPC.createElementsBatch, (_event, inputs: ElementCreateInput[]) => repo.createElementsBatch(inputs));
   safeHandle(IPC.updateElement, (_event, input: ElementUpdateInput) => repo.updateElement(input));
   safeHandle(IPC.updateElementsBatch, (_event, inputs: ElementUpdateInput[]) => repo.updateElementsBatch(inputs));
   safeHandle(IPC.deleteElement, (_event, id: Id) => repo.deleteElement(id));
   safeHandle(IPC.deleteElementsBatch, (_event, ids: Id[]) => repo.deleteElementsBatch(ids));
-  safeHandle(IPC.createMediaAsset, (_event, asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) =>
+  safeHandle(IPC.createMediaAsset, (_event, asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) =>
     repo.createMediaAsset(asset)
   );
   safeHandle(IPC.deleteMediaAsset, (_event, id: Id) => repo.deleteMediaAsset(id));

@@ -6,6 +6,7 @@ import { useOverlayEditor, useTemplateEditor } from '../../../contexts/asset-edi
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useContextMenuState } from '../../../hooks/use-context-menu-state';
 import { filterByText } from '../../../utils/filter-by-text';
+import { compareByKey, useTemplateBinSort } from '../../workbench/use-bin-sort';
 
 export function useTemplateBin(filterText: string) {
   const { currentPlaylistDeckItem, currentDeckItem } = useNavigation();
@@ -21,11 +22,13 @@ export function useTemplateBin(filterText: string) {
     renameTemplate,
   } = useTemplateEditor();
   const menu = useContextMenuState<Id>();
+  const { sort } = useTemplateBinSort();
 
-  const filteredTemplates = useMemo(
-    () => filterByText(templates, filterText, (t) => [t.name, t.kind]),
-    [templates, filterText],
-  );
+  const filteredTemplates = useMemo(() => {
+    const filtered = filterByText(templates, filterText, (t) => [t.name, t.kind]);
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => direction * compareByKey(a, b, sort.key, (item) => item.name));
+  }, [templates, filterText, sort]);
   const activeDeckItem = currentPlaylistDeckItem ?? currentDeckItem;
 
   function resolvePreviewTarget(template: Template) {

@@ -1,6 +1,9 @@
 import type { Id } from '@core/types';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, Play, Plus, Trash2 } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from '../../components/controls/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Panel } from '../../components/layout/panel';
@@ -23,15 +26,18 @@ import { ObjectListPanel } from '@renderer/features/canvas/object-list-panel';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { SceneStage } from '@renderer/features/canvas/scene-stage';
+import type { RenderScene } from '@renderer/features/canvas/scene-types';
 import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
+import { Label } from '@renderer/components/display/text';
 
 export function DeckEditorScreen() {
   const { browseDeckItem, currentDeckItem } = useNavigation();
   const { effectiveElements } = useElements();
   const { deckItems } = useProjectContent();
   const { getSlideElements } = useDeckEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide } = useSlides();
+  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide, reorderSlide } = useSlides();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const { getThumbnailScene } = useRenderScenes();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const {
@@ -44,7 +50,6 @@ export function DeckEditorScreen() {
     handleSaveNotes,
     handleResetNotes,
   } = useSlideNotesPanel();
-  const [presentationMenuPosition, setPresentationMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const slideMenu = useContextMenuState<Id>();
 
   useEditorLeftPanelNav({
@@ -66,14 +71,17 @@ export function DeckEditorScreen() {
     void createSlide();
   }
 
-  function handleOpenPresentationMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setPresentationMenuPosition({ x: rect.left, y: rect.bottom + 4 });
-  }
-
   function handleDeleteSlide(slideId: string) {
     if (!window.confirm('Delete this slide? This cannot be undone.')) return;
     void deleteSlide(slideId);
+  }
+
+  function handleSlideDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const newIndex = slides.findIndex((slide) => slide.id === over.id);
+    if (newIndex < 0) return;
+    void reorderSlide(String(active.id), newIndex);
   }
 
   function buildSlideMenuItems(slideId: Id): ContextMenuItem[] {
@@ -89,25 +97,34 @@ export function DeckEditorScreen() {
   }
 
   const titleElement = (
-    <Button variant="ghost" onClick={handleOpenPresentationMenu} className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
-      <span className="flex min-w-0 items-center gap-2">
-        {currentDeckItem && <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" />}
-        <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
-          {currentDeckItem?.title ?? 'No item selected'}
-        </span>
-      </span>
-      <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
-    </Button>
+    <ContextMenu.Root>
+      <ContextMenu.ButtonTrigger>
+        <Button variant="ghost" className="flex w-full items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+          <span className="flex min-w-0 items-center gap-2">
+            {currentDeckItem && <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" />}
+            <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
+              {currentDeckItem?.title ?? 'No item selected'}
+            </span>
+          </span>
+          <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
+        </Button>
+      </ContextMenu.ButtonTrigger>
+      <ContextMenu.Portal>
+        <ContextMenu.Positioner>
+          <ContextMenu.Popup>
+            <ContextMenu.Items items={presentationMenuItems} />
+          </ContextMenu.Popup>
+        </ContextMenu.Positioner>
+      </ContextMenu.Portal>
+    </ContextMenu.Root>
   );
 
-  const contextMenus = (
-    <>
-      {presentationMenuPosition && (
-        <ContextMenu x={presentationMenuPosition.x} y={presentationMenuPosition.y} items={presentationMenuItems} onClose={() => setPresentationMenuPosition(null)} />
-      )}
-      {slideMenu.menuState && <ContextMenu x={slideMenu.menuState.x} y={slideMenu.menuState.y} items={buildSlideMenuItems(slideMenu.menuState.data)} onClose={slideMenu.close} />}
-    </>
-  );
+  const slideMenuItems = slideMenu.menuState ? buildSlideMenuItems(slideMenu.menuState.data) : [];
+
+  function handleSlideMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    slideMenu.close();
+  }
 
   return (
     <section data-ui-region="deck-editor-layout" className="h-full min-h-0 overflow-hidden">
@@ -139,65 +156,42 @@ export function DeckEditorScreen() {
                     </EmptyState.Root>
                   ) : (
                   <ScrollArea className="p-2">
-                  <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
-                    {slides.map((slide, index) => {
-                      const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
-                      const scene = getThumbnailScene(slide.id, 'deck-editor');
-                      if (!scene) return null;
-                      const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlideDragEnd}>
+                    <SortableContext items={slides.map((slide) => slide.id)} strategy={verticalListSortingStrategy}>
+                      <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
+                        {slides.map((slide, index) => {
+                          const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
+                          const scene = getThumbnailScene(slide.id, 'deck-editor');
+                          if (!scene) return null;
+                          const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
 
-                      function handleSelect() {
-                        setCurrentSlideIndex(index);
-                      }
+                          function handleSelect() {
+                            setCurrentSlideIndex(index);
+                          }
 
-                      function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-                        event.stopPropagation();
-                        slideMenu.openFromButton(event.currentTarget, slide.id);
-                      }
+                          function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
+                            event.stopPropagation();
+                            slideMenu.openFromButton(event.currentTarget, slide.id);
+                          }
 
-                      const isLive = state === 'live';
-                      const isEmpty = state === 'warning';
-
-                      return (
-                        <ActiveSlideTile
-                          key={slide.id}
-                          isActive={index === currentSlideIndex}
-                          onClick={handleSelect}
-                          onDoubleClick={handleSelect}
-                          selected={index === currentSlideIndex}
-                        >
-                          <Thumbnail.Body>
-                            <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                              {isEmpty && (
-                                <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
-                                  Empty
-                                </div>
-                              )}
-                              <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-                            </SceneFrame>
-                          </Thumbnail.Body>
-                          {isLive && (
-                            <Thumbnail.Overlay position="top-left">
-                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
-                                <Play size={12} strokeWidth={1.9} />
-                              </span>
-                            </Thumbnail.Overlay>
-                          )}
-                          <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-                            <Button.Icon label="Slide options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                              <Ellipsis />
-                            </Button.Icon>
-                          </Thumbnail.Overlay>
-                          <Thumbnail.Caption>
-                            <div className="flex min-w-0 items-center gap-2">
-                              <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                              <span className="min-w-0 truncate text-sm text-tertiary">{slideTextPreview(elements)}</span>
-                            </div>
-                          </Thumbnail.Caption>
-                        </ActiveSlideTile>
-                      );
-                    })}
-                  </div>
+                          return (
+                            <SortableSlideTile
+                              key={slide.id}
+                              slide={slide}
+                              scene={scene}
+                              index={index}
+                              isActive={index === currentSlideIndex}
+                              isLive={state === 'live'}
+                              isEmpty={state === 'warning'}
+                              textPreview={slideTextPreview(elements)}
+                              onSelect={handleSelect}
+                              onMenuClick={handleMenuClick}
+                            />
+                          );
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                   </ScrollArea>
                   )}
                   </Panel.SectionBody>
@@ -207,7 +201,7 @@ export function DeckEditorScreen() {
                 <Panel.Section>
                   <Panel.SectionHeader className="border-b border-t border-primary">
                     <Panel.SectionTitle>
-                      <span className="text-sm font-medium text-primary">Objects</span>
+                      <Label.xs>Objects</Label.xs>
                     </Panel.SectionTitle>
                   </Panel.SectionHeader>
                   <Panel.SectionBody className="overflow-y-auto p-2">
@@ -216,7 +210,15 @@ export function DeckEditorScreen() {
                 </Panel.Section>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            {contextMenus}
+            <ContextMenu.Root open={Boolean(slideMenu.menuState)} position={slideMenu.menuState} onOpenChange={handleSlideMenuOpenChange}>
+              <ContextMenu.Portal>
+                <ContextMenu.Positioner>
+                  <ContextMenu.Popup>
+                    <ContextMenu.Items items={slideMenuItems} />
+                  </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+              </ContextMenu.Portal>
+            </ContextMenu.Root>
           </Panel>
         </SplitPanel.Segment>
 
@@ -270,7 +272,68 @@ export function DeckEditorScreen() {
   );
 }
 
-function ActiveSlideTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
-  const ref = useScrollAreaActiveItem(isActive);
-  return <Thumbnail.Tile ref={ref} {...props} />;
+interface SortableSlideTileProps {
+  slide: { id: Id };
+  scene: RenderScene;
+  index: number;
+  isActive: boolean;
+  isLive: boolean;
+  isEmpty: boolean;
+  textPreview: string;
+  onSelect: () => void;
+  onMenuClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+function SortableSlideTile({ slide, scene, index, isActive, isLive, isEmpty, textPreview, onSelect, onMenuClick }: SortableSlideTileProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: slide.id });
+  const activeRef = useScrollAreaActiveItem(isActive);
+  const setRef = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    activeRef.current = el;
+  };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : undefined,
+  };
+  return (
+    <Thumbnail.Tile
+      ref={setRef}
+      style={style}
+      onClick={onSelect}
+      onDoubleClick={onSelect}
+      selected={isActive}
+      {...attributes}
+      {...listeners}
+    >
+      <Thumbnail.Body>
+        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+          {isEmpty && (
+            <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
+              Empty
+            </div>
+          )}
+          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+        </SceneFrame>
+      </Thumbnail.Body>
+      {isLive && (
+        <Thumbnail.Overlay position="top-left">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+            <Play size={12} strokeWidth={1.9} />
+          </span>
+        </Thumbnail.Overlay>
+      )}
+      <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+        <Button.Icon label="Slide options" onPointerDown={(event) => event.stopPropagation()} onClick={onMenuClick} className="border-primary bg-tertiary/80">
+          <Ellipsis />
+        </Button.Icon>
+      </Thumbnail.Overlay>
+      <Thumbnail.Caption>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+          <span className="min-w-0 truncate text-sm text-tertiary">{textPreview}</span>
+        </div>
+      </Thumbnail.Caption>
+    </Thumbnail.Tile>
+  );
 }

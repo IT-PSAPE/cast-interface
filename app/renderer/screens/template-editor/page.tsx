@@ -8,7 +8,6 @@ import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
@@ -23,8 +22,7 @@ import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout
 
 export function TemplateEditorScreen() {
   const { templates, currentTemplateId, currentTemplate, hasPendingChanges: hasTemplateDraftChanges, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus, syncLinkedDeckItems } = useTemplateEditor();
-  const { menuItems, menuState, openMenuFromButton, closeMenu } = useCreateTemplateMenu({ createTemplate });
-  const templateMenu = useContextMenuState<Id>();
+  const { menuItems } = useCreateTemplateMenu({ createTemplate });
   const { deckItems } = useProjectContent();
 
   const linkedItemCount = currentTemplate
@@ -47,10 +45,6 @@ export function TemplateEditorScreen() {
     currentId: currentTemplateId,
     activate: (id) => openTemplateEditor(id),
   });
-
-  function handleOpenCreateMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    openMenuFromButton(event.currentTarget);
-  }
 
   function handleDeleteTemplate(templateId: Id) {
     if (!window.confirm('Delete this template? Deck items using it will keep their current elements but lose the template association.')) return;
@@ -78,9 +72,20 @@ export function TemplateEditorScreen() {
                       <span className="truncate text-sm font-medium text-primary">Templates</span>
                     </Panel.SectionTitle>
                     <Panel.SectionAction>
-                      <Button.Icon label="Create template" onClick={handleOpenCreateMenu}>
-                        <Plus />
-                      </Button.Icon>
+                      <ContextMenu.Root>
+                        <ContextMenu.ButtonTrigger>
+                          <Button.Icon label="Create template">
+                            <Plus />
+                          </Button.Icon>
+                        </ContextMenu.ButtonTrigger>
+                        <ContextMenu.Portal>
+                          <ContextMenu.Positioner>
+                            <ContextMenu.Popup>
+                              <ContextMenu.Items items={menuItems} />
+                            </ContextMenu.Popup>
+                          </ContextMenu.Positioner>
+                        </ContextMenu.Portal>
+                      </ContextMenu.Root>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody>
@@ -99,40 +104,44 @@ export function TemplateEditorScreen() {
                           openTemplateEditor(template.id);
                         }
 
-                        function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-                          event.stopPropagation();
-                          templateMenu.openFromButton(event.currentTarget, template.id);
-                        }
-
-                        function handleContextMenu(event: React.MouseEvent) {
-                          templateMenu.openFromEvent(event, template.id);
-                        }
-
                         function handleCaptionDoubleClick(event: React.MouseEvent) {
                           event.stopPropagation();
                           requestNameFocus(template.id);
                         }
 
                         return (
-                          <ActiveTemplateTile key={template.id} isActive={template.id === currentTemplateId} onClick={handleSelect} onContextMenu={handleContextMenu} selected={template.id === currentTemplateId}>
-                            <Thumbnail.Body>
-                              <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                                <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-                              </SceneFrame>
-                            </Thumbnail.Body>
-                            <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-                              <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                                <Ellipsis />
-                              </Button.Icon>
-                            </Thumbnail.Overlay>
-                            <Thumbnail.Caption>
-                              <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
-                                <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                                <TemplateKindIcon kind={template.kind} />
-                                <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
-                              </div>
-                            </Thumbnail.Caption>
-                          </ActiveTemplateTile>
+                          <ContextMenu.Root key={template.id}>
+                            <ContextMenu.Trigger>
+                              <ActiveTemplateTile isActive={template.id === currentTemplateId} onClick={handleSelect} selected={template.id === currentTemplateId}>
+                                <Thumbnail.Body>
+                                  <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+                                    <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+                                  </SceneFrame>
+                                </Thumbnail.Body>
+                                <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
+                                  <ContextMenu.ButtonTrigger>
+                                    <Button.Icon label="Template options" className="border-primary bg-tertiary/80">
+                                      <Ellipsis />
+                                    </Button.Icon>
+                                  </ContextMenu.ButtonTrigger>
+                                </Thumbnail.Overlay>
+                                <Thumbnail.Caption>
+                                  <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
+                                    <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+                                    <TemplateKindIcon kind={template.kind} />
+                                    <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
+                                  </div>
+                                </Thumbnail.Caption>
+                              </ActiveTemplateTile>
+                            </ContextMenu.Trigger>
+                            <ContextMenu.Portal>
+                              <ContextMenu.Positioner>
+                                <ContextMenu.Popup>
+                                  <ContextMenu.Items items={buildTemplateMenuItems(template.id)} />
+                                </ContextMenu.Popup>
+                              </ContextMenu.Positioner>
+                            </ContextMenu.Portal>
+                          </ContextMenu.Root>
                         );
                       })}
                     </div>
@@ -154,8 +163,6 @@ export function TemplateEditorScreen() {
                 </Panel.Section>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            {menuState && <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={closeMenu} />}
-            {templateMenu.menuState && <ContextMenu x={templateMenu.menuState.x} y={templateMenu.menuState.y} items={buildTemplateMenuItems(templateMenu.menuState.data)} onClose={templateMenu.close} />}
           </Panel>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>

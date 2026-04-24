@@ -31,6 +31,7 @@ interface SlideContextValue {
   duplicateSlide: (slideId: Id) => Promise<void>;
   deleteSlide: (slideId: Id) => Promise<void>;
   moveSlide: (slideId: Id, direction: 'up' | 'down') => Promise<void>;
+  reorderSlide: (slideId: Id, newOrder: number) => Promise<void>;
   updateCurrentSlideNotes: (notes: string) => Promise<void>;
 }
 
@@ -255,6 +256,17 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     setStatusText(direction === 'up' ? 'Moved slide up' : 'Moved slide down');
   }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
+  const reorderSlideAction = useCallback(async (slideId: Id, newOrder: number) => {
+    const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
+    if (sourceIndex < 0) return;
+    if (sourceIndex === newOrder) return;
+    if (newOrder < 0 || newOrder >= slides.length) return;
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    await mutatePatch(() => window.castApi.setSlideOrder({ slideId, newOrder }));
+    if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, newOrder);
+    setStatusText('Reordered slide');
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;
     await mutatePatch(() => window.castApi.updateSlideNotes({ slideId: currentSlide.id, notes }));
@@ -302,6 +314,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     duplicateSlide: duplicateSlideAction,
     deleteSlide: deleteSlideAction,
     moveSlide: moveSlideAction,
+    reorderSlide: reorderSlideAction,
     updateCurrentSlideNotes,
   }), [
     activatePlaylistEntrySlide,
@@ -311,6 +324,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     deleteSlideAction,
     duplicateSlideAction,
     moveSlideAction,
+    reorderSlideAction,
     currentSlide,
     currentSlideIndex,
     clearCurrentSlideSelection,

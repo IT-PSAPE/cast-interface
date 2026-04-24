@@ -94,16 +94,9 @@ export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, 
             ref={setNodeRef}
             style={style}
             onContextMenu={handleRowContextMenu}
-            className={cn(
-                'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25',
-                isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary',
-                isSelected && '!bg-brand_solid/10',
-            )}
+            className={cn( 'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10', )}
         >
-            <div className={cn(
-                'absolute -left-13 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity',
-                'opacity-0 group-hover:opacity-100',
-            )}>
+            <div className={cn('flex absolute -left-13  items-center gap-0.5 transition-opacity','opacity-0 group-hover:opacity-100',)}>
                 <Button.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
                     <Plus />
                 </Button.Icon>

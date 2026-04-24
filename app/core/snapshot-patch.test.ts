@@ -33,6 +33,7 @@ function buildLibraryBundles(): LibraryPlaylistBundle[] {
     library: {
       id: 'library-1',
       name: 'Library One',
+      order: 0,
       createdAt: '2026-04-19T00:00:00.000Z',
       updatedAt: '2026-04-19T00:00:00.000Z',
     },
@@ -45,6 +46,7 @@ function buildSnapshot(): AppSnapshot {
     libraries: [{
       id: 'library-1',
       name: 'Library One',
+      order: 0,
       createdAt: '2026-04-19T00:00:00.000Z',
       updatedAt: '2026-04-19T00:00:00.000Z',
     }],
@@ -88,6 +90,7 @@ describe('applyPatch', () => {
           {
             id: 'library-2',
             name: 'Library Two',
+            order: 1,
             createdAt: '2026-04-19T00:00:01.000Z',
             updatedAt: '2026-04-19T00:00:01.000Z',
           },

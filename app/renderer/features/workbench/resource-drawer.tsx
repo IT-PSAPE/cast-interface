@@ -24,7 +24,17 @@ import { useAudio } from '../../contexts/playback/playback-context';
 import { useAudioCoverArt } from '../../hooks/use-audio-cover-art';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
-import { useDeckBinSort, type DeckBinSortKey, type SortDirection } from '../deck/use-deck-bin-sort';
+import {
+  compareByKey,
+  useAudioBinSort,
+  useDeckBinSort,
+  useMediaBinSort,
+  useTemplateBinSort,
+  type BinSort,
+  type BinTabSortKey,
+  type DeckBinSortKey,
+  type SortDirection,
+} from './use-bin-sort';
 import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
 import { EmptyState } from '../../components/display/empty-state';
@@ -173,6 +183,16 @@ function Root({ children }: { children: ReactNode }) {
     closeTemplateMenu();
   }
 
+  function handleCreateMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    closeCreateMenu();
+  }
+
+  function handleTemplateMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    closeTemplateMenu();
+  }
+
   function handleCloseCreateLyricDialog() {
     if (activeCreateAction) return;
     setIsCreateLyricDialogOpen(false);
@@ -266,22 +286,24 @@ function Root({ children }: { children: ReactNode }) {
         onDrop={value.actions.handleDrop}
       >
         {children}
-        {value.state.createMenuState && value.state.drawerTab === 'deck' ? (
-          <ContextMenu
-            x={value.state.createMenuState.x}
-            y={value.state.createMenuState.y}
-            items={value.state.createMenuItems}
-            onClose={closeCreateMenu}
-          />
-        ) : null}
-        {value.state.templateMenuState && value.state.drawerTab === 'templates' ? (
-          <ContextMenu
-            x={value.state.templateMenuState.x}
-            y={value.state.templateMenuState.y}
-            items={value.state.templateMenuItems}
-            onClose={value.actions.closeTemplateMenu}
-          />
-        ) : null}
+        <ContextMenu.Root open={Boolean(value.state.createMenuState && value.state.drawerTab === 'deck')} position={value.state.createMenuState} onOpenChange={handleCreateMenuOpenChange}>
+          <ContextMenu.Portal>
+            <ContextMenu.Positioner>
+              <ContextMenu.Popup>
+                <ContextMenu.Items items={value.state.createMenuItems} />
+              </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+          </ContextMenu.Portal>
+        </ContextMenu.Root>
+        <ContextMenu.Root open={Boolean(value.state.templateMenuState && value.state.drawerTab === 'templates')} position={value.state.templateMenuState} onOpenChange={handleTemplateMenuOpenChange}>
+          <ContextMenu.Portal>
+            <ContextMenu.Positioner>
+              <ContextMenu.Popup>
+                <ContextMenu.Items items={value.state.templateMenuItems} />
+              </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+          </ContextMenu.Portal>
+        </ContextMenu.Root>
         <CreateLyricDialog
           isOpen={isCreateLyricDialogOpen}
           isBusy={activeCreateAction !== null}
@@ -303,31 +325,71 @@ function ResourceDrawerContent() {
   const { actions, meta, state } = useDrawer();
   const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
   const audio = useAudio();
-  const { sort, setSort } = useDeckBinSort();
+  const deckSort = useDeckBinSort();
+  const mediaSort = useMediaBinSort();
+  const audioSort = useAudioBinSort();
+  const templateSort = useTemplateBinSort();
   const sortMenu = useContextMenuState<null>();
 
+  const sortedAudioAssets = useMemo(() => {
+    const direction = audioSort.sort.direction === 'asc' ? 1 : -1;
+    return [...audio.audioAssets].sort((a, b) => direction * compareByKey(a, b, audioSort.sort.key, (item) => item.name));
+  }, [audio.audioAssets, audioSort.sort]);
+
   const sortMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const keyOption = (id: DeckBinSortKey, label: string): ContextMenuItem => ({
+    const directionOptions = (sort: BinSort<string>, setSort: (next: BinSort<string>) => void): ContextMenuItem[] => [
+      { id: 'sort-separator', separator: true, label: '' },
+      {
+        id: 'sort-direction-asc',
+        label: 'Ascending',
+        selected: sort.direction === 'asc',
+        onSelect: () => setSort({ ...sort, direction: 'asc' as SortDirection }),
+      },
+      {
+        id: 'sort-direction-desc',
+        label: 'Descending',
+        selected: sort.direction === 'desc',
+        onSelect: () => setSort({ ...sort, direction: 'desc' as SortDirection }),
+      },
+    ];
+
+    const keyOption = <Key extends string>(
+      sort: BinSort<Key>,
+      setSort: (next: BinSort<Key>) => void,
+      id: Key,
+      label: string,
+    ): ContextMenuItem => ({
       id: `sort-${id}`,
       label,
       selected: sort.key === id,
       onSelect: () => setSort({ ...sort, key: id }),
     });
-    const directionOption = (direction: SortDirection, label: string): ContextMenuItem => ({
-      id: `sort-direction-${direction}`,
-      label,
-      selected: sort.direction === direction,
-      onSelect: () => setSort({ ...sort, direction }),
-    });
+
+    if (state.drawerTab === 'deck') {
+      const { sort, setSort } = deckSort;
+      return [
+        keyOption<DeckBinSortKey>(sort, setSort, 'name', 'Name'),
+        keyOption<DeckBinSortKey>(sort, setSort, 'created', 'Date created'),
+        keyOption<DeckBinSortKey>(sort, setSort, 'modified', 'Date modified'),
+        keyOption<DeckBinSortKey>(sort, setSort, 'slides', 'Slide count'),
+        ...directionOptions(sort as BinSort<string>, setSort as (next: BinSort<string>) => void),
+      ];
+    }
+
+    const tabSort = (
+      state.drawerTab === 'media' ? mediaSort :
+      state.drawerTab === 'audio' ? audioSort :
+      templateSort
+    );
+
+    const { sort, setSort } = tabSort;
     return [
-      keyOption('name', 'Name'),
-      keyOption('created', 'Date created'),
-      keyOption('modified', 'Date modified'),
-      keyOption('slides', 'Slide count'),
-      directionOption('asc', 'Ascending'),
-      directionOption('desc', 'Descending'),
+      keyOption<BinTabSortKey>(sort, setSort, 'name', 'Name'),
+      keyOption<BinTabSortKey>(sort, setSort, 'created', 'Date created'),
+      keyOption<BinTabSortKey>(sort, setSort, 'modified', 'Date modified'),
+      ...directionOptions(sort as BinSort<string>, setSort as (next: BinSort<string>) => void),
     ];
-  }, [sort, setSort]);
+  }, [state.drawerTab, deckSort, mediaSort, audioSort, templateSort]);
 
   function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     actions.handleImport(event);
@@ -347,7 +409,12 @@ function ResourceDrawerContent() {
     sortMenu.openFromButton(event.currentTarget, null);
   }
 
-  const showSortControl = state.drawerTab === 'deck';
+  function handleSortMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    sortMenu.close();
+  }
+
+  const showSortControl = true;
 
   return (
     <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
@@ -393,14 +460,14 @@ function ResourceDrawerContent() {
         <Tabs.Panel value="audio">
           <section className="h-full min-h-0 overflow-auto p-2">
             <div className="flex min-h-full flex-col">
-              {audio.audioAssets.length === 0 ? (
+              {sortedAudioAssets.length === 0 ? (
                 <EmptyState.Root>
                   <EmptyState.Title>No audio files</EmptyState.Title>
                   <EmptyState.Description>Import audio to build a reusable app-wide audio list.</EmptyState.Description>
                 </EmptyState.Root>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {audio.audioAssets.map((asset) => (
+                  {sortedAudioAssets.map((asset) => (
                     <AudioRow
                       key={asset.id}
                       asset={asset}
@@ -417,9 +484,15 @@ function ResourceDrawerContent() {
           <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />
         </Tabs.Panel>
       </Tabs.Panels>
-      {sortMenu.menuState ? (
-        <ContextMenu x={sortMenu.menuState.x} y={sortMenu.menuState.y} items={sortMenuItems} onClose={sortMenu.close} />
-      ) : null}
+      <ContextMenu.Root open={Boolean(sortMenu.menuState)} position={sortMenu.menuState} onOpenChange={handleSortMenuOpenChange}>
+        <ContextMenu.Portal>
+          <ContextMenu.Positioner>
+            <ContextMenu.Popup>
+              <ContextMenu.Items items={sortMenuItems} />
+            </ContextMenu.Popup>
+          </ContextMenu.Positioner>
+        </ContextMenu.Portal>
+      </ContextMenu.Root>
     </Tabs.Root>
   );
 }
