@@ -50,24 +50,24 @@ export function ShapeElementInspector() {
           <Section.Row>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignLeft} title="Align left" aria-label="Align left">
-                <AlignStartHorizontal className="size-4" />
+                <AlignStartVertical className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignCenter} title="Align center" aria-label="Align center">
-                <AlignCenterHorizontal className="size-4" />
+                <AlignCenterVertical className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignRight} title="Align right" aria-label="Align right">
-                <AlignEndHorizontal className="size-4" />
+                <AlignEndVertical className="size-4" />
               </IconGroup.Item>
             </IconGroup.Root>
             <IconGroup.Root fill>
               <IconGroup.Item onClick={handleAlignTop} title="Align top" aria-label="Align top">
-                <AlignStartVertical className="size-4" />
+                <AlignStartHorizontal className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignMiddle} title="Align middle" aria-label="Align middle">
-                <AlignCenterVertical className="size-4" />
+                <AlignCenterHorizontal className="size-4" />
               </IconGroup.Item>
               <IconGroup.Item onClick={handleAlignBottom} title="Align bottom" aria-label="Align bottom">
-                <AlignEndVertical className="size-4" />
+                <AlignEndHorizontal className="size-4" />
               </IconGroup.Item>
             </IconGroup.Root>
           </Section.Row>
@@ -137,7 +137,7 @@ export function ShapeElementInspector() {
         </Section.Header>
         {visual.fillEnabled ? (
           <Section.Body>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.fillColor} onChange={handleFillColorChange} />
             </Section.Row>
           </Section.Body>
@@ -151,7 +151,7 @@ export function ShapeElementInspector() {
         </Section.Header>
         {visual.strokeEnabled ? (
           <Section.Body>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.strokeColor} onChange={(value: string) => { updateVisual({ strokeColor: value }); }} />
             </Section.Row>
             <Section.Row>
@@ -184,7 +184,7 @@ export function ShapeElementInspector() {
                 <FieldIcon><Sun size={14} /></FieldIcon>
               </FieldInput>
             </Section.Row>
-            <Section.Row lead>
+            <Section.Row>
               <ColorPicker value={visual.shadowColor} onChange={(value: string) => { updateVisual({ shadowColor: value }); }} />
             </Section.Row>
           </Section.Body>

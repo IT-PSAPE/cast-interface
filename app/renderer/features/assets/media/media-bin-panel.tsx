@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { Ellipsis } from 'lucide-react';
+import { AlertTriangle, Ellipsis } from 'lucide-react';
 import { Button } from '../../../components/controls/button';
 import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
@@ -58,8 +59,8 @@ interface MediaItemProps {
 }
 
 function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps) {
-  function handleDragStart(e: React.DragEvent) {
-    e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
+  function handleDragStart(event: React.DragEvent) {
+    event.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
   }
 
   function handleAssignLayer() {
@@ -72,24 +73,24 @@ function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps
   }
 
   return (
-    <SelectableRow.Root
-      selected={isActive}
-      onClick={handleAssignLayer}
-      draggable
-      onDragStart={handleDragStart}
-      className="group h-9 cursor-grab"
-    >
-      <SelectableRow.Leading>
-        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-      </SelectableRow.Leading>
-      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-      <SelectableRow.Trailing>
-        <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-        <Button.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
-          <Ellipsis size={14} />
-        </Button.Icon>
-      </SelectableRow.Trailing>
-    </SelectableRow.Root>
+    <div draggable onDragStart={handleDragStart}>
+      <SelectableRow.Root
+        selected={isActive}
+        onClick={handleAssignLayer}
+        className="group h-9 cursor-grab"
+      >
+        <SelectableRow.Leading>
+          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+        </SelectableRow.Leading>
+        <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+        <SelectableRow.Trailing>
+          <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
+          <Button.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
+            <Ellipsis size={14} />
+          </Button.Icon>
+        </SelectableRow.Trailing>
+      </SelectableRow.Root>
+    </div>
   );
 }
 
@@ -137,11 +138,46 @@ function MediaTile({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProp
 }
 
 function MediaThumbnail({ asset }: { asset: MediaAsset }) {
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+  const isBroken = brokenSrc === asset.src;
+
+  // Reset the broken flag when the source changes (e.g. after Replace Source).
+  if (brokenSrc !== null && brokenSrc !== asset.src) {
+    setBrokenSrc(null);
+  }
+
+  if (isBroken) {
+    return (
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-tertiary/80 text-tertiary">
+        <AlertTriangle size={16} strokeWidth={1.75} />
+        <span className="px-2 text-center text-xs uppercase tracking-wider">Missing — use Replace Source</span>
+      </div>
+    );
+  }
+
   if (asset.type === 'image') {
-    return <img src={asset.src} alt={asset.name} loading="lazy" draggable={false} className="absolute inset-0 h-full w-full object-cover" />;
+    return (
+      <img
+        src={asset.src}
+        alt={asset.name}
+        loading="lazy"
+        draggable={false}
+        onError={() => setBrokenSrc(asset.src)}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    );
   }
   if (asset.type === 'video') {
-    return <video src={asset.src} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />;
+    return (
+      <video
+        src={asset.src}
+        muted
+        playsInline
+        preload="metadata"
+        onError={() => setBrokenSrc(asset.src)}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    );
   }
   return <span className="text-tertiary text-sm font-bold tracking-wider uppercase">{asset.type}</span>;
 }

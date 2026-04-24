@@ -101,14 +101,7 @@ function Segment({ splitId, orientation, className = '', children }: PanelRouteS
   }, [context.state, definition]);
 
   return (
-    <ResizableSplitRoot
-      orientation={orientation}
-      className={className}
-      onContainerResize={handleContainerResize}
-      onResizeStart={handleResizeStart}
-      onResize={handleResize}
-      onResizeEnd={handleResizeEnd}
-    >
+    <ResizableSplitRoot orientation={orientation} className={className} onContainerResize={handleContainerResize} onResizeStart={handleResizeStart} onResize={handleResize} onResizeEnd={handleResizeEnd}>
       {resizablePanes}
     </ResizableSplitRoot>
   );

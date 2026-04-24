@@ -47,6 +47,8 @@ const api = {
     ipcRenderer.invoke(IPC.moveDeckItemToSegment, playlistId, itemId, segmentId),
   movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) =>
     ipcRenderer.invoke(IPC.movePlaylistEntryToSegment, entryId, segmentId),
+  movePlaylistEntry: (entryId: Id, direction: 'up' | 'down') =>
+    ipcRenderer.invoke(IPC.movePlaylistEntry, entryId, direction),
   moveDeckItem: (id: Id, direction: 'up' | 'down') => ipcRenderer.invoke(IPC.moveDeckItem, id, direction),
   createPresentation: (title: string) => ipcRenderer.invoke(IPC.createPresentation, title),
   createLyric: (title: string) => ipcRenderer.invoke(IPC.createLyric, title),
@@ -55,13 +57,17 @@ const api = {
   deleteSlide: (slideId: Id) => ipcRenderer.invoke(IPC.deleteSlide, slideId),
   updateSlideNotes: (input: SlideNotesUpdateInput) => ipcRenderer.invoke(IPC.updateSlideNotes, input),
   setSlideOrder: (input: SlideOrderUpdateInput) => ipcRenderer.invoke(IPC.setSlideOrder, input),
+  setLibraryOrder: (libraryId: Id, newOrder: number) => ipcRenderer.invoke(IPC.setLibraryOrder, libraryId, newOrder),
+  setPlaylistOrder: (playlistId: Id, newOrder: number) => ipcRenderer.invoke(IPC.setPlaylistOrder, playlistId, newOrder),
+  setPlaylistSegmentOrder: (segmentId: Id, newOrder: number) => ipcRenderer.invoke(IPC.setPlaylistSegmentOrder, segmentId, newOrder),
+  movePlaylistEntryTo: (entryId: Id, segmentId: Id, newOrder: number) => ipcRenderer.invoke(IPC.movePlaylistEntryTo, entryId, segmentId, newOrder),
   createElement: (input: ElementCreateInput) => ipcRenderer.invoke(IPC.createElement, input),
   createElementsBatch: (inputs: ElementCreateInput[]) => ipcRenderer.invoke(IPC.createElementsBatch, inputs),
   updateElement: (input: ElementUpdateInput) => ipcRenderer.invoke(IPC.updateElement, input),
   updateElementsBatch: (inputs: ElementUpdateInput[]) => ipcRenderer.invoke(IPC.updateElementsBatch, inputs),
   deleteElement: (id: Id) => ipcRenderer.invoke(IPC.deleteElement, id),
   deleteElementsBatch: (ids: Id[]) => ipcRenderer.invoke(IPC.deleteElementsBatch, ids),
-  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
+  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
   deleteMediaAsset: (id: Id) => ipcRenderer.invoke(IPC.deleteMediaAsset, id),
   updateMediaAssetSrc: (id: Id, src: string) => ipcRenderer.invoke(IPC.updateMediaAssetSrc, id, src),
   getAudioCoverArt: (src: string) => ipcRenderer.invoke(IPC.getAudioCoverArt, src) as Promise<string | null>,
@@ -76,6 +82,8 @@ const api = {
     ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
   detachTemplateFromDeckItem: (itemId: Id) =>
     ipcRenderer.invoke(IPC.detachTemplateFromDeckItem, itemId),
+  syncTemplateToLinkedDeckItems: (templateId: Id) =>
+    ipcRenderer.invoke(IPC.syncTemplateToLinkedDeckItems, templateId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),

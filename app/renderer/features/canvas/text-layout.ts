@@ -11,6 +11,24 @@ type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 
 let measurementContext: CanvasRenderingContext2D | null = null;
 
+export function measureTextLineStackHeight(lineCount: number, fontSize: number, lineHeight: number): number {
+  return fontSize + Math.max(0, lineCount - 1) * fontSize * lineHeight;
+}
+
+export function measureTextLineLayoutHeight(lineCount: number, fontSize: number, lineHeight: number): number {
+  return Math.max(1, lineCount) * fontSize * lineHeight;
+}
+
+export function textLineBleedPadding(fontSize: number, lineHeight: number): number {
+  return Math.max(0, (fontSize - fontSize * lineHeight) / 2);
+}
+
+export function textOverflowOffset(verticalAlign: TextVerticalAlign, containerHeight: number, textHeight: number): number {
+  if (verticalAlign === 'bottom') return Math.min(0, containerHeight - textHeight);
+  if (verticalAlign === 'middle') return Math.min(0, (containerHeight - textHeight) / 2);
+  return 0;
+}
+
 function getMeasurementContext(): CanvasRenderingContext2D | null {
   if (measurementContext) return measurementContext;
   if (typeof document === 'undefined') return null;
@@ -61,7 +79,16 @@ export function measureTextBlockHeight({ text, width, fontFamily, fontSize, font
 
   context.font = buildFontDeclaration(fontStyle, fontSize, fontFamily);
   const lineCount = countWrappedLines(text, Math.max(1, width), context);
-  return fontSize + Math.max(0, lineCount - 1) * fontSize * lineHeight;
+  return measureTextLineStackHeight(lineCount, fontSize, lineHeight);
+}
+
+export function measureTextLayoutHeight({ text, width, fontFamily, fontSize, fontStyle, lineHeight }: MeasureTextBlockInput): number {
+  const context = getMeasurementContext();
+  if (!context) return fontSize * lineHeight;
+
+  context.font = buildFontDeclaration(fontStyle, fontSize, fontFamily);
+  const lineCount = countWrappedLines(text, Math.max(1, width), context);
+  return measureTextLineLayoutHeight(lineCount, fontSize, lineHeight);
 }
 
 export function verticalTextOffset(verticalAlign: TextVerticalAlign, containerHeight: number, textHeight: number): number {

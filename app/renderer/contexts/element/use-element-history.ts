@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { AppSnapshot, ElementCreateInput, ElementUpdateInput, Id, Slide, SlideElement } from '@core/types';
+import type { SnapshotPatch } from '@core/snapshot-patch';
 import { createId } from '../../utils/create-id';
 import { buildSnapshotDiff } from './element-history-utils';
 import { cloneElements, payloadSignature } from './element-context-utils';
@@ -60,7 +61,7 @@ interface UseElementHistoryInput {
   currentSlide: Slide | null;
   historyKey: string | null;
   selectedElementIds: Id[];
-  mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
+  mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
   setStatusText: (text: string) => void;
   selectElements: (ids: Id[]) => void;
   setDraftElements: React.Dispatch<React.SetStateAction<Record<Id, Partial<SlideElement>>>>;
@@ -75,7 +76,7 @@ export function useElementHistory({
   currentSlide,
   historyKey,
   selectedElementIds,
-  mutate,
+  mutatePatch,
   setStatusText,
   selectElements,
   setDraftElements,
@@ -114,17 +115,14 @@ export function useElementHistory({
     }
     const diff = buildSnapshotDiff(baseElements, target);
     if (diff.creates.length === 0 && diff.updates.length === 0 && diff.deletes.length === 0) return;
-    await mutate(async () => {
-      let nextSnapshot: AppSnapshot | null = null;
-      if (diff.deletes.length > 0) nextSnapshot = await window.castApi.deleteElementsBatch(diff.deletes);
-      if (diff.updates.length > 0) nextSnapshot = await window.castApi.updateElementsBatch(diff.updates);
-      if (diff.creates.length > 0) nextSnapshot = await window.castApi.createElementsBatch(diff.creates);
-      if (nextSnapshot) return nextSnapshot;
-      return window.castApi.getSnapshot();
-    });
+    // Each batch returns a patch; mutatePatch applies it and queues the
+    // next call so the snapshotRef stays correct for subsequent operations.
+    if (diff.deletes.length > 0) await mutatePatch(() => window.castApi.deleteElementsBatch(diff.deletes));
+    if (diff.updates.length > 0) await mutatePatch(() => window.castApi.updateElementsBatch(diff.updates));
+    if (diff.creates.length > 0) await mutatePatch(() => window.castApi.createElementsBatch(diff.creates));
     setDraftElements({});
     setCanvasInteracting(false);
-  }, [baseElements, mutate, replaceElements, setCanvasInteracting, setDraftElements]);
+  }, [baseElements, mutatePatch, replaceElements, setCanvasInteracting, setDraftElements]);
 
   const commitElementUpdates = useCallback(async (updates: ElementUpdateInput[], withHistory = true) => {
     if (updates.length === 0) return;
@@ -177,11 +175,11 @@ export function useElementHistory({
         updatedAt: new Date().toISOString(),
       }))]);
     } else {
-      await mutate(() => window.castApi.createElementsBatch(creates));
+      await mutatePatch(() => window.castApi.createElementsBatch(creates));
     }
     selectElements(creates.map((input) => input.id!).reverse());
     setStatusText(`Pasted ${creates.length} object(s)`);
-  }, [baseElements, currentSlide, mutate, pushHistorySnapshot, replaceElements, selectElements, setStatusText]);
+  }, [baseElements, currentSlide, mutatePatch, pushHistorySnapshot, replaceElements, selectElements, setStatusText]);
 
   const nudgeSelection = useCallback(async (dx: number, dy: number) => {
     const targets = effectiveElements.filter((element) => selectedElementIds.includes(element.id) && !element.payload.locked);

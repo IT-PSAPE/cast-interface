@@ -9,7 +9,7 @@ interface ThumbnailGridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'style
 
 export function ThumbnailGrid({ columns, children, className, ...rest }: ThumbnailGridProps) {
   return (
-    <div className={cn('grid gap-1.5', className)} style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }} {...rest} >
+    <div className={cn('grid gap-1.5', className)} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} {...rest} >
       {children}
     </div>
   );

@@ -21,7 +21,7 @@ export function useLibraryPanelContextMenu() {
   const { deckItems } = useProjectContent();
   const { selectPlaylistDeckItem, selectPlaylistEntry } = useSlides();
   const { setLibraryPanelView } = useLibraryPanelState();
-  const { deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment } = useLibraryPanelManagement();
+  const { deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, movePlaylistEntry, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment } = useLibraryPanelManagement();
   const menu = useContextMenuState<LibraryPanelMenuTarget>();
   const [editingTarget, setEditingTarget] = useState<EditingTarget>(null);
   const selectedTree = currentLibraryBundle?.playlists.find((playlist) => playlist.playlist.id === currentPlaylistId) ?? null;
@@ -56,6 +56,7 @@ export function useLibraryPanelContextMenu() {
       deleteDeckItem,
       movePlaylist,
       moveDeckItem,
+      movePlaylistEntry,
       setSegmentColor,
       addDeckItemToSegment,
       movePlaylistEntryToSegment,
@@ -66,7 +67,7 @@ export function useLibraryPanelContextMenu() {
       beginRenameSegment: (id: Id) => beginEditing('segment', id),
       beginRenamePresentation: (id: Id) => beginEditing('presentation', id),
     });
-  }, [menu.menuState, currentLibraryId, currentPlaylistId, selectedTree, deckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginEditing]);
+  }, [menu.menuState, currentLibraryId, currentPlaylistId, selectedTree, deckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, movePlaylistEntry, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginEditing]);
 
   return {
     menuState: menu.menuState,

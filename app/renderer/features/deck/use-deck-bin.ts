@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Id } from '@core/types';
+import type { DeckItem, Id } from '@core/types';
 import type { ContextMenuItem } from '../../components/overlays/context-menu';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -7,6 +7,7 @@ import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { filterByText } from '../../utils/filter-by-text';
 import { buildDeckItemMenuItems } from './build-deck-menu-items';
 import { useLibraryPanelManagement } from '../library/use-library-panel-management';
+import { useDeckBinSort, compareByKey, type BinSort, type DeckBinSortKey } from '../workbench/use-bin-sort';
 
 export function useDeckBin(filterText: string) {
   const {
@@ -25,14 +26,16 @@ export function useDeckBin(filterText: string) {
   } = useLibraryPanelManagement();
   const menu = useContextMenuState<Id>();
   const [editingDeckItemId, setEditingPresentationId] = useState<Id | null>(null);
+  const { sort } = useDeckBinSort();
 
   const filteredDeckItems = useMemo(() => {
-    return filterByText(deckItems, filterText, (item) => {
+    const filtered = filterByText(deckItems, filterText, (item) => {
       const slides = slidesByDeckItemId.get(item.id) ?? [];
       const slideLabels = slides.map((slide) => `slide ${slide.order + 1}`);
       return [item.title, item.type, ...slideLabels];
     });
-  }, [deckItems, filterText, slidesByDeckItemId]);
+    return sortDeckItems(filtered, sort, slidesByDeckItemId);
+  }, [deckItems, filterText, slidesByDeckItemId, sort]);
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!menu.menuState) return [];
@@ -64,4 +67,18 @@ export function useDeckBin(filterText: string) {
     handleRename,
     slidesByDeckItemId,
   };
+}
+
+function sortDeckItems(items: DeckItem[], sort: BinSort<DeckBinSortKey>, slidesByDeckItemId: ReadonlyMap<Id, unknown[]>): DeckItem[] {
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  const sorted = [...items];
+  sorted.sort((a, b) => {
+    if (sort.key === 'slides') {
+      const aCount = slidesByDeckItemId.get(a.id)?.length ?? 0;
+      const bCount = slidesByDeckItemId.get(b.id)?.length ?? 0;
+      return direction * (aCount - bCount);
+    }
+    return direction * compareByKey(a, b, sort.key, (item) => item.title);
+  });
+  return sorted;
 }

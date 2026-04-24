@@ -178,6 +178,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
                 ))}
                 <Transformer
                   ref={editor.transformerRef}
+                  visible={editor.editingTextId === null}
                   rotateEnabled
                   rotationSnaps={editor.shiftPressed ? snaps : []}
                   rotationSnapTolerance={5}

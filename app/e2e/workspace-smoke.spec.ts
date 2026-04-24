@@ -1,19 +1,156 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { createDefaultNdiOutputConfigs } from '../core/ndi';
+import type { AppSnapshot, NdiDiagnostics, NdiOutputConfigMap, NdiOutputState } from '../core/types';
+
+interface CastApiMockPayload {
+  snapshot: AppSnapshot;
+  ndiDiagnostics: NdiDiagnostics;
+  ndiOutputConfigs: NdiOutputConfigMap;
+  ndiOutputState: NdiOutputState;
+}
+
+function buildEmptySnapshot(): AppSnapshot {
+  return {
+    libraries: [],
+    libraryBundles: [],
+    presentations: [],
+    lyrics: [],
+    slides: [],
+    slideElements: [],
+    mediaAssets: [],
+    overlays: [],
+    templates: [],
+  };
+}
+
+function buildNdiDiagnostics(outputState: NdiOutputState, outputConfigs: NdiOutputConfigMap): NdiDiagnostics {
+  return {
+    outputState,
+    outputConfig: outputConfigs.audience,
+    runtimeLoaded: false,
+    runtimePath: null,
+    activeSender: null,
+    sourceStatus: 'idle',
+    lastError: null,
+  };
+}
+
+async function installCastApiMock(page: Page): Promise<void> {
+  const ndiOutputConfigs = createDefaultNdiOutputConfigs();
+  const ndiOutputState = { audience: false };
+  const payload: CastApiMockPayload = {
+    snapshot: buildEmptySnapshot(),
+    ndiDiagnostics: buildNdiDiagnostics(ndiOutputState, ndiOutputConfigs),
+    ndiOutputConfigs,
+    ndiOutputState,
+  };
+
+  await page.addInitScript((mockPayload: CastApiMockPayload) => {
+    const emptyPatch = { version: 1, upserts: {}, deletes: {} };
+    const unsubscribe = () => {};
+
+    window.castApi = {
+      platform: 'darwin',
+      getPathForFile: () => '',
+      getInlineWindowMenuItems: async () => [],
+      popupInlineWindowMenu: async () => {},
+      getSnapshot: async () => mockPayload.snapshot,
+      chooseDeckBundleExportPath: async () => null,
+      chooseDeckBundleImportPath: async () => null,
+      chooseImportReplacementMediaPath: async () => null,
+      exportDeckBundle: async () => ({ filePath: '', itemCount: 0 }),
+      inspectImportBundle: async () => ({
+        exportedAt: '',
+        itemCount: 0,
+        templateCount: 0,
+        mediaReferenceCount: 0,
+        items: [],
+        templates: [],
+        mediaReferences: [],
+        brokenReferences: [],
+      }),
+      finalizeImportBundle: async () => mockPayload.snapshot,
+      createLibrary: async () => emptyPatch,
+      createPlaylist: async () => emptyPatch,
+      createPlaylistSegment: async () => emptyPatch,
+      renamePlaylistSegment: async () => emptyPatch,
+      setPlaylistSegmentColor: async () => emptyPatch,
+      movePlaylist: async () => emptyPatch,
+      addDeckItemToSegment: async () => emptyPatch,
+      moveDeckItemToSegment: async () => emptyPatch,
+      movePlaylistEntryToSegment: async () => emptyPatch,
+      movePlaylistEntry: async () => mockPayload.snapshot,
+      moveDeckItem: async () => emptyPatch,
+      createPresentation: async () => emptyPatch,
+      createLyric: async () => emptyPatch,
+      createSlide: async () => emptyPatch,
+      duplicateSlide: async () => emptyPatch,
+      deleteSlide: async () => emptyPatch,
+      updateSlideNotes: async () => emptyPatch,
+      setSlideOrder: async () => emptyPatch,
+      setLibraryOrder: async () => emptyPatch,
+      setPlaylistOrder: async () => emptyPatch,
+      setPlaylistSegmentOrder: async () => emptyPatch,
+      movePlaylistEntryTo: async () => emptyPatch,
+      createElement: async () => emptyPatch,
+      createElementsBatch: async () => emptyPatch,
+      updateElement: async () => emptyPatch,
+      updateElementsBatch: async () => emptyPatch,
+      deleteElement: async () => emptyPatch,
+      deleteElementsBatch: async () => emptyPatch,
+      createMediaAsset: async () => emptyPatch,
+      deleteMediaAsset: async () => emptyPatch,
+      updateMediaAssetSrc: async () => emptyPatch,
+      getAudioCoverArt: async () => null,
+      createOverlay: async () => emptyPatch,
+      updateOverlay: async () => emptyPatch,
+      setOverlayEnabled: async () => emptyPatch,
+      deleteOverlay: async () => emptyPatch,
+      createTemplate: async () => emptyPatch,
+      updateTemplate: async () => emptyPatch,
+      deleteTemplate: async () => emptyPatch,
+      applyTemplateToDeckItem: async () => emptyPatch,
+      detachTemplateFromDeckItem: async () => emptyPatch,
+      syncTemplateToLinkedDeckItems: async () => emptyPatch,
+      applyTemplateToOverlay: async () => emptyPatch,
+      renameLibrary: async () => emptyPatch,
+      renamePlaylist: async () => emptyPatch,
+      renamePresentation: async () => emptyPatch,
+      renameLyric: async () => emptyPatch,
+      deleteLibrary: async () => emptyPatch,
+      deletePlaylist: async () => emptyPatch,
+      deletePlaylistSegment: async () => emptyPatch,
+      deletePresentation: async () => emptyPatch,
+      deleteLyric: async () => emptyPatch,
+      setNdiOutputEnabled: async () => mockPayload.ndiOutputState,
+      getNdiOutputState: async () => mockPayload.ndiOutputState,
+      getNdiOutputConfigs: async () => mockPayload.ndiOutputConfigs,
+      updateNdiOutputConfig: async () => mockPayload.ndiOutputConfigs,
+      getNdiDiagnostics: async () => mockPayload.ndiDiagnostics,
+      sendNdiFrame: () => {},
+      onNdiOutputStateChanged: () => unsubscribe,
+      onNdiDiagnosticsChanged: () => unsubscribe,
+    } as unknown as typeof window.castApi;
+  }, payload);
+}
 
 test('workbench renders current toolbar labels and panel toggles', async ({ page }) => {
+  await installCastApiMock(page);
   await page.goto('/');
-  await expect(page.locator('[data-ui-region="app-toolbar"]')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Show' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Slides' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Overlay' })).toBeVisible();
+  const toolbar = page.locator('[data-ui-region="app-toolbar"]');
 
-  await expect(page.getByRole('button', { name: 'Left' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Bottom' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Right' })).toBeVisible();
+  await expect(toolbar).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Show' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Overlay' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Overlay' }).click();
+  await expect(toolbar.getByRole('button', { name: 'Left' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Bottom' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Right' })).toBeVisible();
 
-  await expect(page.getByRole('button', { name: 'Left' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Right' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Bottom' })).toHaveCount(0);
+  await toolbar.getByRole('button', { name: 'Overlay' }).click();
+
+  await expect(toolbar.getByRole('button', { name: 'Left' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Right' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Bottom' })).toHaveCount(0);
 });

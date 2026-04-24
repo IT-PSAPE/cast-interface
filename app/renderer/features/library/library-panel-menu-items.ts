@@ -29,6 +29,7 @@ interface BuildMenuItemsOptions {
   deleteDeckItem: (id: Id) => Promise<void>;
   movePlaylist: (id: Id, direction: 'up' | 'down') => Promise<void>;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
+  movePlaylistEntry: (entryId: Id, direction: 'up' | 'down') => Promise<void>;
   setSegmentColor: (id: Id, colorKey: string | null) => Promise<void>;
   addDeckItemToSegment: (segmentId: Id, itemId: Id) => Promise<Id | null>;
   movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<void>;
@@ -41,7 +42,7 @@ interface BuildMenuItemsOptions {
 }
 
 export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): ContextMenuItem[] {
-  const { target, currentLibraryId, selectedTree, libraryDeckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
+  const { target, currentLibraryId, selectedTree, libraryDeckItems, playlistIds, deckItemIds, setLibraryPanelView, selectPlaylistDeckItem, selectPlaylistEntry, deleteLibrary, deletePlaylist, deleteSegment, deleteDeckItem, movePlaylist, moveDeckItem, movePlaylistEntry, setSegmentColor, addDeckItemToSegment, movePlaylistEntryToSegment, createPresentationInSegment, createLyricInSegment, beginRenameLibrary, beginRenamePlaylist, beginRenameSegment, beginRenamePresentation } = options;
 
   if (target.type === 'library') {
     return [
@@ -158,6 +159,7 @@ export function buildLibraryPanelMenuItems(options: BuildMenuItemsOptions): Cont
     itemIds: deckItemIds,
     selectPlaylistEntry,
     moveDeckItem,
+    movePlaylistEntry,
     movePlaylistEntryToSegment,
     beginRenameDeckItem: beginRenamePresentation,
     deleteDeckItem,

@@ -73,7 +73,7 @@ function OutlineSection({ item, currentPlaylistEntryId, currentOutputPlaylistEnt
       <header className="px-1">
         <h3 className="m-0 text-sm font-semibold text-primary">{item.item.title}</h3>
       </header>
-      <div className="flex flex-col gap-1" role="list" aria-label={`${item.item.title} outline`}>
+      <div className="flex flex-col gap-3" role="list" aria-label={`${item.item.title} outline`}>
         {item.slides.map(renderRow)}
       </div>
     </section>

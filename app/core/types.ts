@@ -3,6 +3,7 @@ export type Id = string;
 export interface Library {
   id: Id;
   name: string;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -174,6 +175,7 @@ export interface MediaAsset {
   name: string;
   type: MediaAssetType;
   src: string;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }

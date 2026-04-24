@@ -1,43 +1,35 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 
-function Root({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+function Root({ className, hide, ...props }: HTMLAttributes<HTMLDivElement> & { hide?: boolean }) {
+  if (hide) return null;
+  
   return (
-    <div className={cn('flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center', className)} {...props}>
-      {children}
-    </div>
+    <div className={cn('flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center', className)} {...props} />
   );
 }
 
-function Icon({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+function Icon({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('text-quaternary', className)} {...props}>
-      {children}
-    </div>
+    <div className={cn('text-quaternary', className)} {...props} />
   );
 }
 
-function Title({ children, className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+function Title({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('max-w-[16rem] text-xs font-medium text-secondary', className)} {...props}>
-      {children}
-    </p>
+    <p className={cn('max-w-[16rem] text-xs font-medium text-secondary', className)} {...props} />
   );
 }
 
-function Description({ children, className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+function Description({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('max-w-[16rem] text-xs text-tertiary', className)} {...props}>
-      {children}
-    </p>
+    <p className={cn('max-w-[16rem] text-xs text-tertiary', className)} {...props} />
   );
 }
 
-function Action({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+function Action({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mt-1 flex items-center gap-2', className)} {...props}>
-      {children}
-    </div>
+    <div className={cn('mt-1 flex items-center gap-2', className)} {...props} />
   );
 }
 

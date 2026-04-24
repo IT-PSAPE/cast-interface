@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import type { Id } from '@core/types';
 import type { ContextMenuItem } from '../../../components/overlays/context-menu';
 import { useElements } from '../../../contexts/canvas/canvas-context';
@@ -6,20 +6,26 @@ import { usePresentationLayers } from '../../../contexts/playback/playback-conte
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { useContextMenuState } from '../../../hooks/use-context-menu-state';
 import { filterByText } from '../../../utils/filter-by-text';
+import { compareByKey, useMediaBinSort } from '../../workbench/use-bin-sort';
 
 export function useMediaBin(filterText: string) {
   const { mediaAssets: allMediaAssets } = useProjectContent();
   const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationLayers();
   const { deleteMedia, changeMediaSrc } = useElements();
+  const { sort } = useMediaBinSort();
   const menu = useContextMenuState<Id>();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const changeSrcTargetRef = useRef<Id | null>(null);
 
-  const mediaAssets = filterByText(
-    allMediaAssets.filter((asset) => asset.type !== 'audio'),
-    filterText,
-    (asset) => [asset.name, asset.type],
-  );
+  const mediaAssets = useMemo(() => {
+    const filtered = filterByText(
+      allMediaAssets.filter((asset) => asset.type !== 'audio'),
+      filterText,
+      (asset) => [asset.name, asset.type],
+    );
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => direction * compareByKey(a, b, sort.key, (item) => item.name));
+  }, [allMediaAssets, filterText, sort]);
 
   function handleApply(assetId: Id) {
     setMediaLayerAsset(assetId);
@@ -45,7 +51,7 @@ export function useMediaBin(filterText: string) {
   function buildMenuItems(assetId: Id): ContextMenuItem[] {
     return [
       { id: 'apply', label: 'Apply to Layer', onSelect: () => handleApply(assetId) },
-      { id: 'change-src', label: 'Change Source', onSelect: () => handleChangeSrc(assetId) },
+      { id: 'replace-src', label: 'Replace Source', onSelect: () => handleChangeSrc(assetId) },
       { id: 'delete', label: 'Delete', danger: true, onSelect: () => handleDelete(assetId) },
     ];
   }

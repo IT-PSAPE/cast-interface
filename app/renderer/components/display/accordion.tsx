@@ -87,9 +87,10 @@ function AccordionRoot({ type = "single", defaultValue, value, onValueChange, ch
 
 type AccordionItemProps = HTMLAttributes<HTMLDivElement> & {
     value: string;
+    ref?: React.Ref<HTMLDivElement>;
 };
 
-function AccordionItem({ value, children, className, ...props }: AccordionItemProps) {
+function AccordionItem({ value, children, className, ref, ...props }: AccordionItemProps) {
     const { openItems } = useAccordion();
     const isOpen = openItems.has(value);
 
@@ -97,7 +98,7 @@ function AccordionItem({ value, children, className, ...props }: AccordionItemPr
 
     return (
         <AccordionItemContext.Provider value={contextValue}>
-            <div className={cn(className)} data-state={isOpen ? "open" : "closed"} {...props}>
+            <div ref={ref} className={cn(className)} data-state={isOpen ? "open" : "closed"} {...props}>
                 {children}
             </div>
         </AccordionItemContext.Provider>

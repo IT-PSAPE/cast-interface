@@ -56,7 +56,7 @@ export function selectThumbnailElements(policy: SceneSourcePolicy, effectiveElem
 // ─── Provider ───────────────────────────────────────────────────────
 
 export function CanvasProvider({ children }: { children: ReactNode }) {
-  const { mutate, setStatusText } = useCast();
+  const { mutate, mutatePatch, setStatusText } = useCast();
   const { currentDeckItem } = useNavigation();
   const { currentSlide, liveSlide, liveElements, slides, slideElementsById } = useSlides();
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
@@ -135,19 +135,19 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     if (isOverlayEdit) { stageOverlayElementUpdates([input]); return; }
     if (isTemplateEdit) { if (!currentTemplate) return; replaceTemplateElements(applyElementUpdates(currentTemplate.elements, [input])); return; }
     if (isSlideEdit) { if (!currentSlide) return; replaceSlideElements(currentSlide.id, applyElementUpdates(getSlideElements(currentSlide.id), [input])); return; }
-    await mutate(() => window.castApi.updateElement(input));
-  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
+    await mutatePatch(() => window.castApi.updateElement(input));
+  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
 
   const saveElementUpdates = useCallback(async (updates: ElementUpdateInput[]) => {
     if (updates.length === 0) return;
     if (isOverlayEdit) { stageOverlayElementUpdates(updates); return; }
     if (isTemplateEdit) { if (!currentTemplate) return; replaceTemplateElements(applyElementUpdates(currentTemplate.elements, updates)); return; }
     if (isSlideEdit) { if (!currentSlide) return; replaceSlideElements(currentSlide.id, applyElementUpdates(getSlideElements(currentSlide.id), updates)); return; }
-    await mutate(() => {
+    await mutatePatch(() => {
       if (updates.length === 1) return window.castApi.updateElement(updates[0]);
       return window.castApi.updateElementsBatch(updates);
     });
-  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
+  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
 
   const inspector = useElementInspectorSync({
     selectedElementId: selection.primarySelectedElementId,
@@ -164,7 +164,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     currentSlide,
     historyKey: isOverlayEdit ? currentOverlay?.id ?? null : isTemplateEdit ? currentTemplate?.id ?? null : currentSlide?.id ?? null,
     selectedElementIds: selection.selectedElementIds,
-    mutate,
+    mutatePatch,
     setStatusText,
     selectElements: selection.selectElements,
     setDraftElements,
@@ -200,12 +200,12 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
       replaceSlideElements(currentSlide.id, getSlideElements(currentSlide.id).filter((el) => !targetIds.includes(el.id)));
     } else {
       history.pushHistorySnapshot();
-      await mutate(() => targetIds.length === 1 ? window.castApi.deleteElement(targetIds[0]) : window.castApi.deleteElementsBatch(targetIds));
+      await mutatePatch(() => targetIds.length === 1 ? window.castApi.deleteElement(targetIds[0]) : window.castApi.deleteElementsBatch(targetIds));
     }
     setStatusText('Deleted selected object(s)');
     selection.selectElements(selection.selectedElementIds.filter((id) => protectedLyricTextIds.has(id)));
     setDraftElements({});
-  }, [currentDeckItem, currentOverlay, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutate, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
+  }, [currentDeckItem, currentOverlay, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
 
   const toggleElementVisibility = useCallback(async (id: Id, visible: boolean) => {
     const target = effectiveElements.find((el) => el.id === id);
@@ -227,7 +227,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   }, [effectiveElements, inspector, saveElementUpdate, selection.primarySelectedElementId]);
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
-    currentSlide, currentDeckItem, currentTemplate, mutate, setStatusText,
+    currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText,
   });
 
   const elementsValue = useMemo<ElementContextValue>(() => ({

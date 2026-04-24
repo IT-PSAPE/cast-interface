@@ -31,6 +31,7 @@ interface SlideContextValue {
   duplicateSlide: (slideId: Id) => Promise<void>;
   deleteSlide: (slideId: Id) => Promise<void>;
   moveSlide: (slideId: Id, direction: 'up' | 'down') => Promise<void>;
+  reorderSlide: (slideId: Id, newOrder: number) => Promise<void>;
   updateCurrentSlideNotes: (notes: string) => Promise<void>;
 }
 
@@ -38,7 +39,7 @@ const SlideContext = createContext<SlideContextValue | null>(null);
 const NO_SLIDE_SELECTED = -1;
 
 export function SlideProvider({ children }: { children: ReactNode }) {
-  const { mutate, runOperation, setStatusText } = useCast();
+  const { mutatePatch, runOperation, setStatusText } = useCast();
   const {
     currentDeckItemId,
     currentPlaylistEntryId,
@@ -212,7 +213,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     if (!currentDeckItemId || !currentDeckItem) return;
     await runOperation('Creating slide...', async () => {
       const previousSlideIds = new Set(slides.map((slide) => slide.id));
-      const nextSnapshot = await mutate(() => window.castApi.createSlide({
+      const nextSnapshot = await mutatePatch(() => window.castApi.createSlide({
         presentationId: currentDeckItem.type === 'presentation' ? currentDeckItemId : null,
         lyricId: currentDeckItem.type === 'lyric' ? currentDeckItemId : null,
       }));
@@ -221,28 +222,28 @@ export function SlideProvider({ children }: { children: ReactNode }) {
       if (selectionKey && createdSlideIndex !== null) updateVisibleSelectedSlideIndex(selectionKey, createdSlideIndex);
       setStatusText('Created slide');
     });
-  }, [currentDeckItem, currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, runOperation, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItem, currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, runOperation, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const deleteSlideAction = useCallback(async (slideId: Id) => {
     const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
     if (!selectionKey) return;
     const deletedIndex = slides.findIndex((slide) => slide.id === slideId);
-    await mutate(() => window.castApi.deleteSlide(slideId));
+    await mutatePatch(() => window.castApi.deleteSlide(slideId));
     if (deletedIndex >= 0 && slides.length > 1) {
       const nextIndex = clamp(deletedIndex >= slides.length - 1 ? deletedIndex - 1 : deletedIndex, 0, slides.length - 2);
       updateVisibleSelectedSlideIndex(selectionKey, nextIndex);
     }
     setStatusText('Deleted slide');
-  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const duplicateSlideAction = useCallback(async (slideId: Id) => {
     const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
     const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
     if (sourceIndex < 0) return;
-    await mutate(() => window.castApi.duplicateSlide(slideId));
+    await mutatePatch(() => window.castApi.duplicateSlide(slideId));
     if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, sourceIndex + 1);
     setStatusText('Duplicated slide');
-  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const moveSlideAction = useCallback(async (slideId: Id, direction: 'up' | 'down') => {
     const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
@@ -250,16 +251,27 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     const newOrder = direction === 'up' ? sourceIndex - 1 : sourceIndex + 1;
     if (newOrder < 0 || newOrder >= slides.length) return;
     const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
-    await mutate(() => window.castApi.setSlideOrder({ slideId, newOrder }));
+    await mutatePatch(() => window.castApi.setSlideOrder({ slideId, newOrder }));
     if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, newOrder);
     setStatusText(direction === 'up' ? 'Moved slide up' : 'Moved slide down');
-  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutate, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
+
+  const reorderSlideAction = useCallback(async (slideId: Id, newOrder: number) => {
+    const sourceIndex = slides.findIndex((slide) => slide.id === slideId);
+    if (sourceIndex < 0) return;
+    if (sourceIndex === newOrder) return;
+    if (newOrder < 0 || newOrder >= slides.length) return;
+    const selectionKey = isDetachedDeckBrowser ? currentDeckItemId : currentPlaylistEntryId;
+    await mutatePatch(() => window.castApi.setSlideOrder({ slideId, newOrder }));
+    if (selectionKey) updateVisibleSelectedSlideIndex(selectionKey, newOrder);
+    setStatusText('Reordered slide');
+  }, [currentDeckItemId, currentPlaylistEntryId, isDetachedDeckBrowser, mutatePatch, setStatusText, slides, updateVisibleSelectedSlideIndex]);
 
   const updateCurrentSlideNotes = useCallback(async (notes: string) => {
     if (!currentSlide) return;
-    await mutate(() => window.castApi.updateSlideNotes({ slideId: currentSlide.id, notes }));
+    await mutatePatch(() => window.castApi.updateSlideNotes({ slideId: currentSlide.id, notes }));
     setStatusText('Saved slide notes');
-  }, [currentSlide, mutate, setStatusText]);
+  }, [currentSlide, mutatePatch, setStatusText]);
 
   const focusPlaylistEntrySlide = useCallback((entryId: Id, itemId: Id, index: number) => {
     const contentSlides = slidesByDeckItemId.get(itemId) ?? [];
@@ -302,6 +314,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     duplicateSlide: duplicateSlideAction,
     deleteSlide: deleteSlideAction,
     moveSlide: moveSlideAction,
+    reorderSlide: reorderSlideAction,
     updateCurrentSlideNotes,
   }), [
     activatePlaylistEntrySlide,
@@ -311,6 +324,7 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     deleteSlideAction,
     duplicateSlideAction,
     moveSlideAction,
+    reorderSlideAction,
     currentSlide,
     currentSlideIndex,
     clearCurrentSlideSelection,

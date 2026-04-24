@@ -9,6 +9,7 @@ interface BuildPresentationMenuItemsOptions {
   itemIds: Id[];
   selectPlaylistEntry?: (entryId: Id) => void;
   moveDeckItem: (id: Id, direction: 'up' | 'down') => Promise<void>;
+  movePlaylistEntry?: (entryId: Id, direction: 'up' | 'down') => Promise<void>;
   movePlaylistEntryToSegment: (entryId: Id, segmentId: Id | null) => Promise<void>;
   beginRenameDeckItem: (id: Id) => void;
   deleteDeckItem: (id: Id) => Promise<void>;
@@ -22,23 +23,11 @@ export function buildDeckItemMenuItems({
   itemIds,
   selectPlaylistEntry,
   moveDeckItem,
+  movePlaylistEntry,
   movePlaylistEntryToSegment,
   beginRenameDeckItem,
   deleteDeckItem
 }: BuildPresentationMenuItemsOptions): ContextMenuItem[] {
-  const itemIndex = itemIds.indexOf(itemId);
-  const moveUpItem: ContextMenuItem = {
-    id: 'deck-item-up',
-    label: 'Move Up',
-    disabled: itemIndex <= 0,
-    onSelect: () => { void moveDeckItem(itemId, 'up'); }
-  };
-  const moveDownItem: ContextMenuItem = {
-    id: 'deck-item-down',
-    label: 'Move Down',
-    disabled: itemIndex < 0 || itemIndex >= itemIds.length - 1,
-    onSelect: () => { void moveDeckItem(itemId, 'down'); }
-  };
   const deleteItem: ContextMenuItem = {
     id: 'delete-deck-item',
     label: 'Delete',
@@ -50,17 +39,30 @@ export function buildDeckItemMenuItems({
   };
 
   if (scope === 'library') {
+    const itemIndex = itemIds.indexOf(itemId);
     return [
       { id: 'rename-deck-item', label: 'Rename', onSelect: () => beginRenameDeckItem(itemId) },
-      moveUpItem,
-      moveDownItem,
+      {
+        id: 'deck-item-up',
+        label: 'Move Up',
+        disabled: itemIndex <= 0,
+        onSelect: () => { void moveDeckItem(itemId, 'up'); }
+      },
+      {
+        id: 'deck-item-down',
+        label: 'Move Down',
+        disabled: itemIndex < 0 || itemIndex >= itemIds.length - 1,
+        onSelect: () => { void moveDeckItem(itemId, 'down'); }
+      },
       deleteItem
     ];
   }
 
-  const assignedSegmentId = selectedTree?.segments.find((segment) =>
+  const assignedSegment = selectedTree?.segments.find((segment) =>
     segment.entries.some((entry) => entry.entry.id === entryId)
-  )?.segment.id ?? null;
+  ) ?? null;
+  const entryIndex = assignedSegment?.entries.findIndex((entry) => entry.entry.id === entryId) ?? -1;
+  const totalEntries = assignedSegment?.entries.length ?? 0;
   const moveOptions = (selectedTree?.segments ?? []).map((segment) => ({
     id: `move-${segment.segment.id}`,
     label: segment.segment.name,
@@ -73,11 +75,27 @@ export function buildDeckItemMenuItems({
 
   return [
     { id: 'rename-deck-item', label: 'Rename', onSelect: () => beginRenameDeckItem(itemId) },
-    moveUpItem,
-    moveDownItem,
+    {
+      id: 'deck-item-up',
+      label: 'Move Up',
+      disabled: !entryId || !movePlaylistEntry || entryIndex <= 0,
+      onSelect: () => {
+        if (!entryId || !movePlaylistEntry) return;
+        void movePlaylistEntry(entryId, 'up');
+      }
+    },
+    {
+      id: 'deck-item-down',
+      label: 'Move Down',
+      disabled: !entryId || !movePlaylistEntry || entryIndex < 0 || entryIndex >= totalEntries - 1,
+      onSelect: () => {
+        if (!entryId || !movePlaylistEntry) return;
+        void movePlaylistEntry(entryId, 'down');
+      }
+    },
     {
       id: 'move-deck-item',
-      label: 'Move',
+      label: 'Move to segment',
       disabled: !entryId,
       children: [
         ...moveOptions,
@@ -94,7 +112,7 @@ export function buildDeckItemMenuItems({
     {
       id: 'remove-from-segment',
       label: 'Remove',
-      disabled: !entryId || !assignedSegmentId,
+      disabled: !entryId || !assignedSegment,
       onSelect: () => {
         if (!entryId) return;
         void movePlaylistEntryToSegment(entryId, null);

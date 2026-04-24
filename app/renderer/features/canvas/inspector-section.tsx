@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { Checkbox } from '@renderer/components/form/checkbox';
-import { cv } from '@renderer/utils/cv';
 
 function Root({ children }: { children: ReactNode }) {
   return (
@@ -27,22 +26,9 @@ function Body({ children }: { children: ReactNode }) {
   );
 }
 
-const rowStyles = cv({
-  base: 'grid gap-2',
-  variants: {
-    lead: {
-      true: ['grid-cols-[1fr_repeat(2,24px)]'],
-      false: ['grid-cols-[repeat(2,1fr)_24px]'],
-    },
-  },
-  defaultVariants: {
-    lead: false,
-  },
-});
-
-function Row({ children, lead }: { children: ReactNode; lead?: boolean }) {
+function Row({ children }: { children: ReactNode }) {
   return (
-    <div className={rowStyles({ lead })}>
+    <div className="flex gap-1">
       {children}
     </div>
   );

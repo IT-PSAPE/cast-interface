@@ -16,8 +16,13 @@ interface BinPanelLayoutProps {
 }
 
 export function BinPanelLayout({ children, gridItemSize, mode = 'grid', menuState, menuItems, onCloseMenu, listClassName = '' }: BinPanelLayoutProps) {
+  function handleMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen) return;
+    onCloseMenu();
+  }
+
   return (
-    <>
+    <ContextMenu.Root open={Boolean(menuState)} position={menuState} onOpenChange={handleMenuOpenChange}>
       {mode === 'grid' ? (
         <ThumbnailGrid columns={gridItemSize}>
           {children}
@@ -27,9 +32,13 @@ export function BinPanelLayout({ children, gridItemSize, mode = 'grid', menuStat
           {children}
         </div>
       )}
-      {menuState ? (
-        <ContextMenu x={menuState.x} y={menuState.y} items={menuItems} onClose={onCloseMenu} />
-      ) : null}
-    </>
+      <ContextMenu.Portal>
+        <ContextMenu.Positioner>
+          <ContextMenu.Popup>
+            <ContextMenu.Items items={menuItems} />
+          </ContextMenu.Popup>
+        </ContextMenu.Positioner>
+      </ContextMenu.Portal>
+    </ContextMenu.Root>
   );
 }
