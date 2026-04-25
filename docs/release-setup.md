@@ -1,19 +1,20 @@
 # Release & signing setup
 
-Everything in this doc is the one-time human setup required to turn unsigned CI builds into signed, notarized, auto-updating releases. After this is done, cutting a release is just bumping `version` in `package.json` and pushing to `main`.
+Everything in this doc is the one-time human setup required to turn unsigned CI builds into signed, notarized, auto-updating releases. After this is done, cutting a release is bumping `version` in `package.json`, pushing the matching `v<version>` tag, and publishing a GitHub Release.
 
 ## The release flow (after this is all set up)
 
 1. Bump `"version"` in [../package.json](../package.json).
-2. Commit and push to `main`.
+2. Commit, tag, and push the commit + tag.
 3. GitHub Actions:
-   - detects the new version (no `v<version>` tag exists yet),
+   - waits until a GitHub Release is published,
+   - checks out the release tag,
+   - validates the tag matches `package.json`,
    - builds + signs + notarizes on macOS, Windows, and Linux runners,
-   - uploads artifacts to a draft GitHub Release named `v<version>`,
-   - promotes the draft to published with auto-generated release notes from commits.
+   - uploads artifacts to the published GitHub Release.
 4. Installed clients see `latest-mac.yml` / `latest.yml` / `latest-linux.yml` at the new release and self-update.
 
-No release is cut if the version isn't bumped — pushes to `main` just run CI (typecheck, tests, build verification).
+No production build runs unless a GitHub Release is published. Pushes to `main`, PRs, and version-only commits do not build release artifacts.
 
 ---
 
@@ -147,19 +148,23 @@ app.whenReady().then(() => {
    npm version patch   # or minor / major
    git push && git push --tags
    ```
-   (`npm version` edits package.json, commits, and creates a local tag. The workflow creates its own tag when it publishes, so the local tag is optional; pushing the commit is the trigger.)
-2. Watch the run:
+   (`npm version` edits package.json, commits, and creates a local tag. The release tag must be named `v<version>` and must match `package.json`.)
+2. Publish the GitHub Release:
+   ```bash
+   gh release create v<version> --generate-notes
+   ```
+3. Watch the run:
    ```bash
    gh run watch
    ```
-3. When the workflow completes, the release is live at:
+4. When the workflow completes, the release is live at:
    ```bash
    gh release view v<version> --web
    ```
 
 ## Troubleshooting
 
-- **"Tag v<version> already exists"** in the workflow log → you pushed without bumping the version. CI runs, no release is cut. Bump and push again.
+- **"Release tag v<version> does not match package.json version"** in the workflow log → the GitHub Release tag and app version disagree. Fix the version/tag alignment and publish a new release.
 - **Mac build succeeds but users can't open the app** → likely unsigned or notarization failed. Check the workflow log for `electron-notarize` errors, usually due to wrong `APPLE_TEAM_ID` or password.
-- **Windows auto-update fails with "cannot find latest.yml"** → make sure the workflow completed the `publish-release` job; check the release assets include `latest.yml`.
+- **Windows auto-update fails with "cannot find latest.yml"** → make sure the release build completed; check the release assets include `latest.yml`.
 - **Auto-update not triggering on launch** → `app.isPackaged` is false in dev mode; the update check only runs in packaged builds.

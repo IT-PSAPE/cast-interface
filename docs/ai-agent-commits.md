@@ -1,6 +1,6 @@
 # Commit & release conventions (for humans and AI agents)
 
-The release pipeline in [.github/workflows/build.yml](../.github/workflows/build.yml) cuts a release **only when `package.json` version changes on `main`**. Everything else is just CI. Keep this loop clean and releases happen automatically.
+The release pipeline in [.github/workflows/build.yml](../.github/workflows/build.yml) builds production artifacts **only when a GitHub Release is published**. Pushes, PRs, and version-only commits do not build production installers.
 
 ## Commit messages
 
@@ -19,7 +19,7 @@ Bad:
 
 ## When to bump the version
 
-The version field is the only release trigger. Bump it when you have a coherent set of changes you want to ship to users.
+The version field must match the release tag. Bump it when you have a coherent set of changes you want to ship to users, then publish a GitHub Release for `v<version>`.
 
 | Change class | Bump |
 | --- | --- |
@@ -35,32 +35,30 @@ Keep it plain semver. Pre-1.0 convention: `minor` for features, `patch` for fixe
 npm version patch   # or minor / major
 ```
 
-This edits `package.json`, commits with message `v<version>`, and creates a local tag. Push the commit (the local tag is optional — the workflow publishes its own tag when it promotes the draft release):
-
-```bash
-git push
-```
-
-Or, if you want the local tag pushed too:
+This edits `package.json`, commits with message `v<version>`, and creates a local tag. Push both the commit and tag:
 
 ```bash
 git push && git push --tags
 ```
 
-## What the workflow does on each push
+Then publish the GitHub Release. Publishing the release is the production build trigger:
 
-```
-push to main
-├── detect-release: did package.json version change? (no tag v<version> yet)
-│     ├── no  → just run CI (typecheck, test, build). No release.
-│     └── yes → build with --publish always. Electron-builder uploads
-│               artifacts to a draft GitHub Release named v<version>.
-└── build: runs on mac / win / linux in parallel.
-    └── publish-release: when all three succeed, promote the draft to
-          published, regenerate notes from commits since the previous tag.
+```bash
+gh release create v$(node -p "require('./package.json').version") --generate-notes
 ```
 
-If any one platform fails, the draft is left in place so you can inspect it. Re-push (with the same version) won't help — the draft already exists; delete it first, or bump to a new version.
+## What the workflow does on each release
+
+```
+published GitHub Release
+└── build-release: runs on mac / win / linux in parallel.
+    ├── validates release tag v<version> matches package.json
+    ├── typechecks, tests, and builds
+    └── packages with --publish always so electron-builder uploads
+        artifacts to the published release.
+```
+
+If there is no published GitHub Release event, the production build does not run. If any one platform fails, fix the cause and rerun the failed workflow from GitHub Actions.
 
 ## Release notes
 
@@ -75,7 +73,7 @@ Title quality directly becomes release note quality. Write PR/commit titles as u
 
 ## Rules for AI agents
 
-- **Don't bump `version`** unless the human explicitly asks for a release. A version bump on an unintended commit cuts a release.
+- **Don't bump `version`** unless the human explicitly asks for release preparation. A version bump alone does not build production artifacts, but it should still represent an intended ship candidate.
 - **Don't rewrite existing release notes or tags.** They're immutable once published.
 - **When adding features, group them into one commit** if possible. Multiple trivial commits produce noisy release notes.
 - **Write commit titles in the voice of a release note** — "Add X", "Fix Y when Z", not "update files" or "wip".
@@ -88,13 +86,16 @@ Title quality directly becomes release note quality. Write PR/commit titles as u
 
 ```bash
 # ship a patch release
-npm version patch && git push
+npm version patch && git push && git push --tags
+gh release create v$(node -p "require('./package.json').version") --generate-notes
 
 # ship a minor release (new feature, backward-compatible)
-npm version minor && git push
+npm version minor && git push && git push --tags
+gh release create v$(node -p "require('./package.json').version") --generate-notes
 
 # ship a major release (breaking change)
-npm version major && git push
+npm version major && git push && git push --tags
+gh release create v$(node -p "require('./package.json').version") --generate-notes
 
 # watch the workflow
 gh run watch
