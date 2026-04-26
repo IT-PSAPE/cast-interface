@@ -6,3 +6,6 @@ dist
 *.db
 packages/ndi-native/build
 .electron-dev-dist
+
+bun.lock
+package-lock.json
