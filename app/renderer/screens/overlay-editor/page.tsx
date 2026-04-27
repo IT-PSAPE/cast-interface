@@ -1,11 +1,11 @@
-import type { Id } from '@core/types';
 import { overlayToLayerElements } from '@core/presentation-layers';
-import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { RecastPanel } from '@renderer/components 2.0/panel';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
-import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
+import { Dropdown } from '../../components/form/dropdown';
+import { useNavigation } from '../../contexts/navigation-context';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
@@ -20,7 +20,8 @@ import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function OverlayEditorScreen() {
-  const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay, deleteCurrentOverlay, duplicateOverlay, requestNameFocus } = useOverlayEditor();
+  const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay } = useOverlayEditor();
+  const { createPresentation, createEmptyLyric } = useNavigation();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
 
   useEditorLeftPanelNav({
@@ -33,20 +34,6 @@ export function OverlayEditorScreen() {
     void createOverlay();
   }
 
-  function handleDeleteOverlay(overlayId: Id) {
-    if (!window.confirm('Delete this overlay? This cannot be undone.')) return;
-    setCurrentOverlayId(overlayId);
-    void deleteCurrentOverlay();
-  }
-
-  function buildMenuItems(overlayId: Id): ContextMenuItem[] {
-    return [
-      { id: 'rename', label: 'Rename', icon: <Pencil size={14} />, onSelect: () => requestNameFocus(overlayId) },
-      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => duplicateOverlay(overlayId) },
-      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteOverlay(overlayId) },
-    ];
-  }
-
   return (
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
@@ -56,14 +43,21 @@ export function OverlayEditorScreen() {
               <SplitPanel.Segment id="overlay-list" defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
-                    <div className="mr-auto">
-                      <Label.sm>Overlays</Label.sm>
-                    </div>
-                    <div>
-                      <ReacstButton.Icon label="Add overlay" onClick={handleAddOverlay}>
+                    <Label.sm className="mr-auto">Overlays</Label.sm>
+                    <Dropdown>
+                      <Dropdown.Trigger
+                        aria-label="Add"
+                        className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
+                      >
                         <Plus />
-                      </ReacstButton.Icon>
-                    </div>
+                      </Dropdown.Trigger>
+                      <Dropdown.Panel placement="bottom-end">
+                        <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
+                        <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                        <Dropdown.Separator />
+                        <Dropdown.Item onClick={handleAddOverlay}>New overlay</Dropdown.Item>
+                      </Dropdown.Panel>
+                    </Dropdown>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content>
                     {overlays.length === 0 ? (
@@ -72,19 +66,18 @@ export function OverlayEditorScreen() {
                         <EmptyState.Description>Click the + button to create your first overlay.</EmptyState.Description>
                       </EmptyState.Root>
                     ) : (
-                    <ScrollArea className="p-2">
-                    <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
-                      {overlays.map((overlay, index) => {
-                        const scene = buildRenderScene(null, overlayToLayerElements(overlay));
+                    <ScrollArea.Root>
+                      <ScrollArea.Viewport className="p-2">
+                        <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
+                          {overlays.map((overlay, index) => {
+                            const scene = buildRenderScene(null, overlayToLayerElements(overlay));
 
-                        function handleSelect() {
-                          setCurrentOverlayId(overlay.id);
-                        }
+                            function handleSelect() {
+                              setCurrentOverlayId(overlay.id);
+                            }
 
-                        return (
-                          <ContextMenu.Root key={overlay.id}>
-                            <ContextMenu.Trigger>
-                              <ActiveOverlayTile isActive={currentOverlayId === overlay.id} onClick={handleSelect} selected={currentOverlayId === overlay.id}>
+                            return (
+                              <ActiveOverlayTile key={overlay.id} isActive={currentOverlayId === overlay.id} onClick={handleSelect} selected={currentOverlayId === overlay.id}>
                                 <Thumbnail.Body>
                                   <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                     <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
@@ -97,19 +90,14 @@ export function OverlayEditorScreen() {
                                   </div>
                                 </Thumbnail.Caption>
                               </ActiveOverlayTile>
-                            </ContextMenu.Trigger>
-                            <ContextMenu.Portal>
-                              <ContextMenu.Positioner>
-                                <ContextMenu.Popup>
-                                  <ContextMenu.Items items={buildMenuItems(overlay.id)} />
-                                </ContextMenu.Popup>
-                              </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
-                          </ContextMenu.Root>
-                        );
-                      })}
-                      </div>
-                    </ScrollArea>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea.Viewport>
+                      <ScrollArea.Scrollbar>
+                        <ScrollArea.Thumb />
+                      </ScrollArea.Scrollbar>
+                    </ScrollArea.Root>
                     )}
                   </RecastPanel.Content>
                 </RecastPanel.Group>
@@ -117,9 +105,7 @@ export function OverlayEditorScreen() {
               <SplitPanel.Segment id="overlay-objects" defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
-                    <div className="mr-auto">
-                      <span className="text-sm font-medium text-primary">Objects</span>
-                    </div>
+                    <Label.xs className="mr-auto">Objects</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />

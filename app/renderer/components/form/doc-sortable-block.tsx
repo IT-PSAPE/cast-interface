@@ -3,8 +3,10 @@ import { Plus } from 'lucide-react'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
 import { ReacstButton } from '@renderer/components 2.0/button'
+import { Label } from '../display/text'
 
 export type SortableBlockProps = {
+    index: number
     block: Block
     isSelected: boolean
     contentRef: (el: HTMLTextAreaElement | null) => void
@@ -12,7 +14,6 @@ export type SortableBlockProps = {
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
-    onContextMenu: (event: React.MouseEvent) => void
     onAddBelow: () => void
     onTextareaFocus: () => void
     onPaste: (before: string, segments: string[], after: string) => void
@@ -29,7 +30,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onContextMenu, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
+export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
         (el: HTMLTextAreaElement | null) => {
@@ -78,34 +79,30 @@ export function SortableBlock({ block, isSelected, contentRef, onUpdate, onSplit
         onUpdate(e.currentTarget.value)
     }
 
-    const handleRowContextMenu = (e: React.MouseEvent) => {
-        if ((e.target as HTMLElement).tagName === 'TEXTAREA') return
-        onContextMenu(e)
-    }
-
     return (
-        <div
-            onContextMenu={handleRowContextMenu}
-            className={cn('group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10')}
-        >
-            <div className={cn('flex absolute -left-7 items-center gap-0.5 transition-opacity', 'opacity-0 group-hover:opacity-100')}>
-                <ReacstButton.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
+        <div className='flex w-full items-start gap-2'>
+            <span className='w-3 pt-1 text-quaternary'>
+                <Label.xs className="sm">{index + 1}</Label.xs>
+            </span>
+            <div className={cn('flex-1 group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10')}>
+                <div className={cn('flex absolute -left-7 items-center gap-0.5 transition-opacity', 'opacity-0 group-hover:opacity-100')}>
+                    {/* <ReacstButton.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
                     <Plus />
-                </ReacstButton.Icon>
+                    </ReacstButton.Icon> */}
+                </div>
+                <textarea
+                    ref={setContentRef}
+                    value={block.content}
+                    rows={1}
+                    spellCheck={false}
+                    className="doc-block flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
+                    placeholder="Type something..."
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                    onChange={handleChange}
+                    onFocus={onTextareaFocus}
+                />
             </div>
-
-            <textarea
-                ref={setContentRef}
-                value={block.content}
-                rows={1}
-                spellCheck={false}
-                className="doc-block min-h-[1.7em] flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
-                placeholder="Type something..."
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                onChange={handleChange}
-                onFocus={onTextareaFocus}
-            />
         </div>
     )
 }

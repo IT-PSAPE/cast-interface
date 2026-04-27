@@ -65,23 +65,28 @@ function ContinuousSlideGridView({ items }: { items: PlaylistDeckSequenceItem[] 
   const { getThumbnailScene } = useRenderScenes();
 
   return (
-    <ScrollArea>
-      {items.map((item) => (
-        <ContinuousGridSection
-          key={item.entryId}
-          item={item}
-          currentPlaylistEntryId={currentPlaylistEntryId}
-          currentOutputPlaylistEntryId={currentOutputPlaylistEntryId}
-          currentSlideIndex={currentSlideIndex}
-          gridItemSize={gridItemSize}
-          liveSlideIndex={liveSlideIndex}
-          slideElementsById={slideElementsBySlideId}
-          getThumbnailScene={getThumbnailScene}
-          onActivateSlide={handleActivateSlide}
-          onEditSlide={handleEditSlide}
-        />
-      ))}
-    </ScrollArea>
+    <ScrollArea.Root>
+      <ScrollArea.Viewport>
+        {items.map((item) => (
+          <ContinuousGridSection
+            key={item.entryId}
+            item={item}
+            currentPlaylistEntryId={currentPlaylistEntryId}
+            currentOutputPlaylistEntryId={currentOutputPlaylistEntryId}
+            currentSlideIndex={currentSlideIndex}
+            gridItemSize={gridItemSize}
+            liveSlideIndex={liveSlideIndex}
+            slideElementsById={slideElementsBySlideId}
+            getThumbnailScene={getThumbnailScene}
+            onActivateSlide={handleActivateSlide}
+            onEditSlide={handleEditSlide}
+          />
+        ))}
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar>
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+    </ScrollArea.Root>
   );
 }
 
@@ -130,22 +135,27 @@ function ContinuousSlideListView({ items }: { items: PlaylistDeckSequenceItem[] 
   const { getThumbnailScene } = useRenderScenes();
 
   return (
-    <ScrollArea>
-      {items.map((item) => (
-        <ContinuousListSection
-          key={item.entryId}
-          item={item}
-          currentPlaylistEntryId={currentPlaylistEntryId}
-          currentOutputPlaylistEntryId={currentOutputPlaylistEntryId}
-          currentSlideIndex={currentSlideIndex}
-          liveSlideIndex={liveSlideIndex}
-          slideElementsById={slideElementsBySlideId}
-          getThumbnailScene={getThumbnailScene}
-          onSelectSlide={handleActivateSlide}
-          onOpenSlide={handleEditSlide}
-        />
-      ))}
-    </ScrollArea>
+    <ScrollArea.Root>
+      <ScrollArea.Viewport>
+        {items.map((item) => (
+          <ContinuousListSection
+            key={item.entryId}
+            item={item}
+            currentPlaylistEntryId={currentPlaylistEntryId}
+            currentOutputPlaylistEntryId={currentOutputPlaylistEntryId}
+            currentSlideIndex={currentSlideIndex}
+            liveSlideIndex={liveSlideIndex}
+            slideElementsById={slideElementsBySlideId}
+            getThumbnailScene={getThumbnailScene}
+            onSelectSlide={handleActivateSlide}
+            onOpenSlide={handleEditSlide}
+          />
+        ))}
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar>
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+    </ScrollArea.Root>
   );
 }
 

@@ -1,401 +1,570 @@
-import { Check, ChevronRight } from 'lucide-react';
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type RefObject,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
 import { cn } from '@renderer/utils/cn';
+import { OverlayPortal } from './overlay-primitives';
 
-const VIEWPORT_PADDING = 8;
+const DEFAULT_LONG_PRESS_DELAY = 500;
+const DEFAULT_VIEWPORT_PADDING = 8;
 
 export interface ContextMenuPoint {
   x: number;
   y: number;
-  width?: number;
-}
-
-export interface ContextMenuItem {
-  id: string;
-  label?: string;
-  icon?: ReactNode;
-  danger?: boolean;
-  disabled?: boolean;
-  selected?: boolean;
-  separator?: boolean;
-  swatchColor?: string;
-  onSelect?: () => void;
-  children?: ContextMenuItem[];
-  childrenLayout?: 'list' | 'color-grid';
 }
 
 interface ContextMenuContextValue {
-  state: { activeSubmenuId: string | null; isOpen: boolean; position: ContextMenuPoint | null };
+  state: {
+    open: boolean;
+    position: ContextMenuPoint | null;
+  };
   actions: {
     close: () => void;
     openAt: (position: ContextMenuPoint) => void;
-    selectItem: (item: ContextMenuItem) => void;
-    setActiveSubmenuId: (id: string | null) => void;
+    setOpen: (nextOpen: boolean) => void;
   };
-  meta: { popupRef: RefObject<HTMLDivElement | null>; zIndex: number };
+  meta: {
+    positionerRef: RefObject<HTMLDivElement | null>;
+    triggerRef: RefObject<HTMLDivElement | null>;
+    zIndex: number;
+  };
 }
 
 interface RootProps {
   children: ReactNode;
   defaultOpen?: boolean;
   onOpenChange?: (nextOpen: boolean) => void;
+  onPositionChange?: (position: ContextMenuPoint | null) => void;
   open?: boolean;
   position?: ContextMenuPoint | null;
   zIndex?: number;
 }
 
-interface TriggerProps extends HTMLAttributes<HTMLSpanElement> {
+interface TriggerProps extends HTMLAttributes<HTMLDivElement> {
   disabled?: boolean;
+  longPressDelay?: number;
 }
 
-interface PopupProps extends HTMLAttributes<HTMLDivElement> {
-  minWidthClassName?: string;
-}
-
-interface ItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onSelect'> {
-  children: ReactNode;
-  danger?: boolean;
-  icon?: ReactNode;
-  onSelect?: () => void;
-  selected?: boolean;
-}
-
-interface SubmenuRootProps extends HTMLAttributes<HTMLDivElement> {
-  id: string;
-}
-
-interface SubmenuPopupProps extends HTMLAttributes<HTMLDivElement> {
-  layout?: ContextMenuItem['childrenLayout'];
+interface PositionerProps extends HTMLAttributes<HTMLDivElement> {
+  viewportPadding?: number;
 }
 
 const ContextMenuContext = createContext<ContextMenuContextValue | null>(null);
 
-function getOverlayRoot(): HTMLElement { return document.getElementById('overlay-root') ?? document.body; }
-
-function useContextMenu() {
+export function useContextMenu() {
   const context = useContext(ContextMenuContext);
-  if (!context) throw new Error('ContextMenu components must be used within ContextMenu.Root');
+
+  if (!context) {
+    throw new Error('ContextMenu components must be used within ContextMenu.Root');
+  }
+
   return context;
 }
 
-function Root({ children, defaultOpen = false, onOpenChange, open, position, zIndex = 1000 }: RootProps) {
-  const popupRef = useRef<HTMLDivElement | null>(null);
-  const isControlled = open !== undefined;
+function Root({
+  children,
+  defaultOpen = false,
+  onOpenChange,
+  onPositionChange,
+  open,
+  position,
+  zIndex = 50,
+}: RootProps) {
+  const positionerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const isOpenControlled = open !== undefined;
   const isPositionControlled = position !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const [uncontrolledPosition, setUncontrolledPosition] = useState<ContextMenuPoint | null>(null);
-  const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
-  const isOpen = isControlled ? open : uncontrolledOpen;
-  const currentPosition = isPositionControlled ? position : uncontrolledPosition;
+  const resolvedOpen = isOpenControlled ? open : uncontrolledOpen;
+  const resolvedPosition = isPositionControlled ? position : uncontrolledPosition;
+
+  const setPositionState = useCallback((nextPosition: ContextMenuPoint | null) => {
+    if (!isPositionControlled) {
+      setUncontrolledPosition(nextPosition);
+    }
+
+    onPositionChange?.(nextPosition);
+  }, [isPositionControlled, onPositionChange]);
 
   const setOpenState = useCallback((nextOpen: boolean) => {
-    if (!isControlled) setUncontrolledOpen(nextOpen);
-    if (!nextOpen) setActiveSubmenuId(null);
+    if (!isOpenControlled) {
+      setUncontrolledOpen(nextOpen);
+    }
+
+    if (!nextOpen) {
+      setPositionState(null);
+    }
+
     onOpenChange?.(nextOpen);
-  }, [isControlled, onOpenChange]);
+  }, [isOpenControlled, onOpenChange, setPositionState]);
 
   const close = useCallback(() => {
     setOpenState(false);
   }, [setOpenState]);
 
   const openAt = useCallback((nextPosition: ContextMenuPoint) => {
-    if (!isPositionControlled) setUncontrolledPosition(nextPosition);
+    setPositionState(nextPosition);
     setOpenState(true);
-  }, [isPositionControlled, setOpenState]);
-
-  const selectItem = useCallback((item: ContextMenuItem) => {
-    if (item.disabled || item.children?.length) return;
-    item.onSelect?.();
-    close();
-  }, [close]);
+  }, [setOpenState, setPositionState]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!resolvedOpen) {
+      return undefined;
+    }
 
-    function handlePointerDown(event: MouseEvent) {
-      if (popupRef.current?.contains(event.target as Node)) return;
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+
+      if (positionerRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+        return;
+      }
+
       close();
     }
 
-    function handleContextMenu(event: MouseEvent) {
-      if (popupRef.current?.contains(event.target as Node)) return;
-      close();
-    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') {
+        return;
+      }
 
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return;
       event.preventDefault();
       close();
     }
 
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('contextmenu', handleContextMenu);
-    window.addEventListener('keydown', handleEscape);
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [close, isOpen]);
+  }, [close, resolvedOpen]);
 
   const context = useMemo<ContextMenuContextValue>(() => ({
-    state: { activeSubmenuId, isOpen, position: currentPosition },
-    actions: { close, openAt, selectItem, setActiveSubmenuId },
-    meta: { popupRef, zIndex },
-  }), [activeSubmenuId, close, currentPosition, isOpen, openAt, selectItem, zIndex]);
+    state: {
+      open: resolvedOpen,
+      position: resolvedPosition,
+    },
+    actions: {
+      close,
+      openAt,
+      setOpen: setOpenState,
+    },
+    meta: {
+      positionerRef,
+      triggerRef,
+      zIndex,
+    },
+  }), [close, openAt, resolvedOpen, resolvedPosition, setOpenState, zIndex]);
 
-  return <ContextMenuContext.Provider value={context}>{children}</ContextMenuContext.Provider>;
+  return (
+    <ContextMenuContext.Provider value={context}>
+      {children}
+    </ContextMenuContext.Provider>
+  );
 }
 
-function Trigger({ children, className, disabled = false, onContextMenu, ...props }: TriggerProps) {
-  const { actions } = useContextMenu();
+function Trigger({
+  children,
+  className,
+  disabled = false,
+  longPressDelay = DEFAULT_LONG_PRESS_DELAY,
+  onContextMenu,
+  onKeyDown,
+  onTouchCancel,
+  onTouchEnd,
+  onTouchMove,
+  onTouchStart,
+  style,
+  ...props
+}: TriggerProps) {
+  const { actions, meta, state } = useContextMenu();
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchOriginRef = useRef<ContextMenuPoint | null>(null);
 
-  function handleContextMenu(event: ReactMouseEvent<HTMLSpanElement>) {
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const openFromElement = useCallback((element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+
+    actions.openAt({
+      x: Math.round(rect.left + rect.width / 2),
+      y: Math.round(rect.top + Math.min(rect.height, 24) / 2),
+    });
+  }, [actions]);
+
+  function handleContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
     onContextMenu?.(event);
-    if (event.defaultPrevented || disabled) return;
+
+    if (event.defaultPrevented || disabled) {
+      return;
+    }
+
     event.preventDefault();
     actions.openAt({ x: event.clientX, y: event.clientY });
   }
 
-  return (
-    <span className={cn('contents', className)} onContextMenu={handleContextMenu} {...props}>
-      {children}
-    </span>
-  );
-}
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    onKeyDown?.(event);
 
-function ButtonTrigger({ children, className, disabled = false, onClick, ...props }: TriggerProps) {
-  const { actions } = useContextMenu();
+    if (event.defaultPrevented || disabled) {
+      return;
+    }
 
-  function handleClick(event: ReactMouseEvent<HTMLSpanElement>) {
-    onClick?.(event);
-    if (event.defaultPrevented || disabled) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    actions.openAt({ x: rect.left, y: rect.bottom + 4, width: rect.width });
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      event.preventDefault();
+      openFromElement(event.currentTarget);
+    }
   }
 
+  function handleTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+    onTouchStart?.(event);
+
+    if (event.defaultPrevented || disabled || event.touches.length !== 1) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
+    clearLongPress();
+    longPressTimerRef.current = setTimeout(() => {
+      if (!touchOriginRef.current) {
+        return;
+      }
+
+      actions.openAt(touchOriginRef.current);
+      touchOriginRef.current = null;
+      longPressTimerRef.current = null;
+    }, longPressDelay);
+  }
+
+  function handleTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
+    onTouchMove?.(event);
+
+    if (!touchOriginRef.current || event.touches.length !== 1) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchOriginRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchOriginRef.current.y);
+
+    if (deltaX > 10 || deltaY > 10) {
+      touchOriginRef.current = null;
+      clearLongPress();
+    }
+  }
+
+  function handleTouchEnd(event: ReactTouchEvent<HTMLDivElement>) {
+    onTouchEnd?.(event);
+    touchOriginRef.current = null;
+    clearLongPress();
+  }
+
+  function handleTouchCancel(event: ReactTouchEvent<HTMLDivElement>) {
+    onTouchCancel?.(event);
+    touchOriginRef.current = null;
+    clearLongPress();
+  }
+
+  useEffect(() => {
+    return clearLongPress;
+  }, [clearLongPress]);
+
   return (
-    <span className={cn('inline-flex', className)} onClick={handleClick} {...props}>
+    <div
+      {...props}
+      ref={meta.triggerRef}
+      className={className}
+      onContextMenu={handleContextMenu}
+      onKeyDown={handleKeyDown}
+      onTouchCancel={handleTouchCancel}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onTouchStart={handleTouchStart}
+      style={{ ...style, WebkitTouchCallout: 'none' }}
+      data-state={state.open ? 'open' : 'closed'}
+    >
       {children}
-    </span>
+    </div>
   );
 }
 
 function Portal({ children }: { children: ReactNode }) {
-  const { state, meta } = useContextMenu();
-  if (!state.isOpen || !state.position) return null;
-  return createPortal(
-    <div className="pointer-events-none fixed inset-0" style={{ zIndex: meta.zIndex }}>
+  const { meta, state } = useContextMenu();
+
+  return (
+    <OverlayPortal isOpen={state.open && state.position !== null} zIndex={meta.zIndex}>
       {children}
-    </div>,
-    getOverlayRoot(),
+    </OverlayPortal>
   );
 }
 
-function Positioner({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  const positionerRef = useRef<HTMLDivElement | null>(null);
-  const { state } = useContextMenu();
-  const [clampedPosition, setClampedPosition] = useState<ContextMenuPoint>(state.position ?? { x: 0, y: 0 });
+function Positioner({
+  children,
+  className,
+  onContextMenu,
+  style,
+  viewportPadding = DEFAULT_VIEWPORT_PADDING,
+  ...props
+}: PositionerProps) {
+  const { meta, state } = useContextMenu();
+  const [position, setPosition] = useState<ContextMenuPoint | null>(null);
 
-  useLayoutEffect(() => {
+  const clampPosition = useCallback(() => {
     const nextPosition = state.position;
-    if (!nextPosition) return;
-    const rect = positionerRef.current?.getBoundingClientRect();
-    if (!rect) {
-      setClampedPosition(nextPosition);
+    const node = meta.positionerRef.current;
+
+    if (!nextPosition || !node) {
       return;
     }
-    setClampedPosition({
-      x: nextPosition.x + rect.width > window.innerWidth - VIEWPORT_PADDING
-        ? Math.max(VIEWPORT_PADDING, window.innerWidth - rect.width - VIEWPORT_PADDING)
-        : nextPosition.x,
-      y: nextPosition.y + rect.height > window.innerHeight - VIEWPORT_PADDING
-        ? Math.max(VIEWPORT_PADDING, window.innerHeight - rect.height - VIEWPORT_PADDING)
-        : nextPosition.y,
+
+    const rect = node.getBoundingClientRect();
+
+    setPosition({
+      x: Math.max(
+        viewportPadding,
+        Math.min(nextPosition.x, window.innerWidth - rect.width - viewportPadding),
+      ),
+      y: Math.max(
+        viewportPadding,
+        Math.min(nextPosition.y, window.innerHeight - rect.height - viewportPadding),
+      ),
     });
-  }, [state.position]);
+  }, [meta.positionerRef, state.position, viewportPadding]);
 
-  if (!state.position) return null;
+  useLayoutEffect(() => {
+    if (!state.open || !state.position) {
+      setPosition(null);
+      return;
+    }
+
+    clampPosition();
+  }, [clampPosition, state.open, state.position]);
+
+  useEffect(() => {
+    if (!state.open || !state.position) {
+      return undefined;
+    }
+
+    function handleResize() {
+      clampPosition();
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [clampPosition, state.open, state.position]);
+
+  if (!state.open || !state.position) {
+    return null;
+  }
+
+  function handleContextMenu(event: ReactMouseEvent<HTMLDivElement>) {
+    onContextMenu?.(event);
+
+    if (!event.defaultPrevented) {
+      event.preventDefault();
+    }
+  }
+
+  const isPositioned = position !== null;
 
   return (
     <div
-      ref={positionerRef}
+      {...props}
+      ref={meta.positionerRef}
       className={cn('pointer-events-auto fixed', className)}
-      style={{ left: clampedPosition.x, top: clampedPosition.y }}
-      {...props}
+      onContextMenu={handleContextMenu}
+      style={{
+        ...style,
+        left: isPositioned ? position.x : -9999,
+        top: isPositioned ? position.y : -9999,
+        visibility: isPositioned ? 'visible' : 'hidden',
+      }}
     >
       {children}
     </div>
   );
 }
 
-function Popup({ children, className, minWidthClassName = 'min-w-[180px]', style, ...props }: PopupProps) {
-  const { meta, state } = useContextMenu();
-  const anchorWidth = state.position?.width;
+// ─── Menu (styled positioner surface) ────────────────────
+
+interface MenuProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+}
+
+function Menu({ children, className, ...props }: MenuProps) {
   return (
-    <div
-      ref={meta.popupRef}
+    <Positioner
       role="menu"
-      className={cn(anchorWidth == null && minWidthClassName, 'rounded-md border border-primary bg-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]', className)}
-      style={anchorWidth != null ? { ...style, width: anchorWidth } : style}
       {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Separator({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div role="separator" className={cn('my-1 h-px bg-border-primary', className)} {...props} />;
-}
-
-function Item({ children, className, danger = false, disabled = false, icon, onClick, onSelect, selected = false, ...props }: ItemProps) {
-  const { actions } = useContextMenu();
-  const item: ContextMenuItem = { id: '', danger, disabled, onSelect };
-
-  function handleClick(event: ReactMouseEvent<HTMLButtonElement>) {
-    onClick?.(event);
-    if (event.defaultPrevented) return;
-    actions.selectItem(item);
-  }
-
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={handleClick}
-      className={cn('w-full rounded px-2 py-1 text-left text-sm transition-colors', getItemClassName(item), className)}
-      {...props}
-    >
-      <span className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">
-          {icon ? <span className="shrink-0">{icon}</span> : null}
-          <span className="truncate">{children}</span>
-        </span>
-        {selected ? <Check size={12} strokeWidth={2.5} className="shrink-0 text-primary" /> : null}
-      </span>
-    </button>
-  );
-}
-
-function Items({ items }: { items: ContextMenuItem[] }) {
-  return items.map((item) => <ConfiguredItem key={item.id} item={item} />);
-}
-
-function SubmenuRoot({ children, id, onMouseEnter, ...props }: SubmenuRootProps) {
-  const { actions } = useContextMenu();
-
-  function handleMouseEnter(event: ReactMouseEvent<HTMLDivElement>) {
-    onMouseEnter?.(event);
-    if (event.defaultPrevented) return;
-    actions.setActiveSubmenuId(id);
-  }
-
-  return <div className="relative" onMouseEnter={handleMouseEnter} {...props}>{children}</div>;
-}
-
-function SubmenuTrigger({ item }: { item: ContextMenuItem }) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={item.disabled}
-      className={cn('w-full rounded px-2 py-1 text-left text-sm transition-colors', getItemClassName(item))}
-    >
-      <span className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">
-          {item.icon ? <span className="shrink-0">{item.icon}</span> : null}
-          <span className="truncate">{item.label}</span>
-        </span>
-        <ChevronRight size={10} strokeWidth={2.5} />
-      </span>
-    </button>
-  );
-}
-
-function SubmenuPopup({ children, className, layout = 'list', ...props }: SubmenuPopupProps) {
-  return (
-    <div
       className={cn(
-        'absolute left-full top-0 ml-1 rounded-md border border-primary bg-tertiary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]',
-        layout === 'color-grid' ? 'min-w-[236px]' : 'min-w-[190px] max-h-56 overflow-y-auto',
+        'min-w-30 max-h-60 overflow-y-auto rounded-md border border-primary bg-primary p-1 shadow-lg',
         className,
       )}
-      {...props}
     >
       {children}
-    </div>
+    </Positioner>
   );
 }
 
-function ConfiguredItem({ item }: { item: ContextMenuItem }) {
-  const { state } = useContextMenu();
+// ─── Item ────────────────────────────────────────────────
 
-  if (item.separator) return <Separator />;
-  if (item.children?.length) {
-    return (
-      <SubmenuRoot id={item.id}>
-        <SubmenuTrigger item={item} />
-        {state.activeSubmenuId === item.id ? (
-          <SubmenuPopup layout={item.childrenLayout}>
-            {item.childrenLayout === 'color-grid' ? <ColorGridItems items={item.children} /> : <Items items={item.children} />}
-          </SubmenuPopup>
-        ) : null}
-      </SubmenuRoot>
-    );
-  }
-
-  return <Item danger={item.danger} disabled={item.disabled} icon={item.icon} onSelect={item.onSelect} selected={item.selected}>{item.label}</Item>;
+interface ItemProps {
+  children: ReactNode;
+  onSelect?: () => void;
+  disabled?: boolean;
+  className?: string;
 }
 
-function ColorGridItems({ items }: { items: ContextMenuItem[] }) {
-  const actionItems = items.filter((item) => !item.swatchColor);
-  const colorItems = items.filter((item) => item.swatchColor);
-
-  return (
-    <>
-      <div className="grid grid-cols-8 gap-1 p-1">
-        {colorItems.map((item) => <ColorGridItem key={item.id} item={item} />)}
-      </div>
-      {actionItems.length ? (
-        <div className="mt-1 border-t border-primary pt-1">
-          <Items items={actionItems} />
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function ColorGridItem({ item }: { item: ContextMenuItem }) {
+function Item({ children, onSelect, disabled = false, className }: ItemProps) {
   const { actions } = useContextMenu();
 
   function handleClick() {
-    actions.selectItem(item);
+    if (disabled) return;
+    onSelect?.();
+    actions.close();
   }
 
   return (
     <button
       type="button"
-      disabled={item.disabled}
-      title={item.label}
-      aria-label={item.label}
+      role="menuitem"
+      data-context-menu-item=""
+      data-disabled={disabled || undefined}
       onClick={handleClick}
-      className={cn('grid h-6 w-6 place-items-center rounded-md border transition-colors', item.selected ? 'border-text-primary/90 shadow-[0_0_0_1px_rgba(255,255,255,0.3)]' : 'border-primary hover:border-text-secondary', item.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer')}
+      // Prevent the document pointerdown from closing the menu before the click fires.
+      onPointerDown={(event) => event.preventDefault()}
+      className={cn(
+        'flex w-full select-none gap-2 rounded px-2 py-1.5 text-left text-sm text-secondary hover:bg-tertiary',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+        className,
+      )}
     >
-      <span className="h-4 w-4 rounded" style={{ backgroundColor: item.swatchColor }} />
+      {children}
     </button>
   );
 }
 
-function getItemClassName(item: Pick<ContextMenuItem, 'danger' | 'disabled'>): string {
-  if (item.disabled) return 'cursor-not-allowed text-tertiary/50';
-  if (item.danger) return 'cursor-pointer text-error hover:bg-red-500/10';
-  return 'cursor-pointer text-secondary hover:bg-quaternary hover:text-primary';
+// ─── Separator ───────────────────────────────────────────
+
+function Separator() {
+  return <div role="separator" className="my-1 h-px bg-tertiary" />;
 }
 
-export const ContextMenu = { Root, Trigger, ButtonTrigger, Portal, Positioner, Popup, Item, Items, Separator, SubmenuRoot, SubmenuTrigger, SubmenuPopup };
+// ─── Trigger hook (no wrapper element) ───────────────────
+
+interface UseContextMenuTriggerOptions {
+  disabled?: boolean;
+  longPressDelay?: number;
+}
+
+export function useContextMenuTrigger({
+  disabled = false,
+  longPressDelay = DEFAULT_LONG_PRESS_DELAY,
+}: UseContextMenuTriggerOptions = {}) {
+  const { actions, meta, state } = useContextMenu();
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchOriginRef = useRef<ContextMenuPoint | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearLongPress, [clearLongPress]);
+
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      meta.triggerRef.current = node as HTMLDivElement | null;
+    },
+    [meta.triggerRef],
+  );
+
+  return useMemo(
+    () => ({
+      ref,
+      'data-state': state.open ? 'open' : 'closed',
+      onContextMenu(event: ReactMouseEvent<HTMLElement>) {
+        if (disabled) return;
+        event.preventDefault();
+        actions.openAt({ x: event.clientX, y: event.clientY });
+      },
+      onKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+        if (disabled) return;
+        if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          actions.openAt({
+            x: Math.round(rect.left + rect.width / 2),
+            y: Math.round(rect.top + Math.min(rect.height, 24) / 2),
+          });
+        }
+      },
+      onTouchStart(event: ReactTouchEvent<HTMLElement>) {
+        if (disabled || event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
+        clearLongPress();
+        longPressTimerRef.current = setTimeout(() => {
+          if (!touchOriginRef.current) return;
+          actions.openAt(touchOriginRef.current);
+          touchOriginRef.current = null;
+          longPressTimerRef.current = null;
+        }, longPressDelay);
+      },
+      onTouchMove(event: ReactTouchEvent<HTMLElement>) {
+        if (!touchOriginRef.current || event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchOriginRef.current.x);
+        const deltaY = Math.abs(touch.clientY - touchOriginRef.current.y);
+        if (deltaX > 10 || deltaY > 10) {
+          touchOriginRef.current = null;
+          clearLongPress();
+        }
+      },
+      onTouchEnd() {
+        touchOriginRef.current = null;
+        clearLongPress();
+      },
+      onTouchCancel() {
+        touchOriginRef.current = null;
+        clearLongPress();
+      },
+    }),
+    [actions, clearLongPress, disabled, longPressDelay, ref, state.open],
+  );
+}
+
+export const ContextMenu = Object.assign(Root, {
+  Portal,
+  Positioner,
+  Root,
+  Trigger,
+  Menu,
+  Item,
+  Separator,
+});

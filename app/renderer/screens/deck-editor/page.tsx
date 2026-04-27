@@ -1,22 +1,16 @@
-import type { Id } from '@core/types';
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, FilePlus, Play, Plus, Trash2 } from 'lucide-react';
+import { Play, Plus } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { RecastPanel } from '@renderer/components 2.0/panel';
+import type { Id } from '@core/types';
+import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
 import { DeckItemIcon } from '../../components/display/entity-icon';
-import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
+import { Dropdown } from '../../components/form/dropdown';
 import { FieldTextarea } from '../../components/form/field';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { useCreateMenu } from '../../hooks/use-create-menu';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useNavigation } from '../../contexts/navigation-context';
-import { useProjectContent } from '../../contexts/use-project-content';
 import { useDeckEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useSlides } from '../../contexts/slide-context';
-import { useWorkbench } from '../../contexts/workbench-context';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
-import { CreateLyricDialog } from '../../features/deck/create-lyric-dialog';
-import { LyricEditorModal } from '../../features/deck/lyric-editor-modal';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { StagePanel } from '../../features/canvas/stage-panel';
@@ -32,20 +26,13 @@ import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { Label } from '@renderer/components/display/text';
 
-type CreateDeckItemAction = 'presentation' | 'lyric-edit' | 'lyric-empty';
-
 export function DeckEditorScreen() {
-  const { browseDeckItem, currentDeckItem, createPresentation, createEmptyLyric } = useNavigation();
+  const { currentDeckItem, createPresentation, createEmptyLyric } = useNavigation();
   const { effectiveElements } = useElements();
-  const { deckItems } = useProjectContent();
   const { getSlideElements } = useDeckEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide } = useSlides();
-  const { actions: { setWorkbenchMode } } = useWorkbench();
+  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
-  const [activeCreateAction, setActiveCreateAction] = useState<CreateDeckItemAction | null>(null);
-  const [isCreateLyricDialogOpen, setIsCreateLyricDialogOpen] = useState(false);
-  const [isLyricEditorOpen, setIsLyricEditorOpen] = useState(false);
   const {
     canEdit,
     notesDraft,
@@ -56,85 +43,6 @@ export function DeckEditorScreen() {
     handleSaveNotes,
     handleResetNotes,
   } = useSlideNotesPanel();
-  const slideMenu = useContextMenuState<Id>();
-
-  function handleOpenCreateLyricDialog() {
-    closeCreateMenu();
-    setIsCreateLyricDialogOpen(true);
-  }
-
-  async function handleCreatePresentation() {
-    setActiveCreateAction('presentation');
-    try {
-      await createPresentation();
-      setWorkbenchMode('deck-editor');
-    } finally {
-      setActiveCreateAction(null);
-    }
-  }
-
-  async function handleCreateEmptyLyricFromDialog() {
-    setActiveCreateAction('lyric-empty');
-    try {
-      await createEmptyLyric();
-      setIsCreateLyricDialogOpen(false);
-      setWorkbenchMode('deck-editor');
-    } finally {
-      setActiveCreateAction(null);
-    }
-  }
-
-  async function handleCreateEditableLyricFromDialog() {
-    setActiveCreateAction('lyric-edit');
-    try {
-      await createEmptyLyric();
-      setIsCreateLyricDialogOpen(false);
-      setIsLyricEditorOpen(true);
-    } finally {
-      setActiveCreateAction(null);
-    }
-  }
-
-  function handleCloseCreateLyricDialog() {
-    if (activeCreateAction) return;
-    setIsCreateLyricDialogOpen(false);
-  }
-
-  function handleCloseLyricEditor() {
-    setIsLyricEditorOpen(false);
-  }
-
-  const {
-    menuItems: createMenuItems,
-    menuState: createMenuState,
-    openMenuFromButton: openCreateMenuFromButton,
-    closeMenu: closeCreateMenu,
-  } = useCreateMenu(
-    () => [
-      {
-        id: 'create-presentation',
-        label: 'Presentation',
-        icon: <DeckItemIcon entity="presentation" size={14} strokeWidth={1.75} />,
-        onSelect: () => { void handleCreatePresentation(); },
-      },
-      {
-        id: 'create-lyric',
-        label: 'Lyric',
-        icon: <DeckItemIcon entity="lyric" size={14} strokeWidth={1.75} />,
-        onSelect: handleOpenCreateLyricDialog,
-      },
-    ],
-    [createPresentation],
-  );
-
-  function handleOpenCreateMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    openCreateMenuFromButton(event.currentTarget);
-  }
-
-  function handleCreateMenuOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    closeCreateMenu();
-  }
 
   useEditorLeftPanelNav({
     items: slides,
@@ -142,64 +50,8 @@ export function DeckEditorScreen() {
     activate: (_id, index) => setCurrentSlideIndex(index),
   });
 
-  const presentationMenuItems = useMemo<ContextMenuItem[]>(() => {
-    return deckItems.map((item) => ({
-      id: item.id,
-      label: item.title,
-      icon: <DeckItemIcon entity={item} className="text-tertiary" />,
-      onSelect: () => browseDeckItem(item.id),
-    }));
-  }, [browseDeckItem, deckItems]);
-
   function handleAddSlide() {
     void createSlide();
-  }
-
-  function handleDeleteSlide(slideId: string) {
-    if (!window.confirm('Delete this slide? This cannot be undone.')) return;
-    void deleteSlide(slideId);
-  }
-
-  function buildSlideMenuItems(slideId: Id): ContextMenuItem[] {
-    const slideIndex = slides.findIndex((slide) => slide.id === slideId);
-    const canMoveUp = slideIndex > 0;
-    const canMoveDown = slideIndex >= 0 && slideIndex < slides.length - 1;
-    return [
-      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => void duplicateSlide(slideId) },
-      { id: 'move-up', label: 'Move Up', icon: <ArrowUp size={14} />, disabled: !canMoveUp, onSelect: () => void moveSlide(slideId, 'up') },
-      { id: 'move-down', label: 'Move Down', icon: <ArrowDown size={14} />, disabled: !canMoveDown, onSelect: () => void moveSlide(slideId, 'down') },
-      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteSlide(slideId) },
-    ];
-  }
-
-  const titleElement = (
-    <ContextMenu.Root>
-      <ContextMenu.ButtonTrigger className="flex w-full min-w-0">
-        <ReacstButton variant="ghost" className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
-          <span className="flex min-w-0 items-center gap-2">
-            {currentDeckItem && <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" />}
-            <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
-              {currentDeckItem?.title ?? 'No item selected'}
-            </span>
-          </span>
-          <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
-        </ReacstButton>
-      </ContextMenu.ButtonTrigger>
-      <ContextMenu.Portal>
-        <ContextMenu.Positioner>
-          <ContextMenu.Popup>
-            <ContextMenu.Items items={presentationMenuItems} />
-          </ContextMenu.Popup>
-        </ContextMenu.Positioner>
-      </ContextMenu.Portal>
-    </ContextMenu.Root>
-  );
-
-  const slideMenuItems = slideMenu.menuState ? buildSlideMenuItems(slideMenu.menuState.data) : [];
-
-  function handleSlideMenuOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    slideMenu.close();
   }
 
   return (
@@ -212,14 +64,27 @@ export function DeckEditorScreen() {
               <SplitPanel.Segment id={'slide-list'} defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
-                    <div className="min-w-0 flex-1">{titleElement}</div>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      {currentDeckItem ? <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" /> : null}
+                      <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
+                        {currentDeckItem?.title ?? 'No item selected'}
+                      </span>
+                    </div>
                     <div className="flex gap-1">
-                      <ReacstButton.Icon label={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
-                        <Plus />
-                      </ReacstButton.Icon>
-                      <ReacstButton.Icon label="Create deck item" onClick={handleOpenCreateMenu}>
-                        <FilePlus />
-                      </ReacstButton.Icon>
+                      <Dropdown>
+                        <Dropdown.Trigger
+                          aria-label="Add"
+                          className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
+                        >
+                          <Plus />
+                        </Dropdown.Trigger>
+                        <Dropdown.Panel placement="bottom-end">
+                          <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
+                          <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                          <Dropdown.Separator />
+                          <Dropdown.Item onClick={handleAddSlide} disabled={!currentDeckItem}>New slide</Dropdown.Item>
+                        </Dropdown.Panel>
+                      </Dropdown>
                     </div>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="min-h-0">
@@ -234,38 +99,39 @@ export function DeckEditorScreen() {
                       <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
                     </EmptyState.Root>
                   ) : (
-                    <ScrollArea className="p-2">
-                      <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
-                        {slides.map((slide, index) => {
-                          const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
-                          const scene = getThumbnailScene(slide.id, 'deck-editor');
-                          if (!scene) return null;
-                          const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+                    <ScrollArea.Root>
+                      <ScrollArea.Viewport className="p-2">
+                        <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
+                          {slides.map((slide, index) => {
+                            const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
+                            const scene = getThumbnailScene(slide.id, 'deck-editor');
+                            if (!scene) return null;
+                            const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
 
-                          function handleSelect() {
-                            setCurrentSlideIndex(index);
-                          }
+                            function handleSelect() {
+                              setCurrentSlideIndex(index);
+                            }
 
-                          function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-                            slideMenu.openFromEvent(event, slide.id);
-                          }
-
-                          return (
-                            <SlideTile
-                              key={slide.id}
-                              scene={scene}
-                              index={index}
-                              isActive={index === currentSlideIndex}
-                              isLive={state === 'live'}
-                              isEmpty={state === 'warning'}
-                              textPreview={slideTextPreview(elements)}
-                              onSelect={handleSelect}
-                              onContextMenu={handleContextMenu}
-                            />
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
+                            return (
+                              <SlideTile
+                                key={slide.id}
+                                slideId={slide.id}
+                                scene={scene}
+                                index={index}
+                                isActive={index === currentSlideIndex}
+                                isLive={state === 'live'}
+                                isEmpty={state === 'warning'}
+                                textPreview={slideTextPreview(elements)}
+                                onSelect={handleSelect}
+                              />
+                            );
+                          })}
+                        </div>
+                      </ScrollArea.Viewport>
+                      <ScrollArea.Scrollbar>
+                        <ScrollArea.Thumb />
+                      </ScrollArea.Scrollbar>
+                    </ScrollArea.Root>
                   )}
                   </RecastPanel.Content>
                 </RecastPanel.Group>
@@ -273,9 +139,7 @@ export function DeckEditorScreen() {
               <SplitPanel.Segment id={"slide-objects"} defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
-                    <div className="mr-auto">
-                      <Label.xs>Objects</Label.xs>
-                    </div>
+                    <Label.xs className="mr-auto">Objects</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
@@ -283,32 +147,6 @@ export function DeckEditorScreen() {
                 </RecastPanel.Group>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-            <ContextMenu.Root open={Boolean(slideMenu.menuState)} position={slideMenu.menuState} onOpenChange={handleSlideMenuOpenChange}>
-              <ContextMenu.Portal>
-                <ContextMenu.Positioner>
-                  <ContextMenu.Popup>
-                    <ContextMenu.Items items={slideMenuItems} />
-                  </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-              </ContextMenu.Portal>
-            </ContextMenu.Root>
-            <ContextMenu.Root open={Boolean(createMenuState)} position={createMenuState} onOpenChange={handleCreateMenuOpenChange}>
-              <ContextMenu.Portal>
-                <ContextMenu.Positioner>
-                  <ContextMenu.Popup>
-                    <ContextMenu.Items items={createMenuItems} />
-                  </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-              </ContextMenu.Portal>
-            </ContextMenu.Root>
-            <CreateLyricDialog
-              isOpen={isCreateLyricDialogOpen}
-              isBusy={activeCreateAction !== null}
-              onClose={handleCloseCreateLyricDialog}
-              onCreateEmptyLyric={handleCreateEmptyLyricFromDialog}
-              onCreateEditableLyric={handleCreateEditableLyricFromDialog}
-            />
-            <LyricEditorModal isOpen={isLyricEditorOpen} onClose={handleCloseLyricEditor} />
           </RecastPanel.Root>
         </SplitPanel.Segment>
 
@@ -363,6 +201,7 @@ export function DeckEditorScreen() {
 }
 
 interface SlideTileProps {
+  slideId: Id;
   scene: RenderScene;
   index: number;
   isActive: boolean;
@@ -370,42 +209,77 @@ interface SlideTileProps {
   isEmpty: boolean;
   textPreview: string;
   onSelect: () => void;
-  onContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-function SlideTile({ scene, index, isActive, isLive, isEmpty, textPreview, onSelect, onContextMenu }: SlideTileProps) {
-  const activeRef = useScrollAreaActiveItem(isActive);
+function SlideTile({ slideId, scene, index, isActive, isLive, isEmpty, textPreview, onSelect }: SlideTileProps) {
   return (
-    <Thumbnail.Tile
-      ref={activeRef}
-      onClick={onSelect}
-      onDoubleClick={onSelect}
-      onContextMenu={onContextMenu}
-      selected={isActive}
-    >
-      <Thumbnail.Body>
-        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          {isEmpty && (
-            <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
-              Empty
-            </div>
-          )}
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-        </SceneFrame>
-      </Thumbnail.Body>
-      {isLive && (
-        <Thumbnail.Overlay position="top-left">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
-            <Play size={12} strokeWidth={1.9} />
-          </span>
-        </Thumbnail.Overlay>
-      )}
-      <Thumbnail.Caption>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-          <span className="min-w-0 truncate text-sm text-tertiary">{textPreview}</span>
-        </div>
-      </Thumbnail.Caption>
-    </Thumbnail.Tile>
+    <ContextMenu.Root>
+      <SlideTileBody
+        slideId={slideId}
+        scene={scene}
+        index={index}
+        isActive={isActive}
+        isLive={isLive}
+        isEmpty={isEmpty}
+        textPreview={textPreview}
+        onSelect={onSelect}
+      />
+    </ContextMenu.Root>
+  );
+}
+
+function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textPreview, onSelect }: SlideTileProps) {
+  const { slides, duplicateSlide, deleteSlide, moveSlide } = useSlides();
+  const isFirst = index === 0;
+  const isLast = index === slides.length - 1;
+  const activeRef = useScrollAreaActiveItem<HTMLDivElement>(isActive);
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+
+  return (
+    <>
+      <Thumbnail.Tile
+        {...triggerHandlers}
+        ref={(node) => {
+          activeRef.current = node;
+          triggerRef(node);
+        }}
+        onClick={onSelect}
+        onDoubleClick={onSelect}
+        selected={isActive}
+      >
+        <Thumbnail.Body>
+          <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+            {isEmpty && (
+              <div className="absolute inset-0 z-10 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
+                Empty
+              </div>
+            )}
+            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          </SceneFrame>
+        </Thumbnail.Body>
+        {isLive && (
+          <Thumbnail.Overlay position="top-left">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+              <Play size={12} strokeWidth={1.9} />
+            </span>
+          </Thumbnail.Overlay>
+        )}
+        <Thumbnail.Caption>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+            <span className="min-w-0 truncate text-sm text-tertiary">{textPreview}</span>
+          </div>
+        </Thumbnail.Caption>
+      </Thumbnail.Tile>
+      <ContextMenu.Portal>
+        <ContextMenu.Menu>
+          <ContextMenu.Item onSelect={() => { void duplicateSlide(slideId); }}>Duplicate</ContextMenu.Item>
+          <ContextMenu.Item onSelect={() => { void deleteSlide(slideId); }}>Delete</ContextMenu.Item>
+          <ContextMenu.Separator />
+          <ContextMenu.Item disabled={isFirst} onSelect={() => { void moveSlide(slideId, 'up'); }}>Move up</ContextMenu.Item>
+          <ContextMenu.Item disabled={isLast} onSelect={() => { void moveSlide(slideId, 'down'); }}>Move down</ContextMenu.Item>
+        </ContextMenu.Menu>
+      </ContextMenu.Portal>
+    </>
   );
 }

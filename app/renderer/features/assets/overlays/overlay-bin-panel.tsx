@@ -27,7 +27,7 @@ export function OverlayBinPanel({ filterText, gridItemSize }: OverlayBinPanelPro
   );
 
   return (
-    <BinPanelLayout gridItemSize={gridItemSize} menuState={null} menuItems={[]} onCloseMenu={() => {}}>
+    <BinPanelLayout gridItemSize={gridItemSize}>
       {overlays.map((overlay, index) => (
         <OverlayCard
           key={overlay.id}

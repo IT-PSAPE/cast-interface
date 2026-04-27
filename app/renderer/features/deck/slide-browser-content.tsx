@@ -28,31 +28,36 @@ function SingleSlideGrid() {
   const showLiveState = !isDetachedDeckBrowser && currentDeckItemId === currentOutputDeckItemId;
 
   return (
-    <ScrollArea className="p-2">
-      <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label="Slides">
-        {slides.map((slide, idx) => {
-          const elements = slideElementsById.get(slide.id) ?? [];
-          const scene = getThumbnailScene(slide.id, 'show');
-          if (!scene) return null;
-          const state = getSlideVisualState(idx, showLiveState ? liveSlideIndex : -1, currentSlideIndex, elements);
+    <ScrollArea.Root>
+      <ScrollArea.Viewport className="p-2">
+        <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label="Slides">
+          {slides.map((slide, idx) => {
+            const elements = slideElementsById.get(slide.id) ?? [];
+            const scene = getThumbnailScene(slide.id, 'show');
+            if (!scene) return null;
+            const state = getSlideVisualState(idx, showLiveState ? liveSlideIndex : -1, currentSlideIndex, elements);
 
-          return (
-            <SlideGridTile
-              key={slide.id}
-              slideId={slide.id}
-              index={idx}
-              scene={scene}
-              selected={idx === currentSlideIndex}
-              isLive={state === 'live'}
-              isEmpty={state === 'warning'}
-              textPreview={slideTextPreview(elements)}
-              onActivate={activateSlide}
-              onFocus={setCurrentSlideIndex}
-            />
-          );
-        })}
-      </ThumbnailGrid>
-    </ScrollArea>
+            return (
+              <SlideGridTile
+                key={slide.id}
+                slideId={slide.id}
+                index={idx}
+                scene={scene}
+                selected={idx === currentSlideIndex}
+                isLive={state === 'live'}
+                isEmpty={state === 'warning'}
+                textPreview={slideTextPreview(elements)}
+                onActivate={activateSlide}
+                onFocus={setCurrentSlideIndex}
+              />
+            );
+          })}
+        </ThumbnailGrid>
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar>
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+    </ScrollArea.Root>
   );
 }
 
@@ -85,10 +90,15 @@ function SingleSlideList() {
   }
 
   return (
-    <ScrollArea className="p-2">
-      <div className="flex flex-col gap-3" role="list" aria-label="Slide outline">
-        {rows.map(renderRow)}
-      </div>
-    </ScrollArea>
+    <ScrollArea.Root>
+      <ScrollArea.Viewport className="p-2">
+        <div className="flex flex-col gap-3" role="list" aria-label="Slide outline">
+          {rows.map(renderRow)}
+        </div>
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar>
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+    </ScrollArea.Root>
   );
 }

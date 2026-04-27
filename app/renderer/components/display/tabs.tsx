@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
+import { ScrollArea } from '../layout/scroll-area';
 
 type TabsOrientation = 'horizontal' | 'vertical';
 type TabsActivationMode = 'automatic' | 'manual';
@@ -30,12 +31,14 @@ function sanitizeTabValue(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
 }
 
+// Inner nav uses max-content sizing so triggers keep their natural width and
+// overflow the viewport (which then scrolls) instead of shrinking to fit.
 const listStyles = cv({
-  base: 'flex min-w-0 items-center gap-2',
+  base: 'flex items-center gap-2',
   variants: {
     orientation: {
-      horizontal: null,
-      vertical: 'items-start',
+      horizontal: 'w-max',
+      vertical: 'h-max flex-col items-start',
     },
   },
   defaultVariants: {
@@ -100,13 +103,26 @@ interface ListProps extends HTMLAttributes<HTMLElement> {
   tabsClassName?: string;
 }
 
-function List({ children, className = '', label, ...rest }: ListProps) {
+function List({ children, className, label, tabsClassName, ...rest }: ListProps) {
   const { meta } = useTabs();
+  // Override the ScrollArea.Root default `size-full` so the tab list sizes to
+  // its triggers along the cross-axis (h-auto for horizontal, w-auto for vertical).
+  const rootSizing = meta.orientation === 'horizontal'
+    ? 'h-auto w-full min-w-0'
+    : 'w-auto h-full min-h-0';
 
   return (
-    <nav className={listStyles({ orientation: meta.orientation, className })} aria-label={label} {...rest}>
-      {children}
-    </nav>
+    <ScrollArea.Root className={cn(rootSizing, className)}>
+      <ScrollArea.Viewport>
+        <nav
+          className={listStyles({ orientation: meta.orientation, className: tabsClassName })}
+          aria-label={label}
+          {...rest}
+        >
+          {children}
+        </nav>
+      </ScrollArea.Viewport>
+    </ScrollArea.Root>
   );
 }
 

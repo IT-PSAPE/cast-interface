@@ -771,7 +771,6 @@ body,
   .label-md,
   .label-sm,
   .label-xs {
-    color: var(--text-color-primary);
     font-family: var(--font-label);
     font-style: normal;
   }
@@ -816,7 +815,6 @@ body,
   .paragraph-md,
   .paragraph-sm,
   .paragraph-xs {
-    color: var(--text-color-primary);
     font-family: var(--font-paragraph);
     font-style: normal;
   }

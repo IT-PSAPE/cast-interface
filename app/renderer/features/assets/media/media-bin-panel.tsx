@@ -6,7 +6,6 @@ import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
-import { FileTrigger } from '../../../components/form/file-trigger';
 import { BinPanelLayout } from '../../workbench/bin-panel-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useMediaBin } from './use-media-bin';
@@ -18,35 +17,22 @@ interface MediaBinPanelProps {
 
 export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
-  const { mediaAssets, mediaLayerAssetId, setMediaLayerAsset, menu, fileInputRef, buildMenuItems, handleChangeSourceSelect } = useMediaBin(filterText);
-
-  const currentMenuItems = menu.menuState ? buildMenuItems(menu.menuState.data) : [];
+  const { mediaAssets, mediaLayerAssetId, handleApply } = useMediaBin(filterText);
 
   return (
-    <>
-      <BinPanelLayout
-        gridItemSize={gridItemSize}
-        mode={drawerViewMode}
-        menuState={menu.menuState}
-        menuItems={currentMenuItems}
-        onCloseMenu={menu.close}
-      >
-        {mediaAssets.map((asset) => {
-          const shared = {
-            key: asset.id,
-            asset,
-            isActive: mediaLayerAssetId === asset.id,
-            onAssignLayer: setMediaLayerAsset,
-            onContextMenu: menu.openFromEvent,
-          };
-          return drawerViewMode === 'list'
-            ? <MediaRow {...shared} />
-            : <MediaTile {...shared} />;
-        })}
-      </BinPanelLayout>
-
-      <FileTrigger.Root hidden inputRef={fileInputRef} accept="image/*,video/*" onSelect={handleChangeSourceSelect} />
-    </>
+    <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
+      {mediaAssets.map((asset) => {
+        const shared = {
+          key: asset.id,
+          asset,
+          isActive: mediaLayerAssetId === asset.id,
+          onAssignLayer: handleApply,
+        };
+        return drawerViewMode === 'list'
+          ? <MediaRow {...shared} />
+          : <MediaTile {...shared} />;
+      })}
+    </BinPanelLayout>
   );
 }
 
@@ -54,20 +40,15 @@ interface MediaItemProps {
   asset: MediaAsset;
   isActive: boolean;
   onAssignLayer: (id: Id) => void;
-  onContextMenu: (event: React.MouseEvent, data: Id) => void;
 }
 
-function MediaRow({ asset, isActive, onAssignLayer, onContextMenu }: MediaItemProps) {
+function MediaRow({ asset, isActive, onAssignLayer }: MediaItemProps) {
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, asset.id);
-  }
-
   return (
-    <div onContextMenu={handleContextMenu}>
+    <div>
       <SelectableRow.Root
         selected={isActive}
         onClick={handleAssignLayer}
@@ -85,17 +66,13 @@ function MediaRow({ asset, isActive, onAssignLayer, onContextMenu }: MediaItemPr
   );
 }
 
-function MediaTile({ asset, isActive, onAssignLayer, onContextMenu }: MediaItemProps) {
+function MediaTile({ asset, isActive, onAssignLayer }: MediaItemProps) {
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, asset.id);
-  }
-
   return (
-    <div className="flex flex-col gap-1" onContextMenu={handleContextMenu}>
+    <div className="flex flex-col gap-1">
       <Thumbnail.Tile
         onClick={handleAssignLayer}
         selected={isActive}
@@ -131,7 +108,7 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
     return (
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-tertiary/80 text-tertiary">
         <AlertTriangle size={16} strokeWidth={1.75} />
-        <span className="px-2 text-center text-xs uppercase tracking-wider">Missing — use Replace Source</span>
+        <span className="px-2 text-center text-xs uppercase tracking-wider">Missing source</span>
       </div>
     );
   }

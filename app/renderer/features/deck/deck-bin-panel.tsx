@@ -22,8 +22,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
   const {
     filteredDeckItems,
-    menu,
-    menuItems,
     editingDeckItemId,
     browseDeckItem,
     isDetachedDeckBrowser,
@@ -36,9 +34,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
     <BinPanelLayout
       gridItemSize={gridItemSize}
       mode={drawerViewMode}
-      menuState={menu.menuState}
-      menuItems={menuItems}
-      onCloseMenu={menu.close}
     >
       {filteredDeckItems.map((presentation) => {
         const shared = {
@@ -48,7 +43,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
           isSelected: isDetachedDeckBrowser && currentDrawerDeckItemId === presentation.id,
           isEditing: editingDeckItemId === presentation.id,
           onOpen: browseDeckItem,
-          onContextMenu: menu.openFromEvent,
           onRename: handleRename,
         };
         return drawerViewMode === 'list'
@@ -65,11 +59,10 @@ interface DeckItemProps {
   isSelected: boolean;
   isEditing: boolean;
   onOpen: (itemId: Id) => void;
-  onContextMenu: (event: React.MouseEvent, data: Id) => void;
   onRename: (itemId: Id, title: string) => void;
 }
 
-function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
   const renameRef = useRef<RenameFieldHandle>(null);
 
   useEffect(() => {
@@ -78,10 +71,6 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMen
 
   function handleOpen() {
     onOpen(item.id);
-  }
-
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, item.id);
   }
 
   function handleDragStart(event: React.DragEvent<HTMLElement>) {
@@ -93,7 +82,7 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMen
   }
 
   return (
-    <div className="group cursor-grab" draggable onDragStart={handleDragStart} onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
       <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
         <SelectableRow.Leading>
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
@@ -109,7 +98,7 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMen
   );
 }
 
-function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
   const { slideElementsBySlideId } = useProjectContent();
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
@@ -124,10 +113,6 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onContextMe
     onOpen(item.id);
   }
 
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, item.id);
-  }
-
   function handleDragStart(event: React.DragEvent<HTMLElement>) {
     writeDeckItemDragData(event.dataTransfer, item.id);
   }
@@ -137,7 +122,7 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onContextMe
   }
 
   return (
-    <div className="group cursor-grab" draggable onDragStart={handleDragStart} onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
       <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
         <Thumbnail.Body>
           <ScenePreview scene={scene} />

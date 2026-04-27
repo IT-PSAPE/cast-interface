@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import type { Id, Template } from '@core/types';
-import { Copy, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
+import type { Template } from '@core/types';
+import { Layers, Music, Plus, Presentation } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { RecastPanel } from '@renderer/components 2.0/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
-import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
+import { Dropdown } from '../../components/form/dropdown';
+import { useNavigation } from '../../contexts/navigation-context';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
@@ -18,11 +18,12 @@ import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
 import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { EmptyState } from '@renderer/components/display/empty-state';
+import { Label } from '@renderer/components/display/text';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 
 export function TemplateEditorScreen() {
-  const { templates, currentTemplateId, currentTemplate, hasPendingChanges: hasTemplateDraftChanges, openTemplateEditor, createTemplate, deleteTemplate, duplicateTemplate, requestNameFocus, syncLinkedDeckItems } = useTemplateEditor();
-  const { menuItems } = useCreateTemplateMenu({ createTemplate });
+  const { templates, currentTemplateId, currentTemplate, hasPendingChanges: hasTemplateDraftChanges, openTemplateEditor, requestNameFocus, syncLinkedDeckItems, createTemplate } = useTemplateEditor();
+  const { createPresentation, createEmptyLyric } = useNavigation();
   const { deckItems } = useProjectContent();
 
   const linkedItemCount = currentTemplate
@@ -46,19 +47,6 @@ export function TemplateEditorScreen() {
     activate: (id) => openTemplateEditor(id),
   });
 
-  function handleDeleteTemplate(templateId: Id) {
-    if (!window.confirm('Delete this template? Deck items using it will keep their current elements but lose the template association.')) return;
-    deleteTemplate(templateId);
-  }
-
-  function buildTemplateMenuItems(templateId: Id): ContextMenuItem[] {
-    return [
-      { id: 'rename', label: 'Rename', icon: <Pencil size={14} />, onSelect: () => requestNameFocus(templateId) },
-      { id: 'duplicate', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => duplicateTemplate(templateId) },
-      { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => handleDeleteTemplate(templateId) },
-    ];
-  }
-
   return (
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
@@ -68,25 +56,22 @@ export function TemplateEditorScreen() {
               <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
-                    <div className="truncate text-sm font-medium text-primary mr-auto">
-                      <span className="truncate text-sm font-medium text-primary">Templates</span>
-                    </div>
-                    <div>
-                      <ContextMenu.Root>
-                        <ContextMenu.ButtonTrigger>
-                          <ReacstButton.Icon label="Create template">
-                            <Plus />
-                          </ReacstButton.Icon>
-                        </ContextMenu.ButtonTrigger>
-                        <ContextMenu.Portal>
-                          <ContextMenu.Positioner>
-                            <ContextMenu.Popup>
-                              <ContextMenu.Items items={menuItems} />
-                            </ContextMenu.Popup>
-                          </ContextMenu.Positioner>
-                          </ContextMenu.Portal>
-                      </ContextMenu.Root>
-                    </div>
+                    <Label.sm className="mr-auto">Templates</Label.sm>
+                    <Dropdown>
+                      <Dropdown.Trigger
+                        aria-label="Add"
+                        className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
+                      >
+                        <Plus />
+                      </Dropdown.Trigger>
+                      <Dropdown.Panel placement="bottom-end">
+                        <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
+                        <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                        <Dropdown.Separator />
+                        <Dropdown.Item onClick={() => createTemplate('slides')}>New presentation template</Dropdown.Item>
+                        <Dropdown.Item onClick={() => createTemplate('lyrics')}>New lyric template</Dropdown.Item>
+                      </Dropdown.Panel>
+                    </Dropdown>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content>
                     {templates.length === 0 ? (
@@ -95,24 +80,23 @@ export function TemplateEditorScreen() {
                         <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
                       </EmptyState.Root>
                     ) : (
-                    <ScrollArea className="p-2">
-                    <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
-                      {templates.map((template, index) => {
-                        const scene = buildRenderScene(null, template.elements);
+                    <ScrollArea.Root>
+                      <ScrollArea.Viewport className="p-2">
+                        <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
+                          {templates.map((template, index) => {
+                            const scene = buildRenderScene(null, template.elements);
 
-                        function handleSelect() {
-                          openTemplateEditor(template.id);
-                        }
+                            function handleSelect() {
+                              openTemplateEditor(template.id);
+                            }
 
-                        function handleCaptionDoubleClick(event: React.MouseEvent) {
-                          event.stopPropagation();
-                          requestNameFocus(template.id);
-                        }
+                            function handleCaptionDoubleClick(event: React.MouseEvent) {
+                              event.stopPropagation();
+                              requestNameFocus(template.id);
+                            }
 
-                        return (
-                          <ContextMenu.Root key={template.id}>
-                            <ContextMenu.Trigger>
-                              <ActiveTemplateTile isActive={template.id === currentTemplateId} onClick={handleSelect} selected={template.id === currentTemplateId}>
+                            return (
+                              <ActiveTemplateTile key={template.id} isActive={template.id === currentTemplateId} onClick={handleSelect} selected={template.id === currentTemplateId}>
                                 <Thumbnail.Body>
                                   <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
                                     <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
@@ -126,19 +110,14 @@ export function TemplateEditorScreen() {
                                   </div>
                                 </Thumbnail.Caption>
                               </ActiveTemplateTile>
-                            </ContextMenu.Trigger>
-                            <ContextMenu.Portal>
-                              <ContextMenu.Positioner>
-                                <ContextMenu.Popup>
-                                  <ContextMenu.Items items={buildTemplateMenuItems(template.id)} />
-                                </ContextMenu.Popup>
-                              </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
-                          </ContextMenu.Root>
-                        );
-                      })}
-                      </div>
-                    </ScrollArea>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea.Viewport>
+                      <ScrollArea.Scrollbar>
+                        <ScrollArea.Thumb />
+                      </ScrollArea.Scrollbar>
+                    </ScrollArea.Root>
                     )}
                   </RecastPanel.Content>
                 </RecastPanel.Group>
@@ -146,9 +125,7 @@ export function TemplateEditorScreen() {
               <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
-                    <div className="mr-auto">
-                      <span className="text-sm font-medium text-primary">Objects</span>
-                    </div>
+                    <Label.xs className="mr-auto">Objects</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />

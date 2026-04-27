@@ -21,6 +21,10 @@ interface PopoverProps {
   offset?: number;
   className?: string;
   children: ReactNode;
+  // When true, only fall back along the main axis (e.g., bottom→top) and never
+  // to cross-axis sides. Dropdowns want this so the menu never appears beside
+  // its trigger — that's confusing for menu UX.
+  axisLock?: boolean;
 }
 
 interface ResolvedPosition {
@@ -39,16 +43,16 @@ function getOverlayRoot(): HTMLElement {
 
 // ── Component ──────────────────────────────────────────────
 
-export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 4, className = '', children }: PopoverProps) {
+export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 4, className = '', children, axisLock = false }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<ResolvedPosition | null>(null);
 
   // Compute position after content renders so we can measure it
   useLayoutEffect(() => {
     if (!open || !anchor || !contentRef.current) return;
-    const pos = resolvePosition(anchor, contentRef.current, placement, offset);
+    const pos = resolvePosition(anchor, contentRef.current, placement, offset, axisLock);
     setPosition(pos);
-  }, [open, anchor, placement, offset]);
+  }, [open, anchor, placement, offset, axisLock]);
 
   // Close on outside pointer
   useEffect(() => {
@@ -76,7 +80,7 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
     const content = contentRef.current;
     function reposition() {
       if (!anchor || !content) return;
-      const pos = resolvePosition(anchor, content, placement, offset);
+      const pos = resolvePosition(anchor, content, placement, offset, axisLock);
       setPosition(pos);
     }
     window.addEventListener('resize', reposition);
@@ -85,7 +89,7 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
-  }, [open, anchor, placement, offset]);
+  }, [open, anchor, placement, offset, axisLock]);
 
   if (!open) return null;
 
@@ -129,6 +133,7 @@ function resolvePosition(
   content: HTMLElement,
   preferred: PopoverPlacement,
   offset: number,
+  axisLock: boolean,
 ): ResolvedPosition {
   const anchorRect = anchor.getBoundingClientRect();
   const contentRect = content.getBoundingClientRect();
@@ -136,7 +141,7 @@ function resolvePosition(
   const vh = window.innerHeight;
 
   // Try preferred placement first, then fallbacks
-  const fallbackOrder = getFallbackOrder(preferred);
+  const fallbackOrder = getFallbackOrder(preferred, axisLock);
 
   for (const candidate of fallbackOrder) {
     const pos = computePosition(anchorRect, contentRect, candidate, offset);
@@ -208,7 +213,7 @@ function fitsInViewport(
   );
 }
 
-function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
+function getFallbackOrder(preferred: PopoverPlacement, axisLock: boolean): PopoverPlacement[] {
   const { side, align } = parsePlacement(preferred);
 
   const oppositeSide: Record<PopoverSide, PopoverSide> = {
@@ -224,6 +229,13 @@ function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
     left: ['top', 'bottom'],
     right: ['top', 'bottom'],
   };
+
+  if (axisLock) {
+    return [
+      preferred,
+      buildPlacement(oppositeSide[side], align),
+    ];
+  }
 
   return [
     preferred,

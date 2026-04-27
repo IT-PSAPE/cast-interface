@@ -43,9 +43,14 @@ export function PlaylistPanels() {
             </RecastPanel.Group>
 
             <RecastPanel.GroupContent className="py-1.5 space-y-1">
-              <ScrollArea role="list" aria-label="Playlists">
-                {playlists.map((tree) => <PlaylistRow key={tree.playlist.id} tree={tree} />)}
-              </ScrollArea>
+              <ScrollArea.Root>
+                <ScrollArea.Viewport role="list" aria-label="Playlists">
+                  {playlists.map((tree) => <PlaylistRow key={tree.playlist.id} tree={tree} />)}
+                </ScrollArea.Viewport>
+                <ScrollArea.Scrollbar>
+                  <ScrollArea.Thumb />
+                </ScrollArea.Scrollbar>
+              </ScrollArea.Root>
             </RecastPanel.GroupContent>
           </SplitPanel.Segment>
           <SplitPanel.Segment id="library-segments" defaultSize={320} minSize={180}>

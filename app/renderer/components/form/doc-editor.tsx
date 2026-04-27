@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { SortableBlock } from './doc-sortable-block'
-import { BlockMenu } from './doc-block-menu'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
@@ -11,14 +10,11 @@ type DocEditorProps = {
     onChange?: (blocks: Block[]) => void
 }
 
-type MenuState = { x: number; y: number; anchorBlockId: string }
-
 export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
     const [blocks, setBlocks] = useState<Block[]>(
         () => initialBlocks ?? [{ id: uid(), content: '' }],
     )
     const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(() => new Set())
-    const [menuState, setMenuState] = useState<MenuState | null>(null)
 
     const contentRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
     const blocksRef = useRef(blocks)
@@ -184,7 +180,7 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             const delta = direction === 'up' ? -1 : 1
             for (const idx of ordered) {
                 const swap = idx + delta
-                ;[next[swap], next[idx]] = [next[idx], next[swap]]
+                    ;[next[swap], next[idx]] = [next[idx], next[swap]]
             }
             return next
         })
@@ -225,47 +221,6 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         }
     }, [clearSelection, deleteSelectedBlocks, moveSelectedBlocks, selectedBlockIds.size])
 
-    // ── Menu ────────────────────────────────────────────────────────
-
-    const openMenuForBlock = useCallback((event: React.MouseEvent, blockId: string) => {
-        event.preventDefault()
-        // If the block isn't already part of the selection, make it the sole selection.
-        setSelectedBlockIds(prev => (prev.has(blockId) ? prev : new Set([blockId])))
-        setMenuState({ x: event.clientX, y: event.clientY, anchorBlockId: blockId })
-    }, [])
-
-    const closeMenu = useCallback(() => {
-        setMenuState(null)
-    }, [])
-
-    const duplicateSelected = useCallback(() => {
-        const selected = selectedRef.current
-        if (selected.size === 0) return
-        setBlocks(prev => {
-            const next: Block[] = []
-            for (const block of prev) {
-                next.push(block)
-                if (selected.has(block.id)) {
-                    next.push({ id: uid(), content: block.content })
-                }
-            }
-            return next
-        })
-    }, [])
-
-    const handleMenuAction = useCallback((action: string) => {
-        closeMenu()
-        if (action === 'delete') {
-            deleteSelectedBlocks()
-        } else if (action === 'duplicate') {
-            duplicateSelected()
-        } else if (action === 'move-up') {
-            moveSelectedBlocks('up')
-        } else if (action === 'move-down') {
-            moveSelectedBlocks('down')
-        }
-    }, [closeMenu, deleteSelectedBlocks, duplicateSelected, moveSelectedBlocks])
-
     const handleTextareaFocus = useCallback(() => {
         clearSelection()
     }, [clearSelection])
@@ -280,8 +235,9 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
             className="w-full max-w-[680px] outline-none"
         >
             <div className="space-y-0.5">
-                {blocks.map((block) => (
+                {blocks.map((block, index) => (
                     <SortableBlock
+                        index={index}
                         key={block.id}
                         block={block}
                         isSelected={selectedBlockIds.has(block.id)}
@@ -290,21 +246,12 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
                         onSplit={(before, after) => splitBlock(block.id, before, after)}
                         onDelete={() => deleteBlock(block.id)}
                         onMergeWithPrev={text => mergeWithPrev(block.id, text)}
-                        onContextMenu={event => openMenuForBlock(event, block.id)}
                         onAddBelow={() => addBlockAfter(block.id)}
                         onTextareaFocus={handleTextareaFocus}
                         onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
                     />
                 ))}
             </div>
-            {menuState ? (
-                <BlockMenu
-                    x={menuState.x}
-                    y={menuState.y}
-                    onAction={handleMenuAction}
-                    onClose={closeMenu}
-                />
-            ) : null}
         </div>
     )
 }

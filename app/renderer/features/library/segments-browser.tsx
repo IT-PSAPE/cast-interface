@@ -41,16 +41,21 @@ export function SegmentsBrowser() {
       </RecastPanel.Group>
 
       <RecastPanel.Group>
-        <ScrollArea>
-          <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
-            {rawSegments.map((segment) => (
-              <PlaylistSegmentGroup
-                key={segment.segment.id}
-                segment={segment}
-              />
-            ))}
-          </Accordion>
-        </ScrollArea>
+        <ScrollArea.Root>
+          <ScrollArea.Viewport>
+            <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
+              {rawSegments.map((segment) => (
+                <PlaylistSegmentGroup
+                  key={segment.segment.id}
+                  segment={segment}
+                />
+              ))}
+            </Accordion>
+          </ScrollArea.Viewport>
+          <ScrollArea.Scrollbar>
+            <ScrollArea.Thumb />
+          </ScrollArea.Scrollbar>
+        </ScrollArea.Root>
       </RecastPanel.Group>
     </>
   );

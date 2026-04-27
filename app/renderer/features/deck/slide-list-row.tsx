@@ -2,9 +2,11 @@ import { memo } from 'react';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { RenameField } from '@renderer/components 2.0/rename-field';
+import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useScrollAreaActiveItem } from '../../components/layout/scroll-area';
+import { useSlides } from '../../contexts/slide-context';
 import { Play } from 'lucide-react';
 import type { OutlineSlideRow } from './use-slide-list-view';
 import { SceneStage } from '../canvas/scene-stage';
@@ -19,8 +21,28 @@ interface SlideOutlineRowProps {
   onTextCommit: (slideId: Id, nextText: string) => void;
 }
 
-function SlideOutlineRowImpl({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
-  const ref = useScrollAreaActiveItem(isFocused);
+function SlideOutlineRowImpl(props: SlideOutlineRowProps) {
+  return (
+    <ContextMenu.Root>
+      <SlideOutlineRowBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function SlideOutlineRowBody({ row, scene, isFocused, onSelect, onOpen, onTextCommit }: SlideOutlineRowProps) {
+  // Gating: this row component is shared between single-mode and continuous-mode
+  // browsers. Slide actions live on the slide-context for the *current* deck item;
+  // in continuous mode the row may belong to a different deck item, so we disable
+  // the menu when the slide isn't part of the active context.
+  const { slides, duplicateSlide, deleteSlide, moveSlide } = useSlides();
+  const slideIndex = slides.findIndex((s) => s.id === row.slide.id);
+  const slideOwned = slideIndex !== -1;
+  const isFirst = slideIndex === 0;
+  const isLast = slideIndex === slides.length - 1;
+
+  const activeRef = useScrollAreaActiveItem<HTMLDivElement>(isFocused);
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger({ disabled: !slideOwned });
+
   const rowStateClass = isFocused
     ? 'border-brand-400/80 bg-brand-400/8'
     : 'border-primary bg-primary/40';
@@ -55,44 +77,61 @@ function SlideOutlineRowImpl({ row, scene, isFocused, onSelect, onOpen, onTextCo
   }
 
   return (
-    <Thumbnail.Row
-      ref={ref}
-      onClick={handleSelect}
-      onDoubleClick={row.textEditable ? undefined : handleOpen}
-      className={rowStateClass}
-    >
-      <Thumbnail.Preview>
-        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">
-          {row.elements.length === 0 ? (
-            <div className="absolute inset-0 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
-              Empty
+    <>
+      <Thumbnail.Row
+        {...triggerHandlers}
+        ref={(node) => {
+          activeRef.current = node;
+          triggerRef(node);
+        }}
+        onClick={handleSelect}
+        onDoubleClick={row.textEditable ? undefined : handleOpen}
+        className={rowStateClass}
+      >
+        <Thumbnail.Preview>
+          <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">
+            {row.elements.length === 0 ? (
+              <div className="absolute inset-0 grid place-items-center text-sm uppercase tracking-wider text-tertiary">
+                Empty
+              </div>
+            ) : null}
+            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          </SceneFrame>
+        </Thumbnail.Preview>
+        <Thumbnail.Body className={row.textEditable ? 'content-start' : 'content-center'}>
+          <>
+            <div className={cn('flex gap-2', row.textEditable ? 'items-start' : 'items-center')}>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{row.index + 1}.</span>
+              {renderRowText()}
             </div>
-          ) : null}
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-        </SceneFrame>
-      </Thumbnail.Preview>
-      <Thumbnail.Body className={row.textEditable ? 'content-start' : 'content-center'}>
-        <>
-          <div className={cn('flex gap-2', row.textEditable ? 'items-start' : 'items-center')}>
-            <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{row.index + 1}.</span>
-            {renderRowText()}
-          </div>
 
-          {!row.textEditable && row.secondaryText ? (
-            <p className="m-0 truncate text-sm text-tertiary" title={row.secondaryText}>
-              {row.secondaryText}
-            </p>
-          ) : null}
-        </>
-      </Thumbnail.Body>
-      {row.state === 'live' ? (
-        <Thumbnail.Overlay position="top-right" className="right-2 top-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
-            <Play size={12} strokeWidth={1.9} />
-          </span>
-        </Thumbnail.Overlay>
-      ) : null}
-    </Thumbnail.Row>
+            {!row.textEditable && row.secondaryText ? (
+              <p className="m-0 truncate text-sm text-tertiary" title={row.secondaryText}>
+                {row.secondaryText}
+              </p>
+            ) : null}
+          </>
+        </Thumbnail.Body>
+        {row.state === 'live' ? (
+          <Thumbnail.Overlay position="top-right" className="right-2 top-2">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-brand_solid text-white shadow-sm">
+              <Play size={12} strokeWidth={1.9} />
+            </span>
+          </Thumbnail.Overlay>
+        ) : null}
+      </Thumbnail.Row>
+      {slideOwned && (
+        <ContextMenu.Portal>
+          <ContextMenu.Menu>
+            <ContextMenu.Item onSelect={() => { void duplicateSlide(row.slide.id); }}>Duplicate</ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => { void deleteSlide(row.slide.id); }}>Delete</ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Item disabled={isFirst} onSelect={() => { void moveSlide(row.slide.id, 'up'); }}>Move up</ContextMenu.Item>
+            <ContextMenu.Item disabled={isLast} onSelect={() => { void moveSlide(row.slide.id, 'down'); }}>Move down</ContextMenu.Item>
+          </ContextMenu.Menu>
+        </ContextMenu.Portal>
+      )}
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import type { Id, Template } from '@core/types';
+import type { Template } from '@core/types';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
@@ -15,24 +15,16 @@ interface TemplateBinPanelProps {
 
 export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
-  const { filteredTemplates, menu, menuItems, currentTemplateId, handleOpenTemplate } = useTemplateBin(filterText);
+  const { filteredTemplates, handleApplyTemplate } = useTemplateBin(filterText);
 
   return (
-    <BinPanelLayout
-      gridItemSize={gridItemSize}
-      mode={drawerViewMode}
-      menuState={menu.menuState}
-      menuItems={menuItems}
-      onCloseMenu={menu.close}
-    >
+    <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
       {filteredTemplates.map((template, index) => {
         const shared = {
           key: template.id,
           template,
           index,
-          isSelected: template.id === currentTemplateId,
-          onOpen: handleOpenTemplate,
-          onContextMenu: menu.openFromEvent,
+          onApply: handleApplyTemplate,
         };
         return drawerViewMode === 'list'
           ? <TemplateRow {...shared} />
@@ -45,23 +37,17 @@ export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelP
 interface TemplateItemProps {
   template: Template;
   index: number;
-  isSelected: boolean;
-  onOpen: (template: Template) => void;
-  onContextMenu: (event: React.MouseEvent, data: Id) => void;
+  onApply: (template: Template) => void;
 }
 
-function TemplateRow({ template, index, isSelected, onOpen, onContextMenu }: TemplateItemProps) {
-  function handleOpen() {
-    onOpen(template);
-  }
-
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, template.id);
+function TemplateRow({ template, index, onApply }: TemplateItemProps) {
+  function handleClick() {
+    onApply(template);
   }
 
   return (
-    <div onContextMenu={handleContextMenu}>
-      <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
+    <div>
+      <SelectableRow.Root selected={false} onClick={handleClick} className="h-9">
         <SelectableRow.Leading>
           <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
         </SelectableRow.Leading>
@@ -74,19 +60,15 @@ function TemplateRow({ template, index, isSelected, onOpen, onContextMenu }: Tem
   );
 }
 
-function TemplateTile({ template, index, isSelected, onOpen, onContextMenu }: TemplateItemProps) {
+function TemplateTile({ template, index, onApply }: TemplateItemProps) {
   const scene = buildRenderScene(null, template.elements);
 
-  function handleOpen() {
-    onOpen(template);
-  }
-
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, template.id);
+  function handleClick() {
+    onApply(template);
   }
 
   return (
-    <Thumbnail.Tile onClick={handleOpen} onDoubleClick={handleOpen} onContextMenu={handleContextMenu} selected={isSelected}>
+    <Thumbnail.Tile onClick={handleClick}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
           <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
