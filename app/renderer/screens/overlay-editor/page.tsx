@@ -5,7 +5,7 @@ import { RecastPanel } from '@renderer/components 2.0/panel';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Dropdown } from '../../components/form/dropdown';
-import { useNavigation } from '../../contexts/navigation-context';
+import { useCreateDeckItem } from '../../features/deck/create-deck-item';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
@@ -21,7 +21,7 @@ import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout
 
 export function OverlayEditorScreen() {
   const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay } = useOverlayEditor();
-  const { createPresentation, createEmptyLyric } = useNavigation();
+  const { open: openCreateDeckItem } = useCreateDeckItem();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
 
   useEditorLeftPanelNav({
@@ -52,8 +52,8 @@ export function OverlayEditorScreen() {
                         <Plus />
                       </Dropdown.Trigger>
                       <Dropdown.Panel placement="bottom-end">
-                        <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
-                        <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                        <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
+                        <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
                         <Dropdown.Separator />
                         <Dropdown.Item onClick={handleAddOverlay}>New overlay</Dropdown.Item>
                       </Dropdown.Panel>

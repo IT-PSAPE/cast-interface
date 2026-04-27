@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -15,6 +16,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from 'react';
 import { cn } from '@renderer/utils/cn';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayPortal } from './overlay-primitives';
 
 const DEFAULT_LONG_PRESS_DELAY = 500;
@@ -80,7 +82,7 @@ function Root({
   onPositionChange,
   open,
   position,
-  zIndex = 50,
+  zIndex,
 }: RootProps) {
   const positionerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +92,21 @@ function Root({
   const [uncontrolledPosition, setUncontrolledPosition] = useState<ContextMenuPoint | null>(null);
   const resolvedOpen = isOpenControlled ? open : uncontrolledOpen;
   const resolvedPosition = isPositionControlled ? position : uncontrolledPosition;
+
+  // Participate in the global overlay stack so context menus opened from inside
+  // a Dialog/Popover layer above their parent. Caller may pass `zIndex` to
+  // override (rare). NB: depend on the stable `register`/`unregister` callbacks,
+  // not the whole `overlayStack` object — see Popover for the same caveat.
+  const { overlayStack } = useWorkbench();
+  const { register, unregister } = overlayStack;
+  const contextMenuId = useId();
+  useEffect(() => {
+    if (!resolvedOpen) return undefined;
+    register(contextMenuId);
+    return () => unregister(contextMenuId);
+  }, [contextMenuId, register, unregister, resolvedOpen]);
+  const stackIndex = overlayStack.stack.indexOf(contextMenuId);
+  const computedZIndex = zIndex ?? overlayStack.baseZIndex + Math.max(stackIndex, 0) * 10;
 
   const setPositionState = useCallback((nextPosition: ContextMenuPoint | null) => {
     if (!isPositionControlled) {
@@ -166,9 +183,9 @@ function Root({
     meta: {
       positionerRef,
       triggerRef,
-      zIndex,
+      zIndex: computedZIndex,
     },
-  }), [close, openAt, resolvedOpen, resolvedPosition, setOpenState, zIndex]);
+  }), [close, computedZIndex, openAt, resolvedOpen, resolvedPosition, setOpenState]);
 
   return (
     <ContextMenuContext.Provider value={context}>

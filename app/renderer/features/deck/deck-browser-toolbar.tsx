@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { AppWindow, EllipsisVertical, LayoutGrid, List, RectangleHorizontal, Rows3 } from 'lucide-react';
 import { Dropdown } from '../../components/form/dropdown';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
@@ -6,7 +5,7 @@ import { Tabs } from '../../components/display/tabs';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useDeckBrowser } from './deck-browser-context';
-import { LyricEditorModal } from './lyric-editor-modal';
+import { useLyricEditor } from './lyric-editor';
 import type { SlideBrowserHeaderVariant } from './use-deck-browser-view';
 import type { PlaylistDeckSequenceItem } from './use-playlist-deck-sequence';
 
@@ -34,7 +33,7 @@ function PlaylistTabItem({ items }: { items: PlaylistDeckSequenceItem[] }) {
 }
 
 export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarProps) {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const { open: openLyricEditor } = useLyricEditor();
   const { createSlide } = useSlides();
   const { currentDeckItem, currentLibraryBundle, currentPlaylistId, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, setSlideBrowserMode, playlistBrowserMode, setPlaylistBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useDeckBrowser();
@@ -49,7 +48,7 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
   }
 
   function handleOpenEditor() {
-    if (currentDeckItem?.type === 'lyric') setIsEditorOpen(true);
+    if (currentDeckItem?.type === 'lyric') openLyricEditor();
   }
 
   function ViewIcon() {
@@ -77,8 +76,7 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
   }
 
   return (
-    <>
-      <header className="flex h-9 items-center gap-2 border-b border-secondary bg-primary/80 px-2">
+    <header className="flex h-9 items-center gap-2 border-b border-secondary bg-primary/80 px-2">
         {/* Left: content info */}
         {showContentInfo && (
           <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
@@ -138,10 +136,7 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
               <Dropdown.Item onClick={handleOpenEditor}>Open lyric editor</Dropdown.Item>
             </Dropdown.Panel>
           </Dropdown>
-        </div>
-      </header>
-
-      <LyricEditorModal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} />
-    </>
+      </div>
+    </header>
   );
 }

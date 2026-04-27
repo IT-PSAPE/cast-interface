@@ -284,6 +284,47 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     });
   }, [deckItems, mutatePatch, runOperation, setStatusText]);
 
+  // Granular create flow used by the create-deck-item dialog. Creates the deck item
+  // with a chosen name, then optionally applies a template and adds it to a segment
+  // — all atomic from the user's perspective (one click of the dialog's New button).
+  const createDeckItem = useCallback(async (input: {
+    kind: 'presentation' | 'lyric';
+    name: string;
+    templateId?: Id;
+    segmentId?: Id;
+  }) => {
+    const trimmedName = input.name.trim() || (input.kind === 'lyric' ? 'New Lyric' : 'New Presentation');
+    const labelKind = input.kind === 'lyric' ? 'lyric' : 'deck';
+
+    await runOperation(`Creating ${labelKind}...`, async () => {
+      const previousIds = new Set(deckItems.map((item) => item.id));
+      const next = input.kind === 'lyric'
+        ? await mutatePatch(() => window.castApi.createLyric(trimmedName))
+        : await mutatePatch(() => window.castApi.createPresentation(trimmedName));
+      const createdId = findCreatedId(previousIds, [...next.presentations, ...next.lyrics].map((item) => item.id));
+      if (!createdId) return;
+
+      await mutatePatch(() => (
+        input.kind === 'lyric'
+          ? window.castApi.createSlide({ lyricId: createdId })
+          : window.castApi.createSlide({ presentationId: createdId })
+      ));
+
+      if (input.templateId) {
+        await mutatePatch(() => window.castApi.applyTemplateToDeckItem(input.templateId!, createdId));
+      }
+
+      if (input.segmentId) {
+        await mutatePatch(() => window.castApi.addDeckItemToSegment(input.segmentId!, createdId));
+      }
+
+      setCurrentDrawerDeckItemId(createdId);
+      setContentBrowseSource('project');
+      setRecentlyCreatedId(createdId);
+      setStatusText(`Created ${labelKind}`);
+    });
+  }, [deckItems, mutatePatch, runOperation, setStatusText]);
+
   const createSegment = useCallback(async () => {
     if (!currentPlaylistId) return;
     const currentTree = currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId);
@@ -416,6 +457,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     createPlaylist,
     createPresentation,
     createEmptyLyric,
+    createDeckItem,
     createSegment,
     addDeckItemToSegment,
     addDeckItemToSegmentAt,
@@ -437,6 +479,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     clearRecentlyCreated,
     createPresentation,
     createEmptyLyric,
+    createDeckItem,
     createLibrary,
     createPlaylist,
     createSegment,

@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { clamp } from '../../utils/math';
 
 // ── Types ──────────────────────────────────────────────────
@@ -46,6 +47,25 @@ function getOverlayRoot(): HTMLElement {
 export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 4, className = '', children, axisLock = false }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<ResolvedPosition | null>(null);
+
+  // Participate in the global overlay stack so nested popovers (e.g. a select
+  // opened inside a dialog) layer above whatever opened them. Without this the
+  // popover's wrapper has `z-index: auto` and gets painted behind any sibling
+  // overlay (like a Dialog) that has an explicit z-index.
+  // NB: depend on the stable `register`/`unregister` callbacks, not the whole
+  // `overlayStack` object — that object's reference changes every time the
+  // stack entries change, which would cause a register → state-change → ref-change
+  // → effect re-run → unregister → register loop.
+  const { overlayStack } = useWorkbench();
+  const { register, unregister } = overlayStack;
+  const popoverId = useId();
+  useEffect(() => {
+    if (!open) return undefined;
+    register(popoverId);
+    return () => unregister(popoverId);
+  }, [open, popoverId, register, unregister]);
+  const stackIndex = overlayStack.stack.indexOf(popoverId);
+  const zIndex = overlayStack.baseZIndex + Math.max(stackIndex, 0) * 10;
 
   // Compute position after content renders so we can measure it
   useLayoutEffect(() => {
@@ -105,12 +125,13 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
         top: isPositioned ? position.top : -9999,
         left: isPositioned ? position.left : -9999,
         visibility: isPositioned ? 'visible' : 'hidden',
+        zIndex,
       }}
       data-popover-placement={isPositioned ? position.placement : undefined}
     >
       {children}
     </div>,
-    getOverlayRoot(),
+    overlayStack.rootElement ?? getOverlayRoot(),
   );
 }
 

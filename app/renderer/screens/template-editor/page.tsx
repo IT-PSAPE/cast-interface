@@ -6,7 +6,7 @@ import { RecastPanel } from '@renderer/components 2.0/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Dropdown } from '../../components/form/dropdown';
-import { useNavigation } from '../../contexts/navigation-context';
+import { useCreateDeckItem } from '../../features/deck/create-deck-item';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
@@ -23,7 +23,7 @@ import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout
 
 export function TemplateEditorScreen() {
   const { templates, currentTemplateId, currentTemplate, hasPendingChanges: hasTemplateDraftChanges, openTemplateEditor, requestNameFocus, syncLinkedDeckItems, createTemplate } = useTemplateEditor();
-  const { createPresentation, createEmptyLyric } = useNavigation();
+  const { open: openCreateDeckItem } = useCreateDeckItem();
   const { deckItems } = useProjectContent();
 
   const linkedItemCount = currentTemplate
@@ -65,8 +65,8 @@ export function TemplateEditorScreen() {
                         <Plus />
                       </Dropdown.Trigger>
                       <Dropdown.Panel placement="bottom-end">
-                        <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
-                        <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                        <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
+                        <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
                         <Dropdown.Separator />
                         <Dropdown.Item onClick={() => createTemplate('slides')}>New presentation template</Dropdown.Item>
                         <Dropdown.Item onClick={() => createTemplate('lyrics')}>New lyric template</Dropdown.Item>

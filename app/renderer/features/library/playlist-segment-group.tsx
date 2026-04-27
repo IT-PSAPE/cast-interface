@@ -124,7 +124,7 @@ function SegmentEntryRow({
 
   return (
     <RecastPanel.MenuItem active={isSelected} onClick={handleSelect} onDragOver={onDeckItemDragOver} onDrop={onDeckItemDrop} className='my-0.5'>
-      <DeckItemIcon entity={item} className="shrink-0 text-tertiary" />
+      <DeckItemIcon entity={item} className="shrink-0" />
       <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
     </RecastPanel.MenuItem>
   );

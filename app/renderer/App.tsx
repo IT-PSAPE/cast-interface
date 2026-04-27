@@ -9,6 +9,8 @@ import { WorkbenchProvider } from './contexts/workbench-context';
 import { CommandPalette } from './features/command-palette/command-palette';
 import { CommandPaletteProvider } from './features/command-palette/command-palette-context';
 import { BundleDropImport } from './features/deck/bundle-drop-import';
+import { CreateDeckItemProvider } from './features/deck/create-deck-item';
+import { LyricEditorProvider } from './features/deck/lyric-editor';
 import { NdiFrameCapture } from './features/playback/ndi-frame-capture';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
@@ -26,16 +28,20 @@ export function App() {
             <PlaybackProvider>
               <SlideProvider>
                 <AssetEditorProvider>
-                  <CanvasProvider>
-                    <CommandPaletteProvider>
-                      <NdiFrameCapture />
-                      <SplitPanel>
-                        <AppLayoutContent />
-                      </SplitPanel>
-                      <CommandPalette />
-                      <BundleDropImport />
-                    </CommandPaletteProvider>
-                  </CanvasProvider>
+                  <LyricEditorProvider>
+                    <CreateDeckItemProvider>
+                      <CanvasProvider>
+                        <CommandPaletteProvider>
+                          <NdiFrameCapture />
+                          <SplitPanel>
+                            <AppLayoutContent />
+                          </SplitPanel>
+                          <CommandPalette />
+                          <BundleDropImport />
+                        </CommandPaletteProvider>
+                      </CanvasProvider>
+                    </CreateDeckItemProvider>
+                  </LyricEditorProvider>
                 </AssetEditorProvider>
               </SlideProvider>
             </PlaybackProvider>

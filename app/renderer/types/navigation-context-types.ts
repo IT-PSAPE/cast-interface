@@ -32,6 +32,12 @@ export interface NavigationActionsValue {
   createPlaylist: () => Promise<void>;
   createPresentation: () => Promise<void>;
   createEmptyLyric: () => Promise<void>;
+  createDeckItem: (input: {
+    kind: 'presentation' | 'lyric';
+    name: string;
+    templateId?: Id;
+    segmentId?: Id;
+  }) => Promise<void>;
   createSegment: () => Promise<void>;
   addDeckItemToSegment: (segmentId: Id) => Promise<void>;
   addDeckItemToSegmentAt: (segmentId: Id, itemId: Id, newOrder: number) => Promise<Id | null>;

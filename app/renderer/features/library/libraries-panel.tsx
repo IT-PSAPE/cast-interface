@@ -12,8 +12,9 @@ import { useLibraryPanelState } from './library-panel-context';
 export function LibrariesPanel() {
   const { snapshot } = useCast();
   const { createLibrary } = useNavigation();
+  const { libraryPanelView } = useLibraryPanelState();
 
-  if (!snapshot) return null;
+  if (!snapshot || libraryPanelView !== 'libraries') return null;
 
   return (
     <RecastPanel.Root className='h-full'>

@@ -111,14 +111,12 @@ function List({ children, className, label, tabsClassName, ...rest }: ListProps)
     ? 'h-auto w-full min-w-0'
     : 'w-auto h-full min-h-0';
 
+  const classes = listStyles({ orientation: meta.orientation, className: tabsClassName });
+
   return (
     <ScrollArea.Root className={cn(rootSizing, className)}>
       <ScrollArea.Viewport>
-        <nav
-          className={listStyles({ orientation: meta.orientation, className: tabsClassName })}
-          aria-label={label}
-          {...rest}
-        >
+        <nav className={classes} aria-label={label} {...rest} >
           {children}
         </nav>
       </ScrollArea.Viewport>
@@ -150,15 +148,10 @@ function Trigger({ children, className, disabled = false, value, ...rest }: Trig
     actions.setValue(value);
   }
 
+  const classes = cn(tabStyles({ active }), className);
+
   return (
-    <div
-      {...rest}
-      ref={buttonRef}
-      id={triggerId}
-      role="tab"
-      onClick={handleClick}
-      className={cn(tabStyles({ active }), className)}
-    >
+    <div {...rest} ref={buttonRef} id={triggerId} role="tab" onClick={handleClick} className={classes}>
       {children}
       {active && <Indicator />}
     </div>

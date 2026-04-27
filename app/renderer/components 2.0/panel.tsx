@@ -73,12 +73,10 @@ type PanelMenuItemProps = PanelMenuLevelProps & Omit<ButtonHTMLAttributes<HTMLBu
 };
 
 const menuItemVariants = cv({
-    base: [
-        'w-full min-h-7 py-1 px-2 rounded-sm inline-flex justify-start items-center gap-2 overflow-hidden',
-    ],
+    base: ['w-full min-h-7 py-1 px-2 rounded-sm inline-flex justify-start items-center gap-2 overflow-hidden'],
     variants: {
         state: {
-            active: ['bg-brand_primary/20 text-white hover:bg-brand_solid/20'],
+            active: ['bg-foreground-brand_primary text-primary_on-brand hover:bg-brand_solid'],
             inactive: ['bg-transparent text-secondary hover:bg-tertiary active:bg-secondary'],
         },
     },
@@ -93,12 +91,7 @@ function PanelMenuItem({ children, active = false, className, onClick, ...button
 
     return (
         <div className="w-full">
-            <button
-                type="button"
-                className={cn(menuItemVariants({ state: itemState }), cursorClassName, className)}
-                onClick={onClick}
-                {...buttonProps}
-            >
+            <button type="button" className={cn(menuItemVariants({ state: itemState }), cursorClassName, className)} onClick={onClick} {...buttonProps}>
                 {children}
             </button>
         </div>

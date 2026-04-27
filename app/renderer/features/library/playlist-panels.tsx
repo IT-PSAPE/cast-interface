@@ -10,14 +10,16 @@ import { ScrollArea } from '@renderer/components/layout/scroll-area';
 import { PlaylistTree } from '@core/types';
 import { RenameField, RenameFieldHandle } from '@renderer/components 2.0/rename-field';
 import { useEffect, useRef } from 'react';
+import { useLibraryPanelState } from './library-panel-context';
 
 export function PlaylistPanels() {
   const { currentLibraryBundle, createPlaylist } = useNavigation();
   const { actions } = useLibraryBrowser();
+  const { libraryPanelView } = useLibraryPanelState();
 
   function handleCreate() { void createPlaylist(); }
 
-  if (!currentLibraryBundle) return null;
+  if (libraryPanelView !== 'playlist' || !currentLibraryBundle) return null;
 
   const playlists = currentLibraryBundle.playlists;
 
@@ -30,7 +32,6 @@ export function PlaylistPanels() {
           </ReacstButton.Icon>
           <Label.sm className="mr-auto">{currentLibraryBundle.library.name}</Label.sm>
         </RecastPanel.GroupTitle>
-
         <SplitPanel.Panel splitId="library-panel" orientation="vertical" className="flex-1">
           <SplitPanel.Segment id="library-playlists" defaultSize={200} minSize={120}>
             <RecastPanel.Group>

@@ -7,6 +7,7 @@ import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dropdown } from '../../components/form/dropdown';
 import { FieldTextarea } from '../../components/form/field';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
+import { useCreateDeckItem } from '../../features/deck/create-deck-item';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useDeckEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useSlides } from '../../contexts/slide-context';
@@ -27,7 +28,8 @@ import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout
 import { Label } from '@renderer/components/display/text';
 
 export function DeckEditorScreen() {
-  const { currentDeckItem, createPresentation, createEmptyLyric } = useNavigation();
+  const { currentDeckItem } = useNavigation();
+  const { open: openCreateDeckItem } = useCreateDeckItem();
   const { effectiveElements } = useElements();
   const { getSlideElements } = useDeckEditor();
   const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
@@ -79,8 +81,8 @@ export function DeckEditorScreen() {
                           <Plus />
                         </Dropdown.Trigger>
                         <Dropdown.Panel placement="bottom-end">
-                          <Dropdown.Item onClick={() => { void createEmptyLyric(); }}>New lyric</Dropdown.Item>
-                          <Dropdown.Item onClick={() => { void createPresentation(); }}>New presentation</Dropdown.Item>
+                          <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
+                          <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
                           <Dropdown.Separator />
                           <Dropdown.Item onClick={handleAddSlide} disabled={!currentDeckItem}>New slide</Dropdown.Item>
                         </Dropdown.Panel>
