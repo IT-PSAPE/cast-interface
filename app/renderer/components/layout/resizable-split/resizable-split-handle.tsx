@@ -1,5 +1,4 @@
 import type { PointerEventHandler } from 'react';
-import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
 const TOUCH_SIZE = 16;

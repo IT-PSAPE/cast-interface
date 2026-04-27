@@ -27,6 +27,7 @@ export interface MainApi {
   getInlineWindowMenuItems: () => Promise<InlineWindowMenuItem[]>;
   popupInlineWindowMenu: (menuId: string, x: number, y: number) => Promise<void>;
   getSnapshot: () => Promise<AppSnapshot>;
+  restoreFromSnapshot: (snapshot: AppSnapshot) => Promise<AppSnapshot>;
   chooseDeckBundleExportPath: (suggestedName: string) => Promise<string | null>;
   chooseDeckBundleImportPath: () => Promise<string | null>;
   chooseImportReplacementMediaPath: () => Promise<string | null>;
@@ -104,6 +105,7 @@ export const IPC = {
   getInlineWindowMenuItems: 'cast:getInlineWindowMenuItems',
   popupInlineWindowMenu: 'cast:popupInlineWindowMenu',
   getSnapshot: 'cast:getSnapshot',
+  restoreFromSnapshot: 'cast:restoreFromSnapshot',
   chooseDeckBundleExportPath: 'cast:chooseDeckBundleExportPath',
   chooseDeckBundleImportPath: 'cast:chooseDeckBundleImportPath',
   chooseImportReplacementMediaPath: 'cast:chooseImportReplacementMediaPath',

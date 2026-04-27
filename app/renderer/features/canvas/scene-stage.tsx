@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Fragment } from 'react';
 import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
@@ -93,6 +93,7 @@ const SceneNode = memo(function SceneNode({
         scaleY={node.visual.flipY ? -1 : 1}
         offsetX={node.visual.flipX ? node.element.width : 0}
         offsetY={node.visual.flipY ? node.element.height : 0}
+        listening={!node.visual.locked}
         draggable={editable && !node.visual.locked && !isBeingEdited}
         onMouseDown={handleClick}
         onTap={handleClick}

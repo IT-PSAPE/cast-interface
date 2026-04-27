@@ -1,7 +1,7 @@
 import type { Id } from '@core/types';
 import { overlayToLayerElements } from '@core/presentation-layers';
 import { Copy, Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Panel } from '../../components/layout/panel';
@@ -60,9 +60,9 @@ export function OverlayEditorScreen() {
                       <Label.sm>Overlays</Label.sm>
                     </Panel.SectionTitle>
                     <Panel.SectionAction>
-                      <Button.Icon label="Add overlay" onClick={handleAddOverlay}>
+                      <ReacstButton.Icon label="Add overlay" onClick={handleAddOverlay}>
                         <Plus />
-                      </Button.Icon>
+                      </ReacstButton.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody>
@@ -92,9 +92,9 @@ export function OverlayEditorScreen() {
                                 </Thumbnail.Body>
                                 <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
                                   <ContextMenu.ButtonTrigger>
-                                    <Button.Icon label="Overlay options" className="border-primary bg-tertiary/80">
+                                    <ReacstButton.Icon label="Overlay options" className="border-primary bg-tertiary/80">
                                       <Ellipsis />
-                                    </Button.Icon>
+                                    </ReacstButton.Icon>
                                   </ContextMenu.ButtonTrigger>
                                 </Thumbnail.Overlay>
                                 <Thumbnail.Caption>
@@ -144,9 +144,9 @@ export function OverlayEditorScreen() {
             <InspectorTabsPanel className="flex-1" />
             {inspectorState.isVisible && (
               <Panel.Footer className="p-3">
-                <Button onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
+                <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
-                </Button>
+                </ReacstButton>
               </Panel.Footer>
             )}
           </Panel>

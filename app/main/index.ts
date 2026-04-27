@@ -82,7 +82,7 @@ function getAppIcon(): string {
   return path.join(resourcesPath, 'icon.png');
 }
 
-function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
+function createRendererWindowOptions(width: number, height: number): BrowserWindowConstructorOptions {
   return {
     title: APP_NAME,
     width,
@@ -136,7 +136,7 @@ function loadRendererView(window: BrowserWindow, view: RendererView): void {
 }
 
 function createMainWindow(): void {
-  const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
+  const window = new BrowserWindow(createRendererWindowOptions(1680, 980));
   mainWindow = window;
   window.setTitle(APP_NAME);
   if (process.platform === 'win32') {

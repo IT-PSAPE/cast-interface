@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Id, Template } from '@core/types';
 import { Copy, Ellipsis, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Panel } from '../../components/layout/panel';
@@ -74,9 +74,9 @@ export function TemplateEditorScreen() {
                     <Panel.SectionAction>
                       <ContextMenu.Root>
                         <ContextMenu.ButtonTrigger>
-                          <Button.Icon label="Create template">
+                          <ReacstButton.Icon label="Create template">
                             <Plus />
-                          </Button.Icon>
+                          </ReacstButton.Icon>
                         </ContextMenu.ButtonTrigger>
                         <ContextMenu.Portal>
                           <ContextMenu.Positioner>
@@ -120,9 +120,9 @@ export function TemplateEditorScreen() {
                                 </Thumbnail.Body>
                                 <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
                                   <ContextMenu.ButtonTrigger>
-                                    <Button.Icon label="Template options" className="border-primary bg-tertiary/80">
+                                    <ReacstButton.Icon label="Template options" className="border-primary bg-tertiary/80">
                                       <Ellipsis />
-                                    </Button.Icon>
+                                    </ReacstButton.Icon>
                                   </ContextMenu.ButtonTrigger>
                                 </Thumbnail.Overlay>
                                 <Thumbnail.Caption>
@@ -173,7 +173,7 @@ export function TemplateEditorScreen() {
             <InspectorTabsPanel className="flex-1" />
             {currentTemplate ? (
               <Panel.Footer className="p-3">
-                <Button
+                <ReacstButton
                   variant="ghost"
                   onClick={handleSyncLinkedItems}
                   disabled={linkedItemCount === 0 || isSyncing || hasTemplateDraftChanges}
@@ -181,7 +181,7 @@ export function TemplateEditorScreen() {
                   className="w-full"
                 >
                   {isSyncing ? 'Syncing…' : `Sync ${linkedItemCount} linked ${linkedItemCount === 1 ? 'item' : 'items'}`}
-                </Button>
+                </ReacstButton>
               </Panel.Footer>
             ) : null}
           </Panel>

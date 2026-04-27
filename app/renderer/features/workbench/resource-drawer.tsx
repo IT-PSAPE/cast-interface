@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { ArrowDownUp, Grid2x2, List, Plus } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { SegmentedControl } from '../../components/controls/segmented-control';
 import { Tabs } from '../../components/display/tabs';
 import { DeckItemIcon, MediaAssetIcon } from '../../components/display/entity-icon';
@@ -427,17 +427,17 @@ function ResourceDrawerContent() {
         </Tabs.List>
         <div className={cn('flex shrink-0 items-center gap-0.5 py-0.5')}>
           {showSortControl ? (
-            <Button.Icon label="Sort" variant="ghost" onClick={handleOpenSortMenu}>
+            <ReacstButton.Icon label="Sort" variant="ghost" onClick={handleOpenSortMenu}>
               <ArrowDownUp />
-            </Button.Icon>
+            </ReacstButton.Icon>
           ) : null}
           {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
           {meta.showImportAction &&
             <FileTrigger.Root accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media} multiple onSelect={handleImportSelect} className="relative inline-flex">
-              <Button.Icon label={state.drawerTab === 'audio' ? 'Import audio' : 'Import media'} variant="ghost"><Plus /></Button.Icon>
+              <ReacstButton.Icon label={state.drawerTab === 'audio' ? 'Import audio' : 'Import media'} variant="ghost"><Plus /></ReacstButton.Icon>
             </FileTrigger.Root>
           }
-          {meta.showCreateAction && <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </Button.Icon>}
+          {meta.showCreateAction && <ReacstButton.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </ReacstButton.Icon>}
           {meta.showModeControl ? (
             <SegmentedControl value={drawerViewMode} onValueChange={handleViewModeChange} aria-label="Resource drawer mode">
               <SegmentedControl.Icon value="grid" title="Grid view" aria-label="Grid view">
@@ -450,14 +450,10 @@ function ResourceDrawerContent() {
           ) : null}
         </div>
       </div>
-      <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
-        <Tabs.Panel value="deck">
-          <DeckBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-        <Tabs.Panel value="media">
-          <MediaBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-        <Tabs.Panel value="audio">
+      <div className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
+        {state.drawerTab === 'deck' && <DeckBinPanel filterText="" gridItemSize={meta.gridSize} />}
+        {state.drawerTab === 'media' && <MediaBinPanel filterText="" gridItemSize={meta.gridSize} />}
+        {state.drawerTab === 'audio' && (
           <section className="h-full min-h-0 overflow-auto p-2">
             <div className="flex min-h-full flex-col">
               {sortedAudioAssets.length === 0 ? (
@@ -479,11 +475,9 @@ function ResourceDrawerContent() {
               )}
             </div>
           </section>
-        </Tabs.Panel>
-        <Tabs.Panel value="templates">
-          <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-      </Tabs.Panels>
+        )}
+        {state.drawerTab === 'templates' && <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />}
+      </div>
       <ContextMenu.Root open={Boolean(sortMenu.menuState)} position={sortMenu.menuState} onOpenChange={handleSortMenuOpenChange}>
         <ContextMenu.Portal>
           <ContextMenu.Positioner>

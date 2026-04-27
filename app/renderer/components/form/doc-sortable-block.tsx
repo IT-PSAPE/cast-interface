@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
-import { Button } from '../controls/button'
+import { ReacstButton } from '@renderer/components 2.0/button'
 
 export type SortableBlockProps = {
     block: Block
@@ -97,12 +97,12 @@ export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, 
             className={cn( 'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10', )}
         >
             <div className={cn('flex absolute -left-13  items-center gap-0.5 transition-opacity','opacity-0 group-hover:opacity-100',)}>
-                <Button.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
+                <ReacstButton.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
                     <Plus />
-                </Button.Icon>
-                <Button.Icon variant='ghost' onClick={onGripClick} {...listeners} {...attributes}>
+                </ReacstButton.Icon>
+                <ReacstButton.Icon variant='ghost' onClick={onGripClick} {...listeners} {...attributes}>
                     <GripHorizontal />
-                </Button.Icon>
+                </ReacstButton.Icon>
             </div>
 
             <textarea

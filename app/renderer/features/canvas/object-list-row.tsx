@@ -1,6 +1,6 @@
-import type { Id, SlideElement, TextElementPayload } from '@core/types';
+import type { SlideElement, TextElementPayload } from '@core/types';
 import { Box, Eye, EyeOff, Film, Image, Lock, LockOpen, Square, Type } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { SelectableRow } from '../../components/display/selectable-row';
 import { useObjectList } from './object-list-context';
 import { compactText } from '../../utils/slides';
@@ -83,12 +83,12 @@ export function ObjectListRow({ element }: ObjectListRowProps) {
       <SelectableRow.Label>{title}</SelectableRow.Label>
       <SelectableRow.Trailing>
         <span className="flex items-center gap-1">
-          <Button.Icon variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-primary' : 'text-tertiary'}>
+          <ReacstButton.Icon variant="ghost" label={locked ? 'Unlock object' : 'Lock object'} onClick={handleToggleLock} className={locked ? 'text-primary' : 'text-tertiary'}>
             <LockIcon closed={locked} />
-          </Button.Icon>
-          <Button.Icon variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-primary' : 'text-tertiary'}>
+          </ReacstButton.Icon>
+          <ReacstButton.Icon variant="ghost" label={visible ? 'Hide object' : 'Show object'} onClick={handleToggleVisibility} className={visible ? 'text-primary' : 'text-tertiary'}>
             <VisibilityIcon visible={visible} />
-          </Button.Icon>
+          </ReacstButton.Icon>
         </span>
       </SelectableRow.Trailing>
     </SelectableRow.Root>

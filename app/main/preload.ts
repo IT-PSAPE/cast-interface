@@ -28,6 +28,7 @@ const api = {
   getInlineWindowMenuItems: () => ipcRenderer.invoke(IPC.getInlineWindowMenuItems) as Promise<import('@core/ipc').InlineWindowMenuItem[]>,
   popupInlineWindowMenu: (menuId: string, x: number, y: number) => ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, x, y) as Promise<void>,
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
+  restoreFromSnapshot: (snapshot: AppSnapshot) => ipcRenderer.invoke(IPC.restoreFromSnapshot, snapshot) as Promise<AppSnapshot>,
   chooseDeckBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseDeckBundleExportPath, suggestedName) as Promise<string | null>,
   chooseDeckBundleImportPath: () => ipcRenderer.invoke(IPC.chooseDeckBundleImportPath) as Promise<string | null>,
   chooseImportReplacementMediaPath: () => ipcRenderer.invoke(IPC.chooseImportReplacementMediaPath) as Promise<string | null>,

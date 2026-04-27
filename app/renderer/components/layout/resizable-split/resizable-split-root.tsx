@@ -1,5 +1,6 @@
 import {
   Children,
+  cloneElement,
   isValidElement,
   useCallback,
   useEffect,
@@ -9,6 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { ResizableSplitHandle } from './resizable-split-handle';
@@ -34,9 +36,14 @@ interface HandleDescriptor {
   position: number;
 }
 
+interface RootSlotProps {
+  className?: string;
+  children?: ReactNode;
+  ref?: Ref<HTMLElement>;
+}
+
 interface ResizableSplitRootProps {
   children: ReactNode;
-  className?: string;
   onContainerResize?: (size: number) => void;
   onResize: (event: ResizableSplitResizeMoveEvent) => void;
   onResizeEnd: (event: ResizableSplitResizeEndEvent) => void;
@@ -44,14 +51,30 @@ interface ResizableSplitRootProps {
   orientation: 'horizontal' | 'vertical';
 }
 
-export function ResizableSplitRoot({ children, className = '', onContainerResize, onResize, onResizeEnd, onResizeStart, orientation }: ResizableSplitRootProps) {
-  const paneElements = collectPaneElements(children);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+export function ResizableSplitRoot({ children, onContainerResize, onResize, onResizeEnd, onResizeStart, orientation }: ResizableSplitRootProps) {
+  const wrapper = Children.only(children);
+  if (!isValidElement<RootSlotProps>(wrapper)) {
+    throw new Error('ResizableSplitRoot expects a single element child');
+  }
+  const wrapperChildren = wrapper.props.children;
+  const paneElements = collectPaneElements(wrapperChildren);
+  const externalRef = (wrapper as ReactElement<RootSlotProps> & { ref?: Ref<HTMLElement> }).ref;
+
+  const containerRef = useRef<HTMLElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
   const activeHandleIndexRef = useRef<number | null>(null);
   const [handleDescriptors, setHandleDescriptors] = useState<HandleDescriptor[]>([]);
   const [activeHandleIndex, setActiveHandleIndex] = useState<number | null>(null);
   const [hoveredHandleIndex, setHoveredHandleIndex] = useState<number | null>(null);
+
+  const setContainerRef = useCallback((node: HTMLElement | null) => {
+    containerRef.current = node;
+    if (typeof externalRef === 'function') {
+      externalRef(node);
+    } else if (externalRef && typeof externalRef === 'object') {
+      (externalRef as { current: HTMLElement | null }).current = node;
+    }
+  }, [externalRef]);
 
   const measurePaneSizes = useCallback((): Record<string, number> => {
     const sizes: Record<string, number> = {};
@@ -176,27 +199,35 @@ export function ResizableSplitRoot({ children, className = '', onContainerResize
     recalculateHandles();
   }
 
-  return (
-    <div ref={containerRef} className={cn('relative flex min-h-0 min-w-0 overflow-hidden', orientation === 'horizontal' ? 'flex-row' : 'flex-col', className)}>
-      {paneElements}
-      {handleDescriptors.map((handle) => (
-        <ResizableSplitHandle
-          key={handle.index}
-          orientation={orientation}
-          handleIndex={handle.index}
-          position={handle.position}
-          active={activeHandleIndex === handle.index}
-          hovered={hoveredHandleIndex === handle.index}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-          onPointerEnter={handlePointerEnter}
-          onPointerLeave={handlePointerLeave}
-        />
-      ))}
-    </div>
-  );
+  return cloneElement(wrapper, {
+    ref: setContainerRef,
+    className: cn(
+      'w-full relative flex min-h-0 min-w-0 overflow-hidden',
+      orientation === 'horizontal' ? 'flex-row' : 'flex-col',
+      wrapper.props.className,
+    ),
+    children: (
+      <>
+        {wrapperChildren}
+        {handleDescriptors.map((handle) => (
+          <ResizableSplitHandle
+            key={handle.index}
+            orientation={orientation}
+            handleIndex={handle.index}
+            position={handle.position}
+            active={activeHandleIndex === handle.index}
+            hovered={hoveredHandleIndex === handle.index}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
+          />
+        ))}
+      </>
+    ),
+  });
 }
 
 function collectPaneElements(children: ReactNode): ReactElement<ResizableSplitPaneProps>[] {
@@ -225,7 +256,7 @@ function areHandleDescriptorsEqual(current: HandleDescriptor[], next: HandleDesc
   return true;
 }
 
-function findBoundaryPosition(container: HTMLDivElement, orientation: 'horizontal' | 'vertical', leftPaneId: string, rightPaneId: string): number | null {
+function findBoundaryPosition(container: HTMLElement, orientation: 'horizontal' | 'vertical', leftPaneId: string, rightPaneId: string): number | null {
   const leftPane = findPaneElement(container, leftPaneId);
   if (leftPane) {
     return orientation === 'horizontal' ? leftPane.offsetLeft + leftPane.offsetWidth : leftPane.offsetTop + leftPane.offsetHeight;
@@ -236,7 +267,7 @@ function findBoundaryPosition(container: HTMLDivElement, orientation: 'horizonta
   return orientation === 'horizontal' ? rightPane.offsetLeft : rightPane.offsetTop;
 }
 
-function findPaneElement(container: HTMLDivElement, paneId: string): HTMLElement | null {
+function findPaneElement(container: HTMLElement, paneId: string): HTMLElement | null {
   return container.querySelector<HTMLElement>(`[data-pane-id="${paneId}"]`);
 }
 

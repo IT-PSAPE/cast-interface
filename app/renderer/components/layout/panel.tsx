@@ -1,4 +1,5 @@
 import { Children, isValidElement, type ButtonHTMLAttributes, type HTMLAttributes, type ReactElement, type ReactNode, type Ref } from 'react';
+import { RecastPanel } from '@renderer/components 2.0/panel';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -47,7 +48,7 @@ interface ItemSlots {
 }
 
 const panelStyles = cv({
-  base: 'flex h-full min-h-0 flex-col overflow-hidden border-primary bg-primary',
+  base: 'flex h-full min-h-0 flex-col overflow-hidden bg-primary border-secondary',
   variants: {
     bordered: {
       left: ['border-l'],
@@ -81,13 +82,7 @@ function Root({ children, className, as: Component = 'div', bordered = 'none', .
   );
 }
 
-function PanelHeader({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div data-layer="panel-header" className={cn('flex h-8 items-center border-b border-primary px-2 py-0.5', className)} {...rest}>
-      {children}
-    </div>
-  );
-}
+const PanelHeader = RecastPanel.Header;
 
 function PanelBody({ children, className, scroll = true, ...rest }: PanelBodyProps) {
   return (
@@ -97,13 +92,7 @@ function PanelBody({ children, className, scroll = true, ...rest }: PanelBodyPro
   );
 }
 
-function PanelFooter({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div data-layer="panel-footer" className={cn('border-t border-primary', className)} {...rest}>
-      {children}
-    </div>
-  );
-}
+const PanelFooter = RecastPanel.Footer;
 
 function Section({ children, className, ...rest }: PanelSectionProps) {
   const slots = collectSectionSlots(children);
@@ -292,8 +281,13 @@ function collectItemSlots(children: ReactNode): ItemSlots {
 
 export const Panel = Object.assign(Root, {
   Header: PanelHeader,
+  Content: RecastPanel.Content,
   Body: PanelBody,
   Footer: PanelFooter,
+  Group: RecastPanel.Group,
+  GroupTitle: RecastPanel.GroupTitle,
+  GroupContent: RecastPanel.GroupContent,
+  MenuItem: RecastPanel.MenuItem,
   Section,
   SectionHeader,
   SectionTitle,

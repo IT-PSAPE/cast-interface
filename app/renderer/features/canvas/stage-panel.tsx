@@ -1,6 +1,6 @@
 import { isLyricDeckItem } from '@core/deck-items';
 import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { MediaPickerDialog } from '../../components/overlays/media-picker-dialog';
 import { useCast } from '../../contexts/app-context';
 import { useElements } from '../../contexts/canvas/canvas-context';
@@ -52,22 +52,22 @@ export function StagePanel() {
             <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
               <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-primary bg-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
                 {!hideAddText ? (
-                  <Button.Icon label="Add Text" onClick={createText}>
+                  <ReacstButton.Icon label="Add Text" onClick={createText}>
                     <Type size={18} strokeWidth={1.5} />
-                  </Button.Icon>
+                  </ReacstButton.Icon>
                 ) : null}
-                <Button.Icon label="Add Shape" onClick={createShape}>
+                <ReacstButton.Icon label="Add Shape" onClick={createShape}>
                   <Square size={18} strokeWidth={1.5} />
-                </Button.Icon>
-                <Button.Icon label="Add Media" onClick={handleAddMedia}>
+                </ReacstButton.Icon>
+                <ReacstButton.Icon label="Add Media" onClick={handleAddMedia}>
                   <Image size={18} strokeWidth={1.5} />
-                </Button.Icon>
-                <Button.Icon label="Draw Path" onClick={handleUnavailable} disabled>
+                </ReacstButton.Icon>
+                <ReacstButton.Icon label="Draw Path" onClick={handleUnavailable} disabled>
                   <PencilLine size={18} strokeWidth={1.5} />
-                </Button.Icon>
-                <Button.Icon label="Add Web Source" onClick={handleUnavailable} disabled>
+                </ReacstButton.Icon>
+                <ReacstButton.Icon label="Add Web Source" onClick={handleUnavailable} disabled>
                   <Globe size={18} strokeWidth={1.5} />
-                </Button.Icon>
+                </ReacstButton.Icon>
               </div>
             </div>
             {state.showMediaPicker ? (

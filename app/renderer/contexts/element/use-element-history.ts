@@ -3,7 +3,7 @@ import type { AppSnapshot, ElementCreateInput, ElementUpdateInput, Id, Slide, Sl
 import type { SnapshotPatch } from '@core/snapshot-patch';
 import { createId } from '../../utils/create-id';
 import { buildSnapshotDiff } from './element-history-utils';
-import { cloneElements, payloadSignature } from './element-context-utils';
+import { cloneElements, payloadSignature } from '../../utils/element-context-utils';
 
 const HISTORY_LIMIT = 100;
 type DraftPatchMap = Record<Id, Partial<SlideElement>>;

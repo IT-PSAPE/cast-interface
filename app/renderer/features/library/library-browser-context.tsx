@@ -13,13 +13,13 @@ interface LibraryBrowserContextValue {
     editingTarget: EditingTarget;
   };
   actions: {
+    beginEditing: (type: NonNullable<EditingTarget>['type'], id: string) => void;
     setLibrariesView: () => void;
     setPlaylistView: () => void;
     renameSegment: (segmentId: string, name: string) => void;
     renameDeckItem: (itemId: string, title: string) => void;
     isEditing: (type: NonNullable<EditingTarget>['type'], id: string) => boolean;
     clearEditing: () => void;
-    handleLibraryContextMenu: ReturnType<typeof useLibraryPanelContextMenu>['handleLibraryContextMenu'];
     handlePlaylistContextMenu: ReturnType<typeof useLibraryPanelContextMenu>['handlePlaylistContextMenu'];
     handleSegmentContextMenu: ReturnType<typeof useLibraryPanelContextMenu>['handleSegmentContextMenu'];
     handleSegmentPresentationContextMenu: ReturnType<typeof useLibraryPanelContextMenu>['handleSegmentPresentationContextMenu'];
@@ -57,11 +57,11 @@ export function LibraryBrowserProvider({ children }: { children: ReactNode }) {
     actions: {
       setLibrariesView: () => { setLibraryPanelView('libraries'); },
       setPlaylistView: () => { setLibraryPanelView('playlist'); },
+      beginEditing: contextMenu.beginEditing,
       renameSegment: (segmentId: string, name: string) => { void renameSegment(segmentId, name); },
       renameDeckItem: (itemId: string, title: string) => { void renameDeckItem(itemId, title); },
       isEditing: contextMenu.isEditing,
       clearEditing: contextMenu.clearEditing,
-      handleLibraryContextMenu: contextMenu.handleLibraryContextMenu,
       handlePlaylistContextMenu: contextMenu.handlePlaylistContextMenu,
       handleSegmentContextMenu: contextMenu.handleSegmentContextMenu,
       handleSegmentPresentationContextMenu: contextMenu.handleSegmentPresentationContextMenu,

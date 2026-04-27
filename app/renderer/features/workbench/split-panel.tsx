@@ -101,8 +101,10 @@ function Segment({ splitId, orientation, className = '', children }: PanelRouteS
   }, [context.state, definition]);
 
   return (
-    <ResizableSplitRoot orientation={orientation} className={className} onContainerResize={handleContainerResize} onResizeStart={handleResizeStart} onResize={handleResize} onResizeEnd={handleResizeEnd}>
-      {resizablePanes}
+    <ResizableSplitRoot orientation={orientation} onContainerResize={handleContainerResize} onResizeStart={handleResizeStart} onResize={handleResize} onResizeEnd={handleResizeEnd}>
+      <div className={className}>
+        {resizablePanes}
+      </div>
     </ResizableSplitRoot>
   );
 }
@@ -190,9 +192,10 @@ function buildResizablePanes(
       minSize={panel.definition.minSize}
       maxSize={panel.definition.maxSize}
       flexible={definition.fillPaneId === panel.id}
-      className={panel.className}
     >
-      {panel.children}
+      <section className={panel.className}>
+        {panel.children}
+      </section>
     </ResizableSplitPane>
   ));
 }

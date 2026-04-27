@@ -1,5 +1,5 @@
 import type { SlideElement } from '@core/types';
-import type { ElementInspectorDraft } from '../../types/ui';
+import type { ElementInspectorDraft } from '../types/ui';
 
 export { cloneElement, cloneElements } from '@core/clone';
 

@@ -1,6 +1,6 @@
 import type { Id, Template } from '@core/types';
 import { Ellipsis } from 'lucide-react';
-import { Button } from '../../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
@@ -71,9 +71,9 @@ function TemplateRow({ template, index, isSelected, onOpen, onOpenMenu }: Templa
         <SelectableRow.Label>{template.name}</SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
-          <Button.Icon label="Template options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
+          <ReacstButton.Icon label="Template options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
             <Ellipsis size={14} />
-          </Button.Icon>
+          </ReacstButton.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
@@ -100,9 +100,9 @@ function TemplateTile({ template, index, isSelected, onOpen, onOpenMenu }: Templ
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-        <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+        <ReacstButton.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
           <Ellipsis />
-        </Button.Icon>
+        </ReacstButton.Icon>
       </Thumbnail.Overlay>
       <Thumbnail.Caption>
         <div className="flex items-center gap-2">

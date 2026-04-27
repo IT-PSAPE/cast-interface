@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ElementUpdateInput, Id, SlideElement } from '@core/types';
 import type { ElementInspectorDraft } from '../../types/ui';
 import { clamp } from '../../utils/slides';
-import { hasGeometryChange, payloadSignature } from './element-context-utils';
+import { hasGeometryChange, payloadSignature } from '../../utils/element-context-utils';
 
 interface UseElementInspectorSyncInput {
   selectedElementId: Id | null;

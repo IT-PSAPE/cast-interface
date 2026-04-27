@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppWindow, ChevronDown, EllipsisVertical, LayoutGrid, List, RectangleHorizontal, Rows3 } from 'lucide-react';
+import { AppWindow, EllipsisVertical, LayoutGrid, List, RectangleHorizontal, Rows3 } from 'lucide-react';
 import { Dropdown } from '../../components/form/dropdown';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { Tabs } from '../../components/display/tabs';
@@ -9,34 +9,34 @@ import { useDeckBrowser } from './deck-browser-context';
 import { LyricEditorModal } from './lyric-editor-modal';
 import type { SlideBrowserHeaderVariant } from './use-deck-browser-view';
 import type { PlaylistDeckSequenceItem } from './use-playlist-deck-sequence';
-import type { PlaylistBrowserMode, SlideBrowserMode } from '../../types/ui';
 
 interface DeckBrowserToolbarProps {
   items: PlaylistDeckSequenceItem[];
   headerVariant: SlideBrowserHeaderVariant;
 }
 
-function PlaylistTabItem({ item }: { item: PlaylistDeckSequenceItem }) {
-  const duplicateSuffix = item.occurrenceIndex > 1 ? ` (${item.occurrenceIndex})` : '';
-  const tabLabel = `${item.item.title}${duplicateSuffix}`;
+function PlaylistTabItem({ items }: { items: PlaylistDeckSequenceItem[] }) {
+  const { currentPlaylistEntryId } = useNavigation();
+  const { selectPlaylistEntry } = useSlides();
+
+  function getLabel(item: PlaylistDeckSequenceItem) {
+    const duplicateSuffix = item.occurrenceIndex > 1 ? ` (${item.occurrenceIndex})` : '';
+    return `${item.item.title}${duplicateSuffix}`;
+  }
 
   return (
-    <Tabs.Trigger value={item.entryId}>
-      <span className="max-w-[180px] truncate" title={tabLabel}>
-        {tabLabel}
-      </span>
-    </Tabs.Trigger>
+    <Tabs.Root value={currentPlaylistEntryId ?? undefined} onValueChange={selectPlaylistEntry}>
+      <Tabs.List label="Playlist items">
+        {items.map((item) => <Tabs.Trigger value={item.entryId}>{getLabel(item)}</Tabs.Trigger>)}
+      </Tabs.List>
+    </Tabs.Root>
   );
 }
-
-const VIEW_MODE_LABELS: Record<SlideBrowserMode, string> = { grid: 'Grid', list: 'List' };
-const PLAYLIST_MODE_LABELS: Record<PlaylistBrowserMode, string> = { current: 'Current', tabs: 'Tabs', continuous: 'Continuous' };
 
 export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
-  const { selectPlaylistEntry } = useSlides();
-  const { currentDeckItem, currentPlaylistEntryId, isDetachedDeckBrowser } = useNavigation();
+  const { currentDeckItem, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, setSlideBrowserMode, playlistBrowserMode, setPlaylistBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useDeckBrowser();
 
   const isGridMode = slideBrowserMode === 'grid';
@@ -51,7 +51,7 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
     if (currentDeckItem?.type === 'lyric') setIsEditorOpen(true);
   }
 
-  function ViewIcon(){
+  function ViewIcon() {
     switch (slideBrowserMode) {
       case 'grid':
         return <LayoutGrid className='size-4' />;
@@ -77,18 +77,12 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
 
   return (
     <>
-      <header className="flex h-8 items-center gap-2 border-b border-primary bg-primary/80 px-2">
+      <header className="flex h-9 items-center gap-2 border-b border-secondary bg-primary/80 px-2">
         {/* Left: content info */}
         {showContentInfo && (
           <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
             {headerVariant === 'tabs' ? (
-              <Tabs.Root value={currentPlaylistEntryId ?? undefined} onValueChange={selectPlaylistEntry}>
-                <div className="min-w-max">
-                  <Tabs.List label="Playlist items">
-                    {items.map((item) => <PlaylistTabItem key={item.entryId} item={item} />)}
-                  </Tabs.List>
-                </div>
-              </Tabs.Root>
+              <PlaylistTabItem items={items} />
             ) : (
               <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title}>
                 {currentDeckItem?.title ?? 'No item selected'}
@@ -96,12 +90,6 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
             )}
           </div>
         )}
-
-        {/* {showContentInfo && (
-          <span className="shrink-0 text-sm text-tertiary tabular-nums">
-            {slides.length} slide{slides.length === 1 ? '' : 's'}
-          </span>
-        )} */}
 
         {/* Right: toolbar controls */}
         <div className="ml-auto flex items-center gap-1.5">

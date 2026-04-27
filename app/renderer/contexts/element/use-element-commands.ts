@@ -25,7 +25,7 @@ interface CommandsParams {
   setStatusText: (text: string) => void;
 }
 
-export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText }: CommandsParams) {
+export function useElementCommands({ currentSlide, currentDeckItem, currentTemplate, mutatePatch, setStatusText }: CommandsParams) {
   const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { currentOverlay, updateOverlayDraft } = useOverlayEditor();

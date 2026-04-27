@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electro
 import { CastRepository } from '@database/store';
 import { IPC, NDI_EVENTS, type InlineWindowMenuItem } from '@core/ipc';
 import type {
+  AppSnapshot,
   DeckBundleBrokenReferenceDecision,
   ElementCreateInput,
   ElementUpdateInput,
@@ -79,6 +80,7 @@ export const registerIpcHandlers = (
     await popupInlineWindowMenu(menuId, browserWindow, x, y);
   });
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
+  safeHandle(IPC.restoreFromSnapshot, (_event, snapshot: AppSnapshot) => repo.restoreFromSnapshot(snapshot));
   safeHandle(IPC.chooseDeckBundleExportPath, async (event, suggestedName: string) => {
     const result = await showSaveDialogForEvent(event, {
       title: 'Export Deck Bundle',

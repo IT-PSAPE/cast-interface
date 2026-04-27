@@ -1,4 +1,4 @@
-import { useCast, useNdi } from './contexts/app-context';
+import { useCast } from './contexts/app-context';
 import { AppProvider } from './contexts/app-context';
 import { AssetEditorProvider } from './contexts/asset-editor/asset-editor-context';
 import { CanvasProvider } from './contexts/canvas/canvas-context';
@@ -6,6 +6,9 @@ import { NavigationProvider } from './contexts/navigation-context';
 import { PlaybackProvider } from './contexts/playback/playback-context';
 import { SlideProvider } from './contexts/slide-context';
 import { WorkbenchProvider } from './contexts/workbench-context';
+import { CommandPalette } from './features/command-palette/command-palette';
+import { CommandPaletteProvider } from './features/command-palette/command-palette-context';
+import { BundleDropImport } from './features/deck/bundle-drop-import';
 import { NdiFrameCapture } from './features/playback/ndi-frame-capture';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
@@ -24,10 +27,14 @@ export function App() {
               <SlideProvider>
                 <AssetEditorProvider>
                   <CanvasProvider>
-                    <NdiFrameCapture />
-                    <SplitPanel>
-                      <AppLayoutContent />
-                    </SplitPanel>
+                    <CommandPaletteProvider>
+                      <NdiFrameCapture />
+                      <SplitPanel>
+                        <AppLayoutContent />
+                      </SplitPanel>
+                      <CommandPalette />
+                      <BundleDropImport />
+                    </CommandPaletteProvider>
                   </CanvasProvider>
                 </AssetEditorProvider>
               </SlideProvider>

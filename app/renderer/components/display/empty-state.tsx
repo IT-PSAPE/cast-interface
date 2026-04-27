@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes } from 'react';
 import { cn } from '@renderer/utils/cn';
 
 function Root({ className, hide, ...props }: HTMLAttributes<HTMLDivElement> & { hide?: boolean }) {

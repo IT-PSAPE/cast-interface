@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
-import { Button } from '@renderer/components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
@@ -82,7 +82,7 @@ export function AppToolbar() {
       <div aria-hidden="true" className="min-w-6 flex-1 self-stretch" style={dragStyle} />
 
       <div className="flex items-center gap-2" style={noDragStyle}>
-        <Button
+        <ReacstButton
           variant="ghost"
           onClick={toggleAudienceOutput}
           type="button"
@@ -91,7 +91,7 @@ export function AppToolbar() {
         >
           <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
           <span className="text-primary">Audience</span>
-        </Button>
+        </ReacstButton>
 
         <SegmentedControl
           label="Panel visibility"
@@ -102,9 +102,9 @@ export function AppToolbar() {
           {panelToggles.map(renderPanelToggleItem)}
         </SegmentedControl>
 
-        <Button.Icon label="Settings" onClick={handleOpenSettings}>
+        <ReacstButton.Icon label="Settings" onClick={handleOpenSettings}>
           <Settings />
-        </Button.Icon>
+        </ReacstButton.Icon>
       </div>
     </div>
   );

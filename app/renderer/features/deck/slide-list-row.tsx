@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { EditableField } from '../../components/form/editable-field';
+import { RenameField } from '@renderer/components 2.0/rename-field';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useScrollAreaActiveItem } from '../../components/layout/scroll-area';
@@ -47,13 +47,9 @@ function SlideOutlineRowImpl({ row, scene, isFocused, onSelect, onOpen, onTextCo
     }
 
     return (
-      <EditableField
-        multiline
+      <RenameField
         value={row.text}
-        onCommit={handleTextCommit}
-        trimOnCommit={false}
-        placeholder="Lyric text"
-        className="w-full text-md font-medium leading-6 text-secondary"
+        onValueChange={handleTextCommit} className="label-xs"
       />
     );
   }

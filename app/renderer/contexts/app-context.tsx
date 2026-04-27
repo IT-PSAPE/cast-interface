@@ -13,6 +13,8 @@ interface AppContextValue {
     isRunningOperation: boolean;
     operationText: string | null;
     statusText: string;
+    canUndo: boolean;
+    canRedo: boolean;
     themeMode: ThemeMode;
     resolvedTheme: 'light' | 'dark';
     ndiDiagnostics: NdiDiagnostics | null;
@@ -22,6 +24,8 @@ interface AppContextValue {
   actions: {
     mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
     mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
+    undo: () => Promise<void>;
+    redo: () => Promise<void>;
     runOperation: <T>(text: string, action: () => Promise<T>) => Promise<T>;
     setStatusText: (text: string) => void;
     setThemeMode: (mode: ThemeMode) => void;
@@ -38,8 +42,12 @@ interface CastSlice {
   isRunningOperation: boolean;
   operationText: string | null;
   statusText: string;
+  canUndo: boolean;
+  canRedo: boolean;
   mutate: (action: () => Promise<AppSnapshot>) => Promise<AppSnapshot>;
   mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
   runOperation: <T>(text: string, action: () => Promise<T>) => Promise<T>;
   setStatusText: (text: string) => void;
 }
@@ -62,6 +70,7 @@ interface NdiSlice {
 
 const THEME_STORAGE_KEY = 'cast-theme-mode';
 const VALID_THEME_MODES = new Set<ThemeMode>(['light', 'dark', 'system']);
+const UNDO_STACK_LIMIT = 50;
 
 function parseThemeMode(raw: string): ThemeMode | null {
   return VALID_THEME_MODES.has(raw as ThemeMode) ? (raw as ThemeMode) : null;
@@ -83,16 +92,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isRunningOperation, setIsRunningOperation] = useState(false);
   const [operationText, setOperationText] = useState<string | null>(null);
   const [statusText, setStatusText] = useState('Ready');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const mutateQueueRef = useRef<Promise<void>>(Promise.resolve());
   const operationDepthRef = useRef(0);
   // Mirrors the `snapshot` React state synchronously so `mutatePatch` can
   // apply a patch to the post-state and return the up-to-date AppSnapshot
   // to its caller without waiting for the React commit.
   const snapshotRef = useRef<AppSnapshot | null>(null);
+  // Stacks hold pre-mutation snapshots. Each entry is the state to revert
+  // to; new mutations clear redo, and overflow trims the oldest entry.
+  const undoStackRef = useRef<AppSnapshot[]>([]);
+  const redoStackRef = useRef<AppSnapshot[]>([]);
   const setSnapshotBoth = useCallback((value: AppSnapshot) => {
     snapshotRef.current = value;
     setSnapshot(value);
   }, []);
+  const syncHistoryFlags = useCallback(() => {
+    setCanUndo(undoStackRef.current.length > 0);
+    setCanRedo(redoStackRef.current.length > 0);
+  }, []);
+  const pushUndoEntry = useCallback((entry: AppSnapshot) => {
+    undoStackRef.current.push(entry);
+    if (undoStackRef.current.length > UNDO_STACK_LIMIT) {
+      undoStackRef.current.shift();
+    }
+    redoStackRef.current = [];
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
 
   useEffect(() => {
     void window.castApi.getSnapshot().then((loaded) => {
@@ -106,8 +133,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const mutate = useCallback((action: () => Promise<AppSnapshot>) => {
     const run = async () => {
+      const prev = snapshotRef.current;
       try {
         const next = await action();
+        if (prev) pushUndoEntry(prev);
         setSnapshotBoth(next);
         return next;
       } catch (error) {
@@ -122,7 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       () => undefined,
     );
     return queued;
-  }, [setSnapshotBoth]);
+  }, [setSnapshotBoth, pushUndoEntry]);
 
   // Like `mutate` but the action returns a `SnapshotPatch` instead of a
   // full AppSnapshot. Applies the patch to the current snapshot and
@@ -130,11 +159,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // `const next = await mutate(() => castApi.fooAction())` keep working.
   const mutatePatch = useCallback((action: () => Promise<SnapshotPatch>) => {
     const run = async (): Promise<AppSnapshot> => {
+      const prev = snapshotRef.current;
       try {
         const patch = await action();
-        const prev = snapshotRef.current;
         if (!prev) throw new Error('Snapshot not loaded before mutatePatch call');
         const next = applyPatch(prev, patch);
+        pushUndoEntry(prev);
         setSnapshotBoth(next);
         return next;
       } catch (error) {
@@ -149,7 +179,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
       () => undefined,
     );
     return queued;
-  }, [setSnapshotBoth]);
+  }, [setSnapshotBoth, pushUndoEntry]);
+
+  const undo = useCallback(async (): Promise<void> => {
+    const run = async () => {
+      const target = undoStackRef.current.pop();
+      const current = snapshotRef.current;
+      if (!target || !current) {
+        syncHistoryFlags();
+        return;
+      }
+      try {
+        const restored = await window.castApi.restoreFromSnapshot(target);
+        redoStackRef.current.push(current);
+        if (redoStackRef.current.length > UNDO_STACK_LIMIT) {
+          redoStackRef.current.shift();
+        }
+        setSnapshotBoth(restored);
+      } catch (error) {
+        undoStackRef.current.push(target);
+        console.error('[AppProvider] Undo failed:', error);
+        setStatusText('Undo failed');
+      } finally {
+        syncHistoryFlags();
+      }
+    };
+    const queued = mutateQueueRef.current.then(run, run);
+    mutateQueueRef.current = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    await queued;
+  }, [setSnapshotBoth, syncHistoryFlags]);
+
+  const redo = useCallback(async (): Promise<void> => {
+    const run = async () => {
+      const target = redoStackRef.current.pop();
+      const current = snapshotRef.current;
+      if (!target || !current) {
+        syncHistoryFlags();
+        return;
+      }
+      try {
+        const restored = await window.castApi.restoreFromSnapshot(target);
+        undoStackRef.current.push(current);
+        if (undoStackRef.current.length > UNDO_STACK_LIMIT) {
+          undoStackRef.current.shift();
+        }
+        setSnapshotBoth(restored);
+      } catch (error) {
+        redoStackRef.current.push(target);
+        console.error('[AppProvider] Redo failed:', error);
+        setStatusText('Redo failed');
+      } finally {
+        syncHistoryFlags();
+      }
+    };
+    const queued = mutateQueueRef.current.then(run, run);
+    mutateQueueRef.current = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    await queued;
+  }, [setSnapshotBoth, syncHistoryFlags]);
 
   const runOperation = useCallback(async <T,>(text: string, action: () => Promise<T>) => {
     operationDepthRef.current += 1;
@@ -232,23 +324,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isRunningOperation,
     operationText,
     statusText,
+    canUndo,
+    canRedo,
     themeMode,
     resolvedTheme,
     ndiDiagnostics,
     ndiOutputConfigs,
     ndiOutputState,
-  }), [snapshot, isRunningOperation, operationText, statusText, themeMode, resolvedTheme, ndiDiagnostics, ndiOutputConfigs, ndiOutputState]);
+  }), [snapshot, isRunningOperation, operationText, statusText, canUndo, canRedo, themeMode, resolvedTheme, ndiDiagnostics, ndiOutputConfigs, ndiOutputState]);
 
   const actions = useMemo<AppContextValue['actions']>(() => ({
     mutate,
     mutatePatch,
+    undo,
+    redo,
     runOperation,
     setStatusText,
     setThemeMode,
     setNdiOutputEnabled,
     toggleAudienceOutput,
     updateNdiOutputConfig,
-  }), [mutate, mutatePatch, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, updateNdiOutputConfig]);
+  }), [mutate, mutatePatch, undo, redo, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, updateNdiOutputConfig]);
 
   const value = useMemo<AppContextValue>(() => ({ state, actions }), [state, actions]);
 
@@ -270,8 +366,12 @@ export function useCast(): CastSlice {
     isRunningOperation: state.isRunningOperation,
     operationText: state.operationText,
     statusText: state.statusText,
+    canUndo: state.canUndo,
+    canRedo: state.canRedo,
     mutate: actions.mutate,
     mutatePatch: actions.mutatePatch,
+    undo: actions.undo,
+    redo: actions.redo,
     runOperation: actions.runOperation,
     setStatusText: actions.setStatusText,
   };

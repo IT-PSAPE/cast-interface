@@ -1,5 +1,5 @@
 import type { ElementCreateInput, ElementUpdateInput, Id, SlideElement } from '@core/types';
-import { sameElementState } from './element-context-utils';
+import { sameElementState } from '../../utils/element-context-utils';
 
 interface SnapshotDiff {
   creates: ElementCreateInput[];

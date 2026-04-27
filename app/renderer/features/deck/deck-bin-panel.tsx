@@ -1,7 +1,8 @@
+import { useEffect, useRef } from 'react';
 import type { DeckItem, Id, Slide } from '@core/types';
 import { Ellipsis } from 'lucide-react';
-import { EditableField } from '../../components/form/editable-field';
-import { Button } from '../../components/controls/button';
+import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { SelectableRow } from '../../components/display/selectable-row';
@@ -72,6 +73,12 @@ interface DeckItemProps {
 }
 
 function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, onContextMenu, onRename }: DeckItemProps) {
+  const renameRef = useRef<RenameFieldHandle>(null);
+
+  useEffect(() => {
+    if (isEditing) renameRef.current?.startEditing();
+  }, [isEditing]);
+
   function handleOpen() {
     onOpen(item.id);
   }
@@ -96,18 +103,17 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
         </SelectableRow.Leading>
         <SelectableRow.Label>
-          <EditableField
+          <RenameField
+            ref={renameRef}
             value={item.title}
-            onCommit={handleRename}
-            editing={isEditing}
-            className="min-w-0 truncate text-sm text-secondary"
+            onValueChange={handleRename} className="label-xs"
           />
         </SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs text-tertiary">{slides.length} {slides.length === 1 ? 'slide' : 'slides'}</span>
-          <Button.Icon label="Deck item options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
+          <ReacstButton.Icon label="Deck item options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
             <Ellipsis size={14} />
-          </Button.Icon>
+          </ReacstButton.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
@@ -119,6 +125,11 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
   const scene = firstSlide ? buildThumbnailScene(firstSlide, firstSlideElements) : null;
+  const renameRef = useRef<RenameFieldHandle>(null);
+
+  useEffect(() => {
+    if (isEditing) renameRef.current?.startEditing();
+  }, [isEditing]);
 
   function handleOpen() {
     onOpen(item.id);
@@ -144,20 +155,19 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
           <>
             <ScenePreview scene={scene} />
             <div className="absolute right-1 top-1 hidden group-hover:block">
-              <Button.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+              <ReacstButton.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
                 <Ellipsis />
-              </Button.Icon>
+              </ReacstButton.Icon>
             </div>
           </>
         </Thumbnail.Body>
         <Thumbnail.Caption>
           <div className="flex items-center gap-2">
             <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
-            <EditableField
+            <RenameField
+              ref={renameRef}
               value={item.title}
-              onCommit={handleRename}
-              editing={isEditing}
-              className="min-w-0 truncate text-sm text-secondary"
+              onValueChange={handleRename} className="label-xs"
             />
           </div>
         </Thumbnail.Caption>

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
 import {
@@ -58,8 +59,6 @@ const REORDER_SCHEMA_VERSION = 7;
 const LATEST_SCHEMA_VERSION = REORDER_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
-
-type DeckRecordName = 'presentation' | 'lyric';
 
 interface DeckOwnerRow {
   type: DeckItemType;
@@ -176,11 +175,12 @@ function legacyOverlayElement(row: {
 export class CastRepository {
   private db: SqliteDatabase;
   private patchVersion = 0;
+  private readonly dbPath: string;
 
   constructor() {
     const userData = app.getPath('userData');
-    const dbPath = path.join(userData, 'recast.sqlite');
-    this.db = new SqliteDatabase(dbPath);
+    this.dbPath = path.join(userData, 'recast.sqlite');
+    this.db = new SqliteDatabase(this.dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.initializeSchema();
@@ -189,6 +189,10 @@ export class CastRepository {
 
   private initializeSchema(): void {
     const currentVersion = this.getUserVersion();
+
+    if (this.hasTable('libraries') && currentVersion < LATEST_SCHEMA_VERSION) {
+      this.backupBeforeMigration(currentVersion);
+    }
 
     if (currentVersion === 0) {
       if (!this.hasTable('libraries')) {
@@ -254,6 +258,19 @@ export class CastRepository {
     tx();
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_libraries_order_index ON libraries(order_index);');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_media_assets_order_index ON media_assets(order_index);');
+  }
+
+  private backupBeforeMigration(fromVersion: number): void {
+    const backupPath = path.join(path.dirname(this.dbPath), `recast.bak-v${fromVersion}.sqlite`);
+    try {
+      fs.rmSync(backupPath, { force: true });
+      const escaped = backupPath.replace(/'/g, "''");
+      this.db.exec(`VACUUM INTO '${escaped}'`);
+      console.info(`[DB] Pre-migration backup written to ${backupPath}`);
+    } catch (error) {
+      // Migrations are additive and idempotent, so a failed backup must not block startup.
+      console.error('[DB] Pre-migration backup failed (continuing):', error);
+    }
   }
 
   private hasColumn(tableName: string, columnName: string): boolean {
@@ -1107,6 +1124,212 @@ export class CastRepository {
       overlays: this.getOverlays(),
       templates: this.getTemplates(),
     };
+  }
+
+  /**
+   * Wipe every data table and re-insert the rows described by `snapshot`.
+   * Used by global undo/redo: the renderer holds the pre-mutation snapshot
+   * and asks the repo to swap the on-disk state to match. Wrapped in a
+   * single transaction so a partial failure rolls back to the prior state.
+   */
+  restoreFromSnapshot(snapshot: AppSnapshot): AppSnapshot {
+    const tx = this.db.transaction(() => {
+      this.db.exec(`
+        DELETE FROM playlist_entries;
+        DELETE FROM slide_elements;
+        DELETE FROM slides;
+        DELETE FROM playlist_segments;
+        DELETE FROM playlists;
+        DELETE FROM presentations;
+        DELETE FROM lyrics;
+        DELETE FROM media_assets;
+        DELETE FROM overlays;
+        DELETE FROM templates;
+        DELETE FROM libraries;
+      `);
+
+      const insertLibrary = this.db.prepare(
+        'INSERT INTO libraries (id, name, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+      );
+      for (const library of snapshot.libraries) {
+        insertLibrary.run(library.id, library.name, library.order, library.createdAt, library.updatedAt);
+      }
+
+      const insertTemplate = this.db.prepare(
+        `INSERT INTO templates (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      for (const template of snapshot.templates) {
+        insertTemplate.run(
+          template.id,
+          template.name,
+          template.kind,
+          template.width,
+          template.height,
+          template.order,
+          JSON.stringify(template.elements),
+          template.createdAt,
+          template.updatedAt,
+        );
+      }
+
+      const insertPresentation = this.db.prepare(
+        'INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      for (const presentation of snapshot.presentations) {
+        insertPresentation.run(
+          presentation.id,
+          presentation.title,
+          presentation.templateId ?? null,
+          presentation.order,
+          presentation.createdAt,
+          presentation.updatedAt,
+        );
+      }
+
+      const insertLyric = this.db.prepare(
+        'INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      for (const lyric of snapshot.lyrics) {
+        insertLyric.run(
+          lyric.id,
+          lyric.title,
+          lyric.templateId ?? null,
+          lyric.order,
+          lyric.createdAt,
+          lyric.updatedAt,
+        );
+      }
+
+      const insertSlide = this.db.prepare(
+        'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      );
+      for (const slide of snapshot.slides) {
+        insertSlide.run(
+          slide.id,
+          slide.presentationId,
+          slide.lyricId,
+          slide.width,
+          slide.height,
+          slide.notes,
+          slide.order,
+          slide.createdAt,
+          slide.updatedAt,
+        );
+      }
+
+      const insertSlideElement = this.db.prepare(
+        `INSERT INTO slide_elements
+          (id, slide_id, type, x, y, width, height, rotation, opacity, z_index, layer, payload_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      for (const element of snapshot.slideElements) {
+        insertSlideElement.run(
+          element.id,
+          element.slideId,
+          element.type,
+          element.x,
+          element.y,
+          element.width,
+          element.height,
+          element.rotation,
+          element.opacity,
+          element.zIndex,
+          element.layer,
+          JSON.stringify(element.payload),
+          element.createdAt,
+          element.updatedAt,
+        );
+      }
+
+      const insertPlaylist = this.db.prepare(
+        'INSERT INTO playlists (id, library_id, name, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      );
+      const insertSegment = this.db.prepare(
+        'INSERT INTO playlist_segments (id, playlist_id, name, color_key, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      );
+      const insertEntry = this.db.prepare(
+        'INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      );
+      for (const bundle of snapshot.libraryBundles) {
+        for (let playlistOrder = 0; playlistOrder < bundle.playlists.length; playlistOrder += 1) {
+          const tree = bundle.playlists[playlistOrder];
+          insertPlaylist.run(
+            tree.playlist.id,
+            tree.playlist.libraryId,
+            tree.playlist.name,
+            playlistOrder,
+            tree.playlist.createdAt,
+            tree.playlist.updatedAt,
+          );
+          for (const { segment, entries } of tree.segments) {
+            insertSegment.run(
+              segment.id,
+              segment.playlistId,
+              segment.name,
+              segment.colorKey,
+              segment.order,
+              segment.createdAt,
+              segment.updatedAt,
+            );
+            for (const { entry } of entries) {
+              insertEntry.run(
+                entry.id,
+                entry.segmentId,
+                entry.presentationId,
+                entry.lyricId,
+                entry.order,
+                entry.createdAt,
+                entry.updatedAt,
+              );
+            }
+          }
+        }
+      }
+
+      const insertMediaAsset = this.db.prepare(
+        'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      );
+      for (const asset of snapshot.mediaAssets) {
+        insertMediaAsset.run(
+          asset.id,
+          asset.name,
+          asset.type,
+          asset.src,
+          asset.order,
+          asset.createdAt,
+          asset.updatedAt,
+        );
+      }
+
+      const insertOverlay = this.db.prepare(
+        `INSERT INTO overlays
+          (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      for (const overlay of snapshot.overlays) {
+        insertOverlay.run(
+          overlay.id,
+          overlay.name,
+          overlay.type,
+          overlay.x,
+          overlay.y,
+          overlay.width,
+          overlay.height,
+          overlay.opacity,
+          overlay.zIndex,
+          overlay.enabled ? 1 : 0,
+          JSON.stringify(overlay.payload),
+          JSON.stringify(overlay.elements),
+          JSON.stringify(overlay.animation),
+          overlay.createdAt,
+          overlay.updatedAt,
+        );
+      }
+    });
+    tx();
+    this.patchVersion += 1;
+    return this.getSnapshot();
   }
 
   exportDeckBundle(itemIds: Id[]): DeckBundleManifest {

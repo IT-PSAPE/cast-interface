@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Unlink } from 'lucide-react';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { FieldInput, FieldSelect } from '../../components/form/field';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
@@ -95,10 +95,10 @@ export function DeckItemInspector() {
                 <p className="m-0 text-sm text-secondary">{assignedTemplate.name}</p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleResetToTemplate} className="flex-1">Reset To Template</Button>
-                <Button.Icon label="Remove template" onClick={handleDetachTemplate}>
+                <ReacstButton onClick={handleResetToTemplate} className="flex-1">Reset To Template</ReacstButton>
+                <ReacstButton.Icon label="Remove template" onClick={handleDetachTemplate}>
                   <Unlink size={14} />
-                </Button.Icon>
+                </ReacstButton.Icon>
               </div>
             </>
           ) : hasTemplateId ? (
@@ -108,9 +108,9 @@ export function DeckItemInspector() {
                 <div className="flex-1 min-w-0">
                   <FieldSelect value={NO_TEMPLATE_VALUE} onChange={handleApplyTemplate} options={templateOptions} />
                 </div>
-                <Button.Icon label="Remove template" onClick={handleDetachTemplate}>
+                <ReacstButton.Icon label="Remove template" onClick={handleDetachTemplate}>
                   <Unlink size={14} />
-                </Button.Icon>
+                </ReacstButton.Icon>
               </div>
             </>
           ) : compatibleTemplates.length === 0 ? (

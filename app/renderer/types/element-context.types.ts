@@ -1,5 +1,5 @@
 import type { Id, MediaAsset, SlideElement, ElementUpdateInput } from '@core/types';
-import type { ElementInspectorDraft } from '../../types/ui';
+import type { ElementInspectorDraft } from './ui';
 
 export interface ElementContextValue {
   selectedElementId: Id | null;

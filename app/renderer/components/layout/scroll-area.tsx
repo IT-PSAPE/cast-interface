@@ -39,7 +39,7 @@ export function ScrollArea({ className, children, scrollPadding = 0, ...rest }: 
 
   return (
     <ScrollAreaContext.Provider value={value}>
-      <section ref={containerRef} className={cn('h-full min-h-0 overflow-y-auto', className)} {...rest}>
+      <section ref={containerRef} className={cn('w-full h-full min-h-0 overflow-y-auto', className)} {...rest}>
         {children}
       </section>
     </ScrollAreaContext.Provider>

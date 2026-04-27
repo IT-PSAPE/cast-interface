@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, FilePlus, Play, Plu
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
@@ -187,7 +187,7 @@ export function DeckEditorScreen() {
   const titleElement = (
     <ContextMenu.Root>
       <ContextMenu.ButtonTrigger className="flex w-full min-w-0">
-        <Button variant="ghost" className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
+        <ReacstButton variant="ghost" className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-0 text-left hover:bg-transparent">
           <span className="flex min-w-0 items-center gap-2">
             {currentDeckItem && <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" />}
             <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
@@ -195,7 +195,7 @@ export function DeckEditorScreen() {
             </span>
           </span>
           <ChevronsUpDown size={14} strokeWidth={1.5} className="shrink-0 text-tertiary" />
-        </Button>
+        </ReacstButton>
       </ContextMenu.ButtonTrigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner>
@@ -226,12 +226,12 @@ export function DeckEditorScreen() {
                   <Panel.SectionHeader className="border-b border-primary">
                     <Panel.SectionTitle>{titleElement}</Panel.SectionTitle>
                     <Panel.SectionAction className='flex gap-1'>
-                      <Button.Icon label={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
+                      <ReacstButton.Icon label={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
                         <Plus />
-                      </Button.Icon>
-                      <Button.Icon label="Create deck item" onClick={handleOpenCreateMenu}>
+                      </ReacstButton.Icon>
+                      <ReacstButton.Icon label="Create deck item" onClick={handleOpenCreateMenu}>
                         <FilePlus />
-                      </Button.Icon>
+                      </ReacstButton.Icon>
                     </Panel.SectionAction>
                   </Panel.SectionHeader>
                   <Panel.SectionBody>
@@ -343,12 +343,12 @@ export function DeckEditorScreen() {
               >
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
                   <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-primary bg-primary/95 p-1 shadow-sm backdrop-blur-sm">
-                    <Button onClick={handleResetNotes} disabled={!hasSlide || !isDirty} variant="ghost">
+                    <ReacstButton onClick={handleResetNotes} disabled={!hasSlide || !isDirty} variant="ghost">
                       Reset
-                    </Button>
-                    <Button onClick={handleSaveNotes} disabled={!canEdit || !isDirty}>
+                    </ReacstButton>
+                    <ReacstButton onClick={handleSaveNotes} disabled={!canEdit || !isDirty}>
                       Save
-                    </Button>
+                    </ReacstButton>
                   </div>
                 </div>
                 <FieldTextarea
@@ -368,9 +368,9 @@ export function DeckEditorScreen() {
             <InspectorTabsPanel className="flex-1" />
             {inspectorState.isVisible && (
               <Panel.Footer className="p-3">
-                <Button onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
+                <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
-                </Button>
+                </ReacstButton>
               </Panel.Footer>
             )}
           </Panel>
@@ -432,9 +432,9 @@ function SortableSlideTile({ slide, scene, index, isActive, isLive, isEmpty, tex
         </Thumbnail.Overlay>
       )}
       <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-        <Button.Icon label="Slide options" onPointerDown={(event) => event.stopPropagation()} onClick={onMenuClick} className="border-primary bg-tertiary/80">
+        <ReacstButton.Icon label="Slide options" onPointerDown={(event) => event.stopPropagation()} onClick={onMenuClick} className="border-primary bg-tertiary/80">
           <Ellipsis />
-        </Button.Icon>
+        </ReacstButton.Icon>
       </Thumbnail.Overlay>
       <Thumbnail.Caption>
         <div className="flex min-w-0 items-center gap-2">

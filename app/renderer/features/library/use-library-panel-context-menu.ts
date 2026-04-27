@@ -76,7 +76,6 @@ export function useLibraryPanelContextMenu() {
     isEditing,
     beginEditing,
     clearEditing,
-    handleLibraryContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'library', id }),
     handlePlaylistContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'playlist', id }),
     handleSegmentContextMenu: (event: React.MouseEvent<HTMLElement>, id: string) => menu.openFromEvent(event, { type: 'segment', id }),
     handleSegmentPresentationContextMenu: (event: React.MouseEvent<HTMLElement>, entryId: string, itemId: string) => menu.openFromEvent(event, { type: 'deck-item', entryId, itemId, scope: 'segment' }),

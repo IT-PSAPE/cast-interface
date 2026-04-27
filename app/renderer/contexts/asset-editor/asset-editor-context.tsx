@@ -7,7 +7,6 @@ import { createId } from '../../utils/create-id';
 import { useStagedCollection } from '../../hooks/use-staged-collection';
 import { buildSnapshotDiff } from '../element/element-history-utils';
 import { useCast } from '../app-context';
-import { useSlides } from '../slide-context';
 import { useProjectContent } from '../use-project-content';
 import { useWorkbench } from '../workbench-context';
 
@@ -78,7 +77,6 @@ const AssetEditorContext = createContext<AssetEditorContextValue | null>(null);
 export function AssetEditorProvider({ children }: { children: ReactNode }) {
   const { mutatePatch, setStatusText } = useCast();
   const { state: { workbenchMode, overlayDefaults } } = useWorkbench();
-  const { currentSlide } = useSlides();
   const {
     overlays: persistedOverlays,
     templates: persistedTemplates,

@@ -35,11 +35,11 @@ export function InspectorTabsPanel({ className = '', bodyClassName = '' }: Inspe
         </div>
 
         <div className={`min-h-0 overflow-auto ${bodyClassName}`}>
-          <Tabs.Panel value="presentation"><DeckItemInspector /></Tabs.Panel>
-          <Tabs.Panel value="slide"><SlideInspector /></Tabs.Panel>
-          <Tabs.Panel value="template"><TemplateInspector /></Tabs.Panel>
-          <Tabs.Panel value="shape"><ShapeElementInspector /></Tabs.Panel>
-          <Tabs.Panel value="text"><TextElementInspector /></Tabs.Panel>
+          {inspectorTab === 'presentation' && <DeckItemInspector />}
+          {inspectorTab === 'slide' && <SlideInspector />}
+          {inspectorTab === 'template' && <TemplateInspector />}
+          {inspectorTab === 'shape' && <ShapeElementInspector />}
+          {inspectorTab === 'text' && <TextElementInspector />}
         </div>
       </section>
     </Tabs.Root>

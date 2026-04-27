@@ -1,4 +1,4 @@
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dialog } from '../../components/overlays/dialog';
 import { Panel } from '../../components/layout/panel';
@@ -44,12 +44,12 @@ export function CreateLyricDialog({ isBusy, isOpen, onClose, onCreateEditableLyr
                 </div>
                 <div className="pt-6">
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="ghost" onClick={onCreateEmptyLyric} disabled={isBusy} className="px-3 py-2 text-sm">
+                    <ReacstButton variant="ghost" onClick={onCreateEmptyLyric} disabled={isBusy} className="px-3 py-2 text-sm">
                       Empty
-                    </Button>
-                    <Button variant="take" onClick={onCreateEditableLyric} disabled={isBusy} className="px-3 py-2 text-sm">
+                    </ReacstButton>
+                    <ReacstButton variant="take" onClick={onCreateEditableLyric} disabled={isBusy} className="px-3 py-2 text-sm">
                       Edit
-                    </Button>
+                    </ReacstButton>
                   </div>
                 </div>
               </Panel>

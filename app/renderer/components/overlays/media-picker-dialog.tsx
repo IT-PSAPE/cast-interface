@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { Button } from '../controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { Dialog } from './dialog';
 import { MediaAssetIcon } from '../display/entity-icon';
 
@@ -94,10 +94,10 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
                 {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select media to add'}
               </span>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                <Button onClick={handleConfirm} disabled={selectedIds.size === 0}>
+                <ReacstButton variant="ghost" onClick={onClose}>Cancel</ReacstButton>
+                <ReacstButton onClick={handleConfirm} disabled={selectedIds.size === 0}>
                   Add{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-                </Button>
+                </ReacstButton>
               </div>
             </Dialog.Footer>
           </Dialog.Content>

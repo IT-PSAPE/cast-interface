@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { AlertTriangle, Ellipsis } from 'lucide-react';
-import { Button } from '../../../components/controls/button';
+import { ReacstButton } from '@renderer/components 2.0/button';
 import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
@@ -85,9 +85,9 @@ function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps
         <SelectableRow.Label>{asset.name}</SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-          <Button.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
+          <ReacstButton.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
             <Ellipsis size={14} />
-          </Button.Icon>
+          </ReacstButton.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
@@ -122,9 +122,9 @@ function MediaTile({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProp
           </>
         </Thumbnail.Body>
         <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-          <Button.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
+          <ReacstButton.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
             <Ellipsis />
-          </Button.Icon>
+          </ReacstButton.Icon>
         </Thumbnail.Overlay>
         <Thumbnail.Caption>
           <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">

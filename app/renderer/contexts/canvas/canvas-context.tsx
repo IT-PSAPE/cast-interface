@@ -14,8 +14,8 @@ import { useElementCommands } from '../element/use-element-commands';
 import { useElementHistory } from '../element/use-element-history';
 import { useElementInspectorSync } from '../element/use-element-inspector-sync';
 import { useElementSelection } from '../element/use-element-selection';
-import type { ElementContextValue } from '../element/element-context.types';
-import { cloneElements } from '../element/element-context-utils';
+import type { ElementContextValue } from '../../types/element-context.types';
+import { cloneElements } from '../../utils/element-context-utils';
 import { buildLayeredRenderScene, buildRenderScene, buildThumbnailScene } from '../../features/canvas/build-render-scene';
 import type { RenderScene, SceneSourcePolicy, SceneSurface } from '../../features/canvas/scene-types';
 

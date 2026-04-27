@@ -1,4 +1,12 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, type CSSProperties, type ReactNode } from 'react';
+import { cn } from '@renderer/utils/cn';
+
+interface PaneSlotProps {
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+  'data-pane-id'?: string;
+}
 
 interface ResizableSplitPaneProps {
   paneId: string;
@@ -8,19 +16,25 @@ interface ResizableSplitPaneProps {
   maxSize: number;
   flexible: boolean;
   visible: boolean;
-  className?: string;
   children: ReactNode;
 }
 
-export function ResizableSplitPane({ paneId, orientation, size, minSize, maxSize, flexible, visible, className = '', children }: ResizableSplitPaneProps) {
+export function ResizableSplitPane({ paneId, orientation, size, minSize, maxSize, flexible, visible, children }: ResizableSplitPaneProps) {
   if (!visible) return null;
 
-  const style = buildPaneStyle(orientation, size, minSize, maxSize, flexible);
-  return (
-    <section data-pane-id={paneId} className={`h-full min-h-0 min-w-0 overflow-hidden ${className}`.trim()} style={style}>
-      {children}
-    </section>
-  );
+  const wrapper = Children.only(children);
+  if (!isValidElement<PaneSlotProps>(wrapper)) {
+    throw new Error('ResizableSplitPane expects a single element child');
+  }
+
+  const sizingStyle = buildPaneStyle(orientation, size, minSize, maxSize, flexible);
+  return cloneElement(wrapper, {
+    'data-pane-id': paneId,
+    className: cn('h-full min-h-0 min-w-0 overflow-hidden', wrapper.props.className),
+    // Sizing properties win over user-supplied style — they are required for
+    // the pane to participate correctly in the parent flex layout.
+    style: { ...wrapper.props.style, ...sizingStyle },
+  });
 }
 
 function buildPaneStyle(

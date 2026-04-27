@@ -3,8 +3,8 @@ import { getSlideDeckItemId } from '@core/deck-items';
 import type { Id, LibraryPlaylistBundle } from '@core/types';
 import { useCast } from './app-context';
 import { useProjectContent } from './use-project-content';
-import type { NavigationActionsValue, NavigationContextValue, NavigationStateValue } from './navigation-context-types';
-import { findCreatedId, findFirstPlaylistEntryByDeckItemId, findPlaylistEntryById, resolveCurrentDeckItemId, resolveCurrentPlaylistEntryId, resolvePinnedLyricDeckItemId } from './navigation-context-utils';
+import type { NavigationActionsValue, NavigationContextValue, NavigationStateValue } from '../types/navigation-context-types';
+import { findCreatedId, findFirstPlaylistEntryByDeckItemId, findPlaylistEntryById, resolveCurrentDeckItemId, resolveCurrentPlaylistEntryId, resolvePinnedLyricDeckItemId } from '../utils/navigation-context-utils';
 
 type ContentBrowseSource = 'playlist' | 'project';
 
