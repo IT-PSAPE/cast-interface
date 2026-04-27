@@ -34,6 +34,7 @@ export interface NavigationActionsValue {
   createEmptyLyric: () => Promise<void>;
   createSegment: () => Promise<void>;
   addDeckItemToSegment: (segmentId: Id) => Promise<void>;
+  addDeckItemToSegmentAt: (segmentId: Id, itemId: Id, newOrder: number) => Promise<Id | null>;
   moveCurrentDeckItemToSegment: (segmentId: Id | null) => Promise<void>;
   renameLibrary: (id: Id, name: string) => Promise<void>;
   renamePlaylist: (id: Id, name: string) => Promise<void>;

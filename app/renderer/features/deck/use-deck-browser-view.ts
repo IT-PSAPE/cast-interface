@@ -26,27 +26,26 @@ export function useDeckBrowserView(): SlideBrowserView {
   const { items } = usePlaylistDeckSequence();
 
   return useMemo(() => {
-    const hasPresentation = Boolean(currentDeckItem);
+    const hasCurrentDeckItem = Boolean(currentDeckItem);
     const showPlaylistBrowserModes = workbenchMode === 'show'
       && !isDetachedDeckBrowser
       && (slideBrowserMode === 'grid' || slideBrowserMode === 'list');
     const hasItems = items.length > 0;
-    const headerVariant: SlideBrowserHeaderVariant = !hasPresentation || !showPlaylistBrowserModes || !hasItems
+    const isContinuousPlaylist = playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems;
+    const headerVariant: SlideBrowserHeaderVariant = !showPlaylistBrowserModes || !hasItems || (!hasCurrentDeckItem && !isContinuousPlaylist)
       ? 'hidden'
       : playlistBrowserMode === 'tabs'
         ? 'tabs'
         : playlistBrowserMode === 'continuous'
           ? 'continuous'
           : 'current';
-    const contentVariant: SlideBrowserContentVariant = !hasPresentation
-      ? 'empty'
-      : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'grid'
-        ? 'continuous-grid'
-        : playlistBrowserMode === 'continuous' && showPlaylistBrowserModes && hasItems && slideBrowserMode === 'list'
-          ? 'continuous-list'
-          : slideBrowserMode === 'grid'
-            ? 'single-grid'
-            : 'single-list';
+    const contentVariant: SlideBrowserContentVariant = isContinuousPlaylist
+      ? slideBrowserMode === 'grid' ? 'continuous-grid' : 'continuous-list'
+      : !hasCurrentDeckItem
+        ? 'empty'
+        : slideBrowserMode === 'grid'
+          ? 'single-grid'
+          : 'single-list';
     return {
       contentVariant,
       headerVariant,

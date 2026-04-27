@@ -8,6 +8,17 @@ import { findCreatedId, findFirstPlaylistEntryByDeckItemId, findPlaylistEntryByI
 
 type ContentBrowseSource = 'playlist' | 'project';
 
+function getSegmentEntryIds(snapshot: { libraryBundles: LibraryPlaylistBundle[] } | null | undefined, segmentId: Id): Id[] {
+  for (const bundle of snapshot?.libraryBundles ?? []) {
+    for (const playlist of bundle.playlists) {
+      const segment = playlist.segments.find((entry) => entry.segment.id === segmentId);
+      if (segment) return segment.entries.map((entry) => entry.entry.id);
+    }
+  }
+
+  return [];
+}
+
 const NavigationStateContext = createContext<NavigationStateValue | null>(null);
 const NavigationActionsContext = createContext<NavigationActionsValue | null>(null);
 
@@ -291,6 +302,25 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText('Added item to segment');
   }, [currentDeckItemId, currentPlaylistId, mutatePatch, setStatusText]);
 
+  const addDeckItemToSegmentAt = useCallback(async (segmentId: Id, itemId: Id, newOrder: number) => {
+    if (!currentPlaylistId || !deckItemsById.has(itemId)) return null;
+
+    const previousEntryIds = new Set(getSegmentEntryIds(snapshot, segmentId));
+    const afterAdd = await mutatePatch(() => window.castApi.addDeckItemToSegment(segmentId, itemId));
+    const createdEntryId = findCreatedId(previousEntryIds, getSegmentEntryIds(afterAdd, segmentId));
+    if (!createdEntryId) {
+      setStatusText('Added item to segment');
+      return null;
+    }
+
+    await mutatePatch(() => window.castApi.movePlaylistEntryTo(createdEntryId, segmentId, newOrder));
+    setCurrentPlaylistEntryId(createdEntryId);
+    setCurrentPlaylistDeckItemId(itemId);
+    setContentBrowseSource('playlist');
+    setStatusText('Added item to segment');
+    return createdEntryId;
+  }, [currentPlaylistId, deckItemsById, mutatePatch, setStatusText, snapshot]);
+
   const moveCurrentDeckItemToSegment = useCallback(async (segmentId: Id | null) => {
     if (!currentDeckItemId || !currentPlaylistId) return;
     await mutatePatch(() => window.castApi.moveDeckItemToSegment(currentPlaylistId, currentDeckItemId, segmentId));
@@ -388,6 +418,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     createEmptyLyric,
     createSegment,
     addDeckItemToSegment,
+    addDeckItemToSegmentAt,
     moveCurrentDeckItemToSegment,
     renameLibrary,
     renamePlaylist,
@@ -398,6 +429,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     movePlaylistEntry,
   }), [
     addDeckItemToSegment,
+    addDeckItemToSegmentAt,
     armOutputPlaylistEntry,
     armOutputDeckItem,
     browseDeckItem,

@@ -1,13 +1,26 @@
-import { useSlides } from '../../contexts/slide-context';
 import { useNavigation } from '../../contexts/navigation-context';
-import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
 import { useRenderScenes } from '../../contexts/canvas/canvas-context';
-import { useDeckBrowser } from './deck-browser-context';
+import { useSlides } from '../../contexts/slide-context';
+import { EmptyState } from '../../components/display/empty-state';
 import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
 import { ScrollArea } from '../../components/layout/scroll-area';
+import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
+import { useDeckBrowser } from './deck-browser-context';
 import { SlideGridTile } from './slide-grid-tile';
+import { SlideOutlineRow } from './slide-list-row';
+import { useOutlineView } from './use-slide-list-view';
+import type { SlideBrowserContentVariant } from './use-deck-browser-view';
 
-export function SlideGrid() {
+interface SlideBrowserContentProps {
+  variant: SlideBrowserContentVariant;
+}
+
+export function SlideBrowserContent({ variant }: SlideBrowserContentProps) {
+  if (variant !== 'single-grid' && variant !== 'single-list') return null;
+  return variant === 'single-grid' ? <SingleSlideGrid /> : <SingleSlideList />;
+}
+
+function SingleSlideGrid() {
   const { currentDeckItemId, currentOutputDeckItemId, isDetachedDeckBrowser } = useNavigation();
   const { slides, currentSlideIndex, liveSlideIndex, slideElementsById, activateSlide, setCurrentSlideIndex } = useSlides();
   const { getThumbnailScene } = useRenderScenes();
@@ -39,6 +52,43 @@ export function SlideGrid() {
           );
         })}
       </ThumbnailGrid>
+    </ScrollArea>
+  );
+}
+
+function SingleSlideList() {
+  const { rows, currentSlideIndex, selectSlide, openSlide, updateText } = useOutlineView();
+  const { getThumbnailScene } = useRenderScenes();
+
+  function renderRow(row: (typeof rows)[number]) {
+    const scene = getThumbnailScene(row.slide.id, 'list');
+    if (!scene) return null;
+    return (
+      <SlideOutlineRow
+        key={row.slide.id}
+        row={row}
+        scene={scene}
+        isFocused={row.index === currentSlideIndex}
+        onSelect={selectSlide}
+        onOpen={openSlide}
+        onTextCommit={updateText}
+      />
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <EmptyState.Root>
+        <EmptyState.Title>No slides available.</EmptyState.Title>
+      </EmptyState.Root>
+    );
+  }
+
+  return (
+    <ScrollArea className="p-2">
+      <div className="flex flex-col gap-3" role="list" aria-label="Slide outline">
+        {rows.map(renderRow)}
+      </div>
     </ScrollArea>
   );
 }

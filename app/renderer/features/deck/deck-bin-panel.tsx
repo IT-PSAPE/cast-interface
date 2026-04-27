@@ -11,6 +11,7 @@ import { buildThumbnailScene } from '../canvas/build-render-scene';
 import { SceneStage } from '../canvas/scene-stage';
 import { BinPanelLayout } from '../workbench/bin-panel-layout';
 import { useDeckBin } from './use-deck-bin';
+import { writeDeckItemDragData } from '../../utils/deck-item-drag';
 
 interface DeckBinPanelProps {
   filterText: string;
@@ -83,12 +84,16 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMen
     onContextMenu(event, item.id);
   }
 
+  function handleDragStart(event: React.DragEvent<HTMLElement>) {
+    writeDeckItemDragData(event.dataTransfer, item.id);
+  }
+
   function handleRename(title: string) {
     onRename(item.id, title);
   }
 
   return (
-    <div className="group" onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart} onContextMenu={handleContextMenu}>
       <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
         <SelectableRow.Leading>
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
@@ -123,12 +128,16 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onContextMe
     onContextMenu(event, item.id);
   }
 
+  function handleDragStart(event: React.DragEvent<HTMLElement>) {
+    writeDeckItemDragData(event.dataTransfer, item.id);
+  }
+
   function handleRename(title: string) {
     onRename(item.id, title);
   }
 
   return (
-    <div className="group cursor-pointer" onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart} onContextMenu={handleContextMenu}>
       <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
         <Thumbnail.Body>
           <ScenePreview scene={scene} />

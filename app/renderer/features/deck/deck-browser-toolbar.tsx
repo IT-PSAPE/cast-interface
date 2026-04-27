@@ -36,12 +36,13 @@ function PlaylistTabItem({ items }: { items: PlaylistDeckSequenceItem[] }) {
 export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const { createSlide } = useSlides();
-  const { currentDeckItem, isDetachedDeckBrowser } = useNavigation();
+  const { currentDeckItem, currentLibraryBundle, currentPlaylistId, isDetachedDeckBrowser } = useNavigation();
   const { slideBrowserMode, setSlideBrowserMode, playlistBrowserMode, setPlaylistBrowserMode, gridItemSize, gridSizeMin, gridSizeMax, gridSizeStep, setGridItemSize } = useDeckBrowser();
 
   const isGridMode = slideBrowserMode === 'grid';
   const showPlaylistModes = !isDetachedDeckBrowser && (isGridMode || slideBrowserMode === 'list');
   const showContentInfo = headerVariant !== 'hidden';
+  const currentPlaylist = currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId)?.playlist ?? null;
 
   function handleAddSlide() {
     if (currentDeckItem) void createSlide();
@@ -84,8 +85,8 @@ export function DeckBrowserToolbar({ items, headerVariant }: DeckBrowserToolbarP
             {headerVariant === 'tabs' ? (
               <PlaylistTabItem items={items} />
             ) : (
-              <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title}>
-                {currentDeckItem?.title ?? 'No item selected'}
+              <span className="truncate text-sm font-medium text-primary" title={headerVariant === 'continuous' ? currentPlaylist?.name : currentDeckItem?.title}>
+                {headerVariant === 'continuous' ? currentPlaylist?.name ?? 'Playlist' : currentDeckItem?.title ?? 'No item selected'}
               </span>
             )}
           </div>

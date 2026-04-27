@@ -133,12 +133,12 @@ function AccordionTrigger({ children, className, onClick, ...props }: AccordionT
 
 type AccordionContentProps = HTMLAttributes<HTMLDivElement>;
 
-function AccordionContent({ children, className }: AccordionContentProps) {
+function AccordionContent({ children, className, ...props }: AccordionContentProps) {
     const { isOpen } = useAccordionItem();
 
     return (
         <div className={cn("overflow-clip", isOpen ? "h-fit" : "h-0")} >
-            <div className={cn("overflow-hidden", className)}>
+            <div className={cn("overflow-hidden", className)} {...props}>
                 {children}
             </div>
         </div>

@@ -1,4 +1,4 @@
-import type { HTMLAttributes, MouseEventHandler, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -67,10 +67,9 @@ function PanelGroupContent({ children, className }: HTMLAttributes<HTMLDivElemen
     );
 }
 
-type PanelMenuItemProps = PanelMenuLevelProps & {
+type PanelMenuItemProps = PanelMenuLevelProps & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
     active?: boolean;
     children?: ReactNode;
-    onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
 const menuItemVariants = cv({
@@ -88,13 +87,18 @@ const menuItemVariants = cv({
     },
 });
 
-function PanelMenuItem({ children, active = false, onClick }: PanelMenuItemProps) {
+function PanelMenuItem({ children, active = false, className, onClick, ...buttonProps }: PanelMenuItemProps) {
     const itemState = active ? 'active' : 'inactive';
     const cursorClassName = onClick ? 'cursor-pointer' : 'cursor-default';
 
     return (
         <div className="w-full">
-            <button type="button" className={cn(menuItemVariants({ state: itemState }), cursorClassName)} onClick={onClick} >
+            <button
+                type="button"
+                className={cn(menuItemVariants({ state: itemState }), cursorClassName, className)}
+                onClick={onClick}
+                {...buttonProps}
+            >
                 {children}
             </button>
         </div>

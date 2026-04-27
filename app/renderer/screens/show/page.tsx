@@ -1,12 +1,10 @@
 import { LayoutTemplate } from 'lucide-react';
 import { ResourceDrawer } from '../../features/workbench/resource-drawer';
-import { ContinuousSlideGrid } from '../../features/deck/continuous-slide-grid';
-import { ContinuousSlideList } from '../../features/deck/continuous-slide-list';
+import { ContinuousSlideBrowser } from '../../features/deck/continuous-slide-browser';
 import { LibraryBrowserProvider } from '../../features/library/library-browser-context';
 import { PreviewPanel } from '../../features/playback/preview-panel';
 import { DeckBrowserToolbar } from '../../features/deck/deck-browser-toolbar';
-import { SlideGrid } from '../../features/deck/slide-grid';
-import { SlideList } from '../../features/deck/slide-list';
+import { SlideBrowserContent } from '../../features/deck/slide-browser-content';
 import { useDeckBrowserView } from '../../features/deck/use-deck-browser-view';
 import { SplitPanel } from '../../features/workbench/split-panel';
 import { useNavigation } from '@renderer/contexts/navigation-context';
@@ -24,8 +22,8 @@ export function ShowScreen() {
 
 function ShowScreenContent() {
   const state = useDeckBrowserView();
-    const { currentLibraryBundle } = useNavigation();
-    const { libraryPanelView } = useLibraryPanelState();
+  const { currentLibraryBundle } = useNavigation();
+  const { libraryPanelView } = useLibraryPanelState();
 
   return (
     <section data-ui-region="show-mode-layout" className="h-full min-h-0 overflow-hidden">
@@ -51,10 +49,8 @@ function ShowScreenContent() {
                       </div>
                     </section>
                   )}
-                  {state.contentVariant === 'single-grid' && <SlideGrid />}
-                  {state.contentVariant === 'single-list' && <SlideList />}
-                  {state.contentVariant === 'continuous-grid' && <ContinuousSlideGrid items={state.items} />}
-                  {state.contentVariant === 'continuous-list' && <ContinuousSlideList items={state.items} />}
+                  <SlideBrowserContent variant={state.contentVariant} />
+                  <ContinuousSlideBrowser variant={state.contentVariant} items={state.items} />
                 </section>
               </main>
             </SplitPanel.Segment>
