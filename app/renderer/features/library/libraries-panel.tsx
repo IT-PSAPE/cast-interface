@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { LibraryPlaylistBundle } from '@core/types';
 import { Folder, Plus } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useCast } from '@renderer/contexts/app-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { ReacstButton } from '@renderer/components 2.0/button';
@@ -13,17 +11,7 @@ import { useLibraryPanelState } from './library-panel-context';
 
 export function LibrariesPanel() {
   const { snapshot } = useCast();
-  const { createLibrary, reorderLibrary } = useNavigation();
-
-  const librarySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  function handleLibraryDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !snapshot) return;
-    const newIndex = snapshot.libraryBundles.findIndex((bundle) => bundle.library.id === over.id);
-    if (newIndex < 0) return;
-    void reorderLibrary(String(active.id), newIndex);
-  }
+  const { createLibrary } = useNavigation();
 
   if (!snapshot) return null;
 
@@ -37,11 +25,7 @@ export function LibrariesPanel() {
           </ReacstButton.Icon>
         </RecastPanel.GroupTitle>
         <RecastPanel.GroupContent className='py-2 space-y-1'>
-          <DndContext sensors={librarySensors} collisionDetection={closestCenter} onDragEnd={handleLibraryDragEnd}>
-            <SortableContext items={snapshot.libraryBundles.map((bundle) => bundle.library.id)} strategy={verticalListSortingStrategy}>
-              {snapshot.libraryBundles.map((bundle) => <SortableLibraryRow key={bundle.library.id} bundle={bundle} />)}
-            </SortableContext>
-          </DndContext>
+          {snapshot.libraryBundles.map((bundle) => <SortableLibraryRow key={bundle.library.id} bundle={bundle} />)}
         </RecastPanel.GroupContent>
       </RecastPanel.Group>
     </RecastPanel.Root>

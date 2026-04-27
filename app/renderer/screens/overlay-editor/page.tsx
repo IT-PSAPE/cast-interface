@@ -1,10 +1,10 @@
 import type { Id } from '@core/types';
 import { overlayToLayerElements } from '@core/presentation-layers';
-import { Copy, Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
+import { RecastPanel } from '@renderer/components 2.0/panel';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
-import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
@@ -51,21 +51,21 @@ export function OverlayEditorScreen() {
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
         <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
-          <Panel as="aside" bordered="right">
+          <RecastPanel.Root className="h-full border-r border-secondary">
             <SplitPanel.Panel splitId="overlay-list-panel" orientation="vertical" className="h-full">
               <SplitPanel.Segment id="overlay-list" defaultSize={440} minSize={180}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-primary">
-                    <Panel.SectionTitle>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle>
+                    <div className="mr-auto">
                       <Label.sm>Overlays</Label.sm>
-                    </Panel.SectionTitle>
-                    <Panel.SectionAction>
+                    </div>
+                    <div>
                       <ReacstButton.Icon label="Add overlay" onClick={handleAddOverlay}>
                         <Plus />
                       </ReacstButton.Icon>
-                    </Panel.SectionAction>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody>
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content>
                     {overlays.length === 0 ? (
                       <EmptyState.Root>
                         <EmptyState.Title>No overlays yet</EmptyState.Title>
@@ -90,13 +90,6 @@ export function OverlayEditorScreen() {
                                     <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
                                   </SceneFrame>
                                 </Thumbnail.Body>
-                                <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-                                  <ContextMenu.ButtonTrigger>
-                                    <ReacstButton.Icon label="Overlay options" className="border-primary bg-tertiary/80">
-                                      <Ellipsis />
-                                    </ReacstButton.Icon>
-                                  </ContextMenu.ButtonTrigger>
-                                </Thumbnail.Overlay>
                                 <Thumbnail.Caption>
                                   <div className="flex items-center gap-2">
                                     <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
@@ -115,41 +108,41 @@ export function OverlayEditorScreen() {
                           </ContextMenu.Root>
                         );
                       })}
-                    </div>
+                      </div>
                     </ScrollArea>
                     )}
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
               <SplitPanel.Segment id="overlay-objects" defaultSize={220} minSize={160}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-t border-primary">
-                    <Panel.SectionTitle>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle className="border-t">
+                    <div className="mr-auto">
                       <span className="text-sm font-medium text-primary">Objects</span>
-                    </Panel.SectionTitle>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
           <StagePanel />
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
-          <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
+          <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
             {inspectorState.isVisible && (
-              <Panel.Footer className="p-3">
+              <RecastPanel.Footer className="p-3">
                 <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
                 </ReacstButton>
-              </Panel.Footer>
+              </RecastPanel.Footer>
             )}
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
       </SplitPanel.Panel>
     </section>

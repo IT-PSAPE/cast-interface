@@ -1,5 +1,4 @@
 import { Plus } from 'lucide-react';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { PlaylistTree } from '@core/types';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { ScrollArea } from '../../components/layout/scroll-area';
@@ -43,16 +42,14 @@ export function SegmentsBrowser() {
 
       <RecastPanel.Group>
         <ScrollArea>
-          <SortableContext items={rawSegments.map((segment) => segment.segment.id)} strategy={verticalListSortingStrategy}>
-            <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
-              {rawSegments.map((segment) => (
-                <PlaylistSegmentGroup
-                  key={segment.segment.id}
-                  segment={segment}
-                />
-              ))}
-            </Accordion>
-          </SortableContext>
+          <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
+            {rawSegments.map((segment) => (
+              <PlaylistSegmentGroup
+                key={segment.segment.id}
+                segment={segment}
+              />
+            ))}
+          </Accordion>
         </ScrollArea>
       </RecastPanel.Group>
     </>

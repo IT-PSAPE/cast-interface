@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DeckItem, Id, Slide } from '@core/types';
-import { Ellipsis } from 'lucide-react';
 import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
-import { ReacstButton } from '@renderer/components 2.0/button';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { SelectableRow } from '../../components/display/selectable-row';
@@ -49,7 +47,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
           isSelected: isDetachedDeckBrowser && currentDrawerDeckItemId === presentation.id,
           isEditing: editingDeckItemId === presentation.id,
           onOpen: browseDeckItem,
-          onOpenMenu: menu.openFromButton,
           onContextMenu: menu.openFromEvent,
           onRename: handleRename,
         };
@@ -67,12 +64,11 @@ interface DeckItemProps {
   isSelected: boolean;
   isEditing: boolean;
   onOpen: (itemId: Id) => void;
-  onOpenMenu: (button: HTMLElement, data: Id) => void;
   onContextMenu: (event: React.MouseEvent, data: Id) => void;
   onRename: (itemId: Id, title: string) => void;
 }
 
-function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onContextMenu, onRename }: DeckItemProps) {
   const renameRef = useRef<RenameFieldHandle>(null);
 
   useEffect(() => {
@@ -81,11 +77,6 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
 
   function handleOpen() {
     onOpen(item.id);
-  }
-
-  function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    onOpenMenu(event.currentTarget, item.id);
   }
 
   function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
@@ -103,24 +94,17 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
         </SelectableRow.Leading>
         <SelectableRow.Label>
-          <RenameField
-            ref={renameRef}
-            value={item.title}
-            onValueChange={handleRename} className="label-xs"
-          />
+          <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
         </SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs text-tertiary">{slides.length} {slides.length === 1 ? 'slide' : 'slides'}</span>
-          <ReacstButton.Icon label="Deck item options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
-            <Ellipsis size={14} />
-          </ReacstButton.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
   );
 }
 
-function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onContextMenu, onRename }: DeckItemProps) {
   const { slideElementsBySlideId } = useProjectContent();
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
@@ -135,11 +119,6 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
     onOpen(item.id);
   }
 
-  function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    onOpenMenu(event.currentTarget, item.id);
-  }
-
   function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
     onContextMenu(event, item.id);
   }
@@ -152,14 +131,7 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
     <div className="group cursor-pointer" onContextMenu={handleContextMenu}>
       <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
         <Thumbnail.Body>
-          <>
-            <ScenePreview scene={scene} />
-            <div className="absolute right-1 top-1 hidden group-hover:block">
-              <ReacstButton.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                <Ellipsis />
-              </ReacstButton.Icon>
-            </div>
-          </>
+          <ScenePreview scene={scene} />
         </Thumbnail.Body>
         <Thumbnail.Caption>
           <div className="flex items-center gap-2">

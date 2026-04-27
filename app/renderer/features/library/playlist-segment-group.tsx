@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import type { DeckItem, PlaylistEntry, PlaylistTree } from '@core/types';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
 import { Accordion } from '../../components/display/accordion';
 import { DeckItemIcon } from '../../components/display/entity-icon';
@@ -35,9 +34,7 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
         <RenameField ref={renameRef} value={segment.segment.name} onValueChange={handleSegmentRename} className="label-xs" />
       </Accordion.Trigger>
       <Accordion.Content className='p-1 space-y-1'>
-        <SortableContext items={segment.entries.map((entry) => entry.entry.id)} strategy={verticalListSortingStrategy}>
-          {segment.entries.map((entry) => <SegmentEntryRow key={entry.entry.id} entry={entry.entry} item={entry.item} />)}
-        </SortableContext>
+        {segment.entries.map((entry) => <SegmentEntryRow key={entry.entry.id} entry={entry.entry} item={entry.item} />)}
       </Accordion.Content>
     </Accordion.Item>
   );

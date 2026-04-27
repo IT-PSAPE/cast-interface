@@ -55,9 +55,14 @@ function GridSection({ item, currentPlaylistEntryId, currentOutputPlaylistEntryI
   }
 
   return (
-    <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
-      {item.slides.map(renderSlideCard)}
-    </ThumbnailGrid>
+    <div>
+      <div>
+        <h2 className="mb-2 mt-0 text-sm font-semibold text-secondary">Continuous playlist</h2>
+      </div>
+      <ThumbnailGrid columns={gridItemSize} className="auto-rows-max content-start" role="grid" aria-label={`${item.item.title} slides`}>
+        {item.slides.map(renderSlideCard)}
+      </ThumbnailGrid>
+    </div>
   );
 }
 

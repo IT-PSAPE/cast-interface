@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { Id, Template } from '@core/types';
-import { Copy, Ellipsis, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
+import { Copy, Layers, Music, Pencil, Plus, Presentation, Trash2 } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
+import { RecastPanel } from '@renderer/components 2.0/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
-import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
@@ -63,15 +63,15 @@ export function TemplateEditorScreen() {
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
         <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
-          <Panel as="aside" bordered="right">
+          <RecastPanel.Root className="h-full border-r border-secondary">
             <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
               <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-primary">
-                    <Panel.SectionTitle>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle>
+                    <div className="truncate text-sm font-medium text-primary mr-auto">
                       <span className="truncate text-sm font-medium text-primary">Templates</span>
-                    </Panel.SectionTitle>
-                    <Panel.SectionAction>
+                    </div>
+                    <div>
                       <ContextMenu.Root>
                         <ContextMenu.ButtonTrigger>
                           <ReacstButton.Icon label="Create template">
@@ -84,11 +84,11 @@ export function TemplateEditorScreen() {
                               <ContextMenu.Items items={menuItems} />
                             </ContextMenu.Popup>
                           </ContextMenu.Positioner>
-                        </ContextMenu.Portal>
+                          </ContextMenu.Portal>
                       </ContextMenu.Root>
-                    </Panel.SectionAction>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody>
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content>
                     {templates.length === 0 ? (
                       <EmptyState.Root>
                         <EmptyState.Title>No templates yet</EmptyState.Title>
@@ -118,13 +118,6 @@ export function TemplateEditorScreen() {
                                     <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
                                   </SceneFrame>
                                 </Thumbnail.Body>
-                                <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-                                  <ContextMenu.ButtonTrigger>
-                                    <ReacstButton.Icon label="Template options" className="border-primary bg-tertiary/80">
-                                      <Ellipsis />
-                                    </ReacstButton.Icon>
-                                  </ContextMenu.ButtonTrigger>
-                                </Thumbnail.Overlay>
                                 <Thumbnail.Caption>
                                   <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
                                     <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
@@ -144,35 +137,35 @@ export function TemplateEditorScreen() {
                           </ContextMenu.Root>
                         );
                       })}
-                    </div>
+                      </div>
                     </ScrollArea>
                     )}
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
               <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-t border-primary">
-                    <Panel.SectionTitle>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle className="border-t">
+                    <div className="mr-auto">
                       <span className="text-sm font-medium text-primary">Objects</span>
-                    </Panel.SectionTitle>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
           <StagePanel />
         </SplitPanel.Segment>
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
-          <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
+          <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
             {currentTemplate ? (
-              <Panel.Footer className="p-3">
+              <RecastPanel.Footer className="p-3">
                 <ReacstButton
                   variant="ghost"
                   onClick={handleSyncLinkedItems}
@@ -182,9 +175,9 @@ export function TemplateEditorScreen() {
                 >
                   {isSyncing ? 'Syncing…' : `Sync ${linkedItemCount} linked ${linkedItemCount === 1 ? 'item' : 'items'}`}
                 </ReacstButton>
-              </Panel.Footer>
+              </RecastPanel.Footer>
             ) : null}
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
       </SplitPanel.Panel>
     </section>

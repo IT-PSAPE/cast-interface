@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { GripHorizontal, Plus } from 'lucide-react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { Plus } from 'lucide-react'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
 import { ReacstButton } from '@renderer/components 2.0/button'
@@ -9,13 +7,11 @@ import { ReacstButton } from '@renderer/components 2.0/button'
 export type SortableBlockProps = {
     block: Block
     isSelected: boolean
-    isGroupDragging: boolean
     contentRef: (el: HTMLTextAreaElement | null) => void
     onUpdate: (content: string) => void
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
-    onGripClick: (event: React.MouseEvent) => void
     onContextMenu: (event: React.MouseEvent) => void
     onAddBelow: () => void
     onTextareaFocus: () => void
@@ -25,7 +21,7 @@ export type SortableBlockProps = {
 function splitPastedSegments(text: string): string[] {
     return text
         .replace(/\r\n/g, '\n')
-        .split(/\n\s*\n/g)
+        .split('\n')
 }
 
 function resizeTextarea(element: HTMLTextAreaElement) {
@@ -33,9 +29,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onGripClick, onContextMenu, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
-    const style = { transform: CSS.Transform.toString(transform), transition }
+export function SortableBlock({ block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onContextMenu, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
         (el: HTMLTextAreaElement | null) => {
@@ -91,17 +85,12 @@ export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, 
 
     return (
         <div
-            ref={setNodeRef}
-            style={style}
             onContextMenu={handleRowContextMenu}
-            className={cn( 'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10', )}
+            className={cn('group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10')}
         >
-            <div className={cn('flex absolute -left-13  items-center gap-0.5 transition-opacity','opacity-0 group-hover:opacity-100',)}>
+            <div className={cn('flex absolute -left-7 items-center gap-0.5 transition-opacity', 'opacity-0 group-hover:opacity-100')}>
                 <ReacstButton.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
                     <Plus />
-                </ReacstButton.Icon>
-                <ReacstButton.Icon variant='ghost' onClick={onGripClick} {...listeners} {...attributes}>
-                    <GripHorizontal />
                 </ReacstButton.Icon>
             </div>
 

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { AlertTriangle, Ellipsis } from 'lucide-react';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { AlertTriangle } from 'lucide-react';
 import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
@@ -38,7 +37,7 @@ export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) 
             asset,
             isActive: mediaLayerAssetId === asset.id,
             onAssignLayer: setMediaLayerAsset,
-            onOpenMenu: menu.openFromButton,
+            onContextMenu: menu.openFromEvent,
           };
           return drawerViewMode === 'list'
             ? <MediaRow {...shared} />
@@ -55,29 +54,24 @@ interface MediaItemProps {
   asset: MediaAsset;
   isActive: boolean;
   onAssignLayer: (id: Id) => void;
-  onOpenMenu: (button: HTMLElement, data: Id) => void;
+  onContextMenu: (event: React.MouseEvent, data: Id) => void;
 }
 
-function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps) {
-  function handleDragStart(event: React.DragEvent) {
-    event.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
-  }
-
+function MediaRow({ asset, isActive, onAssignLayer, onContextMenu }: MediaItemProps) {
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
-  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onOpenMenu(e.currentTarget, asset.id);
+  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+    onContextMenu(event, asset.id);
   }
 
   return (
-    <div draggable onDragStart={handleDragStart}>
+    <div onContextMenu={handleContextMenu}>
       <SelectableRow.Root
         selected={isActive}
         onClick={handleAssignLayer}
-        className="group h-9 cursor-grab"
+        className="h-9"
       >
         <SelectableRow.Leading>
           <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
@@ -85,31 +79,23 @@ function MediaRow({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps
         <SelectableRow.Label>{asset.name}</SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-          <ReacstButton.Icon label="Media options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
-            <Ellipsis size={14} />
-          </ReacstButton.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
   );
 }
 
-function MediaTile({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProps) {
-  function handleDragStart(e: React.DragEvent) {
-    e.dataTransfer.setData('application/x-cast-media', JSON.stringify(asset));
-  }
-
+function MediaTile({ asset, isActive, onAssignLayer, onContextMenu }: MediaItemProps) {
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
-  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onOpenMenu(e.currentTarget, asset.id);
+  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+    onContextMenu(event, asset.id);
   }
 
   return (
-    <div className="group flex cursor-grab flex-col gap-1" draggable onDragStart={handleDragStart}>
+    <div className="flex flex-col gap-1" onContextMenu={handleContextMenu}>
       <Thumbnail.Tile
         onClick={handleAssignLayer}
         selected={isActive}
@@ -121,11 +107,6 @@ function MediaTile({ asset, isActive, onAssignLayer, onOpenMenu }: MediaItemProp
             <MediaThumbnail asset={asset} />
           </>
         </Thumbnail.Body>
-        <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-          <ReacstButton.Icon label="Media options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-            <Ellipsis />
-          </ReacstButton.Icon>
-        </Thumbnail.Overlay>
         <Thumbnail.Caption>
           <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
             <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />

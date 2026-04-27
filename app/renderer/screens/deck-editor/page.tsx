@@ -1,12 +1,9 @@
 import type { Id } from '@core/types';
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, Ellipsis, FilePlus, Play, Plus, Trash2 } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Copy, FilePlus, Play, Plus, Trash2 } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
+import { RecastPanel } from '@renderer/components 2.0/panel';
 import { DeckItemIcon } from '../../components/display/entity-icon';
-import { Panel } from '../../components/layout/panel';
 import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
 import { FieldTextarea } from '../../components/form/field';
 import { useContextMenuState } from '../../hooks/use-context-menu-state';
@@ -42,9 +39,8 @@ export function DeckEditorScreen() {
   const { effectiveElements } = useElements();
   const { deckItems } = useProjectContent();
   const { getSlideElements } = useDeckEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide, reorderSlide } = useSlides();
+  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide, deleteSlide, duplicateSlide, moveSlide } = useSlides();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const { getThumbnailScene } = useRenderScenes();
   const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
   const [activeCreateAction, setActiveCreateAction] = useState<CreateDeckItemAction | null>(null);
@@ -164,14 +160,6 @@ export function DeckEditorScreen() {
     void deleteSlide(slideId);
   }
 
-  function handleSlideDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const newIndex = slides.findIndex((slide) => slide.id === over.id);
-    if (newIndex < 0) return;
-    void reorderSlide(String(active.id), newIndex);
-  }
-
   function buildSlideMenuItems(slideId: Id): ContextMenuItem[] {
     const slideIndex = slides.findIndex((slide) => slide.id === slideId);
     const canMoveUp = slideIndex > 0;
@@ -219,22 +207,22 @@ export function DeckEditorScreen() {
       <SplitPanel.Panel splitId="edit-main" orientation="horizontal" className="h-full">
         {/* LEFT PANEL: LAYERS PANEL */}
         <SplitPanel.Segment id="edit-left" defaultSize={280} minSize={140} collapsible>
-          <Panel as="aside" bordered="right">
+          <RecastPanel.Root className="h-full border-r border-secondary">
             <SplitPanel.Panel splitId={'slide-list-panel'} orientation="vertical" className="h-full">
               <SplitPanel.Segment id={'slide-list'} defaultSize={440} minSize={180}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-primary">
-                    <Panel.SectionTitle>{titleElement}</Panel.SectionTitle>
-                    <Panel.SectionAction className='flex gap-1'>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle>
+                    <div className="min-w-0 flex-1">{titleElement}</div>
+                    <div className="flex gap-1">
                       <ReacstButton.Icon label={`Add ${currentDeckItem?.type === 'lyric' ? 'lyric' : 'slide'}`} onClick={handleAddSlide}>
                         <Plus />
                       </ReacstButton.Icon>
                       <ReacstButton.Icon label="Create deck item" onClick={handleOpenCreateMenu}>
                         <FilePlus />
                       </ReacstButton.Icon>
-                    </Panel.SectionAction>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody>
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content className="min-h-0">
                   {!currentDeckItem ? (
                     <EmptyState.Root>
                       <EmptyState.Title>No item selected</EmptyState.Title>
@@ -246,9 +234,7 @@ export function DeckEditorScreen() {
                       <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
                     </EmptyState.Root>
                   ) : (
-                  <ScrollArea className="p-2">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlideDragEnd}>
-                    <SortableContext items={slides.map((slide) => slide.id)} strategy={verticalListSortingStrategy}>
+                    <ScrollArea className="p-2">
                       <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
                         {slides.map((slide, index) => {
                           const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
@@ -260,15 +246,13 @@ export function DeckEditorScreen() {
                             setCurrentSlideIndex(index);
                           }
 
-                          function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-                            event.stopPropagation();
-                            slideMenu.openFromButton(event.currentTarget, slide.id);
+                          function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
+                            slideMenu.openFromEvent(event, slide.id);
                           }
 
                           return (
-                            <SortableSlideTile
+                            <SlideTile
                               key={slide.id}
-                              slide={slide}
                               scene={scene}
                               index={index}
                               isActive={index === currentSlideIndex}
@@ -276,29 +260,27 @@ export function DeckEditorScreen() {
                               isEmpty={state === 'warning'}
                               textPreview={slideTextPreview(elements)}
                               onSelect={handleSelect}
-                              onMenuClick={handleMenuClick}
+                              onContextMenu={handleContextMenu}
                             />
                           );
                         })}
                       </div>
-                    </SortableContext>
-                  </DndContext>
-                  </ScrollArea>
+                    </ScrollArea>
                   )}
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
               <SplitPanel.Segment id={"slide-objects"} defaultSize={220} minSize={160}>
-                <Panel.Section>
-                  <Panel.SectionHeader className="border-b border-t border-primary">
-                    <Panel.SectionTitle>
+                <RecastPanel.Group>
+                  <RecastPanel.GroupTitle className="border-t">
+                    <div className="mr-auto">
                       <Label.xs>Objects</Label.xs>
-                    </Panel.SectionTitle>
-                  </Panel.SectionHeader>
-                  <Panel.SectionBody className="overflow-y-auto p-2">
+                    </div>
+                  </RecastPanel.GroupTitle>
+                  <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
-                  </Panel.SectionBody>
-                </Panel.Section>
+                  </RecastPanel.Content>
+                </RecastPanel.Group>
               </SplitPanel.Segment>
             </SplitPanel.Panel>
             <ContextMenu.Root open={Boolean(slideMenu.menuState)} position={slideMenu.menuState} onOpenChange={handleSlideMenuOpenChange}>
@@ -327,7 +309,7 @@ export function DeckEditorScreen() {
               onCreateEditableLyric={handleCreateEditableLyricFromDialog}
             />
             <LyricEditorModal isOpen={isLyricEditorOpen} onClose={handleCloseLyricEditor} />
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
 
         {/* CENTER PANEL: CANVAS & NOTES PANEL */}
@@ -364,24 +346,23 @@ export function DeckEditorScreen() {
 
         {/* RIGHT PANEL: INSPECTOR PANEL*/}
         <SplitPanel.Segment id="edit-right" defaultSize={320} minSize={140} collapsible>
-          <Panel as="aside" bordered="left" data-ui-region="inspector-panel">
+          <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
             {inspectorState.isVisible && (
-              <Panel.Footer className="p-3">
+              <RecastPanel.Footer className="p-3">
                 <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
                   {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
                 </ReacstButton>
-              </Panel.Footer>
+              </RecastPanel.Footer>
             )}
-          </Panel>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
       </SplitPanel.Panel>
     </section>
   );
 }
 
-interface SortableSlideTileProps {
-  slide: { id: Id };
+interface SlideTileProps {
   scene: RenderScene;
   index: number;
   isActive: boolean;
@@ -389,30 +370,18 @@ interface SortableSlideTileProps {
   isEmpty: boolean;
   textPreview: string;
   onSelect: () => void;
-  onMenuClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-function SortableSlideTile({ slide, scene, index, isActive, isLive, isEmpty, textPreview, onSelect, onMenuClick }: SortableSlideTileProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: slide.id });
+function SlideTile({ scene, index, isActive, isLive, isEmpty, textPreview, onSelect, onContextMenu }: SlideTileProps) {
   const activeRef = useScrollAreaActiveItem(isActive);
-  const setRef = (el: HTMLDivElement | null) => {
-    setNodeRef(el);
-    activeRef.current = el;
-  };
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : undefined,
-  };
   return (
     <Thumbnail.Tile
-      ref={setRef}
-      style={style}
+      ref={activeRef}
       onClick={onSelect}
       onDoubleClick={onSelect}
+      onContextMenu={onContextMenu}
       selected={isActive}
-      {...attributes}
-      {...listeners}
     >
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
@@ -431,11 +400,6 @@ function SortableSlideTile({ slide, scene, index, isActive, isLive, isEmpty, tex
           </span>
         </Thumbnail.Overlay>
       )}
-      <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-        <ReacstButton.Icon label="Slide options" onPointerDown={(event) => event.stopPropagation()} onClick={onMenuClick} className="border-primary bg-tertiary/80">
-          <Ellipsis />
-        </ReacstButton.Icon>
-      </Thumbnail.Overlay>
       <Thumbnail.Caption>
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
