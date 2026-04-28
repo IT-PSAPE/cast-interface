@@ -1,4 +1,4 @@
-import { NDI_OUTPUT_HEIGHT, NDI_OUTPUT_WIDTH } from '@core/ndi';
+import { NDI_OUTPUT_HEIGHT, NDI_OUTPUT_WIDTH, NDI_OUTPUT_ORDER } from '@core/ndi';
 import type {
   NdiActiveSenderDiagnostics,
   NdiDiagnostics,
@@ -22,21 +22,26 @@ interface NdiServiceOptions {
   moduleLoader?: () => NdiNativeModule;
 }
 
+interface SenderState {
+  diagnostics: NdiActiveSenderDiagnostics;
+  lastFrame: Uint8Array | null;
+  lastFrameWidth: number;
+  lastFrameHeight: number;
+  lastFrameReceivedAt: number;
+}
+
 export class NdiService {
   private module: NdiNativeModule | null = null;
   private runtimeLoaded = false;
   private runtimePath: string | null = null;
-  private outputState: NdiOutputState = { audience: false };
+  private outputState: NdiOutputState = { audience: false, stage: false };
   private outputConfigs: NdiOutputConfigMap;
   private onOutputConfigsChanged: (configs: NdiOutputConfigMap) => void;
   private moduleLoader: () => NdiNativeModule;
-  private activeSender: NdiActiveSenderDiagnostics | null = null;
+  // One sender per NdiOutputName so Preview and Stage can run concurrently.
+  private senders: Map<NdiOutputName, SenderState> = new Map();
   private sourceStatus: NdiSourceStatus = 'idle';
   private lastError: string | null = null;
-  private lastFrame: Uint8Array | null = null;
-  private lastFrameWidth = 0;
-  private lastFrameHeight = 0;
-  private lastFrameReceivedAt = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private destroyed = false;
 
@@ -65,9 +70,10 @@ export class NdiService {
       this.startHeartbeat();
     } else {
       this.destroySenderForOutput(name);
-      this.stopHeartbeat();
-      this.sourceStatus = 'idle';
-      this.lastFrame = null;
+      if (this.allOutputsDisabled()) {
+        this.stopHeartbeat();
+        this.sourceStatus = 'idle';
+      }
     }
 
     this.emitStateChange();
@@ -90,21 +96,25 @@ export class NdiService {
     return this.getOutputConfigs();
   }
 
-  receiveFrame(rgba: Uint8Array, width: number, height: number): void {
+  // Per-sender frame ingest. Each NdiFrameCapture instance in the renderer
+  // tags its frames with the output name; we route the frame only to that
+  // sender so Preview and Stage can show different content concurrently.
+  receiveFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number): void {
     if (this.destroyed) return;
+    if (!this.outputState[name]) return;
 
-    if (!this.lastFrame || this.lastFrame.length !== rgba.length) {
-      this.lastFrame = new Uint8Array(rgba.length);
-    }
-    this.lastFrame.set(rgba);
-    this.lastFrameWidth = width;
-    this.lastFrameHeight = height;
-    this.lastFrameReceivedAt = Date.now();
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
-    for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
-      if (!this.outputState[name]) continue;
-      this.sendFrame(name, rgba, width, height);
+    if (!sender.lastFrame || sender.lastFrame.length !== rgba.length) {
+      sender.lastFrame = new Uint8Array(rgba.length);
     }
+    sender.lastFrame.set(rgba);
+    sender.lastFrameWidth = width;
+    sender.lastFrameHeight = height;
+    sender.lastFrameReceivedAt = Date.now();
+
+    this.sendFrame(name, rgba, width, height);
   }
 
   setSourceStatus(status: NdiSourceStatus): void {
@@ -114,12 +124,16 @@ export class NdiService {
   }
 
   getDiagnostics(): NdiDiagnostics {
+    // Diagnostics report on the audience sender as the primary surface, since
+    // most consumers (status bar, output settings) are scoped to that output.
+    // Per-sender diagnostics can land alongside the per-sender settings UI.
+    const audienceSender = this.senders.get('audience');
     return {
       outputState: this.getOutputState(),
       outputConfig: { ...this.outputConfigs.audience },
       runtimeLoaded: this.runtimeLoaded,
       runtimePath: this.runtimePath,
-      activeSender: this.activeSender ? { ...this.activeSender } : null,
+      activeSender: audienceSender ? { ...audienceSender.diagnostics } : null,
       sourceStatus: this.sourceStatus,
       lastError: this.lastError,
     };
@@ -145,16 +159,21 @@ export class NdiService {
     this.stopHeartbeat();
 
     try {
-      // destroySender internally sends a black frame, flushes, and waits
-      // for network delivery before tearing down the NDI sender.
+      // destroySender() with no name tears down everything cleanly.
       this.module?.destroySender();
     } catch (error) {
       console.error('[NdiService] Error during destroy:', error);
     }
 
-    this.activeSender = null;
-    this.lastFrame = null;
+    this.senders.clear();
     this.module = null;
+  }
+
+  private allOutputsDisabled(): boolean {
+    for (const name of NDI_OUTPUT_ORDER) {
+      if (this.outputState[name]) return false;
+    }
+    return true;
   }
 
   private loadModuleIfNeeded(): boolean {
@@ -178,6 +197,7 @@ export class NdiService {
 
   private ensureSender(name: NdiOutputName): void {
     if (!this.loadModuleIfNeeded()) return;
+    if (this.senders.has(name)) return;
 
     const config = this.outputConfigs[name];
     const width = NDI_OUTPUT_WIDTH;
@@ -190,41 +210,47 @@ export class NdiService {
         height,
         withAlpha: config.withAlpha,
       });
-      this.activeSender = {
-        senderName: config.senderName,
-        width,
-        height,
-        withAlpha: config.withAlpha,
-      };
+      this.senders.set(name, {
+        diagnostics: {
+          senderName: config.senderName,
+          width,
+          height,
+          withAlpha: config.withAlpha,
+        },
+        lastFrame: null,
+        lastFrameWidth: 0,
+        lastFrameHeight: 0,
+        lastFrameReceivedAt: 0,
+      });
       this.lastError = null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[NdiService] Failed to initialize sender:', message);
       this.lastError = message;
-      this.activeSender = null;
     }
   }
 
   private destroySenderForOutput(name: NdiOutputName): void {
-    if (!this.module || !this.activeSender) return;
+    if (!this.module) return;
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
     try {
-      this.module.destroySender(this.outputConfigs[name].senderName);
+      this.module.destroySender(sender.diagnostics.senderName);
     } catch (error) {
       console.error('[NdiService] Error destroying sender:', error);
     }
 
-    this.activeSender = null;
+    this.senders.delete(name);
   }
 
   private sendFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number): void {
-    if (!this.module || !this.activeSender) return;
-
-    const config = this.outputConfigs[name];
-    if (this.activeSender.senderName !== config.senderName) return;
+    if (!this.module) return;
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
     try {
-      this.module.sendRgbaFrame(config.senderName, rgba, width, height);
+      this.module.sendRgbaFrame(sender.diagnostics.senderName, rgba, width, height);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[NdiService] Frame send failed:', message);
@@ -239,11 +265,11 @@ export class NdiService {
       if (this.destroyed) return;
       const now = Date.now();
 
-      for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
+      for (const [name, sender] of this.senders) {
         if (!this.outputState[name]) continue;
-        if (now - this.lastFrameReceivedAt <= HEARTBEAT_STALL_THRESHOLD_MS) continue;
-        if (this.lastFrame) {
-          this.sendFrame(name, this.lastFrame, this.lastFrameWidth, this.lastFrameHeight);
+        if (now - sender.lastFrameReceivedAt <= HEARTBEAT_STALL_THRESHOLD_MS) continue;
+        if (sender.lastFrame) {
+          this.sendFrame(name, sender.lastFrame, sender.lastFrameWidth, sender.lastFrameHeight);
         }
       }
     }, HEARTBEAT_INTERVAL_MS);

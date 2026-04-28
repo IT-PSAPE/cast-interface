@@ -1,0 +1,213 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import type { Overlay, Slide, Stage, Template } from '@core/types';
+import { useDeckEditor, useOverlayEditor, useStageEditor, useTemplateEditor } from '@renderer/contexts/asset-editor/asset-editor-context';
+import { useNavigation } from '@renderer/contexts/navigation-context';
+import { useSlides } from '@renderer/contexts/slide-context';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
+import { useActiveEditorSource } from './use-active-editor-source';
+
+vi.mock('@renderer/contexts/navigation-context', () => ({ useNavigation: vi.fn() }));
+vi.mock('@renderer/contexts/slide-context', () => ({ useSlides: vi.fn() }));
+vi.mock('@renderer/contexts/workbench-context', () => ({ useWorkbench: vi.fn() }));
+vi.mock('@renderer/contexts/asset-editor/asset-editor-context', () => ({
+  useDeckEditor: vi.fn(),
+  useOverlayEditor: vi.fn(),
+  useStageEditor: vi.fn(),
+  useTemplateEditor: vi.fn(),
+}));
+
+const useNavigationMock = vi.mocked(useNavigation);
+const useSlidesMock = vi.mocked(useSlides);
+const useWorkbenchMock = vi.mocked(useWorkbench);
+const useDeckEditorMock = vi.mocked(useDeckEditor);
+const useOverlayEditorMock = vi.mocked(useOverlayEditor);
+const useStageEditorMock = vi.mocked(useStageEditor);
+const useTemplateEditorMock = vi.mocked(useTemplateEditor);
+
+function makeSlide(id: string): Slide {
+  return {
+    id,
+    presentationId: 'presentation-1',
+    lyricId: null,
+    width: 1920,
+    height: 1080,
+    notes: '',
+    order: 0,
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function makeTemplate(id: string, kind: Template['kind']): Template {
+  return {
+    id,
+    name: 'Template',
+    kind,
+    width: 1920,
+    height: 1080,
+    order: 0,
+    elements: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function makeStage(id: string): Stage {
+  return {
+    id,
+    name: 'Stage',
+    width: 1280,
+    height: 720,
+    order: 0,
+    elements: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function makeOverlay(id: string): Overlay {
+  return {
+    id,
+    name: 'Overlay',
+    type: 'text',
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 120,
+    opacity: 1,
+    zIndex: 0,
+    enabled: true,
+    payload: {
+      text: 'Overlay',
+      fontFamily: 'Avenir Next',
+      fontSize: 72,
+      color: '#FFFFFF',
+      alignment: 'center',
+      verticalAlign: 'middle',
+      lineHeight: 1.2,
+      weight: '700',
+    },
+    elements: [],
+    animation: { kind: 'none', durationMs: 0, autoClearDurationMs: null },
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+describe('useActiveEditorSource', () => {
+  beforeEach(() => {
+    useNavigationMock.mockReturnValue({
+      currentDeckItem: { id: 'deck-1', type: 'presentation' },
+    } as never);
+    useSlidesMock.mockReturnValue({
+      currentSlide: makeSlide('slide-1'),
+    } as never);
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'show' },
+    } as never);
+    useDeckEditorMock.mockReturnValue({
+      getSlideElements: vi.fn().mockReturnValue([{ id: 'slide-el', slideId: 'slide-1', type: 'text' }]),
+      replaceSlideElements: vi.fn(),
+    } as never);
+    useOverlayEditorMock.mockReturnValue({
+      currentOverlay: null,
+      updateOverlayDraft: vi.fn(),
+    } as never);
+    useTemplateEditorMock.mockReturnValue({
+      currentTemplate: null,
+      replaceTemplateElements: vi.fn(),
+    } as never);
+    useStageEditorMock.mockReturnValue({
+      currentStage: null,
+      replaceStageElements: vi.fn(),
+    } as never);
+  });
+
+  it('keeps stage editor empty when no stage is selected even if a deck slide exists', () => {
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'stage-editor' },
+    } as never);
+
+    const { result } = renderHook(() => useActiveEditorSource());
+
+    expect(result.current.mode).toBe('stage-editor');
+    expect(result.current.hasSource).toBe(false);
+    expect(result.current.elements).toEqual([]);
+    expect(result.current.emptyStateLabel).toBe('No stage selected.');
+  });
+
+  it('resolves the selected stage as the active stage editor source', () => {
+    const stage = makeStage('stage-1');
+    stage.elements = [{ id: 'stage-el', slideId: 'stage-1', type: 'shape' } as never];
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'stage-editor' },
+    } as never);
+    useStageEditorMock.mockReturnValue({
+      currentStage: stage,
+      replaceStageElements: vi.fn(),
+    } as never);
+
+    const { result } = renderHook(() => useActiveEditorSource());
+
+    expect(result.current.mode).toBe('stage-editor');
+    expect(result.current.entityId).toBe('stage-1');
+    expect(result.current.hasSource).toBe(true);
+    expect(result.current.elements).toEqual(stage.elements);
+    expect(result.current.frame).toEqual({ width: 1280, height: 720 });
+  });
+
+  it('resolves deck editor metadata and disables text creation for lyric items', () => {
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'deck-editor' },
+    } as never);
+    useNavigationMock.mockReturnValue({
+      currentDeckItem: { id: 'deck-1', type: 'lyric' },
+    } as never);
+
+    const { result } = renderHook(() => useActiveEditorSource());
+
+    const source = result.current;
+    expect(source.mode).toBe('deck-editor');
+    if (source.mode !== 'deck-editor') throw new Error('Expected deck editor source');
+    expect(source.hasSource).toBe(true);
+    expect(source.meta.deckItemType).toBe('lyric');
+    expect(source.createCapabilities.text).toBe(false);
+  });
+
+  it('resolves template editor metadata from the selected template', () => {
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'template-editor' },
+    } as never);
+    useTemplateEditorMock.mockReturnValue({
+      currentTemplate: makeTemplate('template-1', 'lyrics'),
+      replaceTemplateElements: vi.fn(),
+    } as never);
+
+    const { result } = renderHook(() => useActiveEditorSource());
+
+    const source = result.current;
+    expect(source.mode).toBe('template-editor');
+    if (source.mode !== 'template-editor') throw new Error('Expected template editor source');
+    expect(source.meta.templateKind).toBe('lyrics');
+    expect(source.emptyStateLabel).toBe('No template selected.');
+    expect(source.createCapabilities.text).toBe(false);
+  });
+
+  it('resolves overlay editor metadata from the selected overlay', () => {
+    useWorkbenchMock.mockReturnValue({
+      state: { workbenchMode: 'overlay-editor' },
+    } as never);
+    useOverlayEditorMock.mockReturnValue({
+      currentOverlay: makeOverlay('overlay-1'),
+      updateOverlayDraft: vi.fn(),
+    } as never);
+
+    const { result } = renderHook(() => useActiveEditorSource());
+
+    expect(result.current.mode).toBe('overlay-editor');
+    expect(result.current.entityId).toBe('overlay-1');
+    expect(result.current.hasSource).toBe(true);
+    expect(result.current.emptyStateLabel).toBe('No overlay selected.');
+  });
+});

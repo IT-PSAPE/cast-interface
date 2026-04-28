@@ -14,7 +14,7 @@ export function BinPanelLayout({ children, gridItemSize, mode = 'grid', listClas
   return (
     <>
       {mode === 'grid' ? (
-        <ThumbnailGrid columns={gridItemSize}>
+        <ThumbnailGrid columns={gridItemSize} className="w-full">
           {children}
         </ThumbnailGrid>
       ) : (

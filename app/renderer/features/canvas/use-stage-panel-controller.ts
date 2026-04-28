@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MediaAsset } from '@core/types';
 import { useElements } from '../../contexts/canvas/canvas-context';
-import { useOverlayEditor, useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useSlides } from '../../contexts/slide-context';
+import { useActiveEditorSource } from '../../contexts/canvas/use-active-editor-source';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { useWorkbench } from '../../contexts/workbench-context';
 
 interface SelectionMetrics {
   x: number | null;
@@ -33,21 +31,15 @@ interface StagePanelController {
 }
 
 export function useStagePanelController(): StagePanelController {
-  const { currentSlide } = useSlides();
-  const { currentOverlay } = useOverlayEditor();
-  const { currentTemplate } = useTemplateEditor();
+  const activeEditorSource = useActiveEditorSource();
   const { selectedElement, elementDraft, createFromMedia } = useElements();
-  const { state: { workbenchMode } } = useWorkbench();
   const { mediaAssets } = useProjectContent();
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const state = useMemo<StagePanelControllerState>(() => {
-    const isOverlayEdit = workbenchMode === 'overlay-editor';
-    const isTemplateEdit = workbenchMode === 'template-editor';
-
     return {
-      emptyStateLabel: isOverlayEdit ? 'No overlay selected.' : isTemplateEdit ? 'No template selected.' : 'No slide selected.',
-      hasCanvasSource: isOverlayEdit ? Boolean(currentOverlay) : isTemplateEdit ? Boolean(currentTemplate) : Boolean(currentSlide),
+      emptyStateLabel: activeEditorSource.emptyStateLabel,
+      hasCanvasSource: activeEditorSource.editable && activeEditorSource.hasSource,
       mediaAssets,
       selectionMetrics: {
         x: elementDraft?.x ?? selectedElement?.x ?? null,
@@ -57,7 +49,7 @@ export function useStagePanelController(): StagePanelController {
       },
       showMediaPicker
     };
-  }, [currentOverlay, currentSlide, currentTemplate, elementDraft, mediaAssets, selectedElement, showMediaPicker, workbenchMode]);
+  }, [activeEditorSource, elementDraft, mediaAssets, selectedElement, showMediaPicker]);
 
   const openMediaPicker = useCallback(() => {
     setShowMediaPicker(true);

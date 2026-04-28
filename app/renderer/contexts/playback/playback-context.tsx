@@ -65,9 +65,15 @@ interface AudioValue {
   togglePlayback: () => void;
 }
 
+interface StageValue {
+  currentStageId: Id | null;
+  setCurrentStageId: (id: Id | null) => void;
+}
+
 interface PlaybackContextValue {
   layers: LayersValue;
   audio: AudioValue;
+  stage: StageValue;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -428,9 +434,18 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     togglePlayback,
   }), [audioAssets, clearAudio, currentAudioAsset, currentTime, duration, isPlaying, loopEnabled, pauseAudio, playAudio, playNext, playPrevious, seekTo, selectAudio, toggleLoop, togglePlayback]);
 
+  // ── Stage selection ──
+
+  const [currentStageId, setCurrentStageId] = useState<Id | null>(null);
+
+  const stage = useMemo<StageValue>(() => ({
+    currentStageId,
+    setCurrentStageId,
+  }), [currentStageId]);
+
   // ── Combined value ──
 
-  const value = useMemo<PlaybackContextValue>(() => ({ layers, audio }), [layers, audio]);
+  const value = useMemo<PlaybackContextValue>(() => ({ layers, audio, stage }), [layers, audio, stage]);
 
   return <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>;
 }
@@ -449,6 +464,10 @@ export function usePresentationLayers(): LayersValue {
 
 export function useAudio(): AudioValue {
   return usePlayback().audio;
+}
+
+export function useStagePlayback(): StageValue {
+  return usePlayback().stage;
 }
 
 // ─── Utils ──────────────────────────────────────────────────────────

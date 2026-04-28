@@ -218,6 +218,17 @@ export interface Template {
   updatedAt: string;
 }
 
+export interface Stage {
+  id: Id;
+  name: string;
+  width: number;
+  height: number;
+  elements: SlideElement[];
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DeckBundleTemplate {
   id: Id;
   name: string;
@@ -328,6 +339,7 @@ export interface AppSnapshot {
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
   templates: Template[];
+  stages: Stage[];
 }
 
 export interface PlaybackState {
@@ -383,10 +395,11 @@ export interface ElementUpdateInput {
   payload?: SlideElementPayload;
 }
 
-export type NdiOutputName = 'audience';
+export type NdiOutputName = 'audience' | 'stage';
 
 export interface NdiOutputState {
   audience: boolean;
+  stage: boolean;
 }
 
 export type NdiSourceStatus = 'idle' | 'live';
@@ -440,6 +453,21 @@ export interface TemplateUpdateInput {
   id: Id;
   name?: string;
   kind?: TemplateKind;
+  width?: number;
+  height?: number;
+  elements?: SlideElement[];
+}
+
+export interface StageCreateInput {
+  name: string;
+  width?: number;
+  height?: number;
+  elements?: SlideElement[];
+}
+
+export interface StageUpdateInput {
+  id: Id;
+  name?: string;
   width?: number;
   height?: number;
   elements?: SlideElement[];

@@ -41,7 +41,7 @@ export interface PanelToggleButton {
 export function AppToolbar() {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const panelToggles = useWorkbenchPanelToggles();
-  const { state: { outputState }, actions: { toggleAudienceOutput } } = useNdi();
+  const { state: { outputState }, actions: { toggleAudienceOutput, toggleStageOutput } } = useNdi();
 
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
@@ -76,6 +76,7 @@ export function AppToolbar() {
           <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
           <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
           <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
+          <SegmentedControl.Label value="stage-editor">Stage</SegmentedControl.Label>
         </SegmentedControl>
       </div>
 
@@ -91,6 +92,16 @@ export function AppToolbar() {
         >
           <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
           <span className="text-primary">Audience</span>
+        </ReacstButton>
+        <ReacstButton
+          variant="ghost"
+          onClick={toggleStageOutput}
+          type="button"
+          className={outputBorderStyles({ active: outputState.stage })}
+          aria-pressed={outputState.stage}
+        >
+          <span className={outputDotStyles({ active: outputState.stage })} aria-hidden="true" />
+          <span className="text-primary">Stage</span>
         </ReacstButton>
 
         <SegmentedControl
@@ -120,7 +131,7 @@ function renderPanelToggleItem(toggle: PanelToggleButton) {
 }
 
 function isWorkbenchMode(value: string): value is WorkbenchMode {
-  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'settings';
+  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'stage-editor' || value === 'settings';
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {

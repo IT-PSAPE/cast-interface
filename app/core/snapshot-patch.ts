@@ -1,4 +1,4 @@
-import type { AppSnapshot, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Template } from './types';
+import type { AppSnapshot, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Stage, Template } from './types';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -30,6 +30,7 @@ export interface SnapshotPatch {
     mediaAssets?: MediaAsset[];
     overlays?: Overlay[];
     templates?: Template[];
+    stages?: Stage[];
     libraryBundles?: LibraryPlaylistBundle[];
   };
   deletes: {
@@ -41,6 +42,7 @@ export interface SnapshotPatch {
     mediaAssets?: Id[];
     overlays?: Id[];
     templates?: Id[];
+    stages?: Id[];
   };
 }
 
@@ -67,6 +69,7 @@ export function applyPatch(snapshot: AppSnapshot, patch: SnapshotPatch): AppSnap
     mediaAssets: mergeTable(snapshot.mediaAssets, patch.upserts.mediaAssets, patch.deletes.mediaAssets),
     overlays: mergeTable(snapshot.overlays, patch.upserts.overlays, patch.deletes.overlays),
     templates: mergeTable(snapshot.templates, patch.upserts.templates, patch.deletes.templates),
+    stages: mergeTable(snapshot.stages, patch.upserts.stages, patch.deletes.stages),
     libraryBundles: patch.upserts.libraryBundles ?? snapshot.libraryBundles,
   };
   return next;

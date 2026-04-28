@@ -48,7 +48,7 @@ export function ObjectListPanel() {
 
   return (
     <ObjectListContext.Provider value={contextValue}>
-      <div data-ui-region="object-list-panel" className="flex flex-col gap-1.5">
+      <div data-ui-region="object-list-panel" className="flex flex-col gap-1.5 w-full">
         {orderedElements.map((element) => (
           <ObjectListRow key={element.id} element={element} />
         ))}

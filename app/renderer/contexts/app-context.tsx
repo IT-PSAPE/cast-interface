@@ -31,6 +31,7 @@ interface AppContextValue {
     setThemeMode: (mode: ThemeMode) => void;
     setNdiOutputEnabled: (name: NdiOutputName, enabled: boolean) => void;
     toggleAudienceOutput: () => void;
+    toggleStageOutput: () => void;
     updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => void;
   };
 }
@@ -62,6 +63,7 @@ interface NdiSlice {
   actions: {
     setOutputEnabled: (name: NdiOutputName, enabled: boolean) => void;
     toggleAudienceOutput: () => void;
+    toggleStageOutput: () => void;
     updateOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => void;
   };
 }
@@ -279,7 +281,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── NDI ──
   const [ndiDiagnostics, setNdiDiagnostics] = useState<NdiDiagnostics | null>(null);
   const [ndiOutputConfigs, setNdiOutputConfigs] = useState<NdiOutputConfigMap>(createDefaultNdiOutputConfigs);
-  const [ndiOutputState, setNdiOutputState] = useState<NdiOutputState>({ audience: false });
+  const [ndiOutputState, setNdiOutputState] = useState<NdiOutputState>({ audience: false, stage: false });
   const ndiOutputStateRef = useRef(ndiOutputState);
   ndiOutputStateRef.current = ndiOutputState;
 
@@ -310,6 +312,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const toggleAudienceOutput = useCallback(() => {
     setNdiOutputEnabled('audience', !ndiOutputStateRef.current.audience);
+  }, [setNdiOutputEnabled]);
+
+  const toggleStageOutput = useCallback(() => {
+    setNdiOutputEnabled('stage', !ndiOutputStateRef.current.stage);
   }, [setNdiOutputEnabled]);
 
   const updateNdiOutputConfig = useCallback((name: NdiOutputName, config: Partial<NdiOutputConfig>) => {
@@ -343,8 +349,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setThemeMode,
     setNdiOutputEnabled,
     toggleAudienceOutput,
+    toggleStageOutput,
     updateNdiOutputConfig,
-  }), [mutate, mutatePatch, undo, redo, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, updateNdiOutputConfig]);
+  }), [mutate, mutatePatch, undo, redo, runOperation, setThemeMode, setNdiOutputEnabled, toggleAudienceOutput, toggleStageOutput, updateNdiOutputConfig]);
 
   const value = useMemo<AppContextValue>(() => ({ state, actions }), [state, actions]);
 
@@ -392,6 +399,7 @@ export function useNdi(): NdiSlice {
     actions: {
       setOutputEnabled: actions.setNdiOutputEnabled,
       toggleAudienceOutput: actions.toggleAudienceOutput,
+      toggleStageOutput: actions.toggleStageOutput,
       updateOutputConfig: actions.updateNdiOutputConfig,
     },
   };

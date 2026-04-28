@@ -2,22 +2,22 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
+import type { NdiOutputName } from '@core/types';
 import { useNdi } from '../../contexts/app-context';
-import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { SceneNodeMedia } from '../canvas/scene-node-media';
 import { SceneNodeShape } from '../canvas/scene-node-shape';
 import { SceneNodeText } from '../canvas/scene-node-text';
-import type { RenderNode } from '../canvas/scene-types';
+import type { RenderNode, RenderScene, SceneSurface } from '../canvas/scene-types';
 
 const FRAME_INTERVAL_MS = 1000 / 30;
 // If the scene doesn't change for this long, send a heartbeat frame so
 // NDI receivers don't flag the stream as stale.
 const HEARTBEAT_MS = 500;
 
-function renderNodeContent(node: RenderNode, onImageLoad?: () => void) {
+function renderNodeContent(node: RenderNode, surface: SceneSurface, onImageLoad?: () => void) {
   if (node.element.type === 'shape') return <SceneNodeShape node={node} />;
   if (node.element.type === 'text') return <SceneNodeText node={node} />;
-  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} surface="show" onLoad={onImageLoad} />;
+  if (node.element.type === 'image' || node.element.type === 'video') return <SceneNodeMedia node={node} surface={surface} onLoad={onImageLoad} />;
   return null;
 }
 
@@ -32,17 +32,26 @@ function sceneSignature(nodes: readonly RenderNode[], withAlpha: boolean): strin
   return out;
 }
 
-export function NdiFrameCapture() {
-  const { state: { outputState, outputConfigs } } = useNdi();
-  const { programScene } = useRenderScenes();
+interface NdiFrameCaptureProps {
+  /** Which named NDI output this capture feeds (must match a configured sender). */
+  senderName: NdiOutputName;
+  /** Scene to render off-screen and ship as frames. */
+  scene: RenderScene;
+  /** Logical surface used by element renderers (e.g. media surface routing). */
+  surface?: SceneSurface;
+  /** When false the capture loop is torn down and the off-screen stage is unmounted. */
+  enabled: boolean;
+}
+
+export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }: NdiFrameCaptureProps) {
+  const { state: { outputConfigs } } = useNdi();
   const stageRef = useRef<Konva.Stage>(null);
   const normalizedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const normalizedContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const frameBufferRef = useRef<Uint8Array | null>(null);
-  const enabled = outputState.audience;
   const hasVideoNodes = useMemo(
-    () => programScene.nodes.some((node) => node.element.type === 'video'),
-    [programScene.nodes],
+    () => scene.nodes.some((node) => node.element.type === 'video'),
+    [scene.nodes],
   );
 
   const getReadbackContext = useCallback((sourceCanvas: HTMLCanvasElement): CanvasRenderingContext2D | null => {
@@ -100,11 +109,11 @@ export function NdiFrameCapture() {
         frameBufferRef.current = new Uint8Array(requiredSize);
       }
       frameBufferRef.current.set(imageData.data);
-      window.castApi.sendNdiFrame(frameBufferRef.current.buffer as ArrayBuffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+      window.castApi.sendNdiFrame(senderName, frameBufferRef.current.buffer as ArrayBuffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
     } catch (error) {
       console.error('[NdiFrameCapture] Frame capture failed:', error);
     }
-  }, [getReadbackContext]);
+  }, [getReadbackContext, senderName]);
 
   const handleImageLoad = useCallback(() => {
     stageRef.current?.batchDraw();
@@ -115,7 +124,7 @@ export function NdiFrameCapture() {
   // the scene hasn't changed and there are no video nodes, so an idle output
   // costs ~zero IPC traffic. Sends a heartbeat frame every HEARTBEAT_MS so
   // NDI receivers don't think the source died.
-  const withAlpha = outputConfigs.audience.withAlpha;
+  const withAlpha = outputConfigs[senderName].withAlpha;
   useEffect(() => {
     if (!enabled) return;
 
@@ -129,7 +138,7 @@ export function NdiFrameCapture() {
       if (!running) return;
       if (timestamp - lastCaptureTime >= FRAME_INTERVAL_MS) {
         lastCaptureTime = timestamp;
-        const currentSignature = sceneSignature(programScene.nodes, withAlpha);
+        const currentSignature = sceneSignature(scene.nodes, withAlpha);
         const signatureChanged = currentSignature !== lastSignature;
         const heartbeatDue = timestamp - lastSentTime >= HEARTBEAT_MS;
         if (signatureChanged || hasVideoNodes || heartbeatDue) {
@@ -147,7 +156,7 @@ export function NdiFrameCapture() {
       running = false;
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [captureFrame, enabled, hasVideoNodes, programScene, withAlpha]);
+  }, [captureFrame, enabled, hasVideoNodes, scene, withAlpha]);
 
   if (!enabled) return null;
 
@@ -208,7 +217,7 @@ export function NdiFrameCapture() {
             </Group>
           ) : null}
           <Group>
-            {programScene.nodes.map((node) => {
+            {scene.nodes.map((node) => {
               if (node.visual.visible === false) return null;
               return (
                 <Group
@@ -224,7 +233,7 @@ export function NdiFrameCapture() {
                   offsetX={node.visual.flipX ? node.element.width : 0}
                   offsetY={node.visual.flipY ? node.element.height : 0}
                 >
-                  {renderNodeContent(node, handleImageLoad)}
+                  {renderNodeContent(node, surface, handleImageLoad)}
                 </Group>
               );
             })}

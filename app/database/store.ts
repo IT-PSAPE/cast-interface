@@ -43,6 +43,9 @@ import type {
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideOrderUpdateInput,
+  Stage,
+  StageCreateInput,
+  StageUpdateInput,
   Template,
   TemplateCreateInput,
   TemplateKind,
@@ -56,7 +59,8 @@ const DEFAULT_H = 1080;
 const TEMPLATES_SCHEMA_VERSION = 4;
 const DECK_ITEMS_SCHEMA_VERSION = 6;
 const REORDER_SCHEMA_VERSION = 7;
-const LATEST_SCHEMA_VERSION = REORDER_SCHEMA_VERSION;
+const STAGES_SCHEMA_VERSION = 8;
+const LATEST_SCHEMA_VERSION = STAGES_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
 
@@ -226,6 +230,11 @@ export class CastRepository {
     if (this.getUserVersion() < REORDER_SCHEMA_VERSION) {
       this.ensureReorderColumns();
       this.setUserVersion(REORDER_SCHEMA_VERSION);
+    }
+
+    if (this.getUserVersion() < STAGES_SCHEMA_VERSION) {
+      this.ensureStagesSchema();
+      this.setUserVersion(STAGES_SCHEMA_VERSION);
     }
   }
 
@@ -420,6 +429,17 @@ export class CastRepository {
         updated_at TEXT NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS stages (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_presentations_library_id ON presentations(library_id);
       CREATE INDEX IF NOT EXISTS idx_slides_presentation_id ON slides(presentation_id);
       CREATE INDEX IF NOT EXISTS idx_slide_elements_slide_id ON slide_elements(slide_id);
@@ -429,6 +449,7 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_media_assets_library_id ON media_assets(library_id);
       CREATE INDEX IF NOT EXISTS idx_overlays_library_id ON overlays(library_id);
       CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
+      CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index);
     `);
   }
 
@@ -611,6 +632,22 @@ export class CastRepository {
       );
     `);
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index)');
+  }
+
+  private ensureStagesSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS stages (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index)');
   }
 
   private ensurePresentationTemplateSchema(): void {
@@ -1123,6 +1160,7 @@ export class CastRepository {
       mediaAssets: this.getMediaAssets(),
       overlays: this.getOverlays(),
       templates: this.getTemplates(),
+      stages: this.getStages(),
     };
   }
 
@@ -1145,6 +1183,7 @@ export class CastRepository {
         DELETE FROM media_assets;
         DELETE FROM overlays;
         DELETE FROM templates;
+        DELETE FROM stages;
         DELETE FROM libraries;
       `);
 
@@ -1324,6 +1363,23 @@ export class CastRepository {
           JSON.stringify(overlay.animation),
           overlay.createdAt,
           overlay.updatedAt,
+        );
+      }
+
+      const insertStage = this.db.prepare(
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      for (const stage of snapshot.stages) {
+        insertStage.run(
+          stage.id,
+          stage.name,
+          stage.width,
+          stage.height,
+          stage.order,
+          JSON.stringify(stage.elements),
+          stage.createdAt,
+          stage.updatedAt,
         );
       }
     });
@@ -3055,6 +3111,114 @@ export class CastRepository {
     return this.buildPatch({ deletedOverlayIds: [overlayId] });
   }
 
+  // ─── Stages ───────────────────────────────────────────────────────
+  // A Stage is a named container of SlideElement[] that maps to its own NDI
+  // sender. Schema mirrors templates (no kind, no template-application links).
+
+  createStage(input: StageCreateInput): SnapshotPatch {
+    const now = nowIso();
+    const stageId = createId();
+    const elements = input.elements ?? [];
+    const width = input.width ?? 1920;
+    const height = input.height ?? 1080;
+    const nextOrderRow = this.db
+      .prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages')
+      .get() as { next_order: number };
+
+    this.db
+      .prepare(
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        stageId,
+        input.name,
+        width,
+        height,
+        nextOrderRow.next_order,
+        JSON.stringify(elements),
+        now,
+        now,
+      );
+
+    return this.buildPatch({ upsertStageIds: [stageId] });
+  }
+
+  updateStage(input: StageUpdateInput): SnapshotPatch {
+    const existing = this.db
+      .prepare('SELECT id, name, width, height, order_index, elements_json FROM stages WHERE id = ?')
+      .get(input.id) as
+      | {
+        id: string;
+        name: string;
+        width: number;
+        height: number;
+        order_index: number;
+        elements_json: string;
+      }
+      | undefined;
+
+    if (!existing) return this.buildPatch({});
+
+    const nextElements = input.elements ?? parseJson<SlideElement[]>(existing.elements_json);
+
+    this.db
+      .prepare(
+        `UPDATE stages
+         SET name = ?, width = ?, height = ?, elements_json = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        input.name ?? existing.name,
+        input.width ?? existing.width,
+        input.height ?? existing.height,
+        JSON.stringify(nextElements),
+        nowIso(),
+        input.id,
+      );
+
+    return this.buildPatch({ upsertStageIds: [input.id] });
+  }
+
+  deleteStage(stageId: Id): SnapshotPatch {
+    this.db.prepare('DELETE FROM stages WHERE id = ?').run(stageId);
+    return this.buildPatch({ deletedStageIds: [stageId] });
+  }
+
+  duplicateStage(stageId: Id): SnapshotPatch {
+    const existing = this.db
+      .prepare('SELECT id, name, width, height, elements_json FROM stages WHERE id = ?')
+      .get(stageId) as
+      | { id: string; name: string; width: number; height: number; elements_json: string }
+      | undefined;
+
+    if (!existing) return this.buildPatch({});
+
+    const now = nowIso();
+    const newId = createId();
+    const nextOrderRow = this.db
+      .prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages')
+      .get() as { next_order: number };
+
+    this.db
+      .prepare(
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        newId,
+        `${existing.name} copy`,
+        existing.width,
+        existing.height,
+        nextOrderRow.next_order,
+        existing.elements_json,
+        now,
+        now,
+      );
+
+    return this.buildPatch({ upsertStageIds: [newId] });
+  }
+
   private newLyricsTextPayload() {
     return {
       text: 'Verse line one\nVerse line two',
@@ -3263,6 +3427,7 @@ export class CastRepository {
     upsertMediaAssetIds?: Id[];
     upsertOverlayIds?: Id[];
     upsertTemplateIds?: Id[];
+    upsertStageIds?: Id[];
     deletedLibraryIds?: Id[];
     deletedPresentationIds?: Id[];
     deletedLyricIds?: Id[];
@@ -3271,6 +3436,7 @@ export class CastRepository {
     deletedMediaAssetIds?: Id[];
     deletedOverlayIds?: Id[];
     deletedTemplateIds?: Id[];
+    deletedStageIds?: Id[];
     replaceLibraryBundles?: boolean;
   }): SnapshotPatch {
     const patch: SnapshotPatch = {
@@ -3302,6 +3468,9 @@ export class CastRepository {
     if (spec.upsertTemplateIds && spec.upsertTemplateIds.length > 0) {
       patch.upserts.templates = this.getTemplatesByIds(spec.upsertTemplateIds);
     }
+    if (spec.upsertStageIds && spec.upsertStageIds.length > 0) {
+      patch.upserts.stages = this.getStagesByIds(spec.upsertStageIds);
+    }
     if (spec.deletedLibraryIds && spec.deletedLibraryIds.length > 0) {
       patch.deletes.libraries = [...spec.deletedLibraryIds];
     }
@@ -3325,6 +3494,9 @@ export class CastRepository {
     }
     if (spec.deletedTemplateIds && spec.deletedTemplateIds.length > 0) {
       patch.deletes.templates = [...spec.deletedTemplateIds];
+    }
+    if (spec.deletedStageIds && spec.deletedStageIds.length > 0) {
+      patch.deletes.stages = [...spec.deletedStageIds];
     }
     if (spec.replaceLibraryBundles) {
       patch.upserts.libraryBundles = this.buildLibraryBundles();
@@ -4190,6 +4362,69 @@ export class CastRepository {
       id: row.id,
       name: row.name,
       kind: this.normalizeTemplateKind(row.kind),
+      width: row.width,
+      height: row.height,
+      order: row.order_index,
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getStages(): Stage[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, width, height, order_index, elements_json, created_at, updated_at
+         FROM stages
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all() as Array<{
+      id: string;
+      name: string;
+      width: number;
+      height: number;
+      order_index: number;
+      elements_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      width: row.width,
+      height: row.height,
+      order: row.order_index,
+      elements: parseJson<SlideElement[]>(row.elements_json),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  private getStagesByIds(ids: Id[]): Stage[] {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = this.db
+      .prepare(
+        `SELECT id, name, width, height, order_index, elements_json, created_at, updated_at
+         FROM stages
+         WHERE id IN (${placeholders})
+         ORDER BY order_index ASC, created_at ASC`
+      )
+      .all(...ids) as Array<{
+      id: string;
+      name: string;
+      width: number;
+      height: number;
+      order_index: number;
+      elements_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
       width: row.width,
       height: row.height,
       order: row.order_index,

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createDefaultTemplateElements } from '@core/templates';
-import type { Id, Overlay, OverlayCreateInput, OverlayUpdateInput, SlideElement, Template, TemplateKind } from '@core/types';
+import type { Id, Overlay, OverlayCreateInput, OverlayUpdateInput, SlideElement, Stage, Template, TemplateKind } from '@core/types';
 import { cloneElements, slideElementsSignature } from '../../utils/staged-editor-utils';
 import { getOverlayDefaults } from '../../utils/slides';
 import { createId } from '../../utils/create-id';
@@ -62,10 +62,28 @@ interface DeckEditorValue {
   pushChanges: () => Promise<void>;
 }
 
+interface StageEditorValue {
+  stages: Stage[];
+  currentStageId: Id | null;
+  currentStage: Stage | null;
+  hasPendingChanges: boolean;
+  isPushingChanges: boolean;
+  nameFocusRequest: number;
+  setCurrentStageId: (stageId: Id | null) => void;
+  updateStageDraft: (input: { id: Id; name?: string; elements?: SlideElement[] }) => void;
+  replaceStageElements: (elements: SlideElement[]) => void;
+  createStage: () => Promise<void>;
+  duplicateStage: (stageId: Id) => void;
+  deleteCurrentStage: () => Promise<void>;
+  requestNameFocus: (stageId: Id) => void;
+  pushChanges: () => Promise<void>;
+}
+
 interface AssetEditorContextValue {
   overlay: OverlayEditorValue;
   template: TemplateEditorValue;
   deck: DeckEditorValue;
+  stage: StageEditorValue;
 }
 
 // ─── Context ────────────────────────────────────────────────────────
@@ -80,6 +98,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
   const {
     overlays: persistedOverlays,
     templates: persistedTemplates,
+    stages: persistedStages,
     slideElementsBySlideId,
   } = useProjectContent();
 
@@ -434,6 +453,171 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     templateStaged.setCurrentItemId, templateNameFocusRequest, templates, updateTemplateDraft,
   ]);
 
+  // ── Stage editor ──
+
+  const stageStaged = useStagedCollection<Stage>({
+    persistedItems: persistedStages,
+    signatureOf: stageSignature,
+    workbenchModeKey: 'stage-editor',
+    currentWorkbenchMode: workbenchMode,
+  });
+
+  const stages = stageStaged.items;
+  const [stageNameFocusRequest, setStageNameFocusRequest] = useState(0);
+
+  const updateStageDraft = useCallback((input: { id: Id; name?: string; elements?: SlideElement[] }) => {
+    stageStaged.setStagedItems((current) => {
+      const source = current ?? persistedStages;
+      return source.map((stage) => (
+        stage.id === input.id
+          ? {
+            ...stage,
+            name: input.name ?? stage.name,
+            elements: input.elements ? cloneElements(input.elements) : stage.elements,
+            updatedAt: new Date().toISOString(),
+          }
+          : stage
+      ));
+    });
+  }, [persistedStages, stageStaged]);
+
+  const replaceStageElements = useCallback((elements: SlideElement[]) => {
+    if (!stageStaged.currentItemId) return;
+    updateStageDraft({ id: stageStaged.currentItemId, elements });
+  }, [stageStaged.currentItemId, updateStageDraft]);
+
+  const createStageAction = useCallback(async () => {
+    const now = new Date().toISOString();
+    const draft: Stage = {
+      id: createId(),
+      name: 'New Stage',
+      width: 1920,
+      height: 1080,
+      order: (stages.at(-1)?.order ?? -1) + 1,
+      elements: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    stageStaged.setStagedItems((current) => [...(current ?? persistedStages), draft]);
+    stageStaged.setCurrentItemId(draft.id);
+    setStatusText('Created stage');
+  }, [persistedStages, setStatusText, stageStaged, stages]);
+
+  const duplicateStageAction = useCallback((stageId: Id) => {
+    const source = stages.find((stage) => stage.id === stageId);
+    if (!source) return;
+    const now = new Date().toISOString();
+    const duplicate: Stage = {
+      ...cloneStage(source),
+      id: createId(),
+      name: `${source.name} Copy`,
+      order: (stages.at(-1)?.order ?? -1) + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    stageStaged.setStagedItems((current) => [...(current ?? persistedStages), duplicate]);
+    stageStaged.setCurrentItemId(duplicate.id);
+    setStatusText('Duplicated stage');
+  }, [persistedStages, setStatusText, stageStaged, stages]);
+
+  const deleteCurrentStage = useCallback(async () => {
+    if (!stageStaged.currentItemId) return;
+    stageStaged.setStagedItems((current) => {
+      const source = current ?? persistedStages;
+      return source.filter((stage) => stage.id !== stageStaged.currentItemId);
+    });
+    setStatusText('Deleted stage');
+  }, [persistedStages, setStatusText, stageStaged]);
+
+  const requestStageNameFocus = useCallback((stageId: Id) => {
+    stageStaged.setCurrentItemId(stageId);
+    setStageNameFocusRequest((v) => v + 1);
+  }, [stageStaged]);
+
+  const pushStageChanges = useCallback(async () => {
+    if (!stageStaged.stagedItems || stageStaged.isPushingChanges) return;
+    const stagedStages = stageStaged.stagedItems;
+    const stagedSig = stagedStages.map(stageSignature).join();
+    const persistedSig = persistedStages.map(stageSignature).join();
+    if (stagedSig === persistedSig) {
+      stageStaged.setStagedItems(null);
+      return;
+    }
+
+    stageStaged.setIsPushingChanges(true);
+    try {
+      let resolvedCurrentStageId = stageStaged.currentItemId;
+      let knownStages = persistedStages;
+      const persistedById = new Map(persistedStages.map((s) => [s.id, s]));
+      const stagedById = new Map(stagedStages.map((s) => [s.id, s]));
+
+      for (const stage of persistedStages) {
+        if (stagedById.has(stage.id)) continue;
+        const next = await mutatePatch(() => window.castApi.deleteStage(stage.id));
+        knownStages = next.stages;
+      }
+      for (const stage of stagedStages) {
+        if (persistedById.has(stage.id)) continue;
+        const previousIds = new Set(knownStages.map((item) => item.id));
+        const next = await mutatePatch(() => window.castApi.createStage({
+          name: stage.name,
+          width: stage.width,
+          height: stage.height,
+          elements: cloneElements(stage.elements),
+        }));
+        knownStages = next.stages;
+        const createdStage = knownStages.find((item) => !previousIds.has(item.id)) ?? null;
+        if (createdStage && resolvedCurrentStageId === stage.id) resolvedCurrentStageId = createdStage.id;
+      }
+      for (const stage of stagedStages) {
+        if (!persistedById.has(stage.id)) continue;
+        const persisted = persistedById.get(stage.id);
+        if (!persisted || stageSignature(stage) === stageSignature(persisted)) continue;
+        const next = await mutatePatch(() => window.castApi.updateStage({
+          id: stage.id,
+          name: stage.name,
+          width: stage.width,
+          height: stage.height,
+          elements: cloneElements(stage.elements),
+        }));
+        knownStages = next.stages;
+      }
+
+      stageStaged.setStagedItems(null);
+      const stillExists = resolvedCurrentStageId ? knownStages.some((s) => s.id === resolvedCurrentStageId) : false;
+      if (!resolvedCurrentStageId || !stillExists) resolvedCurrentStageId = knownStages[0]?.id ?? null;
+      stageStaged.setCurrentItemId(resolvedCurrentStageId);
+      setStatusText('Stage changes pushed');
+    } finally {
+      stageStaged.setIsPushingChanges(false);
+    }
+  }, [stageStaged, mutatePatch, persistedStages, setStatusText]);
+
+  useEffect(() => {
+    stageStaged.registerAutoPush(() => void pushStageChanges());
+  }, [stageStaged, pushStageChanges]);
+
+  const stageValue = useMemo<StageEditorValue>(() => ({
+    stages,
+    currentStageId: stageStaged.currentItemId,
+    currentStage: stageStaged.currentItem,
+    hasPendingChanges: stageStaged.hasPendingChanges,
+    isPushingChanges: stageStaged.isPushingChanges,
+    nameFocusRequest: stageNameFocusRequest,
+    setCurrentStageId: stageStaged.setCurrentItemId,
+    updateStageDraft,
+    replaceStageElements,
+    createStage: createStageAction,
+    duplicateStage: duplicateStageAction,
+    deleteCurrentStage,
+    requestNameFocus: requestStageNameFocus,
+    pushChanges: pushStageChanges,
+  }), [
+    createStageAction, duplicateStageAction, stageStaged.currentItem, stageStaged.currentItemId,
+    deleteCurrentStage, stageStaged.hasPendingChanges, stageStaged.isPushingChanges, stageNameFocusRequest,
+    stages, pushStageChanges, replaceStageElements, stageStaged.setCurrentItemId, requestStageNameFocus, updateStageDraft,
+  ]);
+
   // ── Deck editor ──
 
   const [stagedSlides, setStagedSlides] = useState<Record<Id, SlideElement[]>>({});
@@ -526,8 +710,8 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
   // ── Combined value ──
 
   const value = useMemo<AssetEditorContextValue>(
-    () => ({ overlay: overlayValue, template: templateValue, deck: deckValue }),
-    [overlayValue, templateValue, deckValue],
+    () => ({ overlay: overlayValue, template: templateValue, deck: deckValue, stage: stageValue }),
+    [overlayValue, templateValue, deckValue, stageValue],
   );
 
   return <AssetEditorContext.Provider value={value}>{children}</AssetEditorContext.Provider>;
@@ -553,6 +737,10 @@ export function useDeckEditor(): DeckEditorValue {
   return useAssetEditor().deck;
 }
 
+export function useStageEditor(): StageEditorValue {
+  return useAssetEditor().stage;
+}
+
 // ─── Utils ──────────────────────────────────────────────────────────
 
 function toOverlayCreateInput(overlay: Overlay): OverlayCreateInput {
@@ -573,4 +761,12 @@ function templateSignature(template: Template): string {
 
 function cloneTemplate(template: Template): Template {
   return JSON.parse(JSON.stringify(template)) as Template;
+}
+
+function stageSignature(stage: Stage): string {
+  return JSON.stringify({ id: stage.id, name: stage.name, width: stage.width, height: stage.height, elements: stage.elements });
+}
+
+function cloneStage(stage: Stage): Stage {
+  return JSON.parse(JSON.stringify(stage)) as Stage;
 }

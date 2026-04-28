@@ -15,6 +15,8 @@ import type {
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  StageCreateInput,
+  StageUpdateInput,
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
@@ -87,6 +89,10 @@ const api = {
     ipcRenderer.invoke(IPC.syncTemplateToLinkedDeckItems, templateId),
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
     ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
+  createStage: (input: StageCreateInput) => ipcRenderer.invoke(IPC.createStage, input),
+  updateStage: (input: StageUpdateInput) => ipcRenderer.invoke(IPC.updateStage, input),
+  deleteStage: (stageId: Id) => ipcRenderer.invoke(IPC.deleteStage, stageId),
+  duplicateStage: (stageId: Id) => ipcRenderer.invoke(IPC.duplicateStage, stageId),
   renameLibrary: (id: Id, name: string) => ipcRenderer.invoke(IPC.renameLibrary, id, name),
   renamePlaylist: (id: Id, name: string) => ipcRenderer.invoke(IPC.renamePlaylist, id, name),
   renamePresentation: (id: Id, title: string) => ipcRenderer.invoke(IPC.renamePresentation, id, title),
@@ -103,8 +109,8 @@ const api = {
   updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) =>
     ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
   getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
-  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => {
-    ipcRenderer.send(IPC.sendNdiFrame, buffer, width, height);
+  sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
+    ipcRenderer.send(IPC.sendNdiFrame, name, buffer, width, height);
   },
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => {
     const handler = (_event: IpcRendererEvent, state: NdiOutputState) => callback(state);

@@ -19,10 +19,7 @@ export function ObjectListRow({ element }: ObjectListRowProps) {
   }
 
   return (
-    <SelectableRow.Root
-      selected={selected}
-      onClick={handleSelect}
-    >
+    <SelectableRow.Root selected={selected} onClick={handleSelect} className='w-full' >
       <SelectableRow.Leading>
         <TypeIcon type={element.type} />
       </SelectableRow.Leading>

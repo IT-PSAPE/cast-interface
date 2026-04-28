@@ -13,8 +13,16 @@ function toRenderNode(element: SlideElement): RenderNode {
   };
 }
 
-function resolveSceneSlide(slide: Slide | null): Slide {
-  return slide ?? LAYER_PREVIEW_SLIDE;
+type RenderSceneFrameInput = Pick<Slide, 'width' | 'height'> | Slide | null;
+
+function resolveSceneSlide(frame: RenderSceneFrameInput): Slide {
+  if (!frame) return LAYER_PREVIEW_SLIDE;
+  if ('id' in frame && 'notes' in frame) return frame;
+  return {
+    ...LAYER_PREVIEW_SLIDE,
+    width: frame.width,
+    height: frame.height,
+  };
 }
 
 function sceneSize(slide: Slide): { width: number; height: number } {
@@ -32,8 +40,8 @@ function toPresentationLayerElement(element: SlideElement): SlideElement {
   };
 }
 
-export function buildRenderScene(slide: Slide | null, elements: SlideElement[]): RenderScene {
-  const nextSlide = resolveSceneSlide(slide);
+export function buildRenderScene(frame: RenderSceneFrameInput, elements: SlideElement[]): RenderScene {
+  const nextSlide = resolveSceneSlide(frame);
   const size = sceneSize(nextSlide);
   const sorted = sortElements(elements).map(toRenderNode);
   return { slide: nextSlide, width: size.width, height: size.height, nodes: sorted };
