@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { DeckItem, PlaylistEntry, PlaylistTree } from '@core/types';
 import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
 import { Accordion } from '../../components/display/accordion';
+import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
+import { useConfirm } from '../../components/overlays/confirm-dialog';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
@@ -99,22 +101,40 @@ export function PlaylistSegmentGroup({ segment }: PlaylistSegmentGroupProps) {
   );
 }
 
-function SegmentEntryRow({
-  item,
-  entry,
-  onDeckItemDragOver,
-  onDeckItemDrop,
-}: {
+interface SegmentEntryRowProps {
   entry: PlaylistEntry;
   item: DeckItem;
+  index: number;
+  totalEntries: number;
   onDeckItemDragOver: (event: React.DragEvent<HTMLButtonElement>) => void;
   onDeckItemDrop: (event: React.DragEvent<HTMLButtonElement>) => void;
-}) {
-  const { currentPlaylistEntryId, renameDeckItem } = useNavigation();
+}
+
+function SegmentEntryRow(props: SegmentEntryRowProps) {
+  return (
+    <ContextMenu.Root>
+      <SegmentEntryRowBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function SegmentEntryRowBody({
+  item,
+  entry,
+  index,
+  totalEntries,
+  onDeckItemDragOver,
+  onDeckItemDrop,
+}: SegmentEntryRowProps) {
+  const { currentPlaylistEntryId, renameDeckItem, movePlaylistEntryDirection, removePlaylistEntry } = useNavigation();
   const { selectPlaylistEntry } = useSlides();
+  const confirm = useConfirm();
   const renameRef = useRef<RenameFieldHandle>(null);
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
   const isSelected = entry.id === currentPlaylistEntryId;
+  const isFirst = index === 0;
+  const isLast = index === totalEntries - 1;
 
   function handleSelect() { selectPlaylistEntry(entry.id); }
 
@@ -122,11 +142,40 @@ function SegmentEntryRow({
     void renameDeckItem(item.id, name);
   }
 
+  async function handleRemoveFromSegment() {
+    const ok = await confirm({
+      title: `Remove "${item.title}" from segment?`,
+      description: 'The item stays in your library — only the playlist entry is removed.',
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (ok) await removePlaylistEntry(entry.id);
+  }
+
   return (
-    <RecastPanel.MenuItem active={isSelected} onClick={handleSelect} onDragOver={onDeckItemDragOver} onDrop={onDeckItemDrop} className='my-0.5'>
-      <DeckItemIcon entity={item} className="shrink-0" />
-      <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
-    </RecastPanel.MenuItem>
+    <>
+      <RecastPanel.MenuItem
+        {...triggerHandlers}
+        ref={triggerRef}
+        active={isSelected}
+        onClick={handleSelect}
+        onDragOver={onDeckItemDragOver}
+        onDrop={onDeckItemDrop}
+        className='my-0.5'
+      >
+        <DeckItemIcon entity={item} className="shrink-0" />
+        <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
+      </RecastPanel.MenuItem>
+      <ContextMenu.Portal>
+        <ContextMenu.Menu>
+          <ContextMenu.Item disabled={isFirst} onSelect={() => { void movePlaylistEntryDirection(entry.id, 'up'); }}>Move up</ContextMenu.Item>
+          <ContextMenu.Item disabled={isLast} onSelect={() => { void movePlaylistEntryDirection(entry.id, 'down'); }}>Move down</ContextMenu.Item>
+          <ContextMenu.Separator />
+          <ContextMenu.Item onSelect={() => { renameRef.current?.startEditing(); }}>Rename</ContextMenu.Item>
+          <ContextMenu.Item variant="destructive" onSelect={() => { void handleRemoveFromSegment(); }}>Remove from segment</ContextMenu.Item>
+        </ContextMenu.Menu>
+      </ContextMenu.Portal>
+    </>
   );
 }
 
@@ -153,6 +202,8 @@ function renderSegmentEntries({
         key={entry.entry.id}
         entry={entry.entry}
         item={entry.item}
+        index={index}
+        totalEntries={entries.length}
         onDeckItemDragOver={(event) => onEntryDragOver(index, event)}
         onDeckItemDrop={onEntryDrop}
       />,

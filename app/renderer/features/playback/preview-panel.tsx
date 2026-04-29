@@ -1,38 +1,46 @@
-import { useState } from 'react';
-import { ChevronDown, AlignLeft, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, VolumeX, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { ChevronDown, AlignLeft, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, VolumeX, XCircle } from 'lucide-react';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { ReacstButton } from '@renderer/components/controls/button';
 import { RecastPanel } from '@renderer/components/layout/panel';
 import { Tabs } from '../../components/display/tabs';
 import { Dropdown } from '../../components/form/dropdown';
+import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
 import { IconGroup } from '@renderer/components/icon-group';
 import { useNdi } from '../../contexts/app-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useOverlayEditor, useStageEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useAudio, usePresentationLayers } from '../../contexts/playback/playback-context';
-import { useRenderScenes } from '../../contexts/canvas/canvas-context';
+import { useAudio, usePresentationLayers, useStagePlayback } from '../../contexts/playback/playback-context';
+import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
+import { useSlides } from '../../contexts/slide-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useGridSize } from '../../hooks/use-grid-size';
 import type { PreviewSurfaceKind } from '../../types/ui';
+import type { SlideElement, TextElementPayload } from '@core/types';
+import { BindingProvider, type BindingValue } from '../canvas/binding-context';
+import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
 import { StageBinPanel } from '../assets/stages/stage-bin-panel';
 import { useProgramOutput } from './use-program-output';
 import { useStageScene } from './use-stage-scene';
 import { SceneStage } from '../canvas/scene-stage';
 
-type BottomTab = 'overlays' | 'stage';
+type BottomTab = 'overlays' | 'stage' | 'audio';
 
 export function PreviewPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
   const { currentOutputDeckItemId } = useNavigation();
   const audio = useAudio();
+  const { importMedia } = useElements();
   const { createOverlay } = useOverlayEditor();
   const { createStage } = useStageEditor();
+  const { setCurrentStageId: setPlaybackStageId } = useStagePlayback();
   const { actions: { setWorkbenchMode } } = useWorkbench();
   const { gridSize: overlayGridSize, setGridSize: setOverlayGridSize, min: overlayGridMin, max: overlayGridMax } = useGridSize('recast.grid-size.overlay-bin', 3, 2, 4);
   const { gridSize: stageGridSize, setGridSize: setStageGridSize, min: stageGridMin, max: stageGridMax } = useGridSize('recast.grid-size.stage-bin', 3, 2, 4);
   const [bottomTab, setBottomTab] = useState<BottomTab>('overlays');
+  const audioImportInputRef = useRef<HTMLInputElement>(null);
   const mediaActive = Boolean(mediaLayerAsset);
   const contentActive = contentLayerVisible && Boolean(currentOutputDeckItemId);
   const overlayActive = activeOverlays.length > 0;
@@ -58,17 +66,28 @@ export function PreviewPanel() {
   }
 
   function handleCreateStage() {
-    void createStage().then(() => {
+    void createStage().then((newStageId) => {
+      if (newStageId) setPlaybackStageId(newStageId);
       setWorkbenchMode('stage-editor');
     });
   }
 
   function handleTabChange(value: string) {
-    if (value === 'overlays' || value === 'stage') setBottomTab(value);
+    if (value === 'overlays' || value === 'stage' || value === 'audio') setBottomTab(value);
+  }
+
+  function handleAudioImportClick() {
+    audioImportInputRef.current?.click();
+  }
+
+  function handleAudioImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.files || event.target.files.length === 0) return;
+    void importMedia(event.target.files);
+    event.target.value = '';
   }
 
   const overlayModeLabel = overlayMode === 'single' ? 'Single overlay mode — click to allow multiple' : 'Multiple overlay mode — click for single';
-  const showOverlayActions = bottomTab === 'overlays';
+  const showGridSlider = bottomTab !== 'audio';
   const activeGridSize = bottomTab === 'overlays' ? overlayGridSize : stageGridSize;
   const activeGridMin = bottomTab === 'overlays' ? overlayGridMin : stageGridMin;
   const activeGridMax = bottomTab === 'overlays' ? overlayGridMax : stageGridMax;
@@ -96,7 +115,6 @@ export function PreviewPanel() {
             <VolumeX className="size-4" />
           </IconGroup.Item>
         </IconGroup.Root>
-        <BackgroundControls />
       </RecastPanel.Group>
       <RecastPanel.Group className='flex-1' >
         <Tabs.Root value={bottomTab} onValueChange={handleTabChange}>
@@ -104,8 +122,9 @@ export function PreviewPanel() {
             <Tabs.List label="Bottom panel" className="mr-auto" tabsClassName="gap-2">
               <Tabs.Trigger value="overlays">Overlays</Tabs.Trigger>
               <Tabs.Trigger value="stage">Stage</Tabs.Trigger>
+              <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
             </Tabs.List>
-            {showOverlayActions ? (
+            {bottomTab === 'overlays' ? (
               <>
                 <ReacstButton.Icon label={overlayModeLabel} variant="ghost" onClick={handleOverlayModeToggle}>
                   {overlayMode === 'single' ? <Layers /> : <Layers2 />}
@@ -114,22 +133,48 @@ export function PreviewPanel() {
                   <Plus />
                 </ReacstButton.Icon>
               </>
-            ) : (
+            ) : bottomTab === 'stage' ? (
               <ReacstButton.Icon label="Add stage" onClick={handleCreateStage}>
                 <Plus />
               </ReacstButton.Icon>
+            ) : (
+              <>
+                <FileTrigger.Root
+                  hidden
+                  inputRef={audioImportInputRef}
+                  accept="audio/*"
+                  multiple
+                  onSelect={handleAudioImportSelect}
+                />
+                <ReacstButton.Icon label="Import audio" onClick={handleAudioImportClick}>
+                  <Upload />
+                </ReacstButton.Icon>
+              </>
             )}
           </RecastPanel.GroupTitle>
-          <RecastPanel.Content className='flex-1 py-2 px-1'>
-            {bottomTab === 'overlays' ? (
-              <OverlayBinPanel filterText="" gridItemSize={overlayGridSize} />
-            ) : (
-              <StageBinPanel filterText="" gridItemSize={stageGridSize} />
-            )}
-          </RecastPanel.Content>
-          <RecastPanel.GroupFooter>
-            <GridSizeSlider value={activeGridSize} min={activeGridMin} max={activeGridMax} onChange={handleActiveGridSizeChange} />
-          </RecastPanel.GroupFooter>
+          {bottomTab === 'audio' ? (
+            <RecastPanel.Content className='flex-1 min-h-0 overflow-y-auto'>
+              <div className="w-full sticky top-0 z-10 bg-primary border-b border-secondary">
+                <AudioBackgroundControls />
+              </div>
+              <div className='w-full py-2 px-1'>
+                <AudioBinPanel filterText="" gridItemSize={1} />
+              </div>
+            </RecastPanel.Content>
+          ) : (
+            <RecastPanel.Content className='flex-1 py-2 px-1'>
+              {bottomTab === 'overlays' ? (
+                <OverlayBinPanel filterText="" gridItemSize={overlayGridSize} />
+              ) : (
+                <StageBinPanel filterText="" gridItemSize={stageGridSize} />
+              )}
+            </RecastPanel.Content>
+          )}
+          {showGridSlider ? (
+            <RecastPanel.GroupFooter>
+              <GridSizeSlider value={activeGridSize} min={activeGridMin} max={activeGridMax} onChange={handleActiveGridSizeChange} />
+            </RecastPanel.GroupFooter>
+          ) : null}
         </Tabs.Root>
       </RecastPanel.Group>
     </RecastPanel.Root>
@@ -202,7 +247,7 @@ function SurfacesArea() {
 
   if (previewMode === 'single') {
     return (
-      <div className="w-full">
+      <div className="flex w-full justify-center">
         <Surface kind={previewSingleSurface} showBadge={false} />
       </div>
     );
@@ -263,49 +308,50 @@ function MonitorSurface({ showBadge }: { showBadge: boolean }) {
   );
 }
 
+function extractSlideText(elements: SlideElement[]): string {
+  const lines: string[] = [];
+  for (const element of elements) {
+    if (element.type !== 'text') continue;
+    const text = (element.payload as TextElementPayload).text ?? '';
+    if (text.trim().length > 0) lines.push(text);
+  }
+  return lines.join('\n');
+}
+
 function StageSurface({ showBadge }: { showBadge: boolean }) {
   const stageScene = useStageScene();
+  const { currentStageId } = useStagePlayback();
+  const { liveSlide, liveElements, nextLiveSlide, nextLiveElements } = useSlides();
+  const [armedAtMs, setArmedAtMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setArmedAtMs(currentStageId ? Date.now() : null);
+  }, [currentStageId]);
+
+  const bindingValue = useMemo<BindingValue>(() => ({
+    currentSlideText: liveSlide ? extractSlideText(liveElements) : null,
+    nextSlideText: nextLiveSlide ? extractSlideText(nextLiveElements) : null,
+    slideNotes: liveSlide ? liveSlide.notes : null,
+    armedAtMs,
+  }), [liveSlide, liveElements, nextLiveSlide, nextLiveElements, armedAtMs]);
+
   // Mirrors the configured alpha for the stage NDI sender so the operator
   // sees exactly what the stage feed would look like over a transparent base.
   const { state: { outputConfigs } } = useNdi();
   const checkerboard = outputConfigs.stage.withAlpha;
 
   return (
-    <SurfaceFrame label="Stage" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage
-        scene={stageScene}
-        surface="stage"
-        className="h-full w-full"
-        fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
-        ndiCaptureSource="stage"
-      />
-    </SurfaceFrame>
-  );
-}
-
-// Background-layer playback controls. Tabs split audio vs. video so the panel
-// has room to grow when video-layer transport controls land. For now the audio
-// tab drives the global audio player; the video tab is a placeholder.
-
-type BackgroundTab = 'audio' | 'video';
-
-function BackgroundControls() {
-  const [tab, setTab] = useState<BackgroundTab>('audio');
-
-  function handleTabChange(value: string) {
-    if (value === 'audio' || value === 'video') setTab(value);
-  }
-
-  return (
-    <div className="w-full flex flex-col gap-1 border-t border-primary px-2 py-1.5">
-      <Tabs.Root value={tab} onValueChange={handleTabChange}>
-        <Tabs.List label="Background controls" className="min-w-0" tabsClassName="gap-2">
-          <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
-          <Tabs.Trigger value="video">Video</Tabs.Trigger>
-        </Tabs.List>
-        {tab === 'audio' ? <AudioBackgroundControls /> : <VideoBackgroundControls />}
-      </Tabs.Root>
-    </div>
+    <BindingProvider value={bindingValue}>
+      <SurfaceFrame label="Stage" showLabel={showBadge} checkerboard={checkerboard}>
+        <SceneStage
+          scene={stageScene}
+          surface="stage"
+          className="h-full w-full"
+          fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
+          ndiCaptureSource="stage"
+        />
+      </SurfaceFrame>
+    </BindingProvider>
   );
 }
 
@@ -358,14 +404,6 @@ function AudioBackgroundControls() {
   );
 }
 
-function VideoBackgroundControls() {
-  return (
-    <div className="px-2 py-3 text-xs text-tertiary">
-      Video controls coming soon.
-    </div>
-  );
-}
-
 function formatPlaybackTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const total = Math.floor(seconds);
@@ -381,7 +419,7 @@ function formatPlaybackTime(seconds: number): string {
 function SurfaceFrame({ label, showLabel, checkerboard = false, children }: { label: string; showLabel: boolean; checkerboard?: boolean; children: React.ReactNode }) {
   return (
     <div
-      className="relative w-full overflow-hidden bg-black"
+      className="relative max-h-full max-w-full w-full overflow-hidden bg-black"
       style={{ aspectRatio: `${NDI_OUTPUT_WIDTH} / ${NDI_OUTPUT_HEIGHT}` }}
     >
       {checkerboard ? (

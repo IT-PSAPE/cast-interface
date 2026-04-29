@@ -28,7 +28,9 @@ export interface ElementContextValue {
   toggleElementLock: (id: Id, locked: boolean) => Promise<void>;
   nudgeSelection: (dx: number, dy: number) => Promise<void>;
   copySelection: () => void;
+  cutSelection: () => Promise<void>;
   pasteSelection: () => Promise<void>;
+  duplicateSelection: () => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   createText: () => Promise<void>;

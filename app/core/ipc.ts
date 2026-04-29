@@ -1,6 +1,7 @@
 import type {
   AppSnapshot,
   DeckBundleBrokenReferenceDecision,
+  DeckBundleExportOptions,
   DeckBundleInspection,
   ElementCreateInput,
   ElementUpdateInput,
@@ -34,7 +35,7 @@ export interface MainApi {
   chooseDeckBundleExportPath: (suggestedName: string) => Promise<string | null>;
   chooseDeckBundleImportPath: () => Promise<string | null>;
   chooseImportReplacementMediaPath: () => Promise<string | null>;
-  exportDeckBundle: (itemIds: Id[], filePath: string) => Promise<{ filePath: string; itemCount: number }>;
+  exportDeckBundle: (itemIds: Id[], filePath: string, options?: DeckBundleExportOptions) => Promise<{ filePath: string; itemCount: number }>;
   inspectImportBundle: (filePath: string) => Promise<DeckBundleInspection>;
   finalizeImportBundle: (filePath: string, decisions: DeckBundleBrokenReferenceDecision[]) => Promise<AppSnapshot>;
   createLibrary: (name: string) => Promise<SnapshotPatch>;

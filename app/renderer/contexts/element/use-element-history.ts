@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { AppSnapshot, ElementCreateInput, ElementUpdateInput, Id, Slide, SlideElement } from '@core/types';
+import type { AppSnapshot, ElementCreateInput, ElementUpdateInput, Id, SlideElement } from '@core/types';
 import type { SnapshotPatch } from '@core/snapshot-patch';
 import { createId } from '../../utils/create-id';
 import { buildSnapshotDiff } from './element-history-utils';
@@ -58,7 +58,8 @@ export function clearDraftElementsSyncedWithBase(currentDrafts: DraftPatchMap, b
 interface UseElementHistoryInput {
   baseElements: SlideElement[];
   effectiveElements: SlideElement[];
-  currentSlide: Slide | null;
+  activeEditorEntityId: Id | null;
+  hasActiveEditorSource: boolean;
   historyKey: string | null;
   selectedElementIds: Id[];
   mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<AppSnapshot>;
@@ -70,10 +71,16 @@ interface UseElementHistoryInput {
   replaceElements?: (elements: SlideElement[]) => Promise<void>;
 }
 
+// Clipboard is module-scoped so a copy in one context survives navigating to
+// another scene/slide/template/stage/overlay. Element ids are regenerated on
+// paste, so cross-context insertion never collides.
+const clipboardRef: { current: SlideElement[] } = { current: [] };
+
 export function useElementHistory({
   baseElements,
   effectiveElements,
-  currentSlide,
+  activeEditorEntityId,
+  hasActiveEditorSource,
   historyKey,
   selectedElementIds,
   mutatePatch,
@@ -86,13 +93,11 @@ export function useElementHistory({
 }: UseElementHistoryInput) {
   const historyPastRef = useRef<SlideElement[][]>([]);
   const historyFutureRef = useRef<SlideElement[][]>([]);
-  const clipboardRef = useRef<SlideElement[]>([]);
   const pasteCountRef = useRef(0);
 
   useEffect(() => {
     historyPastRef.current = [];
     historyFutureRef.current = [];
-    clipboardRef.current = [];
     pasteCountRef.current = 0;
   }, [historyKey]);
 
@@ -138,14 +143,13 @@ export function useElementHistory({
     setStatusText(`Copied ${targets.length} object(s)`);
   }, [baseElements, selectedElementIds, setStatusText]);
 
-  const pasteSelection = useCallback(async () => {
-    if (!currentSlide || clipboardRef.current.length === 0) return;
+  const insertClonedElements = useCallback(async (sources: SlideElement[], offset: number) => {
+    if (!hasActiveEditorSource || !activeEditorEntityId || sources.length === 0) return [] as Id[];
     pushHistorySnapshot();
-    pasteCountRef.current += 1;
-    const offset = 24 * pasteCountRef.current;
-    const creates: ElementCreateInput[] = clipboardRef.current.map((element) => ({
+    const timestamp = new Date().toISOString();
+    const creates: ElementCreateInput[] = sources.map((element) => ({
       id: createId(),
-      slideId: currentSlide.id,
+      slideId: activeEditorEntityId,
       type: element.type,
       x: element.x + offset,
       y: element.y + offset,
@@ -171,15 +175,32 @@ export function useElementHistory({
         zIndex: input.zIndex ?? 0,
         layer: input.layer ?? 'content',
         payload: input.payload,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
       }))]);
     } else {
       await mutatePatch(() => window.castApi.createElementsBatch(creates));
     }
-    selectElements(creates.map((input) => input.id!).reverse());
-    setStatusText(`Pasted ${creates.length} object(s)`);
-  }, [baseElements, currentSlide, mutatePatch, pushHistorySnapshot, replaceElements, selectElements, setStatusText]);
+    return creates.map((input) => input.id!);
+  }, [activeEditorEntityId, baseElements, hasActiveEditorSource, mutatePatch, pushHistorySnapshot, replaceElements]);
+
+  const pasteSelection = useCallback(async () => {
+    if (!hasActiveEditorSource || !activeEditorEntityId || clipboardRef.current.length === 0) return;
+    pasteCountRef.current += 1;
+    const newIds = await insertClonedElements(clipboardRef.current, 24 * pasteCountRef.current);
+    if (newIds.length === 0) return;
+    selectElements([...newIds].reverse());
+    setStatusText(`Pasted ${newIds.length} object(s)`);
+  }, [activeEditorEntityId, hasActiveEditorSource, insertClonedElements, selectElements, setStatusText]);
+
+  const duplicateSelection = useCallback(async () => {
+    const targets = baseElements.filter((element) => selectedElementIds.includes(element.id));
+    if (targets.length === 0) return;
+    const newIds = await insertClonedElements(targets, 24);
+    if (newIds.length === 0) return;
+    selectElements([...newIds].reverse());
+    setStatusText(`Duplicated ${newIds.length} object(s)`);
+  }, [baseElements, insertClonedElements, selectElements, selectedElementIds, setStatusText]);
 
   const nudgeSelection = useCallback(async (dx: number, dy: number) => {
     const targets = effectiveElements.filter((element) => selectedElementIds.includes(element.id) && !element.payload.locked);
@@ -204,5 +225,9 @@ export function useElementHistory({
     setStatusText('Redo');
   }, [applySnapshot, baseElements, setStatusText]);
 
-  return { pushHistorySnapshot, commitElementUpdates, copySelection, pasteSelection, nudgeSelection, undo, redo };
+  return { pushHistorySnapshot, commitElementUpdates, copySelection, pasteSelection, duplicateSelection, nudgeSelection, undo, redo };
+}
+
+export function hasClipboardContent(): boolean {
+  return clipboardRef.current.length > 0;
 }

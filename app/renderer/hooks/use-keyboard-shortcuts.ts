@@ -17,35 +17,25 @@ function isEditableTarget(target: HTMLElement | null): boolean {
     || target.getAttribute('contenteditable') === 'true';
 }
 
+// Only block shortcuts when the target is a text-editing surface or has been
+// explicitly opted out (data-shortcuts-scope="ignore"). Buttons and other
+// interactive controls do NOT block — otherwise pressing Backspace right after
+// clicking a slide/element button would hit the focused button and skip the
+// delete shortcut entirely.
 function isInteractiveTarget(target: HTMLElement | null): boolean {
   if (!target) return false;
   if (isEditableTarget(target)) return true;
-
-  const interactiveSelector = [
-    'button',
-    'a[href]',
-    'select',
-    '[role="button"]',
-    '[role="menuitem"]',
-    '[role="tab"]',
-    '[role="option"]',
-    '[role="listbox"]',
-    '[role="combobox"]',
-    '[role="dialog"]',
-    '[data-shortcuts-scope="ignore"]',
-  ].join(', ');
-
-  return target.closest(interactiveSelector) !== null;
+  return target.closest('[data-shortcuts-scope="ignore"]') !== null;
 }
 
 export function useKeyboardShortcuts(): void {
   const { setStatusText, undo: globalUndoAction, redo: globalRedoAction } = useCast();
   const { open: openCommandPalette } = useCommandPalette();
   const { slides, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, deleteSlide, setCurrentSlideIndex } = useSlides();
-  const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
+  const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, cutSelection, pasteSelection, duplicateSelection, undo, redo } = useElements();
   const { setSlideBrowserMode, setPlaylistBrowserMode } = useDeckBrowser();
   const { state: { workbenchMode } } = useWorkbench();
-  const isEditSlideBrowser = workbenchMode === 'deck-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
+  const isEditSlideBrowser = workbenchMode === 'deck-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor' || workbenchMode === 'stage-editor';
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -54,7 +44,9 @@ export function useKeyboardShortcuts(): void {
 
       const handlers: Record<ShortcutActionId, (event: KeyboardEvent, payload?: string) => void> = {
         copySelection: () => copySelection(),
+        cutSelection: () => { void cutSelection(); },
         pasteSelection: () => { void pasteSelection(); },
+        duplicateSelection: () => { void duplicateSelection(); },
         undo: () => { void undo(); },
         redo: () => { void redo(); },
         globalUndo: () => { void globalUndoAction(); },
@@ -115,5 +107,5 @@ export function useKeyboardShortcuts(): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, setCurrentSlideIndex, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo, globalUndoAction, globalRedoAction, openCommandPalette]);
+  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, setCurrentSlideIndex, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, cutSelection, pasteSelection, duplicateSelection, undo, redo, globalUndoAction, globalRedoAction, openCommandPalette]);
 }

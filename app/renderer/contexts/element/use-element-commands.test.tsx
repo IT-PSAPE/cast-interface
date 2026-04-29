@@ -52,6 +52,7 @@ describe('useElementCommands', () => {
       currentDeckItem: { id: 'deck-1', type: 'lyric' } as never,
       mutatePatch: vi.fn().mockResolvedValue({}),
       setStatusText,
+      pushHistorySnapshot: vi.fn(),
     }));
 
     await act(async () => {
@@ -70,6 +71,7 @@ describe('useElementCommands', () => {
       currentDeckItem: null,
       mutatePatch: vi.fn().mockResolvedValue({}),
       setStatusText: vi.fn(),
+      pushHistorySnapshot: vi.fn(),
     }));
 
     await act(async () => {
@@ -96,6 +98,7 @@ describe('useElementCommands', () => {
       currentDeckItem: null,
       mutatePatch: vi.fn().mockResolvedValue({}),
       setStatusText: vi.fn(),
+      pushHistorySnapshot: vi.fn(),
     }));
 
     await act(async () => {

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Play } from 'lucide-react';
 import type { Id } from '@core/types';
 import { ContextMenu, useContextMenuTrigger } from '@renderer/components/overlays/context-menu';
+import { useConfirm } from '@renderer/components/overlays/confirm-dialog';
 import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
@@ -31,6 +32,7 @@ function SlideGridTileImpl(props: SlideGridTileProps) {
 
 function SlideGridTileBody({ slideId, index, scene, selected, isLive, isEmpty, textPreview, onActivate, onFocus }: SlideGridTileProps) {
   const { slides, duplicateSlide, deleteSlide, moveSlide } = useSlides();
+  const confirm = useConfirm();
   const isFirst = index === 0;
   const isLast = index === slides.length - 1;
   const activeRef = useScrollAreaActiveItem<HTMLDivElement>(selected);
@@ -42,6 +44,16 @@ function SlideGridTileBody({ slideId, index, scene, selected, isLive, isEmpty, t
 
   function handleDoubleClick() {
     onFocus(index);
+  }
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Delete slide ${index + 1}?`,
+      description: 'This slide and all its elements will be permanently removed.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) await deleteSlide(slideId);
   }
 
   return (
@@ -89,10 +101,10 @@ function SlideGridTileBody({ slideId, index, scene, selected, isLive, isEmpty, t
       <ContextMenu.Portal>
         <ContextMenu.Menu>
           <ContextMenu.Item onSelect={() => { void duplicateSlide(slideId); }}>Duplicate</ContextMenu.Item>
-          <ContextMenu.Item onSelect={() => { void deleteSlide(slideId); }}>Delete</ContextMenu.Item>
-          <ContextMenu.Separator />
           <ContextMenu.Item disabled={isFirst} onSelect={() => { void moveSlide(slideId, 'up'); }}>Move up</ContextMenu.Item>
           <ContextMenu.Item disabled={isLast} onSelect={() => { void moveSlide(slideId, 'down'); }}>Move down</ContextMenu.Item>
+          <ContextMenu.Separator />
+          <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
         </ContextMenu.Menu>
       </ContextMenu.Portal>
     </>

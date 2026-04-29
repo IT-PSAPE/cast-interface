@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -85,18 +85,27 @@ const menuItemVariants = cv({
     },
 });
 
-function PanelMenuItem({ children, active = false, className, onClick, ...buttonProps }: PanelMenuItemProps) {
+const PanelMenuItem = forwardRef<HTMLButtonElement, PanelMenuItemProps>(function PanelMenuItem(
+    { children, active = false, className, onClick, ...buttonProps },
+    ref,
+) {
     const itemState = active ? 'active' : 'inactive';
     const cursorClassName = onClick ? 'cursor-pointer' : 'cursor-default';
 
     return (
         <div className="w-full">
-            <button type="button" className={cn(menuItemVariants({ state: itemState }), cursorClassName, className)} onClick={onClick} {...buttonProps}>
+            <button
+                ref={ref}
+                type="button"
+                className={cn(menuItemVariants({ state: itemState }), cursorClassName, className)}
+                onClick={onClick}
+                {...buttonProps}
+            >
                 {children}
             </button>
         </div>
     );
-}
+});
 
 export const RecastPanel = {
     Root: PanelRoot,

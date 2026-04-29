@@ -2,6 +2,8 @@ import type {
   DeckBundleItem,
   DeckBundleManifest,
   DeckBundleMediaReference,
+  DeckBundleOverlay,
+  DeckBundleStage,
   DeckBundleTemplate,
   SlideElement,
 } from './types';
@@ -27,6 +29,8 @@ export function readElementMediaReference(element: SlideElement): { source: stri
 export function collectDeckBundleMediaReferences(
   items: DeckBundleItem[],
   templates: DeckBundleTemplate[],
+  overlays: DeckBundleOverlay[] = [],
+  stages: DeckBundleStage[] = [],
 ): DeckBundleMediaReference[] {
   const references = new Map<string, MediaReferenceAccumulator>();
 
@@ -54,6 +58,14 @@ export function collectDeckBundleMediaReferences(
     collect(template.elements);
   }
 
+  for (const overlay of overlays) {
+    collect(overlay.elements);
+  }
+
+  for (const stage of stages) {
+    collect(stage.elements);
+  }
+
   return Array.from(references.entries())
     .map(([source, reference]) => ({
       source,
@@ -66,6 +78,11 @@ export function collectDeckBundleMediaReferences(
 export function normalizeDeckBundleManifest(manifest: DeckBundleManifest): DeckBundleManifest {
   return {
     ...manifest,
-    mediaReferences: collectDeckBundleMediaReferences(manifest.items, manifest.templates),
+    mediaReferences: collectDeckBundleMediaReferences(
+      manifest.items,
+      manifest.templates,
+      manifest.overlays ?? [],
+      manifest.stages ?? [],
+    ),
   };
 }

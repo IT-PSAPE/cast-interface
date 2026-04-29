@@ -23,7 +23,7 @@ const NavigationStateContext = createContext<NavigationStateValue | null>(null);
 const NavigationActionsContext = createContext<NavigationActionsValue | null>(null);
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const { snapshot, mutatePatch, runOperation, setStatusText } = useCast();
+  const { snapshot, mutate, mutatePatch, runOperation, setStatusText } = useCast();
   const { deckItems, deckItemsById, slides } = useProjectContent();
 
   const [currentLibraryId, setCurrentLibraryId] = useState<Id | null>(null);
@@ -393,6 +393,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setStatusText('Moved item');
   }, [mutatePatch, setStatusText]);
 
+  const movePlaylistEntryDirection = useCallback(async (entryId: Id, direction: 'up' | 'down') => {
+    await mutate(() => window.castApi.movePlaylistEntry(entryId, direction));
+    setStatusText(direction === 'up' ? 'Moved item up' : 'Moved item down');
+  }, [mutate, setStatusText]);
+
+  const removePlaylistEntry = useCallback(async (entryId: Id) => {
+    await mutatePatch(() => window.castApi.movePlaylistEntryToSegment(entryId, null));
+    setStatusText('Removed item from segment');
+  }, [mutatePatch, setStatusText]);
+
   const renamePlaylist = useCallback(async (id: Id, name: string) => {
     await mutatePatch(() => window.castApi.renamePlaylist(id, name));
     setStatusText(`Renamed playlist: ${name}`);
@@ -469,6 +479,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     reorderPlaylist,
     reorderSegment,
     movePlaylistEntry,
+    movePlaylistEntryDirection,
+    removePlaylistEntry,
   }), [
     addDeckItemToSegment,
     addDeckItemToSegmentAt,
@@ -491,6 +503,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     reorderPlaylist,
     reorderSegment,
     movePlaylistEntry,
+    movePlaylistEntryDirection,
+    removePlaylistEntry,
     selectLibrary,
     selectPlaylistEntry,
     selectPlaylistDeckItem,

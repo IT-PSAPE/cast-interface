@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 
@@ -15,7 +15,7 @@ const selectableRowStyles = cv({
   },
 });
 
-interface SelectableRowRootProps extends Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'draggable' | 'onClick' | 'onDragEnd' | 'onDragOver' | 'onDragStart' | 'onDrop'> {
+interface SelectableRowRootProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'type'> {
   children: ReactNode;
   className?: string;
   selected: boolean;
@@ -25,32 +25,21 @@ interface SelectableRowPartProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
 }
 
-function Root({
-  children,
-  className,
-  draggable,
-  onClick,
-  onDragEnd,
-  onDragOver,
-  onDragStart,
-  onDrop,
-  selected,
-}: SelectableRowRootProps) {
+const Root = forwardRef<HTMLButtonElement, SelectableRowRootProps>(function Root(
+  { children, className, selected, ...buttonProps },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
-      onClick={onClick}
       className={cn(selectableRowStyles({ selected }), className)}
-      draggable={draggable}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDragStart={onDragStart}
-      onDrop={onDrop}
+      {...buttonProps}
     >
       {children}
     </button>
   );
-}
+});
 
 function Leading({ children, className, ...rest }: SelectableRowPartProps) {
   return (

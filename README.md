@@ -96,7 +96,7 @@ If the addon is missing or the runtime library cannot be found, the app falls ba
 ## CI and releases
 
 - Pull requests and branch pushes run the validation workflow in [.github/workflows/ci.yml](.github/workflows/ci.yml).
-- Published GitHub Releases run the packaging workflow in [.github/workflows/build.yml](.github/workflows/build.yml).
+- Published GitHub Releases run the packaging job in [.github/workflows/release.yml](.github/workflows/release.yml).
 - Release note grouping is configured in [.github/release.yml](.github/release.yml).
 
 See [docs/ai-agent-commits.md](docs/ai-agent-commits.md) for commit and release conventions, and [docs/release-setup.md](docs/release-setup.md) for signing and packaging setup.

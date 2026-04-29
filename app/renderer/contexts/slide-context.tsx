@@ -14,6 +14,8 @@ interface SlideContextValue {
   currentSlide: Slide | null;
   liveSlide: Slide | null;
   liveElements: SlideElement[];
+  nextLiveSlide: Slide | null;
+  nextLiveElements: SlideElement[];
   slideElementsById: Map<Id, SlideElement[]>;
   isOutputArmedOnCurrent: boolean;
   setCurrentSlideIndex: (idx: number) => void;
@@ -89,11 +91,17 @@ export function SlideProvider({ children }: { children: ReactNode }) {
 
   const currentSlide = slides[currentSlideIndex] ?? null;
   const liveSlide = outputSlides[liveSlideIndex] ?? null;
+  const nextLiveSlide = liveSlideIndex >= 0 ? outputSlides[liveSlideIndex + 1] ?? null : null;
 
   const liveElements = useMemo(() => {
     if (!liveSlide) return [];
     return slideElementsBySlideId.get(liveSlide.id) ?? [];
   }, [liveSlide, slideElementsBySlideId]);
+
+  const nextLiveElements = useMemo(() => {
+    if (!nextLiveSlide) return [];
+    return slideElementsBySlideId.get(nextLiveSlide.id) ?? [];
+  }, [nextLiveSlide, slideElementsBySlideId]);
 
   const slideElementsById = useMemo(() => {
     const bySlide = new Map<Id, SlideElement[]>();
@@ -119,9 +127,13 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     armOutputPlaylistEntry(entryId);
   }, [armOutputPlaylistEntry, selectPlaylistEntryInNavigation, liveSelection.update]);
 
+  // Clicking an entry inside a segment should arm it on the program output
+  // (preview + monitor surfaces). Free-floating selections that don't belong
+  // to a segment go through other code paths and are not armed here.
   const selectPlaylistEntry = useCallback((entryId: Id) => {
     selectPlaylistEntryInNavigation(entryId);
-  }, [selectPlaylistEntryInNavigation]);
+    armOutputPlaylistEntry(entryId);
+  }, [armOutputPlaylistEntry, selectPlaylistEntryInNavigation]);
 
   const selectPlaylistDeckItem = useCallback((itemId: Id) => {
     selectPlaylistDeckItemInNavigation(itemId);
@@ -297,6 +309,8 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     currentSlide,
     liveSlide,
     liveElements,
+    nextLiveSlide,
+    nextLiveElements,
     slideElementsById,
     isOutputArmedOnCurrent,
     setCurrentSlideIndex,
@@ -335,6 +349,8 @@ export function SlideProvider({ children }: { children: ReactNode }) {
     liveElements,
     liveSlide,
     liveSlideIndex,
+    nextLiveElements,
+    nextLiveSlide,
     selectPlaylistEntry,
     selectPlaylistDeckItem,
     setCurrentSlideIndex,

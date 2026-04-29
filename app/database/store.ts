@@ -14,11 +14,16 @@ import type {
   AppSnapshot,
   BrokenDeckBundleReference,
   DeckBundleBrokenReferenceDecision,
+  DeckBundleExportOptions,
   DeckBundleInspection,
+  DeckBundleInspectionOverlay,
+  DeckBundleInspectionStage,
   DeckBundleInspectionTemplate,
   DeckBundleItem,
   DeckBundleManifest,
+  DeckBundleOverlay,
   DeckBundleSlide,
+  DeckBundleStage,
   DeckBundleTemplate,
   DeckItem,
   DeckItemType,
@@ -74,6 +79,8 @@ interface BrokenReferenceAccumulator {
   occurrenceCount: number;
   itemTitles: Set<string>;
   templateNames: Set<string>;
+  overlayNames: Set<string>;
+  stageNames: Set<string>;
 }
 
 const parseJson = <T>(value: string): T => {
@@ -84,6 +91,46 @@ const parseJson = <T>(value: string): T => {
     throw new Error(`Corrupted JSON data in database: ${(error as Error).message}`);
   }
 };
+
+function toDeckBundleTemplate(template: Template): DeckBundleTemplate {
+  return {
+    id: template.id,
+    name: template.name,
+    kind: template.kind,
+    width: template.width,
+    height: template.height,
+    order: template.order,
+    elements: template.elements,
+  };
+}
+
+function toDeckBundleOverlay(overlay: Overlay): DeckBundleOverlay {
+  return {
+    id: overlay.id,
+    name: overlay.name,
+    type: overlay.type,
+    x: overlay.x,
+    y: overlay.y,
+    width: overlay.width,
+    height: overlay.height,
+    opacity: overlay.opacity,
+    zIndex: overlay.zIndex,
+    enabled: overlay.enabled,
+    elements: overlay.elements,
+    animation: overlay.animation,
+  };
+}
+
+function toDeckBundleStage(stage: Stage): DeckBundleStage {
+  return {
+    id: stage.id,
+    name: stage.name,
+    width: stage.width,
+    height: stage.height,
+    order: stage.order,
+    elements: stage.elements,
+  };
+}
 
 function emptyOverlayPayload(): SlideElementPayload {
   return {
@@ -1399,17 +1446,27 @@ export class CastRepository {
     return this.getSnapshot();
   }
 
-  exportDeckBundle(itemIds: Id[]): DeckBundleManifest {
+  exportDeckBundle(itemIds: Id[], options: DeckBundleExportOptions = {}): DeckBundleManifest {
     const uniqueIds = Array.from(new Set(itemIds));
     const items = uniqueIds
       .map((itemId) => this.getDeckBundleItemById(itemId))
       .filter((item): item is DeckBundleItem => item !== null)
       .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
-    const templateIds = Array.from(new Set(items.map((item) => item.templateId).filter((templateId): templateId is Id => Boolean(templateId))));
-    const templates = templateIds
-      .map((templateId) => this.getDeckBundleTemplateById(templateId))
-      .filter((template): template is DeckBundleTemplate => template !== null)
-      .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+
+    const templates = options.includeAllTemplates
+      ? this.getTemplates().map(toDeckBundleTemplate)
+      : Array.from(new Set(items.map((item) => item.templateId).filter((id): id is Id => Boolean(id))))
+          .map((templateId) => this.getDeckBundleTemplateById(templateId))
+          .filter((template): template is DeckBundleTemplate => template !== null)
+          .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
+
+    const overlays = options.includeOverlays
+      ? this.getOverlays().map(toDeckBundleOverlay)
+      : [];
+
+    const stages = options.includeStages
+      ? this.getStages().map(toDeckBundleStage)
+      : [];
 
     return {
       format: 'cast-deck-bundle',
@@ -1417,14 +1474,23 @@ export class CastRepository {
       exportedAt: nowIso(),
       items,
       templates,
-      mediaReferences: collectDeckBundleMediaReferences(items, templates),
+      overlays,
+      stages,
+      mediaReferences: collectDeckBundleMediaReferences(items, templates, overlays, stages),
     };
   }
 
   inspectImportBundle(manifest: DeckBundleManifest): DeckBundleInspection {
     this.assertValidDeckBundleManifest(manifest);
     const normalizedManifest = cloneDeckBundleManifest(manifest);
-    const mediaReferences = collectDeckBundleMediaReferences(normalizedManifest.items, normalizedManifest.templates);
+    const overlays = normalizedManifest.overlays ?? [];
+    const stages = normalizedManifest.stages ?? [];
+    const mediaReferences = collectDeckBundleMediaReferences(
+      normalizedManifest.items,
+      normalizedManifest.templates,
+      overlays,
+      stages,
+    );
     const brokenReferences = this.collectBrokenBundleReferences(normalizedManifest);
 
     return {
@@ -1432,6 +1498,8 @@ export class CastRepository {
       itemCount: normalizedManifest.items.length,
       templateCount: normalizedManifest.templates.length,
       mediaReferenceCount: mediaReferences.length,
+      overlayCount: overlays.length,
+      stageCount: stages.length,
       items: normalizedManifest.items
         .map((item) => ({
           id: item.id,
@@ -1447,6 +1515,12 @@ export class CastRepository {
           name: template.name,
           kind: template.kind,
         }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      overlays: overlays
+        .map((overlay): DeckBundleInspectionOverlay => ({ id: overlay.id, name: overlay.name, type: overlay.type }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      stages: stages
+        .map((stage): DeckBundleInspectionStage => ({ id: stage.id, name: stage.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       mediaReferences,
       brokenReferences,
@@ -1499,6 +1573,17 @@ export class CastRepository {
     const insertMediaAsset = this.db.prepare(
       'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
+    const insertOverlay = this.db.prepare(
+      `INSERT INTO overlays
+       (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    const insertStage = this.db.prepare(
+      `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const nextStageOrder = (this.db.prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages').get() as { next_order: number }).next_order;
 
     const tx = this.db.transaction(() => {
       const templateIdMap = new Map<Id, Id>();
@@ -1602,6 +1687,40 @@ export class CastRepository {
               });
             });
         });
+
+      (workingManifest.overlays ?? []).forEach((overlay) => {
+        const summary = summarizeOverlayElements(overlay.elements);
+        insertOverlay.run(
+          createId(),
+          overlay.name,
+          summary.type,
+          summary.x,
+          summary.y,
+          summary.width,
+          summary.height,
+          summary.opacity,
+          summary.zIndex,
+          overlay.enabled ? 1 : 0,
+          JSON.stringify(summary.payload),
+          JSON.stringify(overlay.elements),
+          JSON.stringify(normalizeOverlayAnimation(overlay.animation)),
+          now,
+          now,
+        );
+      });
+
+      (workingManifest.stages ?? []).forEach((stage, stageIndex) => {
+        insertStage.run(
+          createId(),
+          stage.name,
+          stage.width,
+          stage.height,
+          nextStageOrder + stageIndex,
+          JSON.stringify(stage.elements),
+          now,
+          now,
+        );
+      });
     });
 
     tx();
@@ -3896,12 +4015,33 @@ export class CastRepository {
         }
       }
     }
+
+    if (manifest.overlays !== undefined) {
+      if (!Array.isArray(manifest.overlays)) throw new Error('Invalid bundle overlays.');
+      for (const overlay of manifest.overlays) {
+        if (!overlay?.id || !overlay.name || !Array.isArray(overlay.elements)) {
+          throw new Error('Invalid bundle overlay.');
+        }
+      }
+    }
+
+    if (manifest.stages !== undefined) {
+      if (!Array.isArray(manifest.stages)) throw new Error('Invalid bundle stages.');
+      for (const stage of manifest.stages) {
+        if (!stage?.id || !stage.name || !Array.isArray(stage.elements)) {
+          throw new Error('Invalid bundle stage.');
+        }
+      }
+    }
   }
 
   private collectBrokenBundleReferences(manifest: DeckBundleManifest): BrokenDeckBundleReference[] {
     const references = new Map<string, BrokenReferenceAccumulator>();
 
-    function collect(elements: SlideElement[], itemTitle: string | null, templateName: string | null) {
+    function collect(
+      elements: SlideElement[],
+      owner: { itemTitle?: string; templateName?: string; overlayName?: string; stageName?: string },
+    ) {
       for (const element of elements) {
         const reference = readElementMediaReference(element);
         if (!reference || !isBrokenMediaSource(reference.source)) continue;
@@ -3910,23 +4050,35 @@ export class CastRepository {
           occurrenceCount: 0,
           itemTitles: new Set<string>(),
           templateNames: new Set<string>(),
+          overlayNames: new Set<string>(),
+          stageNames: new Set<string>(),
         };
         current.elementTypes.add(reference.elementType);
         current.occurrenceCount += 1;
-        if (itemTitle) current.itemTitles.add(itemTitle);
-        if (templateName) current.templateNames.add(templateName);
+        if (owner.itemTitle) current.itemTitles.add(owner.itemTitle);
+        if (owner.templateName) current.templateNames.add(owner.templateName);
+        if (owner.overlayName) current.overlayNames.add(owner.overlayName);
+        if (owner.stageName) current.stageNames.add(owner.stageName);
         references.set(reference.source, current);
       }
     }
 
     for (const item of manifest.items) {
       for (const slide of item.slides) {
-        collect(slide.elements, item.title, null);
+        collect(slide.elements, { itemTitle: item.title });
       }
     }
 
     for (const template of manifest.templates) {
-      collect(template.elements, null, template.name);
+      collect(template.elements, { templateName: template.name });
+    }
+
+    for (const overlay of manifest.overlays ?? []) {
+      collect(overlay.elements, { overlayName: overlay.name });
+    }
+
+    for (const stage of manifest.stages ?? []) {
+      collect(stage.elements, { stageName: stage.name });
     }
 
     return Array.from(references.entries())
@@ -3936,6 +4088,8 @@ export class CastRepository {
         occurrenceCount: reference.occurrenceCount,
         itemTitles: Array.from(reference.itemTitles).sort(),
         templateNames: Array.from(reference.templateNames).sort(),
+        overlayNames: Array.from(reference.overlayNames).sort(),
+        stageNames: Array.from(reference.stageNames).sort(),
       }))
       .sort((left, right) => left.source.localeCompare(right.source));
   }
@@ -3979,7 +4133,24 @@ export class CastRepository {
       ...template,
       elements: rewriteElements(template.elements, decisionMap),
     }));
-    manifest.mediaReferences = collectDeckBundleMediaReferences(manifest.items, manifest.templates);
+    if (manifest.overlays) {
+      manifest.overlays = manifest.overlays.map((overlay) => ({
+        ...overlay,
+        elements: rewriteElements(overlay.elements, decisionMap),
+      }));
+    }
+    if (manifest.stages) {
+      manifest.stages = manifest.stages.map((stage) => ({
+        ...stage,
+        elements: rewriteElements(stage.elements, decisionMap),
+      }));
+    }
+    manifest.mediaReferences = collectDeckBundleMediaReferences(
+      manifest.items,
+      manifest.templates,
+      manifest.overlays ?? [],
+      manifest.stages ?? [],
+    );
   }
 
   private collectReplacementMediaSources(

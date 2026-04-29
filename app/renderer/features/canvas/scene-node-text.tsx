@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { Rect, Text, Shape } from 'react-konva';
 import type { Context } from 'konva/lib/Context';
 import type { Shape as KonvaShape } from 'konva/lib/Shape';
-import type { StrokePosition, TextCaseTransform, TextHorizontalAlign } from '@core/types';
+import type { TextBinding, StrokePosition, TextCaseTransform, TextHorizontalAlign } from '@core/types';
 import type { RenderNode } from './scene-types';
 import { resolveKonvaTextStyle } from './resolve-konva-text-style';
 import { measureTextBlockHeight, measureTextLayoutHeight, measureTextLineStackHeight, textLineBleedPadding, textOverflowOffset } from './text-layout';
+import { useResolvedText } from './use-resolved-text';
 
 function transformTextCase(text: string, mode: TextCaseTransform): string {
   if (mode === 'uppercase') return text.toUpperCase();
@@ -144,12 +145,14 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
     textShadowBlur?: number;
     textShadowOffsetX?: number;
     textShadowOffsetY?: number;
+    binding?: TextBinding;
   };
 
+  const resolvedText = useResolvedText({ text: payload.text, binding: payload.binding });
   const fontStyle = resolveKonvaTextStyle(payload.weight, payload.italic);
   const lineHeight = payload.lineHeight ?? 1.25;
   const verticalAlign = payload.verticalAlign ?? 'middle';
-  const text = transformTextCase(payload.text ?? '', payload.caseTransform ?? 'none');
+  const text = transformTextCase(resolvedText, payload.caseTransform ?? 'none');
   const textBleedPadding = textLineBleedPadding(payload.fontSize, lineHeight);
   const textContentHeight = measureTextBlockHeight({
     text,
@@ -251,6 +254,7 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
         fill={node.visual.fillEnabled ? node.visual.fillColor : 'transparent'}
         stroke={node.visual.strokeEnabled ? node.visual.strokeColor : undefined}
         strokeWidth={node.visual.strokeEnabled ? node.visual.strokeWidth : 0}
+        cornerRadius={Math.max(0, node.visual.borderRadius)}
         shadowEnabled={node.visual.shadowEnabled}
         shadowColor={node.visual.shadowColor}
         shadowBlur={node.visual.shadowBlur}

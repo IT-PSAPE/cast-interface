@@ -15,9 +15,11 @@ import {
   type RefObject,
   type TouchEvent as ReactTouchEvent,
 } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
 import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayPortal } from './overlay-primitives';
+import { Popover } from './popover';
 
 const DEFAULT_LONG_PRESS_DELAY = 500;
 const DEFAULT_VIEWPORT_PADDING = 8;
@@ -448,14 +450,17 @@ function Menu({ children, className, ...props }: MenuProps) {
 
 // ─── Item ────────────────────────────────────────────────
 
+type ContextMenuItemVariant = 'default' | 'destructive';
+
 interface ItemProps {
   children: ReactNode;
   onSelect?: () => void;
   disabled?: boolean;
   className?: string;
+  variant?: ContextMenuItemVariant;
 }
 
-function Item({ children, onSelect, disabled = false, className }: ItemProps) {
+function Item({ children, onSelect, disabled = false, className, variant = 'default' }: ItemProps) {
   const { actions } = useContextMenu();
 
   function handleClick() {
@@ -463,6 +468,10 @@ function Item({ children, onSelect, disabled = false, className }: ItemProps) {
     onSelect?.();
     actions.close();
   }
+
+  const variantClasses = variant === 'destructive'
+    ? 'text-error hover:bg-error_primary hover:text-error'
+    : 'text-secondary hover:bg-tertiary';
 
   return (
     <button
@@ -474,7 +483,8 @@ function Item({ children, onSelect, disabled = false, className }: ItemProps) {
       // Prevent the document pointerdown from closing the menu before the click fires.
       onPointerDown={(event) => event.preventDefault()}
       className={cn(
-        'flex w-full select-none gap-2 rounded px-2 py-1.5 text-left text-sm text-secondary hover:bg-tertiary',
+        'flex w-full select-none gap-2 rounded px-2 py-1.5 text-left text-sm',
+        variantClasses,
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         className,
       )}
@@ -488,6 +498,110 @@ function Item({ children, onSelect, disabled = false, className }: ItemProps) {
 
 function Separator() {
   return <div role="separator" className="my-1 h-px bg-tertiary" />;
+}
+
+// ─── Submenu (flyout) ────────────────────────────────────
+// Opens a sibling menu to the right of the trigger row when hovered or
+// activated by keyboard. The submenu reuses Popover for positioning so it
+// flips to the left edge when the parent menu is near the viewport.
+
+const SUBMENU_HOVER_CLOSE_DELAY = 120;
+
+interface SubmenuProps {
+  label: ReactNode;
+  children: ReactNode;
+  disabled?: boolean;
+  className?: string;
+}
+
+function Submenu({ label, children, disabled = false, className }: SubmenuProps) {
+  const { state: parentState } = useContextMenu();
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // When the parent menu closes (e.g. after a child Item fires actions.close)
+  // collapse the submenu too so its popover doesn't linger.
+  useEffect(() => {
+    if (!parentState.open) setOpen(false);
+  }, [parentState.open]);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => setOpen(false), SUBMENU_HOVER_CLOSE_DELAY);
+  }, [cancelClose]);
+
+  useEffect(() => () => cancelClose(), [cancelClose]);
+
+  function handleTriggerClick() {
+    if (disabled) return;
+    cancelClose();
+    setOpen((prev) => !prev);
+  }
+
+  function handleTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (disabled) return;
+    if (event.key === 'ArrowRight' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      cancelClose();
+      setOpen(true);
+    } else if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+      if (open) {
+        event.preventDefault();
+        setOpen(false);
+      }
+    }
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-context-menu-item=""
+        data-disabled={disabled || undefined}
+        onPointerDown={(event) => event.preventDefault()}
+        onMouseEnter={() => { cancelClose(); if (!disabled) setOpen(true); }}
+        onMouseLeave={scheduleClose}
+        onClick={handleTriggerClick}
+        onKeyDown={handleTriggerKeyDown}
+        className={cn(
+          'flex w-full select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-secondary hover:bg-tertiary',
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+          className,
+        )}
+      >
+        <span className="flex-1">{label}</span>
+        <ChevronRight className="size-3.5 shrink-0 text-tertiary" />
+      </button>
+      <Popover
+        anchor={triggerRef.current}
+        open={open && !disabled}
+        onClose={() => setOpen(false)}
+        placement="right-start"
+        offset={4}
+      >
+        <div
+          role="menu"
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          className="min-w-30 max-h-60 overflow-y-auto rounded-md border border-primary bg-primary p-1 shadow-lg"
+        >
+          {children}
+        </div>
+      </Popover>
+    </>
+  );
 }
 
 // ─── Trigger hook (no wrapper element) ───────────────────
@@ -584,4 +698,5 @@ export const ContextMenu = Object.assign(Root, {
   Menu,
   Item,
   Separator,
+  Submenu,
 });

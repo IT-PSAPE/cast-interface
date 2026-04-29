@@ -83,7 +83,7 @@ const WorkbenchOverlayStackContext = createContext<WorkbenchContextValue['overla
 const WORKBENCH_MODE_STORAGE_KEY = 'recast.workbench-mode.v1';
 const DECK_BROWSER_STORAGE_KEY = 'recast.deck-browser-preferences.v1';
 const DRAWER_VIEW_MODES_STORAGE_KEY = 'recast.drawer-view-modes.v1';
-const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', media: 'grid', audio: 'list', templates: 'grid' };
+const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', media: 'grid', templates: 'grid' };
 const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'recast.library-panel-view.v1';
 const EXPANDED_SEGMENTS_STORAGE_KEY = 'recast.library-panel-expanded-segments.v1';
 const OVERLAY_DEFAULTS_STORAGE_KEY = 'recast.overlay-defaults.v1';
@@ -313,10 +313,9 @@ function parseDrawerViewModes(raw: string): DrawerViewModeMap | null {
     if (typeof parsed !== 'object' || parsed === null) return null;
     const deck = parsed.deck;
     const media = parsed.media;
-    const audio = parsed.audio;
     const templates = parsed.templates;
-    if (!isValidViewMode(deck) || !isValidViewMode(media) || !isValidViewMode(audio) || !isValidViewMode(templates)) return null;
-    return { deck, media, audio, templates };
+    if (!isValidViewMode(deck) || !isValidViewMode(media) || !isValidViewMode(templates)) return null;
+    return { deck, media, templates };
   } catch {
     return null;
   }

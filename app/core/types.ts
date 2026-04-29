@@ -94,6 +94,23 @@ export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 export type TextCaseTransform = 'none' | 'uppercase' | 'sentence';
 export type StrokePosition = 'inside' | 'center' | 'outside';
 
+export type TextBindingKind =
+  | 'timer'
+  | 'clock'
+  | 'current-slide-text'
+  | 'next-slide-text'
+  | 'slide-notes';
+
+export type ClockFormat = '12h' | '12h-seconds' | '24h' | '24h-seconds';
+export type TimerFormat = 'mm:ss' | 'hh:mm:ss';
+
+export interface TextBinding {
+  kind: TextBindingKind;
+  timerDurationSeconds?: number;
+  timerFormat?: TimerFormat;
+  clockFormat?: ClockFormat;
+}
+
 export interface ElementVisualPayload {
   visible?: boolean;
   locked?: boolean;
@@ -114,6 +131,7 @@ export interface ElementVisualPayload {
 
 export interface TextElementPayload extends ElementVisualPayload {
   text: string;
+  borderRadius?: number;
   fontFamily: string;
   fontSize: number;
   color: string;
@@ -134,6 +152,7 @@ export interface TextElementPayload extends ElementVisualPayload {
   textShadowBlur?: number;
   textShadowOffsetX?: number;
   textShadowOffsetY?: number;
+  binding?: TextBinding;
 }
 
 export interface ImageElementPayload extends ElementVisualPayload {
@@ -264,6 +283,30 @@ export interface DeckBundleMediaReference {
   occurrenceCount: number;
 }
 
+export interface DeckBundleStage {
+  id: Id;
+  name: string;
+  width: number;
+  height: number;
+  order: number;
+  elements: SlideElement[];
+}
+
+export interface DeckBundleOverlay {
+  id: Id;
+  name: string;
+  type: OverlayType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+  zIndex: number;
+  enabled: boolean;
+  elements: SlideElement[];
+  animation: OverlayAnimation;
+}
+
 export interface DeckBundleManifest {
   format: 'cast-deck-bundle';
   version: 1;
@@ -271,6 +314,14 @@ export interface DeckBundleManifest {
   items: DeckBundleItem[];
   templates: DeckBundleTemplate[];
   mediaReferences: DeckBundleMediaReference[];
+  overlays?: DeckBundleOverlay[];
+  stages?: DeckBundleStage[];
+}
+
+export interface DeckBundleExportOptions {
+  includeAllTemplates?: boolean;
+  includeOverlays?: boolean;
+  includeStages?: boolean;
 }
 
 export interface DeckBundleInspectionItem {
@@ -287,12 +338,25 @@ export interface DeckBundleInspectionTemplate {
   kind: TemplateKind;
 }
 
+export interface DeckBundleInspectionOverlay {
+  id: Id;
+  name: string;
+  type: OverlayType;
+}
+
+export interface DeckBundleInspectionStage {
+  id: Id;
+  name: string;
+}
+
 export interface BrokenDeckBundleReference {
   source: string;
   elementTypes: Array<'image' | 'video'>;
   occurrenceCount: number;
   itemTitles: string[];
   templateNames: string[];
+  overlayNames: string[];
+  stageNames: string[];
 }
 
 export interface DeckBundleInspection {
@@ -300,8 +364,12 @@ export interface DeckBundleInspection {
   itemCount: number;
   templateCount: number;
   mediaReferenceCount: number;
+  overlayCount: number;
+  stageCount: number;
   items: DeckBundleInspectionItem[];
   templates: DeckBundleInspectionTemplate[];
+  overlays: DeckBundleInspectionOverlay[];
+  stages: DeckBundleInspectionStage[];
   mediaReferences: DeckBundleMediaReference[];
   brokenReferences: BrokenDeckBundleReference[];
 }

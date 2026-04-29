@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { ReacstButton } from '@renderer/components/controls/button';
 import { RecastPanel } from '@renderer/components/layout/panel';
-import { EmptyState } from '@renderer/components/display/empty-state';
 import { Tabs } from '@renderer/components/display/tabs';
 import { useElements } from '@renderer/contexts/canvas/canvas-context';
 import { useInspector } from '@renderer/features/inspector/inspector-context';
 import { ShapeElementInspector } from '@renderer/features/inspector/shape-element-inspector';
+import { StageInspector } from '@renderer/features/inspector/stage-inspector';
 import { TextElementInspector } from '@renderer/features/inspector/text-element-inspector';
+import { BindingInspector } from '@renderer/features/inspector/binding-inspector';
 import type { InspectorTab } from '@renderer/types/ui';
 import { useStageEditorScreen } from './screen-context';
 
@@ -18,13 +19,21 @@ export function StageEditorInspectorPanel() {
   const isTextSelected = selectedElement?.type === 'text';
 
   useEffect(() => {
-    if (!hasSelection) return;
+    if (!hasSelection) {
+      // Mirror the template-editor pattern: when nothing is selected, fall
+      // back to the stage-level tab (rename + meta) so the panel always has
+      // something useful instead of an empty state.
+      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'binding' || inspectorTab === 'slide' || inspectorTab === 'presentation' || inspectorTab === 'template') {
+        setInspectorTab('stage');
+      }
+      return;
+    }
     if (isTextSelected) {
-      if (inspectorTab !== 'shape' && inspectorTab !== 'text') setInspectorTab('shape');
+      if (inspectorTab !== 'shape' && inspectorTab !== 'text' && inspectorTab !== 'binding') setInspectorTab('shape');
       return;
     }
     if (inspectorTab !== 'shape') setInspectorTab('shape');
-  }, [hasSelection, inspectorTab, isTextSelected, setInspectorTab]);
+  }, [hasSelection, inspectorTab, setInspectorTab, isTextSelected]);
 
   function handleTabChange(value: string) {
     setInspectorTab(value as InspectorTab);
@@ -32,28 +41,24 @@ export function StageEditorInspectorPanel() {
 
   return (
     <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
-      {hasSelection ? (
-        <Tabs.Root value={inspectorTab} onValueChange={handleTabChange}>
-          <section className="flex flex-1 flex-col">
-            <div className="border-b border-primary">
-              <Tabs.List label="Inspector">
-                <Tabs.Trigger value="shape">Shape</Tabs.Trigger>
-                {isTextSelected && <Tabs.Trigger value="text">Text</Tabs.Trigger>}
-              </Tabs.List>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              {inspectorTab === 'shape' && <ShapeElementInspector />}
-              {inspectorTab === 'text' && <TextElementInspector />}
-            </div>
-          </section>
-        </Tabs.Root>
-      ) : (
-        <div className="flex flex-1">
-          <EmptyState.Root>
-            <EmptyState.Title>Select an object to edit stage content.</EmptyState.Title>
-          </EmptyState.Root>
-        </div>
-      )}
+      <Tabs.Root value={inspectorTab} onValueChange={handleTabChange}>
+        <section className="flex flex-1 flex-col">
+          <div className="border-b border-primary">
+            <Tabs.List label="Inspector">
+              {!hasSelection && <Tabs.Trigger value="stage">Stage</Tabs.Trigger>}
+              {hasSelection && <Tabs.Trigger value="shape">Shape</Tabs.Trigger>}
+              {isTextSelected && <Tabs.Trigger value="text">Text</Tabs.Trigger>}
+              {isTextSelected && <Tabs.Trigger value="binding">Binding</Tabs.Trigger>}
+            </Tabs.List>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto">
+            {inspectorTab === 'stage' && <StageInspector />}
+            {inspectorTab === 'shape' && <ShapeElementInspector />}
+            {inspectorTab === 'text' && <TextElementInspector />}
+            {inspectorTab === 'binding' && <BindingInspector />}
+          </div>
+        </section>
+      </Tabs.Root>
       {state.hasPendingChanges && (
         <RecastPanel.Footer className="p-3">
           <ReacstButton onClick={() => { void actions.saveChanges(); }} disabled={state.isPushingChanges} className="w-full">

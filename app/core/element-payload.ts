@@ -20,6 +20,7 @@ export interface VisualPayloadState {
   strokeColor: string;
   strokeWidth: number;
   strokePosition: StrokePosition;
+  borderRadius: number;
   shadowEnabled: boolean;
   shadowColor: string;
   shadowBlur: number;
@@ -68,9 +69,11 @@ export function supportsVisualStyling(type: SlideElement['type']): boolean {
 
 export function readVisualPayload(type: SlideElement['type'], payload: SlideElementPayload): VisualPayloadState {
   const shapePayload = payload as Partial<ShapeElementPayload>;
+  const textPayload = payload as Partial<TextElementPayload>;
   const fillColor = type === 'shape' ? shapePayload.fillColor ?? DEFAULT_SHAPE_FILL_COLOR : payload.fillColor ?? DEFAULT_TEXT_BOX_FILL_COLOR;
   const strokeColor = type === 'shape' ? shapePayload.borderColor ?? DEFAULT_SHAPE_STROKE_COLOR : payload.strokeColor ?? DEFAULT_SHAPE_STROKE_COLOR;
   const strokeWidth = type === 'shape' ? shapePayload.borderWidth ?? DEFAULT_SHAPE_STROKE_WIDTH : payload.strokeWidth ?? DEFAULT_SHAPE_STROKE_WIDTH;
+  const borderRadius = type === 'shape' ? shapePayload.borderRadius ?? 0 : textPayload.borderRadius ?? 0;
   return {
     visible: payload.visible ?? true,
     locked: payload.locked ?? false,
@@ -82,6 +85,7 @@ export function readVisualPayload(type: SlideElement['type'], payload: SlideElem
     strokeColor,
     strokeWidth,
     strokePosition: payload.strokePosition ?? 'inside',
+    borderRadius,
     shadowEnabled: payload.shadowEnabled ?? false,
     shadowColor: payload.shadowColor ?? DEFAULT_BOX_SHADOW_COLOR,
     shadowBlur: payload.shadowBlur ?? DEFAULT_BOX_SHADOW_BLUR,
@@ -116,6 +120,7 @@ export function applyVisualPayload(type: SlideElement['type'], payload: SlideEle
       fillColor: next.fillColor,
       borderColor: next.strokeColor,
       borderWidth: next.strokeEnabled ? next.strokeWidth : 0,
+      borderRadius: Math.max(0, next.borderRadius),
     };
   }
   if (type === 'text') {
@@ -124,6 +129,7 @@ export function applyVisualPayload(type: SlideElement['type'], payload: SlideEle
       ...textPayload,
       ...basePatch,
       fillColor: next.fillColor,
+      borderRadius: Math.max(0, next.borderRadius),
     };
   }
   return { ...payload, ...basePatch };

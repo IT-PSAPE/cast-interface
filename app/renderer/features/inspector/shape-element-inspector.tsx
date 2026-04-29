@@ -123,7 +123,13 @@ export function ShapeElementInspector() {
             <FieldInput type="number" value={Math.round(elementDraft.opacity * 100)} onChange={handleOpacityChange} min={0} max={100} step={1}>
               <FieldIcon><Eye size={14} /></FieldIcon>
             </FieldInput>
-            <FieldInput type="number" value={0} onChange={() => { }} min={0} max={100} step={1}>
+            <FieldInput
+              type="number"
+              value={Math.round(visual.borderRadius)}
+              onChange={(value: string) => { updateVisual({ borderRadius: Math.max(0, parseNumber(value, visual.borderRadius)) }); }}
+              min={0}
+              step={1}
+            >
               <FieldIcon><Square size={14} /></FieldIcon>
             </FieldInput>
           </Section.Row>

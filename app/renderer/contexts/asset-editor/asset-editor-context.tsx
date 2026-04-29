@@ -28,6 +28,7 @@ interface OverlayEditorValue {
   createOverlay: () => Promise<void>;
   duplicateOverlay: (overlayId: Id) => void;
   deleteCurrentOverlay: () => Promise<void>;
+  deleteOverlay: (overlayId: Id) => Promise<void>;
   requestNameFocus: (overlayId: Id) => void;
   pushChanges: () => Promise<void>;
 }
@@ -72,9 +73,10 @@ interface StageEditorValue {
   setCurrentStageId: (stageId: Id | null) => void;
   updateStageDraft: (input: { id: Id; name?: string; elements?: SlideElement[] }) => void;
   replaceStageElements: (elements: SlideElement[]) => void;
-  createStage: () => Promise<void>;
+  createStage: () => Promise<Id | null>;
   duplicateStage: (stageId: Id) => void;
   deleteCurrentStage: () => Promise<void>;
+  deleteStage: (stageId: Id) => Promise<void>;
   requestNameFocus: (stageId: Id) => void;
   pushChanges: () => Promise<void>;
 }
@@ -159,6 +161,17 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
       const source = current ?? persistedOverlays;
       return source.filter((overlay) => overlay.id !== overlayStaged.currentItemId);
     });
+    setStatusText('Deleted overlay');
+  }, [overlayStaged, persistedOverlays, setStatusText]);
+
+  const deleteOverlayAction = useCallback(async (overlayId: Id) => {
+    overlayStaged.setStagedItems((current) => {
+      const source = current ?? persistedOverlays;
+      return source.filter((overlay) => overlay.id !== overlayId);
+    });
+    if (overlayStaged.currentItemId === overlayId) {
+      overlayStaged.setCurrentItemId(null);
+    }
     setStatusText('Deleted overlay');
   }, [overlayStaged, persistedOverlays, setStatusText]);
 
@@ -253,9 +266,10 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     createOverlay: createOverlayAction,
     duplicateOverlay: duplicateOverlayAction,
     deleteCurrentOverlay,
+    deleteOverlay: deleteOverlayAction,
     requestNameFocus: requestOverlayNameFocus,
     pushChanges: pushOverlayChanges,
-  }), [createOverlayAction, duplicateOverlayAction, overlayStaged.currentItem, overlayStaged.currentItemId, deleteCurrentOverlay, overlayStaged.hasPendingChanges, overlayStaged.isPushingChanges, overlayNameFocusRequest, overlays, pushOverlayChanges, overlayStaged.setCurrentItemId, requestOverlayNameFocus, updateOverlayDraft]);
+  }), [createOverlayAction, duplicateOverlayAction, overlayStaged.currentItem, overlayStaged.currentItemId, deleteCurrentOverlay, deleteOverlayAction, overlayStaged.hasPendingChanges, overlayStaged.isPushingChanges, overlayNameFocusRequest, overlays, pushOverlayChanges, overlayStaged.setCurrentItemId, requestOverlayNameFocus, updateOverlayDraft]);
 
   // ── Template editor ──
 
@@ -504,6 +518,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     stageStaged.setStagedItems((current) => [...(current ?? persistedStages), draft]);
     stageStaged.setCurrentItemId(draft.id);
     setStatusText('Created stage');
+    return draft.id;
   }, [persistedStages, setStatusText, stageStaged, stages]);
 
   const duplicateStageAction = useCallback((stageId: Id) => {
@@ -529,6 +544,17 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
       const source = current ?? persistedStages;
       return source.filter((stage) => stage.id !== stageStaged.currentItemId);
     });
+    setStatusText('Deleted stage');
+  }, [persistedStages, setStatusText, stageStaged]);
+
+  const deleteStageAction = useCallback(async (stageId: Id) => {
+    stageStaged.setStagedItems((current) => {
+      const source = current ?? persistedStages;
+      return source.filter((stage) => stage.id !== stageId);
+    });
+    if (stageStaged.currentItemId === stageId) {
+      stageStaged.setCurrentItemId(null);
+    }
     setStatusText('Deleted stage');
   }, [persistedStages, setStatusText, stageStaged]);
 
@@ -613,11 +639,12 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
     createStage: createStageAction,
     duplicateStage: duplicateStageAction,
     deleteCurrentStage,
+    deleteStage: deleteStageAction,
     requestNameFocus: requestStageNameFocus,
     pushChanges: pushStageChanges,
   }), [
     createStageAction, duplicateStageAction, stageStaged.currentItem, stageStaged.currentItemId,
-    deleteCurrentStage, stageStaged.hasPendingChanges, stageStaged.isPushingChanges, stageNameFocusRequest,
+    deleteCurrentStage, deleteStageAction, stageStaged.hasPendingChanges, stageStaged.isPushingChanges, stageNameFocusRequest,
     stages, pushStageChanges, replaceStageElements, stageStaged.setCurrentItemId, requestStageNameFocus, updateStageDraft,
   ]);
 

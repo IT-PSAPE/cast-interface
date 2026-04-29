@@ -1,29 +1,69 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing GitHub Release tag to publish artifacts to
-        required: true
-        type: string
 
 permissions:
   contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 concurrency:
-  group: release-${{ github.event.release.id || inputs.tag }}
+  group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Publish (${{ matrix.platform }})
+  guard:
+    name: Check branch and release status
+    if: github.event_name != 'pull_request' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      is_new_version: ${{ steps.detect.outputs.is_new_version }}
+      should_release: ${{ steps.detect.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect version and release status
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          LAST_TAG="$(gh release view --json tagName -q .tagName 2>/dev/null || echo '')"
+          if [ "$LAST_TAG" = "v$VERSION" ]; then
+            IS_NEW="false"
+          else
+            IS_NEW="true"
+          fi
+          echo "is_new_version=$IS_NEW" >> "$GITHUB_OUTPUT"
+
+          if [ "$IS_NEW" = "true" ] && [ "$EVENT_NAME" != "pull_request" ] && [ "$GIT_REF" = "refs/heads/main" ]; then
+            SHOULD="true"
+          else
+            SHOULD="false"
+          fi
+          echo "should_release=$SHOULD" >> "$GITHUB_OUTPUT"
+
+          echo "::notice::package.json version=$VERSION, latest release=$LAST_TAG, is_new_version=$IS_NEW, should_release=$SHOULD"
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: guard
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -38,17 +78,8 @@ jobs:
             platform: linux
 
     steps:
-      - name: Validate GitHub Release
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release view "$RELEASE_TAG"
-
-      - name: Checkout release tag
+      - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -69,16 +100,6 @@ jobs:
       - name: Ensure native packages
         run: node scripts/ensure-rollup-native.cjs
 
-      - name: Validate release version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(node -p "require('./package.json').version")"
-          if [ "$RELEASE_TAG" != "v$VERSION" ]; then
-            echo "::error::Release tag $RELEASE_TAG does not match package.json version $VERSION."
-            exit 1
-          fi
-
       - name: Build native addon
         run: npm run build:ndi-native
 
@@ -91,8 +112,8 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Package and publish (macOS)
-        if: matrix.platform == 'mac'
+      - name: Package signed (macOS)
+        if: matrix.platform == 'mac' && needs.guard.outputs.should_release == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,10 +135,16 @@ jobs:
             export CSC_IDENTITY_AUTO_DISCOVERY=false
             echo "::warning::APPLE_CSC_LINK secret not set; building unsigned macOS artifacts. See docs/release-setup.md."
           fi
-          npx electron-builder --mac --publish always
+          npx electron-builder --mac --publish never
 
-      - name: Package and publish (Windows)
-        if: matrix.platform == 'win'
+      - name: Package unsigned (macOS)
+        if: matrix.platform == 'mac' && needs.guard.outputs.should_release != 'true'
+        run: npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Package signed (Windows)
+        if: matrix.platform == 'win' && needs.guard.outputs.should_release == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,10 +160,59 @@ jobs:
             export CSC_IDENTITY_AUTO_DISCOVERY=false
             echo "::warning::WIN_CSC_LINK secret not set; building unsigned Windows artifacts. See docs/release-setup.md."
           fi
-          npx electron-builder --win --publish always
+          npx electron-builder --win --publish never
 
-      - name: Package and publish (Linux)
+      - name: Package unsigned (Windows)
+        if: matrix.platform == 'win' && needs.guard.outputs.should_release != 'true'
+        run: npx electron-builder --win --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Package (Linux)
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --publish always
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: recast-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*.AppImage
+            dist/*.blockmap
+            dist/*.deb
+            dist/*.dmg
+            dist/*.exe
+            dist/*.zip
+            dist/latest*.yml
+
+  release:
+    name: Publish release
+    needs: [guard, build]
+    if: needs.guard.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          pattern: recast-*
+          merge-multiple: true
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --generate-notes \
+            --target "$GITHUB_SHA" \
+            artifacts/*

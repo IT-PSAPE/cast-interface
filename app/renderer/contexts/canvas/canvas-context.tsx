@@ -152,7 +152,8 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   const history = useElementHistory({
     baseElements,
     effectiveElements,
-    currentSlide,
+    activeEditorEntityId: activeEditorSource.entityId,
+    hasActiveEditorSource: activeEditorSource.editable && activeEditorSource.hasSource,
     historyKey: activeEditorSource.historyKey,
     selectedElementIds: selection.selectedElementIds,
     mutatePatch,
@@ -178,10 +179,10 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (targetIds.length === 0) return;
+    history.pushHistorySnapshot();
     if (activeEditorSource.editable && activeEditorSource.hasSource) {
       activeEditorSource.replaceElements(activeEditorSource.elements.filter((el) => !targetIds.includes(el.id)));
     } else {
-      history.pushHistorySnapshot();
       await mutatePatch(() => targetIds.length === 1 ? window.castApi.deleteElement(targetIds[0]) : window.castApi.deleteElementsBatch(targetIds));
     }
     setStatusText('Deleted selected object(s)');
@@ -209,8 +210,13 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   }, [effectiveElements, inspector, saveElementUpdate, selection.primarySelectedElementId]);
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
-    activeEditorSource, currentDeckItem, mutatePatch, setStatusText,
+    activeEditorSource, currentDeckItem, mutatePatch, setStatusText, pushHistorySnapshot: history.pushHistorySnapshot,
   });
+
+  const cutSelection = useCallback(async () => {
+    history.copySelection();
+    await deleteSelected();
+  }, [deleteSelected, history]);
 
   const elementsValue = useMemo<ElementContextValue>(() => ({
     selectedElementId: selection.primarySelectedElementId,
@@ -233,17 +239,19 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     commitElementUpdates: history.commitElementUpdates,
     deleteSelected, toggleElementVisibility, toggleElementLock,
     nudgeSelection: history.nudgeSelection,
-    copySelection: isOverlayEdit || isTemplateEdit ? noopCopySelection : history.copySelection,
-    pasteSelection: isOverlayEdit || isTemplateEdit ? noopAsyncAction : history.pasteSelection,
-    undo: isOverlayEdit ? noopAsyncAction : history.undo,
-    redo: isOverlayEdit ? noopAsyncAction : history.redo,
+    copySelection: history.copySelection,
+    cutSelection,
+    pasteSelection: history.pasteSelection,
+    duplicateSelection: history.duplicateSelection,
+    undo: history.undo,
+    redo: history.redo,
     createText, createShape,
     createFromMedia: (asset: MediaAsset, x: number, y: number) => createFromMedia(asset, x, y),
     createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc,
   }), [
-    baseElements, createFromMedia, createOverlay, createShape, createText, deleteMedia,
+    baseElements, createFromMedia, createOverlay, createShape, createText, cutSelection, deleteMedia,
     deleteSelected, draftElements, effectiveElements, history, importMedia, inspector,
-    isOverlayEdit, isTemplateEdit, isCanvasInteracting, selection,
+    isCanvasInteracting, selection,
     setDraftElements, toggleElementLock, toggleElementVisibility, toggleOverlay, changeMediaSrc,
   ]);
 
@@ -393,9 +401,6 @@ function applyElementUpdates(elements: SlideElement[], updates: ElementUpdateInp
     };
   });
 }
-
-function noopCopySelection() {}
-async function noopAsyncAction() {}
 
 export function isOverlaySelectionValid(overlay: Overlay, selectedElementId: Id | null): boolean {
   if (!selectedElementId) return false;

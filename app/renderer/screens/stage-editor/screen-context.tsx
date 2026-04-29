@@ -13,7 +13,7 @@ interface StageEditorScreenContextValue {
   };
   actions: {
     selectStage: (id: string | null) => void;
-    createStage: () => Promise<void>;
+    createStage: () => Promise<string | null>;
     saveChanges: () => Promise<void>;
   };
 }
