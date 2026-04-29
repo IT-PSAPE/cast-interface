@@ -5,7 +5,7 @@ import { cv } from '@renderer/utils/cv';
 export type ButtonVariant = 'default' | 'take' | 'danger' | 'ghost';
 
 const buttonVariants = cv({
-  base: 'cursor-pointer transition-colors px-2.5 py-1 rounded-sm text-center label-xs',
+  base: 'cursor-pointer transition-colors px-3 py-1.5 rounded-sm text-center label-xs',
   variants: {
     variant: {
       default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',
@@ -36,7 +36,7 @@ const buttonVariants = cv({
 });
 
 const iconButtonVariants = cv({
-  base: 'cursor-pointer transition-colors p-1 rounded-sm *:size-4',
+  base: 'cursor-pointer transition-colors p-1.5 rounded-sm *:size-4',
   variants: {
     variant: {
       default: 'bg-tertiary text-primary hover:border-focus hover:text-primary',

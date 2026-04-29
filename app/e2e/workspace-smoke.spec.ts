@@ -159,7 +159,6 @@ test('workbench renders current toolbar labels and panel toggles', async ({ page
 test('editor add menus only expose actions for their own editor type', async ({ page }) => {
   await installCastApiMock(page);
   await page.goto('/');
-  const toolbar = page.locator('[data-ui-region="app-toolbar"]');
   const applicationViews = page.getByLabel('Application views');
 
   await applicationViews.getByRole('button', { name: 'Overlay' }).click();

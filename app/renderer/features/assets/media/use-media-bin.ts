@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import type { Id } from '@core/types';
-import { usePresentationLayers } from '../../../contexts/playback/playback-context';
+import { usePresentationMediaLayer } from '../../../contexts/playback/playback-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { filterByText } from '../../../utils/filter-by-text';
 import { compareByKey, useMediaBinSort } from '../../workbench/use-bin-sort';
 
 export function useMediaBin(filterText: string) {
   const { mediaAssets: allMediaAssets } = useProjectContent();
-  const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationLayers();
+  const { mediaLayerAssetId, setMediaLayerAsset } = usePresentationMediaLayer();
   const { sort } = useMediaBinSort();
 
   const mediaAssets = useMemo(() => {

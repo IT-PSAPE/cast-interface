@@ -1,11 +1,12 @@
+import { useMemo } from 'react';
 import type { Template } from '@core/types';
 import { Layers, Music, Plus, Presentation } from 'lucide-react';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { RecastPanel } from '@renderer/components/layout/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Dropdown } from '../../components/form/dropdown';
 import { buildRenderScene } from '../../features/canvas/build-render-scene';
-import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { EmptyState } from '@renderer/components/display/empty-state';
@@ -108,7 +109,7 @@ function TemplateListItem({
   isActive: boolean;
 }) {
   const { actions } = useTemplateEditorScreen();
-  const scene = buildRenderScene(null, template.elements);
+  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
 
   function handleSelect() {
     actions.selectTemplate(template.id);
@@ -123,7 +124,7 @@ function TemplateListItem({
     <ActiveTemplateTile isActive={isActive} onClick={handleSelect} selected={isActive}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Caption>

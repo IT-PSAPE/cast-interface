@@ -1,9 +1,10 @@
+import { memo, useMemo } from 'react';
 import type { Template } from '@core/types';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
 import { buildRenderScene } from '../../canvas/build-render-scene';
-import { SceneStage } from '../../canvas/scene-stage';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useTemplateBin } from './use-template-bin';
@@ -37,7 +38,7 @@ function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: NonNull
   return <TemplateTile {...props} />;
 }
 
-function TemplateRow({ template, index, onApply }: TemplateItemProps) {
+function TemplateRowImpl({ template, index, onApply }: TemplateItemProps) {
   function handleClick() {
     onApply(template);
   }
@@ -55,8 +56,8 @@ function TemplateRow({ template, index, onApply }: TemplateItemProps) {
   );
 }
 
-function TemplateTile({ template, index, onApply }: TemplateItemProps) {
-  const scene = buildRenderScene(null, template.elements);
+function TemplateTileImpl({ template, index, onApply }: TemplateItemProps) {
+  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
 
   function handleClick() {
     onApply(template);
@@ -66,7 +67,7 @@ function TemplateTile({ template, index, onApply }: TemplateItemProps) {
     <Thumbnail.Tile onClick={handleClick}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Caption>
@@ -78,3 +79,6 @@ function TemplateTile({ template, index, onApply }: TemplateItemProps) {
     </Thumbnail.Tile>
   );
 }
+
+const TemplateRow = memo(TemplateRowImpl);
+const TemplateTile = memo(TemplateTileImpl);

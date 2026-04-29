@@ -417,6 +417,32 @@ export interface NdiActiveSenderDiagnostics {
   width: number;
   height: number;
   withAlpha: boolean;
+  asyncVideoSend: boolean;
+  connectionCount: number | null;
+  performance: NdiSenderPerformanceDiagnostics;
+}
+
+export interface NdiFrameTelemetry {
+  captureDurationMs: number;
+  readbackDurationMs: number;
+  skippedCaptures: number;
+  heartbeatCaptures: number;
+}
+
+export interface NdiSenderPerformanceDiagnostics {
+  framesCaptured: number;
+  framesSent: number;
+  framesReplayed: number;
+  framesRejected: number;
+  framesSkippedNoConnections: number;
+  skippedCaptures: number;
+  heartbeatCaptures: number;
+  bytesReceived: number;
+  cacheCopyBytes: number;
+  avgCaptureDurationMs: number;
+  avgReadbackDurationMs: number;
+  avgSendDurationMs: number;
+  lastFrameBytes: number;
 }
 
 export interface NdiDiagnostics {

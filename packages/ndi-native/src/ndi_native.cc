@@ -674,7 +674,11 @@ Napi::Value SendBgraFrame(const Napi::CallbackInfo& info) {
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  state.symbols.sendVideoV2(sender.sender, &frame);
+  if (state.symbols.sendVideoAsyncV2 != nullptr) {
+    state.symbols.sendVideoAsyncV2(sender.sender, &frame);
+  } else {
+    state.symbols.sendVideoV2(sender.sender, &frame);
+  }
   sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
 
   return env.Undefined();
@@ -768,7 +772,11 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  state.symbols.sendVideoV2(sender.sender, &frame);
+  if (state.symbols.sendVideoAsyncV2 != nullptr) {
+    state.symbols.sendVideoAsyncV2(sender.sender, &frame);
+  } else {
+    state.symbols.sendVideoV2(sender.sender, &frame);
+  }
   sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
 
   return env.Undefined();
@@ -845,6 +853,7 @@ Napi::Value GetRuntimeInfo(const Napi::CallbackInfo& info) {
 
   Napi::Object runtimeInfo = Napi::Object::New(env);
   runtimeInfo.Set("loaded", Napi::Boolean::New(env, state.runtimeLoaded));
+  runtimeInfo.Set("asyncVideoSend", Napi::Boolean::New(env, state.symbols.sendVideoAsyncV2 != nullptr));
   if (state.loadedRuntimePath.empty()) {
     runtimeInfo.Set("path", env.Null());
   } else {

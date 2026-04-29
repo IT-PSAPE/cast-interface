@@ -9,6 +9,7 @@ import {
   clearAllOverlayPlayback,
   clearOverlayPlayback,
   collapseOverlayPlaybackToSingle,
+  getNextOverlayPlaybackDelay,
   getOverlayRenderLayers,
   type ActiveOverlayEntry,
   type OverlayPlaybackMode,
@@ -46,6 +47,34 @@ interface LayersValue {
   clearAllLayers: () => void;
 }
 
+interface PresentationMediaLayerValue {
+  mediaLayerAssetId: Id | null;
+  mediaLayerAsset: MediaAsset | null;
+  setMediaLayerAsset: (assetId: Id) => void;
+}
+
+interface PresentationOverlayLayerValue {
+  overlayMode: OverlayPlaybackMode;
+  activeOverlays: ActiveOverlayPlayback[];
+  activeOverlayIds: Id[];
+  activateOverlay: (overlayId: Id) => void;
+  clearOverlay: (overlayId: Id) => void;
+  setOverlayMode: (mode: OverlayPlaybackMode) => void;
+  clearAllOverlays: () => void;
+}
+
+interface PresentationRenderLayerValue {
+  contentLayerVisible: boolean;
+  mediaLayerAsset: MediaAsset | null;
+  activeOverlays: ActiveOverlayPlayback[];
+}
+
+interface PresentationLayerActionsValue {
+  showContentLayer: () => void;
+  clearLayer: (layer: PresentationLayerKey) => void;
+  clearAllLayers: () => void;
+}
+
 interface AudioValue {
   audioAssets: MediaAsset[];
   currentAudioAsset: MediaAsset | null;
@@ -79,9 +108,12 @@ interface PlaybackContextValue {
 
 // ─── Constants ──────────────────────────────────────────────────────
 
-const OVERLAY_PLAYBACK_INTERVAL_MS = 33;
 const PlaybackContext = createContext<PlaybackContextValue | null>(null);
 const PresentationLayersContext = createContext<LayersValue | null>(null);
+const PresentationMediaLayerContext = createContext<PresentationMediaLayerValue | null>(null);
+const PresentationOverlayLayerContext = createContext<PresentationOverlayLayerValue | null>(null);
+const PresentationRenderLayerContext = createContext<PresentationRenderLayerValue | null>(null);
+const PresentationLayerActionsContext = createContext<PresentationLayerActionsValue | null>(null);
 const AudioPlaybackContext = createContext<AudioValue | null>(null);
 const StagePlaybackContext = createContext<StageValue | null>(null);
 
@@ -111,12 +143,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, [mediaAssetsById, mediaLayerAssetId]);
 
   useEffect(() => {
-    if (overlayEntries.length === 0) return undefined;
-    const intervalId = window.setInterval(() => {
+    const delay = getNextOverlayPlaybackDelay(overlayEntries, overlaysById, playbackNow);
+    if (delay == null) return undefined;
+    const timeoutId = window.setTimeout(() => {
       setPlaybackNow(Date.now());
-    }, OVERLAY_PLAYBACK_INTERVAL_MS);
-    return () => { window.clearInterval(intervalId); };
-  }, [overlayEntries.length]);
+    }, Math.max(0, delay));
+    return () => { window.clearTimeout(timeoutId); };
+  }, [overlayEntries, overlaysById, playbackNow]);
 
   useEffect(() => {
     setOverlayEntries((current) => {
@@ -241,6 +274,34 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     clearLayer, clearOverlay, contentLayerVisible, mediaLayerAsset, mediaLayerAssetId,
     overlayMode, setMediaLayerAsset, setOverlayMode, showContentLayer,
   ]);
+
+  const mediaLayer = useMemo<PresentationMediaLayerValue>(() => ({
+    mediaLayerAssetId,
+    mediaLayerAsset,
+    setMediaLayerAsset,
+  }), [mediaLayerAsset, mediaLayerAssetId, setMediaLayerAsset]);
+
+  const overlayLayer = useMemo<PresentationOverlayLayerValue>(() => ({
+    overlayMode,
+    activeOverlays,
+    activeOverlayIds,
+    activateOverlay,
+    clearOverlay,
+    setOverlayMode,
+    clearAllOverlays,
+  }), [activateOverlay, activeOverlayIds, activeOverlays, clearAllOverlays, clearOverlay, overlayMode, setOverlayMode]);
+
+  const renderLayer = useMemo<PresentationRenderLayerValue>(() => ({
+    contentLayerVisible,
+    mediaLayerAsset,
+    activeOverlays,
+  }), [activeOverlays, contentLayerVisible, mediaLayerAsset]);
+
+  const layerActions = useMemo<PresentationLayerActionsValue>(() => ({
+    showContentLayer,
+    clearLayer,
+    clearAllLayers,
+  }), [clearAllLayers, clearLayer, showContentLayer]);
 
   // ── Audio playback ──
   //
@@ -478,11 +539,19 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   return (
     <PresentationLayersContext.Provider value={layers}>
-      <AudioPlaybackContext.Provider value={audio}>
-        <StagePlaybackContext.Provider value={stage}>
-          <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>
-        </StagePlaybackContext.Provider>
-      </AudioPlaybackContext.Provider>
+      <PresentationMediaLayerContext.Provider value={mediaLayer}>
+        <PresentationOverlayLayerContext.Provider value={overlayLayer}>
+          <PresentationRenderLayerContext.Provider value={renderLayer}>
+            <PresentationLayerActionsContext.Provider value={layerActions}>
+              <AudioPlaybackContext.Provider value={audio}>
+                <StagePlaybackContext.Provider value={stage}>
+                  <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>
+                </StagePlaybackContext.Provider>
+              </AudioPlaybackContext.Provider>
+            </PresentationLayerActionsContext.Provider>
+          </PresentationRenderLayerContext.Provider>
+        </PresentationOverlayLayerContext.Provider>
+      </PresentationMediaLayerContext.Provider>
     </PresentationLayersContext.Provider>
   );
 }
@@ -498,6 +567,30 @@ export function usePlayback(): PlaybackContextValue {
 export function usePresentationLayers(): LayersValue {
   const ctx = useContext(PresentationLayersContext);
   if (!ctx) throw new Error('usePresentationLayers must be used within PlaybackProvider');
+  return ctx;
+}
+
+export function usePresentationMediaLayer(): PresentationMediaLayerValue {
+  const ctx = useContext(PresentationMediaLayerContext);
+  if (!ctx) throw new Error('usePresentationMediaLayer must be used within PlaybackProvider');
+  return ctx;
+}
+
+export function usePresentationOverlayLayer(): PresentationOverlayLayerValue {
+  const ctx = useContext(PresentationOverlayLayerContext);
+  if (!ctx) throw new Error('usePresentationOverlayLayer must be used within PlaybackProvider');
+  return ctx;
+}
+
+export function usePresentationRenderLayer(): PresentationRenderLayerValue {
+  const ctx = useContext(PresentationRenderLayerContext);
+  if (!ctx) throw new Error('usePresentationRenderLayer must be used within PlaybackProvider');
+  return ctx;
+}
+
+export function usePresentationLayerActions(): PresentationLayerActionsValue {
+  const ctx = useContext(PresentationLayerActionsContext);
+  if (!ctx) throw new Error('usePresentationLayerActions must be used within PlaybackProvider');
   return ctx;
 }
 

@@ -9,6 +9,7 @@ import type {
   Id,
   MediaAsset,
   NdiDiagnostics,
+  NdiFrameTelemetry,
   NdiOutputConfig,
   NdiOutputName,
   OverlayCreateInput,
@@ -248,7 +249,9 @@ export const registerIpcHandlers = (
     return ndiService.updateOutputConfig(name, config);
   });
   safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
-  ipcMain.on(IPC.sendNdiFrame, (event, name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
+  ipcMain.on(
+    IPC.sendNdiFrame,
+    (event, name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number, telemetry?: NdiFrameTelemetry) => {
     try {
       assertTrustedIpcSender(event);
       if (!NDI_OUTPUT_NAMES.has(name)) {
@@ -257,9 +260,10 @@ export const registerIpcHandlers = (
       if (!(buffer instanceof ArrayBuffer)) {
         throw new Error('NDI frame payload must be an ArrayBuffer');
       }
-      ndiService.receiveFrame(name, new Uint8Array(buffer), width, height);
+      ndiService.receiveFrame(name, new Uint8Array(buffer), width, height, telemetry);
     } catch (error) {
       console.error(`[IPC ${IPC.sendNdiFrame}]`, error);
     }
-  });
+    },
+  );
 };

@@ -8,6 +8,7 @@ export type NdiSenderConfig = {
 export type NdiRuntimeInfo = {
   loaded: boolean;
   path: string | null;
+  asyncVideoSend: boolean;
 };
 
 export type NdiAddonInfo = {

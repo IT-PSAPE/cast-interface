@@ -6,7 +6,7 @@ import { sortElements } from '../../utils/slides';
 import { useCast } from '../app-context';
 import { useNavigation } from '../navigation-context';
 import { useDeckEditor } from '../asset-editor/asset-editor-context';
-import { usePresentationLayers } from '../playback/playback-context';
+import { usePresentationRenderLayer } from '../playback/playback-context';
 import { useSlides } from '../slide-context';
 import { useProjectContent } from '../use-project-content';
 import { useWorkbench } from '../workbench-context';
@@ -63,7 +63,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   const { currentSlide, liveSlide, liveElements, slideElementsById } = useSlides();
   const { slides: projectSlides, slideElementsBySlideId: projectSlideElementsBySlideId } = useProjectContent();
   const { getSlideElements, replaceSlideElements } = useDeckEditor();
-  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
+  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationRenderLayer();
   const { state: { workbenchMode } } = useWorkbench();
   const activeEditorSource = useActiveEditorSource();
   const isDeckEdit = activeEditorSource.mode === 'deck-editor';

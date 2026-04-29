@@ -8,6 +8,7 @@ import { SceneNodeMedia } from '../canvas/scene-node-media';
 import { SceneNodeShape } from '../canvas/scene-node-shape';
 import { SceneNodeText } from '../canvas/scene-node-text';
 import type { RenderNode, RenderScene, SceneSurface } from '../canvas/scene-types';
+import { useNdiCaptureSource } from './ndi-capture-source';
 
 const FRAME_INTERVAL_MS = 1000 / 30;
 // If the scene doesn't change for this long, send a heartbeat frame so
@@ -48,7 +49,9 @@ export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }
   const stageRef = useRef<Konva.Stage>(null);
   const normalizedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const normalizedContextRef = useRef<CanvasRenderingContext2D | null>(null);
-  const frameBufferRef = useRef<Uint8Array | null>(null);
+  const pendingSkippedCapturesRef = useRef(0);
+  const pendingHeartbeatCapturesRef = useRef(0);
+  const sharedCaptureSource = useNdiCaptureSource(senderName);
   const hasVideoNodes = useMemo(
     () => scene.nodes.some((node) => node.element.type === 'video'),
     [scene.nodes],
@@ -93,31 +96,41 @@ export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }
     return normalizedContext;
   }, []);
 
-  const captureFrame = useCallback(() => {
+  const captureFrame = useCallback((heartbeatCapture: boolean) => {
     const stage = stageRef.current;
-    if (!stage) return;
+    const canvas = sharedCaptureSource ?? stage?.getLayers()[0]?.getNativeCanvasElement();
+    if (!canvas) return;
 
     try {
-      const [layer] = stage.getLayers();
-      const canvas = layer?.getNativeCanvasElement();
-      if (!canvas) return;
+      const captureStartedAt = performance.now();
       const ctx = getReadbackContext(canvas);
       if (!ctx) return;
+      const readbackStartedAt = performance.now();
       const imageData = ctx.getImageData(0, 0, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
-      const requiredSize = NDI_OUTPUT_WIDTH * NDI_OUTPUT_HEIGHT * 4;
-      if (!frameBufferRef.current || frameBufferRef.current.byteLength !== requiredSize) {
-        frameBufferRef.current = new Uint8Array(requiredSize);
-      }
-      frameBufferRef.current.set(imageData.data);
-      window.castApi.sendNdiFrame(senderName, frameBufferRef.current.buffer as ArrayBuffer, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT);
+      const readbackDurationMs = performance.now() - readbackStartedAt;
+      const captureDurationMs = performance.now() - captureStartedAt;
+      window.castApi.sendNdiFrame(
+        senderName,
+        imageData.data.buffer as ArrayBuffer,
+        NDI_OUTPUT_WIDTH,
+        NDI_OUTPUT_HEIGHT,
+        {
+          captureDurationMs,
+          readbackDurationMs,
+          skippedCaptures: pendingSkippedCapturesRef.current,
+          heartbeatCaptures: pendingHeartbeatCapturesRef.current + (heartbeatCapture ? 1 : 0),
+        },
+      );
+      pendingSkippedCapturesRef.current = 0;
+      pendingHeartbeatCapturesRef.current = 0;
     } catch (error) {
       console.error('[NdiFrameCapture] Frame capture failed:', error);
     }
-  }, [getReadbackContext, senderName]);
+  }, [getReadbackContext, senderName, sharedCaptureSource]);
 
   const handleImageLoad = useCallback(() => {
     stageRef.current?.batchDraw();
-    captureFrame();
+    captureFrame(false);
   }, [captureFrame]);
 
   // Single RAF loop driving capture at ~30fps. Skips the capture/send when
@@ -143,9 +156,11 @@ export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }
         const heartbeatDue = timestamp - lastSentTime >= HEARTBEAT_MS;
         if (signatureChanged || hasVideoNodes || heartbeatDue) {
           stageRef.current?.batchDraw();
-          captureFrame();
+          captureFrame(heartbeatDue && !signatureChanged && !hasVideoNodes);
           lastSignature = currentSignature;
           lastSentTime = timestamp;
+        } else {
+          pendingSkippedCapturesRef.current += 1;
         }
       }
       rafId = requestAnimationFrame(tick);
@@ -159,6 +174,7 @@ export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }
   }, [captureFrame, enabled, hasVideoNodes, scene, withAlpha]);
 
   if (!enabled) return null;
+  if (sharedCaptureSource) return null;
 
   return (
     <div

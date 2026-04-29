@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, Play, Plus, Search } from 'lucide-react';
-import { ReacstButton } from '@renderer/components/controls/button';
 import { RecastPanel } from '@renderer/components/layout/panel';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
@@ -114,11 +113,8 @@ function DeckEditorScreenContent() {
               <StagePanel />
             </SplitPanel.Segment>
             <SplitPanel.Segment id="edit-bottom" defaultSize={220} minSize={120} collapsible>
-              <section
-                data-ui-region="slide-notes-panel"
-                className="relative h-full min-h-0 overflow-hidden border-t border-primary bg-primary/70"
-              >
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
+              <section data-ui-region="slide-notes-panel" className="relative h-full min-h-0 overflow-hidden border-t border-primary bg-secondary">
+                {/* <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
                   <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-primary bg-primary/95 p-1 shadow-sm backdrop-blur-sm">
                     <ReacstButton onClick={state.notesPanel.handleResetNotes} disabled={!state.notesPanel.hasSlide || !state.notesPanel.isDirty} variant="ghost">
                       Reset
@@ -127,12 +123,14 @@ function DeckEditorScreenContent() {
                       Save
                     </ReacstButton>
                   </div>
-                </div>
+                </div> */}
                 <FieldTextarea
                   value={state.notesPanel.notesDraft}
                   onChange={state.notesPanel.handleNotesChange}
+                  onBlur={state.notesPanel.handleSaveNotes}
                   placeholder={state.notesPanel.placeholder}
-                  className="h-full min-h-0 w-full resize-none rounded-none border-0 bg-transparent px-3 pb-3 pt-14 leading-relaxed focus:border-0"
+                  resize="none"
+                  className="h-full min-h-0 w-full resize-none rounded-none border-none bg-transparent p-4 focus:border-0 paragraph-sm"
                 />
               </section>
             </SplitPanel.Segment>

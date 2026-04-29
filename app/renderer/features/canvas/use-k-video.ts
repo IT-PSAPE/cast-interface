@@ -7,83 +7,150 @@ interface UseKVideoOptions {
   muted: boolean;
 }
 
+interface VideoPoolEntry {
+  key: string;
+  status: 'loading' | 'broken' | 'loaded';
+  refCount: number;
+  video: HTMLVideoElement;
+  listeners: Set<() => void>;
+  cleanup: () => void;
+}
+
+const videoPool = new Map<string, VideoPoolEntry>();
+
+function getVideoPoolKey(src: string, { autoplay, loop, muted }: UseKVideoOptions): string {
+  return [src, autoplay ? '1' : '0', loop ? '1' : '0', muted ? '1' : '0'].join('|');
+}
+
+function toResolvedMediaState(entry: VideoPoolEntry): ResolvedMediaState {
+  if (entry.status === 'loaded') {
+    return { status: 'loaded', resource: entry.video };
+  }
+
+  return { status: entry.status };
+}
+
+function notifyListeners(entry: VideoPoolEntry) {
+  entry.listeners.forEach((listener) => {
+    listener();
+  });
+}
+
+function createVideoPoolEntry(src: string, { autoplay, loop, muted }: UseKVideoOptions): VideoPoolEntry {
+  const video = document.createElement('video');
+  video.src = src;
+  video.autoplay = autoplay;
+  video.loop = loop;
+  video.muted = muted;
+  video.playsInline = true;
+  video.crossOrigin = 'anonymous';
+  video.preload = 'metadata';
+
+  const entry: VideoPoolEntry = {
+    key: getVideoPoolKey(src, { autoplay, loop, muted }),
+    status: 'loading',
+    refCount: 0,
+    video,
+    listeners: new Set(),
+    cleanup: () => undefined,
+  };
+
+  const handleReady = () => {
+    entry.status = 'loaded';
+    notifyListeners(entry);
+    if (autoplay) {
+      void video.play().catch(() => undefined);
+    }
+  };
+
+  const handleError = () => {
+    if (entry.status === 'loaded') return;
+    entry.status = 'broken';
+    notifyListeners(entry);
+  };
+
+  video.addEventListener('loadeddata', handleReady);
+  video.addEventListener('error', handleError);
+  entry.cleanup = () => {
+    video.removeEventListener('loadeddata', handleReady);
+    video.removeEventListener('error', handleError);
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  };
+
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    handleReady();
+  } else {
+    video.load();
+  }
+
+  return entry;
+}
+
+function acquireVideoEntry(src: string, options: UseKVideoOptions): VideoPoolEntry {
+  const key = getVideoPoolKey(src, options);
+  let entry = videoPool.get(key);
+  if (!entry) {
+    entry = createVideoPoolEntry(src, options);
+    videoPool.set(key, entry);
+  }
+
+  entry.refCount += 1;
+  if (entry.status === 'loaded' && options.autoplay) {
+    void entry.video.play().catch(() => undefined);
+  }
+  return entry;
+}
+
+function releaseVideoEntry(entry: VideoPoolEntry) {
+  entry.refCount -= 1;
+  if (entry.refCount > 0) return;
+
+  videoPool.delete(entry.key);
+  entry.cleanup();
+}
+
 export function useKVideo(src: string | null, { autoplay, loop, muted }: UseKVideoOptions): ResolvedMediaState {
   const [state, setState] = useState<ResolvedMediaState>({ status: 'empty' });
-  const activeVideoRef = useRef<HTMLVideoElement | null>(null);
+  const activeEntryRef = useRef<VideoPoolEntry | null>(null);
 
   useEffect(() => {
     if (!src) {
-      const current = activeVideoRef.current;
-      if (current) {
-        current.pause();
-        current.removeAttribute('src');
-        current.load();
+      const currentEntry = activeEntryRef.current;
+      if (currentEntry) {
+        releaseVideoEntry(currentEntry);
       }
-      activeVideoRef.current = null;
+      activeEntryRef.current = null;
       setState({ status: 'empty' });
       return;
     }
 
-    const nextVideo = document.createElement('video');
-    nextVideo.src = src;
-    nextVideo.autoplay = autoplay;
-    nextVideo.loop = loop;
-    nextVideo.muted = muted;
-    nextVideo.playsInline = true;
-    nextVideo.crossOrigin = 'anonymous';
-    nextVideo.preload = 'metadata';
-    let promoted = false;
-    setState({ status: 'loading' });
+    const entry = acquireVideoEntry(src, { autoplay, loop, muted });
+    activeEntryRef.current = entry;
+    setState(toResolvedMediaState(entry));
 
-    function handleReady() {
-      promoted = true;
-      const previous = activeVideoRef.current;
-      if (previous && previous !== nextVideo) {
-        previous.pause();
-        previous.removeAttribute('src');
-        previous.load();
-      }
-      activeVideoRef.current = nextVideo;
-      setState({ status: 'loaded', resource: nextVideo });
-      if (autoplay) {
-        void nextVideo.play().catch(() => undefined);
-      }
-    }
+    const handleChange = () => {
+      setState(toResolvedMediaState(entry));
+    };
 
-    function handleError() {
-      if (promoted) return;
-      const previous = activeVideoRef.current;
-      if (previous && previous !== nextVideo) {
-        previous.pause();
-        previous.removeAttribute('src');
-        previous.load();
-        activeVideoRef.current = null;
-      }
-      setState({ status: 'broken' });
-    }
-
-    nextVideo.addEventListener('loadeddata', handleReady);
-    nextVideo.addEventListener('error', handleError);
-    nextVideo.load();
+    entry.listeners.add(handleChange);
 
     return () => {
-      nextVideo.removeEventListener('loadeddata', handleReady);
-      nextVideo.removeEventListener('error', handleError);
-      if (promoted) return;
-      nextVideo.pause();
-      nextVideo.removeAttribute('src');
-      nextVideo.load();
+      entry.listeners.delete(handleChange);
+      if (activeEntryRef.current === entry) {
+        activeEntryRef.current = null;
+      }
+      releaseVideoEntry(entry);
     };
   }, [autoplay, loop, muted, src]);
 
   useEffect(() => {
     return () => {
-      const current = activeVideoRef.current;
-      if (!current) return;
-      current.pause();
-      current.removeAttribute('src');
-      current.load();
-      activeVideoRef.current = null;
+      const currentEntry = activeEntryRef.current;
+      if (!currentEntry) return;
+      releaseVideoEntry(currentEntry);
+      activeEntryRef.current = null;
     };
   }, []);
 
