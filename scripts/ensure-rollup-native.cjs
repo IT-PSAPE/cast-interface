@@ -73,6 +73,31 @@ function getLightningCssPlatformPackageName() {
   return null;
 }
 
+function getTailwindOxidePlatformPackageName() {
+  const { platform, arch } = process;
+
+  if (platform === 'darwin') {
+    if (arch === 'arm64') return '@tailwindcss/oxide-darwin-arm64';
+    if (arch === 'x64') return '@tailwindcss/oxide-darwin-x64';
+    return null;
+  }
+
+  if (platform === 'linux') {
+    if (arch === 'x64') return isMusl() ? '@tailwindcss/oxide-linux-x64-musl' : '@tailwindcss/oxide-linux-x64-gnu';
+    if (arch === 'arm64') return isMusl() ? '@tailwindcss/oxide-linux-arm64-musl' : '@tailwindcss/oxide-linux-arm64-gnu';
+    if (arch === 'arm') return '@tailwindcss/oxide-linux-arm-gnueabihf';
+    return null;
+  }
+
+  if (platform === 'win32') {
+    if (arch === 'x64') return '@tailwindcss/oxide-win32-x64-msvc';
+    if (arch === 'arm64') return '@tailwindcss/oxide-win32-arm64-msvc';
+    return null;
+  }
+
+  return null;
+}
+
 function hasPackage(packageName) {
   try {
     require.resolve(packageName);
@@ -102,12 +127,16 @@ function collectMissingNativePackage({
 
 const missingPackages = [
   collectMissingNativePackage({
-  dependencyName: 'rollup',
-  packageName: getRollupPlatformPackageName(),
+    dependencyName: 'rollup',
+    packageName: getRollupPlatformPackageName(),
   }),
   collectMissingNativePackage({
-  dependencyName: 'lightningcss',
-  packageName: getLightningCssPlatformPackageName(),
+    dependencyName: 'lightningcss',
+    packageName: getLightningCssPlatformPackageName(),
+  }),
+  collectMissingNativePackage({
+    dependencyName: '@tailwindcss/oxide',
+    packageName: getTailwindOxidePlatformPackageName(),
   }),
 ].filter(Boolean);
 
