@@ -4,6 +4,8 @@ const { execFileSync } = require('node:child_process');
 const { existsSync, readFileSync } = require('node:fs');
 const path = require('node:path');
 
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 function getInstalledPackageVersion(packageName) {
   const packageJsonPath = path.join(process.cwd(), 'node_modules', ...packageName.split('/'), 'package.json');
   if (!existsSync(packageJsonPath)) {
@@ -143,7 +145,7 @@ const missingPackages = [
 if (missingPackages.length > 0) {
   const packagesToInstall = missingPackages.map(({ packageName, version }) => `${packageName}@${version}`);
   console.log(`[ensure-rollup-native] Installing missing native packages: ${packagesToInstall.join(', ')}.`);
-  execFileSync('npm', ['install', '--no-save', ...packagesToInstall], {
+  execFileSync(npmCommand, ['install', '--no-save', ...packagesToInstall], {
     stdio: 'inherit',
   });
 }
