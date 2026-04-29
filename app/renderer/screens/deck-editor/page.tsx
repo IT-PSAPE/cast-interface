@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, Play, Plus, Search } from 'lucide-react';
-import { ReacstButton } from '@renderer/components 2.0/button';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
@@ -10,17 +9,17 @@ import { Dropdown } from '../../components/form/dropdown';
 import { FieldTextarea } from '../../components/form/field';
 import { Popover } from '../../components/overlays/popover';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
-import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { StagePanel } from '../../features/canvas/stage-panel';
-import { SplitPanel } from '../../features/workbench/split-panel';
-import { ObjectListPanel } from '@renderer/features/canvas/object-list-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
-import { SceneStage } from '@renderer/features/canvas/scene-stage';
 import type { RenderScene } from '@renderer/features/canvas/scene-types';
 import { EmptyState } from '@renderer/components/display/empty-state';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { Label } from '@renderer/components/display/text';
+import { DeckEditorInspectorPanel } from './inspector-panel';
+import { DeckEditorLayersPanel } from './layers-panel';
 import { DeckEditorScreenProvider, useDeckEditorScreen } from './screen-context';
 
 export function DeckEditorScreen() {
@@ -32,11 +31,10 @@ export function DeckEditorScreen() {
 }
 
 function DeckEditorScreenContent() {
-  const { meta, state, actions } = useDeckEditorScreen();
+  const { state, actions } = useDeckEditorScreen();
 
   return (
-    <section data-ui-region="deck-editor-layout" className="h-full min-h-0 overflow-hidden">
-      <SplitPanel.Panel splitId="edit-main" orientation="horizontal" className="h-full">
+      <SplitPanel.Panel splitId="edit-main" orientation="horizontal" className="h-full" data-ui-region="deck-editor-layout">
         {/* LEFT PANEL: LAYERS PANEL */}
         <SplitPanel.Segment id="edit-left" defaultSize={280} minSize={140} collapsible>
           <RecastPanel.Root className="h-full border-r border-secondary">
@@ -53,25 +51,16 @@ function DeckEditorScreenContent() {
                         <Plus />
                       </Dropdown.Trigger>
                       <Dropdown.Panel placement="bottom-end">
-                        {meta.addActions.slice(0, 2).map((action) => {
-                          const kind = action.kind;
-                          if (!kind) return null;
-                          return (
-                            <Dropdown.Item key={action.id} onClick={() => actions.openCreateDeckItem(kind)}>
-                              {action.label}
-                            </Dropdown.Item>
-                          );
-                        })}
+                        <Dropdown.Item onClick={() => actions.openCreateDeckItem('lyric')}>
+                          New lyric
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => actions.openCreateDeckItem('presentation')}>
+                          New presentation
+                        </Dropdown.Item>
                         <Dropdown.Separator />
-                        {(() => {
-                          const slideAction = meta.addActions.find((action) => action.id === 'new-slide');
-                          if (!slideAction) return null;
-                          return (
-                            <Dropdown.Item onClick={() => { void actions.createSlide(); }} disabled={slideAction.disabled}>
-                              {slideAction.label}
-                            </Dropdown.Item>
-                          );
-                        })()}
+                        <Dropdown.Item onClick={() => { void actions.createSlide(); }} disabled={!state.currentDeckItem}>
+                          New slide
+                        </Dropdown.Item>
                       </Dropdown.Panel>
                     </Dropdown>
                   </RecastPanel.GroupTitle>
@@ -90,30 +79,9 @@ function DeckEditorScreenContent() {
                       <ScrollArea.Root>
                         <ScrollArea.Viewport className="p-2">
                           <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${state.currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
-                            {state.slides.map((slide, index) => {
-                              const elements = state.currentSlide?.id === slide.id ? state.effectiveElements : actions.getSlideElements(slide.id);
-                              const scene = actions.getThumbnailScene(slide.id, 'deck-editor');
-                              if (!scene) return null;
-                              const visualState = getSlideVisualState(index, state.liveSlideIndex, state.currentSlideIndex, elements);
-
-                              function handleSelect() {
-                                actions.setCurrentSlideIndex(index);
-                              }
-
-                              return (
-                                <SlideTile
-                                  key={slide.id}
-                                  slideId={slide.id}
-                                  scene={scene}
-                                  index={index}
-                                  isActive={index === state.currentSlideIndex}
-                                  isLive={visualState === 'live'}
-                                  isEmpty={visualState === 'warning'}
-                                  textPreview={slideTextPreview(elements)}
-                                  onSelect={handleSelect}
-                                />
-                              );
-                            })}
+                            {state.slides.map((slide, index) => (
+                              <DeckEditorSlideListItem key={slide.id} slide={slide} index={index} />
+                            ))}
                           </div>
                         </ScrollArea.Viewport>
                         <ScrollArea.Scrollbar>
@@ -130,7 +98,7 @@ function DeckEditorScreenContent() {
                     <Label.xs className="mr-auto">Layers</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
-                    <ObjectListPanel />
+                    <DeckEditorLayersPanel />
                   </RecastPanel.Content>
                 </RecastPanel.Group>
               </SplitPanel.Segment>
@@ -145,11 +113,8 @@ function DeckEditorScreenContent() {
               <StagePanel />
             </SplitPanel.Segment>
             <SplitPanel.Segment id="edit-bottom" defaultSize={220} minSize={120} collapsible>
-              <section
-                data-ui-region="slide-notes-panel"
-                className="relative h-full min-h-0 overflow-hidden border-t border-primary bg-primary/70"
-              >
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
+              <section data-ui-region="slide-notes-panel" className="relative h-full min-h-0 overflow-hidden border-t border-primary bg-secondary">
+                {/* <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
                   <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-primary bg-primary/95 p-1 shadow-sm backdrop-blur-sm">
                     <ReacstButton onClick={state.notesPanel.handleResetNotes} disabled={!state.notesPanel.hasSlide || !state.notesPanel.isDirty} variant="ghost">
                       Reset
@@ -158,12 +123,14 @@ function DeckEditorScreenContent() {
                       Save
                     </ReacstButton>
                   </div>
-                </div>
+                </div> */}
                 <FieldTextarea
                   value={state.notesPanel.notesDraft}
                   onChange={state.notesPanel.handleNotesChange}
+                  onBlur={state.notesPanel.handleSaveNotes}
                   placeholder={state.notesPanel.placeholder}
-                  className="h-full min-h-0 w-full resize-none rounded-none border-0 bg-transparent px-3 pb-3 pt-14 leading-relaxed focus:border-0"
+                  resize="none"
+                  className="h-full min-h-0 w-full resize-none rounded-none border-none bg-transparent p-4 focus:border-0 paragraph-sm"
                 />
               </section>
             </SplitPanel.Segment>
@@ -172,19 +139,41 @@ function DeckEditorScreenContent() {
 
         {/* RIGHT PANEL: INSPECTOR PANEL*/}
         <SplitPanel.Segment id="edit-right" defaultSize={320} minSize={140} collapsible>
-          <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
-            <InspectorTabsPanel className="flex-1" />
-            {state.inspectorState.isVisible && (
-              <RecastPanel.Footer className="p-3">
-                <ReacstButton onClick={actions.pushChanges} disabled={state.inspectorState.isPushingChanges} className="w-full">
-                  {state.inspectorState.isPushingChanges ? 'Pushing…' : state.inspectorState.pushLabel}
-                </ReacstButton>
-              </RecastPanel.Footer>
-            )}
-          </RecastPanel.Root>
+          <DeckEditorInspectorPanel />
         </SplitPanel.Segment>
       </SplitPanel.Panel>
-    </section>
+  );
+}
+
+function DeckEditorSlideListItem({
+  slide,
+  index,
+}: {
+  slide: ReturnType<typeof useDeckEditorScreen>['state']['slides'][number];
+  index: number;
+}) {
+  const { state, actions } = useDeckEditorScreen();
+  const elements = state.currentSlide?.id === slide.id ? state.effectiveElements : actions.getSlideElements(slide.id);
+  const scene = actions.getThumbnailScene(slide.id, 'deck-editor');
+  if (!scene) return null;
+
+  const visualState = getSlideVisualState(index, state.liveSlideIndex, state.currentSlideIndex, elements);
+
+  function handleSelect() {
+    actions.setCurrentSlideIndex(index);
+  }
+
+  return (
+    <SlideTile
+      slideId={slide.id}
+      scene={scene}
+      index={index}
+      isActive={index === state.currentSlideIndex}
+      isLive={visualState === 'live'}
+      isEmpty={visualState === 'warning'}
+      textPreview={slideTextPreview(elements)}
+      onSelect={handleSelect}
+    />
   );
 }
 
@@ -242,7 +231,7 @@ function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textP
                 Empty
               </div>
             )}
-            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+            <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
           </SceneFrame>
         </Thumbnail.Body>
         {isLive && (
@@ -290,6 +279,9 @@ function DeckItemPicker() {
     return state.deckItems.filter((item) => item.title.toLowerCase().includes(q));
   }, [filter, state.deckItems]);
 
+  const listboxId = 'deck-editor-item-picker-listbox';
+  const activeOptionId = filtered[highlightedIndex] ? `deck-editor-item-option-${filtered[highlightedIndex].id}` : undefined;
+
   function handleOpen() {
     setOpen(true);
     setFilter('');
@@ -330,8 +322,10 @@ function DeckItemPicker() {
         ref={triggerRef}
         type="button"
         onClick={open ? handleClose : handleOpen}
+        aria-label="Select deck item"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={listboxId}
         className="h-6.5 flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 py-0.5 text-left transition-colors hover:bg-tertiary"
         title={state.currentDeckItem?.title ?? 'No item selected'}
       >
@@ -348,6 +342,12 @@ function DeckItemPicker() {
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={listboxId}
+              aria-activedescendant={activeOptionId}
+              aria-autocomplete="list"
+              data-shortcuts-scope="ignore"
               value={filter}
               onChange={(event) => { setFilter(event.target.value); setHighlightedIndex(0); }}
               onKeyDown={handleInputKeyDown}
@@ -355,37 +355,62 @@ function DeckItemPicker() {
               className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
             />
           </div>
-          <div ref={listRef} className="max-h-72 overflow-y-auto p-1">
+          <div ref={listRef} id={listboxId} role="listbox" aria-label="Deck items" className="max-h-72 overflow-y-auto p-1">
             {filtered.length === 0 ? (
               <div className="px-2 py-1.5 text-sm text-tertiary">No deck items match.</div>
             ) : (
-              filtered.map((item, index) => {
-                const isCurrent = item.id === state.currentDeckItemId;
-                const isHighlighted = index === highlightedIndex;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="option"
-                    aria-selected={isCurrent}
-                    onClick={() => handleSelect(item.id)}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
-                      isCurrent ? 'text-primary' : 'text-secondary',
-                      isHighlighted ? 'bg-tertiary text-primary' : 'hover:bg-tertiary hover:text-primary',
-                    )}
-                  >
-                    <DeckItemIcon entity={item} className="shrink-0 text-tertiary" />
-                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                    {isCurrent ? <span className="shrink-0 text-xs uppercase tracking-wide text-tertiary">current</span> : null}
-                  </button>
-                );
-              })
+              filtered.map((item, index) => (
+                <DeckItemPickerOption
+                  key={item.id}
+                  item={item}
+                  isCurrent={item.id === state.currentDeckItemId}
+                  isHighlighted={index === highlightedIndex}
+                  onSelect={handleSelect}
+                  onHighlight={() => setHighlightedIndex(index)}
+                />
+              ))
             )}
           </div>
         </div>
       </Popover>
     </>
+  );
+}
+
+function DeckItemPickerOption({
+  item,
+  isCurrent,
+  isHighlighted,
+  onSelect,
+  onHighlight,
+}: {
+  item: ReturnType<typeof useDeckEditorScreen>['state']['deckItems'][number];
+  isCurrent: boolean;
+  isHighlighted: boolean;
+  onSelect: (id: Id) => void;
+  onHighlight: () => void;
+}) {
+  function handleSelect() {
+    onSelect(item.id);
+  }
+
+  return (
+    <button
+      id={`deck-editor-item-option-${item.id}`}
+      type="button"
+      role="option"
+      aria-selected={isHighlighted}
+      onClick={handleSelect}
+      onMouseEnter={onHighlight}
+      className={cn(
+        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
+        isCurrent ? 'text-primary' : 'text-secondary',
+        isHighlighted ? 'bg-tertiary text-primary' : 'hover:bg-tertiary hover:text-primary',
+      )}
+    >
+      <DeckItemIcon entity={item} className="shrink-0 text-tertiary" />
+      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      {isCurrent ? <span className="shrink-0 text-xs uppercase tracking-wide text-tertiary">current</span> : null}
+    </button>
   );
 }

@@ -11,6 +11,7 @@ import type {
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
+  NdiFrameTelemetry,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
@@ -109,8 +110,8 @@ const api = {
   updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) =>
     ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
   getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
-  sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
-    ipcRenderer.send(IPC.sendNdiFrame, name, buffer, width, height);
+  sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number, telemetry?: NdiFrameTelemetry) => {
+    ipcRenderer.send(IPC.sendNdiFrame, name, buffer, width, height, telemetry);
   },
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => {
     const handler = (_event: IpcRendererEvent, state: NdiOutputState) => callback(state);

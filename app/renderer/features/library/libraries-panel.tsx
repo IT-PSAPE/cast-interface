@@ -3,10 +3,10 @@ import type { LibraryPlaylistBundle } from '@core/types';
 import { Folder, Plus } from 'lucide-react';
 import { useCast } from '@renderer/contexts/app-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Label } from '@renderer/components/display/text';
-import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { useLibraryPanelState } from './library-panel-context';
 
 export function LibrariesPanel() {

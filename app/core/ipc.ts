@@ -9,6 +9,7 @@ import type {
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
+  NdiFrameTelemetry,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
@@ -96,7 +97,13 @@ export interface MainApi {
   getNdiOutputConfigs: () => Promise<NdiOutputConfigMap>;
   updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => Promise<NdiOutputConfigMap>;
   getNdiDiagnostics: () => Promise<NdiDiagnostics>;
-  sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => void;
+  sendNdiFrame: (
+    name: NdiOutputName,
+    buffer: ArrayBuffer,
+    width: number,
+    height: number,
+    telemetry?: NdiFrameTelemetry,
+  ) => void;
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
   getAudioCoverArt: (src: string) => Promise<string | null>;
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;

@@ -3,7 +3,7 @@ import { ContinuousSlideBrowser } from '../../features/deck/continuous-slide-bro
 import { PreviewPanel } from '../../features/playback/preview-panel';
 import { DeckBrowserToolbar } from '../../features/deck/deck-browser-toolbar';
 import { SlideBrowserContent } from '../../features/deck/slide-browser-content';
-import { SplitPanel } from '../../features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { LibrariesPanel } from '@renderer/features/library/libraries-panel';
 import { PlaylistPanels } from '@renderer/features/library/playlist-panels';
 import { Logo } from '@renderer/components/assets';

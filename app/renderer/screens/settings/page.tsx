@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { SelectableRow } from '../../components/display/selectable-row';
 import { AppearanceSettingsPanel } from './appearance-settings-panel';
 import { OutputSettingsPanel } from '../../features/playback/output-settings-panel';
 import { OverlaySettingsPanel } from '../../features/assets/overlays/overlay-settings-panel';
 import { ImportExportPanel } from '../../features/deck/import-export-panel';
-import { SplitPanel } from '../../features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 
 type SettingsTabId = 'appearance' | 'output' | 'overlays' | 'deck';
 

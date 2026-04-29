@@ -2,11 +2,11 @@ import { memo } from 'react';
 import { Play } from 'lucide-react';
 import type { Id } from '@core/types';
 import { ContextMenu, useContextMenuTrigger } from '@renderer/components/overlays/context-menu';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { useSlides } from '@renderer/contexts/slide-context';
-import { SceneStage } from '../canvas/scene-stage';
 import type { RenderScene } from '../canvas/scene-types';
 
 interface SlideGridTileProps {
@@ -69,7 +69,7 @@ function SlideGridTileBody({ slideId, index, scene, selected, isLive, isEmpty, t
                 Empty
               </div>
             ) : null}
-            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+            <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
           </SceneFrame>
         </Thumbnail.Body>
         {isLive ? (

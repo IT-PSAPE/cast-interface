@@ -1,4 +1,4 @@
-import { clamp } from '../../utils/math';
+import { clamp } from '../../../utils/math';
 import type { PaneId, PaneLayoutState, SplitDefinition, SplitLayoutState } from './workbench-panel-layout';
 
 interface WorkingPane {

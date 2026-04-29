@@ -40,3 +40,4 @@ Typical library names searched:
 - `sendBgraFrame` accepts BGRA bitmap order.
 - `sendRgbaFrame` accepts RGBA bitmap order and sends RGBA or RGBX frames so the renderer's byte layout stays intact.
 - When alpha is disabled, the bridge normalizes the fourth byte to opaque `255` before NDI send.
+- When the installed NDI runtime exposes `NDIlib_send_send_video_async_v2`, frame submission uses the async send path with the addon's ping-pong buffers and falls back to synchronous send otherwise.

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
 import { cv } from '@renderer/utils/cv';
 import { ScrollArea } from '../layout/scroll-area';
@@ -9,7 +9,7 @@ type TabsActivationMode = 'automatic' | 'manual';
 interface TabsContextValue {
   state: { value: string | undefined };
   actions: {
-    registerTrigger: (value: string, node: HTMLDivElement | null) => void;
+    registerTrigger: (value: string, node: HTMLButtonElement | null) => void;
     setValue: (value: string) => void;
   };
   meta: {
@@ -73,14 +73,14 @@ function Root({ activationMode = 'automatic', children, defaultValue, onValueCha
   const [internalValue, setInternalValue] = useState(defaultValue);
   const isControlled = value !== undefined;
   const resolvedValue = isControlled ? value : internalValue;
-  const triggerMapRef = useRef(new Map<string, HTMLDivElement>());
+  const triggerMapRef = useRef(new Map<string, HTMLButtonElement>());
 
   function setValue(nextValue: string) {
     if (!isControlled) setInternalValue(nextValue);
     onValueChange?.(nextValue);
   }
 
-  function registerTrigger(triggerValue: string, node: HTMLDivElement | null) {
+  function registerTrigger(triggerValue: string, node: HTMLButtonElement | null) {
     if (!node) {
       triggerMapRef.current.delete(triggerValue);
       return;
@@ -104,7 +104,7 @@ interface ListProps extends HTMLAttributes<HTMLElement> {
 }
 
 function List({ children, className, label, tabsClassName, ...rest }: ListProps) {
-  const { meta } = useTabs();
+  const { actions, meta } = useTabs();
   // Override the ScrollArea.Root default `size-full` so the tab list sizes to
   // its triggers along the cross-axis (h-auto for horizontal, w-auto for vertical).
   const rootSizing = meta.orientation === 'horizontal'
@@ -113,10 +113,42 @@ function List({ children, className, label, tabsClassName, ...rest }: ListProps)
 
   const classes = listStyles({ orientation: meta.orientation, className: tabsClassName });
 
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    const triggerValues = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not([disabled])'),
+      (node) => node.dataset.tabValue ?? '',
+    ).filter(Boolean);
+
+    if (triggerValues.length === 0) return;
+
+    const currentIndex = triggerValues.findIndex((value) => value === (event.target as HTMLElement | null)?.dataset.tabValue);
+    if (currentIndex === -1) return;
+
+    const isHorizontal = meta.orientation === 'horizontal';
+    const previousKey = isHorizontal ? 'ArrowLeft' : 'ArrowUp';
+    const nextKey = isHorizontal ? 'ArrowRight' : 'ArrowDown';
+    if (event.key !== previousKey && event.key !== nextKey && event.key !== 'Home' && event.key !== 'End') return;
+
+    event.preventDefault();
+
+    let nextIndex = currentIndex;
+    if (event.key === previousKey) nextIndex = (currentIndex - 1 + triggerValues.length) % triggerValues.length;
+    else if (event.key === nextKey) nextIndex = (currentIndex + 1) % triggerValues.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = triggerValues.length - 1;
+
+    const nextValue = triggerValues[nextIndex];
+    const nextTrigger = document.getElementById(`${meta.baseId}-trigger-${sanitizeTabValue(nextValue)}`) as HTMLButtonElement | null;
+    nextTrigger?.focus();
+    if (meta.activationMode === 'automatic') {
+      actions.setValue(nextValue);
+    }
+  }
+
   return (
     <ScrollArea.Root className={cn(rootSizing, className)}>
       <ScrollArea.Viewport>
-        <nav className={classes} aria-label={label} {...rest} >
+        <nav className={classes} aria-label={label} role="tablist" aria-orientation={meta.orientation} onKeyDown={handleKeyDown} {...rest} >
           {children}
         </nav>
       </ScrollArea.Viewport>
@@ -124,17 +156,18 @@ function List({ children, className, label, tabsClassName, ...rest }: ListProps)
   );
 }
 
-interface TriggerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onChange'> {
+interface TriggerProps extends Omit<HTMLAttributes<HTMLButtonElement>, 'children' | 'onChange'> {
   children: ReactNode;
   disabled?: boolean;
   value: string;
 }
 
 function Trigger({ children, className, disabled = false, value, ...rest }: TriggerProps) {
-  const buttonRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const { actions, meta, state } = useTabs();
   const active = state.value === value;
   const triggerId = `${meta.baseId}-trigger-${sanitizeTabValue(value)}`;
+  const panelId = `${meta.baseId}-panel-${sanitizeTabValue(value)}`;
 
   useEffect(() => {
     actions.registerTrigger(value, buttonRef.current);
@@ -148,13 +181,35 @@ function Trigger({ children, className, disabled = false, value, ...rest }: Trig
     actions.setValue(value);
   }
 
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (meta.activationMode !== 'manual') return;
+    if ((event.key === 'Enter' || event.key === ' ') && !disabled) {
+      event.preventDefault();
+      actions.setValue(value);
+    }
+  }
+
   const classes = cn(tabStyles({ active }), className);
 
   return (
-    <div {...rest} ref={buttonRef} id={triggerId} role="tab" onClick={handleClick} className={classes}>
+    <button
+      {...rest}
+      ref={buttonRef}
+      id={triggerId}
+      type="button"
+      role="tab"
+      data-tab-value={value}
+      aria-selected={active}
+      aria-controls={panelId}
+      tabIndex={active ? 0 : -1}
+      disabled={disabled}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className={classes}
+    >
       {children}
       {active && <Indicator />}
-    </div>
+    </button>
   );
 }
 

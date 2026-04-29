@@ -8,4 +8,4 @@ packages/ndi-native/build
 .electron-dev-dist
 
 bun.lock
-package-lock.json
+test-results/

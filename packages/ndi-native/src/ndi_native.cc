@@ -28,6 +28,7 @@ namespace {
 
 constexpr int64_t kTimecodeSynthesize = std::numeric_limits<int64_t>::max();
 constexpr int32_t kFrameFormatProgressive = 1;
+constexpr size_t kMaxVideoFrameBytes = static_cast<size_t>(1920) * static_cast<size_t>(1080) * 4U;
 
 constexpr uint32_t MakeFourCC(char a, char b, char c, char d) {
   return static_cast<uint32_t>(static_cast<uint8_t>(a)) |
@@ -322,6 +323,10 @@ bool TryComputeSize(int32_t stride, int32_t height, size_t* out) {
 
   const uint64_t unsignedValue = static_cast<uint64_t>(value);
   if (unsignedValue > std::numeric_limits<size_t>::max()) {
+    return false;
+  }
+
+  if (unsignedValue > kMaxVideoFrameBytes) {
     return false;
   }
 
@@ -669,7 +674,11 @@ Napi::Value SendBgraFrame(const Napi::CallbackInfo& info) {
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  state.symbols.sendVideoV2(sender.sender, &frame);
+  if (state.symbols.sendVideoAsyncV2 != nullptr) {
+    state.symbols.sendVideoAsyncV2(sender.sender, &frame);
+  } else {
+    state.symbols.sendVideoV2(sender.sender, &frame);
+  }
   sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
 
   return env.Undefined();
@@ -763,7 +772,11 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
 
-  state.symbols.sendVideoV2(sender.sender, &frame);
+  if (state.symbols.sendVideoAsyncV2 != nullptr) {
+    state.symbols.sendVideoAsyncV2(sender.sender, &frame);
+  } else {
+    state.symbols.sendVideoV2(sender.sender, &frame);
+  }
   sender.currentBuffer = (bufIdx + 1) % kDoubleBufferCount;
 
   return env.Undefined();
@@ -840,6 +853,7 @@ Napi::Value GetRuntimeInfo(const Napi::CallbackInfo& info) {
 
   Napi::Object runtimeInfo = Napi::Object::New(env);
   runtimeInfo.Set("loaded", Napi::Boolean::New(env, state.runtimeLoaded));
+  runtimeInfo.Set("asyncVideoSend", Napi::Boolean::New(env, state.symbols.sendVideoAsyncV2 != nullptr));
   if (state.loadedRuntimePath.empty()) {
     runtimeInfo.Set("path", env.Null());
   } else {

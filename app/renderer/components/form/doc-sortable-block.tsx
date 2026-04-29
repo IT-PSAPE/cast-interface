@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { Plus } from 'lucide-react'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
-import { ReacstButton } from '@renderer/components 2.0/button'
 import { Label } from '../display/text'
 
 export type SortableBlockProps = {
@@ -14,7 +12,6 @@ export type SortableBlockProps = {
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
-    onAddBelow: () => void
     onTextareaFocus: () => void
     onPaste: (before: string, segments: string[], after: string) => void
 }
@@ -30,7 +27,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
+export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onTextareaFocus, onPaste }: SortableBlockProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
         (el: HTMLTextAreaElement | null) => {
@@ -85,11 +82,6 @@ export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, 
                 <Label.xs className="sm">{index + 1}</Label.xs>
             </span>
             <div className={cn('flex-1 group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10')}>
-                <div className={cn('flex absolute -left-7 items-center gap-0.5 transition-opacity', 'opacity-0 group-hover:opacity-100')}>
-                    {/* <ReacstButton.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
-                    <Plus />
-                    </ReacstButton.Icon> */}
-                </div>
                 <textarea
                     ref={setContentRef}
                     value={block.content}

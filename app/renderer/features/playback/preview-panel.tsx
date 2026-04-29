@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown, AlignLeft, Image, Layers, Layers2, LayoutGrid, Plus, RectangleHorizontal, VolumeX, XCircle } from 'lucide-react';
+import { ChevronDown, AlignLeft, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, VolumeX, XCircle } from 'lucide-react';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
-import { ReacstButton } from '@renderer/components 2.0/button';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { ReacstButton } from '@renderer/components/controls/button';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { Tabs } from '../../components/display/tabs';
 import { Dropdown } from '../../components/form/dropdown';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
@@ -96,6 +96,7 @@ export function PreviewPanel() {
             <VolumeX className="size-4" />
           </IconGroup.Item>
         </IconGroup.Root>
+        <BackgroundControls />
       </RecastPanel.Group>
       <RecastPanel.Group className='flex-1' >
         <Tabs.Root value={bottomTab} onValueChange={handleTabChange}>
@@ -235,7 +236,7 @@ function PreviewSurface({ showBadge }: { showBadge: boolean }) {
 
   return (
     <SurfaceFrame label="Preview" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage scene={scene} surface="show" className="h-full w-full" />
+      <SceneStage scene={scene} surface="show" className="h-full w-full" ndiCaptureSource="audience" />
     </SurfaceFrame>
   );
 }
@@ -265,9 +266,100 @@ function StageSurface({ showBadge }: { showBadge: boolean }) {
 
   return (
     <SurfaceFrame label="Stage" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage scene={stageScene} surface="stage" className="h-full w-full" />
+      <SceneStage scene={stageScene} surface="stage" className="h-full w-full" ndiCaptureSource="stage" />
     </SurfaceFrame>
   );
+}
+
+// Background-layer playback controls. Tabs split audio vs. video so the panel
+// has room to grow when video-layer transport controls land. For now the audio
+// tab drives the global audio player; the video tab is a placeholder.
+
+type BackgroundTab = 'audio' | 'video';
+
+function BackgroundControls() {
+  const [tab, setTab] = useState<BackgroundTab>('audio');
+
+  function handleTabChange(value: string) {
+    if (value === 'audio' || value === 'video') setTab(value);
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-1 border-t border-primary px-2 py-1.5">
+      <Tabs.Root value={tab} onValueChange={handleTabChange}>
+        <Tabs.List label="Background controls" className="min-w-0" tabsClassName="gap-2">
+          <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
+          <Tabs.Trigger value="video">Video</Tabs.Trigger>
+        </Tabs.List>
+        {tab === 'audio' ? <AudioBackgroundControls /> : <VideoBackgroundControls />}
+      </Tabs.Root>
+    </div>
+  );
+}
+
+function AudioBackgroundControls() {
+  const audio = useAudio();
+  const armed = audio.currentAudioAsset;
+  const hasAudio = Boolean(armed);
+  const safeDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+
+  function handleSeek(event: React.ChangeEvent<HTMLInputElement>) {
+    const next = Number(event.target.value);
+    if (!Number.isFinite(next)) return;
+    audio.seekTo(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md bg-secondary/40 p-2 mt-2">
+      <div className="flex min-w-0 items-center gap-1">
+        <ReacstButton.Icon variant="ghost" label="Previous track" disabled={!hasAudio} onClick={audio.playPrevious}>
+          <SkipBack />
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label={audio.isPlaying ? 'Pause' : 'Play'} disabled={!hasAudio} onClick={audio.togglePlayback}>
+          {audio.isPlaying ? <Pause /> : <Play />}
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label="Next track" disabled={!hasAudio} onClick={audio.playNext}>
+          <SkipForward />
+        </ReacstButton.Icon>
+        <span className={`min-w-0 flex-1 truncate pl-2 text-xs ${hasAudio ? 'text-secondary' : 'text-tertiary'}`}>
+          {armed?.name ?? 'No audio armed'}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <input
+          type="range"
+          min={0}
+          max={safeDuration}
+          step={0.1}
+          value={Math.min(audio.currentTime, safeDuration)}
+          onChange={handleSeek}
+          disabled={!hasAudio || safeDuration === 0}
+          aria-label="Audio scrubber"
+          className="w-full accent-brand_solid disabled:opacity-40"
+        />
+        <div className="flex items-center justify-between text-[10px] tabular-nums text-tertiary">
+          <span>{formatPlaybackTime(audio.currentTime)}</span>
+          <span>{formatPlaybackTime(safeDuration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VideoBackgroundControls() {
+  return (
+    <div className="px-2 py-3 text-xs text-tertiary">
+      Video controls coming soon.
+    </div>
+  );
+}
+
+function formatPlaybackTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const total = Math.floor(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 // Single 16:9 frame used by every surface so grid rows auto-size to identical

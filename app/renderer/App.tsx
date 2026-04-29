@@ -14,7 +14,7 @@ import { LyricEditorProvider } from './features/deck/lyric-editor';
 import { NdiOutputs } from './features/playback/ndi-outputs';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
-import { SplitPanel } from './features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { StatusBar } from './features/workbench/status-bar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
 import { WorkbenchScreenRouter } from './workbench-screen-router';

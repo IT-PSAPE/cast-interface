@@ -1,4 +1,4 @@
-import { clamp } from '../../utils/math';
+import { clamp } from '../../../utils/math';
 import type { PaneId, SplitDefinition, SplitLayoutState } from './workbench-panel-layout';
 import { cloneSplitLayout, requirePaneState } from './split-resize';
 

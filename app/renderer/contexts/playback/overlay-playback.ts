@@ -168,6 +168,45 @@ export function getOverlayRenderLayers(
     .sort((left, right) => left.stackOrder - right.stackOrder);
 }
 
+export function getNextOverlayPlaybackDelay(
+  entries: ActiveOverlayEntry[],
+  overlaysById: ReadonlyMap<Id, Overlay>,
+  now: number,
+): number | null {
+  let nextDelay: number | null = null;
+
+  for (const entry of entries) {
+    const overlay = overlaysById.get(entry.overlayId);
+    if (!overlay) continue;
+
+    const animation = normalizeOverlayAnimation(overlay.animation);
+    if (entry.state === 'entering') {
+      if (animation.kind !== 'none' && animation.durationMs > 0) {
+        nextDelay = nextDelay == null ? 33 : Math.min(nextDelay, 33);
+      }
+      if (entry.autoClearAt !== null) {
+        const autoClearDelay = Math.max(0, entry.autoClearAt - now);
+        nextDelay = nextDelay == null ? autoClearDelay : Math.min(nextDelay, autoClearDelay);
+      }
+      continue;
+    }
+
+    if (entry.state === 'exiting') {
+      if (animation.kind !== 'none' && animation.durationMs > 0 && entry.exitStartedAt !== null) {
+        nextDelay = nextDelay == null ? 33 : Math.min(nextDelay, 33);
+      }
+      continue;
+    }
+
+    if (entry.autoClearAt !== null) {
+      const autoClearDelay = Math.max(0, entry.autoClearAt - now);
+      nextDelay = nextDelay == null ? autoClearDelay : Math.min(nextDelay, autoClearDelay);
+    }
+  }
+
+  return nextDelay;
+}
+
 function createActiveOverlayEntry(overlay: Overlay, now: number, stackOrder: number): ActiveOverlayEntry {
   const animation = normalizeOverlayAnimation(overlay.animation);
   return {

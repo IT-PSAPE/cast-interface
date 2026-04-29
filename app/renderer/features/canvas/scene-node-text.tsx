@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Rect, Text, Shape } from 'react-konva';
 import type { Context } from 'konva/lib/Context';
 import type { Shape as KonvaShape } from 'konva/lib/Shape';
@@ -182,15 +183,16 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
   const fillAfterStrokeEnabled = textStrokeEnabled && textStrokePosition === 'outside';
   const useInsideStroke = textStrokeEnabled && textStrokePosition === 'inside';
 
-  function insideStrokeSceneFunc(ctx: Context, shape: KonvaShape) {
-    const w = element.width;
-    const h = textFrameHeight;
+  const insideStrokeCanvas = useMemo(() => {
+    if (!useInsideStroke) return null;
 
+    const width = Math.max(1, Math.ceil(element.width));
+    const height = Math.max(1, Math.ceil(textFrameHeight));
     const offscreen = document.createElement('canvas');
-    offscreen.width = Math.max(1, Math.ceil(w));
-    offscreen.height = Math.max(1, Math.ceil(h));
+    offscreen.width = width;
+    offscreen.height = height;
     const offCtx = offscreen.getContext('2d');
-    if (!offCtx) return;
+    if (!offCtx) return null;
 
     const layoutParams: TextLayoutParams = {
       text,
@@ -198,20 +200,43 @@ export function SceneNodeText({ node }: SceneNodeTextProps) {
       fontSize: payload.fontSize,
       fontStyle,
       lineHeight,
-      width: w,
-      height: h,
+      width: element.width,
+      height: textFrameHeight,
       align: textAlign(payload.alignment ?? 'left'),
       verticalAlign,
     };
 
     drawTextOnCanvas(offCtx, layoutParams, 'fill', 0, '', payload.color);
-
     offCtx.globalCompositeOperation = 'source-atop';
-    drawTextOnCanvas(offCtx, layoutParams, 'stroke', textStrokeWidth * 2, payload.textStrokeColor ?? '#111111', '');
-
+    drawTextOnCanvas(
+      offCtx,
+      layoutParams,
+      'stroke',
+      textStrokeWidth * 2,
+      payload.textStrokeColor ?? '#111111',
+      '',
+    );
     offCtx.globalCompositeOperation = 'source-over';
+    return offscreen;
+  }, [
+    element.width,
+    fontStyle,
+    lineHeight,
+    payload.alignment,
+    payload.color,
+    payload.fontFamily,
+    payload.fontSize,
+    payload.textStrokeColor,
+    text,
+    textFrameHeight,
+    textStrokeWidth,
+    useInsideStroke,
+    verticalAlign,
+  ]);
 
-    ctx._context.drawImage(offscreen, 0, 0);
+  function insideStrokeSceneFunc(ctx: Context, shape: KonvaShape) {
+    if (!insideStrokeCanvas) return;
+    ctx._context.drawImage(insideStrokeCanvas, 0, 0);
     ctx.fillStrokeShape(shape);
   }
 

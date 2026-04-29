@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type MouseEventHandler, type ReactNode } from 'react';
 import type { InlineWindowMenuItem } from '@core/ipc';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
 
 const isMac = window.castApi.platform === 'darwin';

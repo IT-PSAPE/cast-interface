@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Dialog } from './dialog';
 import { MediaAssetIcon } from '../display/entity-icon';
 
@@ -61,30 +61,14 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
                   </p>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
-                    {mediaAssets.map((asset) => {
-                      const isSelected = selectedIds.has(asset.id);
-
-                      function handleClick() {
-                        toggleAsset(asset.id);
-                      }
-
-                      return (
-                        <button
-                          key={asset.id}
-                          type="button"
-                          onClick={handleClick}
-                          className={cn('group cursor-pointer rounded border bg-primary p-0 text-left transition-colors', isSelected ? 'border-brand ring-1 ring-brand-400' : 'border-primary')}
-                        >
-                          <div className="grid aspect-square place-items-center overflow-hidden rounded-t">
-                            <MediaThumbnail asset={asset} />
-                          </div>
-                          <p className="m-0 flex items-center gap-1.5 truncate px-1.5 py-1 text-sm text-secondary group-hover:text-primary">
-                            <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-                            <span className="truncate">{asset.name}</span>
-                          </p>
-                        </button>
-                      );
-                    })}
+                    {mediaAssets.map((asset) => (
+                      <MediaPickerAssetTile
+                        key={asset.id}
+                        asset={asset}
+                        isSelected={selectedIds.has(asset.id)}
+                        onToggle={toggleAsset}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -104,5 +88,35 @@ export function MediaPickerDialog({ assets, onConfirm, onClose }: MediaPickerDia
         </Dialog.Positioner>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function MediaPickerAssetTile({
+  asset,
+  isSelected,
+  onToggle,
+}: {
+  asset: MediaAsset;
+  isSelected: boolean;
+  onToggle: (id: Id) => void;
+}) {
+  function handleClick() {
+    onToggle(asset.id);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn('group cursor-pointer rounded border bg-primary p-0 text-left transition-colors', isSelected ? 'border-brand ring-1 ring-brand-400' : 'border-primary')}
+    >
+      <div className="grid aspect-square place-items-center overflow-hidden rounded-t">
+        <MediaThumbnail asset={asset} />
+      </div>
+      <p className="m-0 flex items-center gap-1.5 truncate px-1.5 py-1 text-sm text-secondary group-hover:text-primary">
+        <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+        <span className="truncate">{asset.name}</span>
+      </p>
+    </button>
   );
 }

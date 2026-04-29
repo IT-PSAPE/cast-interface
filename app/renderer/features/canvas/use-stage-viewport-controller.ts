@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import type { MediaAsset } from '@core/types';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useActiveEditorSource } from '../../contexts/canvas/use-active-editor-source';
-import { useInspector } from './inspector-context';
+import { useInspector } from '../inspector/inspector-context';
 import { mapViewportPointToScene, type SceneViewportTransform } from './use-scene-stage-viewport';
 
 interface StageViewportControllerActions {

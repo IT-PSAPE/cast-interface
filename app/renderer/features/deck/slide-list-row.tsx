@@ -1,7 +1,8 @@
 import { memo } from 'react';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
-import { RenameField } from '@renderer/components 2.0/rename-field';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
+import { RenameField } from '@renderer/components/form/rename-field';
 import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
@@ -9,7 +10,6 @@ import { useScrollAreaActiveItem } from '../../components/layout/scroll-area';
 import { useSlides } from '../../contexts/slide-context';
 import { Play } from 'lucide-react';
 import type { OutlineSlideRow } from './use-slide-list-view';
-import { SceneStage } from '../canvas/scene-stage';
 import type { RenderScene } from '../canvas/scene-types';
 
 interface SlideOutlineRowProps {
@@ -95,7 +95,7 @@ function SlideOutlineRowBody({ row, scene, isFocused, onSelect, onOpen, onTextCo
                 Empty
               </div>
             ) : null}
-            <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+            <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
           </SceneFrame>
         </Thumbnail.Preview>
         <Thumbnail.Body className={row.textEditable ? 'content-start' : 'content-center'}>

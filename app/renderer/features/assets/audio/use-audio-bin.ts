@@ -4,7 +4,7 @@ import { filterByText } from '../../../utils/filter-by-text';
 import { compareByKey, useAudioBinSort } from '../../workbench/use-bin-sort';
 
 export function useAudioBin(filterText: string) {
-  const { audioAssets: allAudioAssets, currentAudioAssetId, selectAudio } = useAudio();
+  const { audioAssets: allAudioAssets, currentAudioAssetId, armAudio } = useAudio();
   const { sort } = useAudioBinSort();
 
   const audioAssets = useMemo(() => {
@@ -13,5 +13,5 @@ export function useAudioBin(filterText: string) {
     return [...filtered].sort((a, b) => direction * compareByKey(a, b, sort.key, (item) => item.name));
   }, [allAudioAssets, filterText, sort]);
 
-  return { audioAssets, currentAudioAssetId, selectAudio };
+  return { audioAssets, currentAudioAssetId, armAudio };
 }

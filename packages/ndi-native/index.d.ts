@@ -8,6 +8,11 @@ export type NdiSenderConfig = {
 export type NdiRuntimeInfo = {
   loaded: boolean;
   path: string | null;
+  asyncVideoSend: boolean;
+};
+
+export type NdiAddonInfo = {
+  path: string | null;
 };
 
 export function initializeSender(config: NdiSenderConfig): void;
@@ -21,3 +26,5 @@ export function getSenderConnections(senderName: string, timeoutMs?: number): nu
 export function destroySender(senderName?: string): void;
 
 export function getRuntimeInfo(): NdiRuntimeInfo;
+
+export function getAddonInfo(): NdiAddonInfo;

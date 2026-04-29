@@ -1,4 +1,4 @@
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';
 import { DeckBundleSelectionList } from './deck-bundle-selection-list';
 import { useDeckImportExport } from './use-deck-import-export';

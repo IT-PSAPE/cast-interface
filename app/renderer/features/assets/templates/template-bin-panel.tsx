@@ -1,10 +1,11 @@
+import { memo, useMemo } from 'react';
 import type { Template } from '@core/types';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
 import { buildRenderScene } from '../../canvas/build-render-scene';
-import { SceneStage } from '../../canvas/scene-stage';
-import { BinPanelLayout } from '../../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useTemplateBin } from './use-template-bin';
 
@@ -19,17 +20,9 @@ export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelP
 
   return (
     <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
-      {filteredTemplates.map((template, index) => {
-        const shared = {
-          key: template.id,
-          template,
-          index,
-          onApply: handleApplyTemplate,
-        };
-        return drawerViewMode === 'list'
-          ? <TemplateRow {...shared} />
-          : <TemplateTile {...shared} />;
-      })}
+      {filteredTemplates.map((template, index) => (
+        <TemplateBinItem key={template.id} template={template} index={index} mode={drawerViewMode} onApply={handleApplyTemplate} />
+      ))}
     </BinPanelLayout>
   );
 }
@@ -40,28 +33,31 @@ interface TemplateItemProps {
   onApply: (template: Template) => void;
 }
 
-function TemplateRow({ template, index, onApply }: TemplateItemProps) {
+function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: NonNullable<ReturnType<typeof useResourceDrawer>['drawerViewMode']> }) {
+  if (mode === 'list') return <TemplateRow {...props} />;
+  return <TemplateTile {...props} />;
+}
+
+function TemplateRowImpl({ template, index, onApply }: TemplateItemProps) {
   function handleClick() {
     onApply(template);
   }
 
   return (
-    <div>
-      <SelectableRow.Root selected={false} onClick={handleClick} className="h-9">
-        <SelectableRow.Leading>
-          <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
-        </SelectableRow.Leading>
-        <SelectableRow.Label>{template.name}</SelectableRow.Label>
-        <SelectableRow.Trailing>
-          <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
-        </SelectableRow.Trailing>
-      </SelectableRow.Root>
-    </div>
+    <SelectableRow.Root selected={false} onClick={handleClick} className="h-9">
+      <SelectableRow.Leading>
+        <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{template.name}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
   );
 }
 
-function TemplateTile({ template, index, onApply }: TemplateItemProps) {
-  const scene = buildRenderScene(null, template.elements);
+function TemplateTileImpl({ template, index, onApply }: TemplateItemProps) {
+  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
 
   function handleClick() {
     onApply(template);
@@ -71,7 +67,7 @@ function TemplateTile({ template, index, onApply }: TemplateItemProps) {
     <Thumbnail.Tile onClick={handleClick}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Caption>
@@ -83,3 +79,6 @@ function TemplateTile({ template, index, onApply }: TemplateItemProps) {
     </Thumbnail.Tile>
   );
 }
+
+const TemplateRow = memo(TemplateRowImpl);
+const TemplateTile = memo(TemplateTileImpl);

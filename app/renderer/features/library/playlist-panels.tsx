@@ -1,14 +1,14 @@
 import { ChevronLeft, List, Plus } from 'lucide-react';
 import { useNavigation } from '@renderer/contexts/navigation-context';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Label } from '@renderer/components/display/text';
-import { SplitPanel } from '@renderer/features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { useLibraryBrowser } from './library-browser-context';
 import { SegmentsBrowser } from './segments-browser';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { ScrollArea } from '@renderer/components/layout/scroll-area';
 import { PlaylistTree } from '@core/types';
-import { RenameField, RenameFieldHandle } from '@renderer/components 2.0/rename-field';
+import { RenameField, RenameFieldHandle } from '@renderer/components/form/rename-field';
 import { useEffect, useRef } from 'react';
 import { useLibraryPanelState } from './library-panel-context';
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Unlink } from 'lucide-react';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { FieldInput, FieldSelect } from '../../components/form/field';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';

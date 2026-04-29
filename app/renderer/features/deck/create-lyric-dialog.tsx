@@ -1,5 +1,5 @@
-import { ReacstButton } from '@renderer/components 2.0/button';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { ReacstButton } from '@renderer/components/controls/button';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dialog } from '../../components/overlays/dialog';
 

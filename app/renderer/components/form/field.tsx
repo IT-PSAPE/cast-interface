@@ -90,7 +90,7 @@ function FieldSelect({ children, value, onChange, onBlur, options, label, wide }
   return <FieldLabel label={label} wide={wide}>{select}</FieldLabel>;
 }
 
-function FieldTextarea({ disabled = false, value, onChange, onFocus, onKeyDown, placeholder, className = '', label, resize = 'vertical', rows, textareaRef, wide }: { disabled?: boolean; value: string; onChange: (value: string) => void; onFocus?: () => void; onKeyDown?: KeyboardEventHandler<HTMLTextAreaElement>; placeholder?: string; className?: string; label?: string; resize?: 'none' | 'vertical'; rows?: number; textareaRef?: Ref<HTMLTextAreaElement>; wide?: boolean }) {
+function FieldTextarea({ disabled = false, value, onChange, onFocus, onBlur, onKeyDown, placeholder, className = '', label, resize = 'vertical', rows, textareaRef, wide }: { disabled?: boolean; value: string; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; onKeyDown?: KeyboardEventHandler<HTMLTextAreaElement>; placeholder?: string; className?: string; label?: string; resize?: 'none' | 'vertical'; rows?: number; textareaRef?: Ref<HTMLTextAreaElement>; wide?: boolean }) {
   function handleValueChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
     onChange(event.target.value);
   }
@@ -104,9 +104,10 @@ function FieldTextarea({ disabled = false, value, onChange, onFocus, onKeyDown, 
       disabled={disabled}
       onChange={handleValueChange}
       onFocus={onFocus}
+      onBlur={onBlur}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`min-w-0 w-full rounded border border-primary bg-primary px-1.5 py-1 text-sm text-primary min-h-[60px] ${resizeClassName} focus:border-brand focus:outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={cn(`min-w-0 w-full rounded border border-primary bg-primary px-1.5 py-1 text-primary min-h-[60px] focus:border-brand focus:outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50`, resizeClassName, className)}
     />
   );
 

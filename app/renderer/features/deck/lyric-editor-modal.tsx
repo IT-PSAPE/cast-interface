@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Dialog } from '../../components/overlays/dialog';
 import DocEditor, { type Block } from '../../components/form/doc-editor';
 import { useNavigation } from '../../contexts/navigation-context';

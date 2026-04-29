@@ -159,24 +159,24 @@ test('workbench renders current toolbar labels and panel toggles', async ({ page
 test('editor add menus only expose actions for their own editor type', async ({ page }) => {
   await installCastApiMock(page);
   await page.goto('/');
-  const toolbar = page.locator('[data-ui-region="app-toolbar"]');
+  const applicationViews = page.getByLabel('Application views');
 
-  await toolbar.getByRole('button', { name: 'Overlay' }).click();
+  await applicationViews.getByRole('button', { name: 'Overlay' }).click();
   await page.getByLabel('Add').click();
   await expect(page.getByRole('menuitem', { name: 'New overlay' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'New lyric' })).toHaveCount(0);
-  await expect(page.getByRole('menuitem', { name: 'New presentation' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New lyric$/ })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New presentation$/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await toolbar.getByRole('button', { name: 'Templates' }).click();
+  await applicationViews.getByRole('button', { name: 'Templates' }).click();
   await page.getByLabel('Add').click();
   await expect(page.getByRole('menuitem', { name: 'New presentation template' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'New lyric template' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'New lyric' })).toHaveCount(0);
-  await expect(page.getByRole('menuitem', { name: 'New presentation' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New lyric$/ })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New presentation$/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await toolbar.getByRole('button', { name: 'Stage' }).click();
+  await applicationViews.getByRole('button', { name: 'Stage' }).click();
   await page.getByLabel('Add').click();
   await expect(page.getByRole('menuitem', { name: 'New stage' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'New lyric' })).toHaveCount(0);

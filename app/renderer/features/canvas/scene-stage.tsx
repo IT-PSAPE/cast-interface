@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo } from 'react';
 import { Fragment } from 'react';
-import { Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
+import { FastLayer, Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
+import type { NdiOutputName } from '@core/types';
 import type { RenderNode, RenderScene, SceneSurface } from './scene-types';
 import { SceneNodeMedia } from './scene-node-media';
 import { SceneNodeShape } from './scene-node-shape';
@@ -10,6 +11,7 @@ import { InlineTextEditor } from './inline-text-editor';
 import { useSceneStageEditor } from './use-scene-stage-editor';
 import type { SceneViewportTransform } from './use-scene-stage-viewport';
 import { useSceneStageViewport } from './use-scene-stage-viewport';
+import { setNdiCaptureSource } from '../playback/ndi-capture-source';
 
 interface SceneStageProps {
   scene: RenderScene;
@@ -20,6 +22,7 @@ interface SceneStageProps {
   onDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
   fixedViewport?: { width: number; height: number } | null;
   onViewportChange?: (viewport: SceneViewportTransform) => void;
+  ndiCaptureSource?: NdiOutputName;
 }
 
 function rotationSnaps(): number[] {
@@ -79,6 +82,8 @@ const SceneNode = memo(function SceneNode({
     setNodeRef(node.id, ref);
   }
 
+  const listening = editable && !node.visual.locked;
+
   return (
     <Fragment>
       <Group
@@ -93,17 +98,17 @@ const SceneNode = memo(function SceneNode({
         scaleY={node.visual.flipY ? -1 : 1}
         offsetX={node.visual.flipX ? node.element.width : 0}
         offsetY={node.visual.flipY ? node.element.height : 0}
-        listening={!node.visual.locked}
+        listening={listening}
         draggable={editable && !node.visual.locked && !isBeingEdited}
-        onMouseDown={handleClick}
-        onTap={handleClick}
-        onDblClick={handleDblClick}
-        onDblTap={handleDblClick}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragEnd={onDragEnd}
-        onTransform={onTransform}
-        onTransformEnd={onTransformEnd}
+        onMouseDown={editable ? handleClick : undefined}
+        onTap={editable ? handleClick : undefined}
+        onDblClick={editable ? handleDblClick : undefined}
+        onDblTap={editable ? handleDblClick : undefined}
+        onDragStart={editable ? handleDragStart : undefined}
+        onDragMove={editable ? handleDragMove : undefined}
+        onDragEnd={editable ? onDragEnd : undefined}
+        onTransform={editable ? onTransform : undefined}
+        onTransformEnd={editable ? onTransformEnd : undefined}
       >
         {renderNodeContent(node, surface)}
       </Group>
@@ -113,7 +118,7 @@ const SceneNode = memo(function SceneNode({
 
 // ─── SceneStage ─────────────────────────────────────────────────────
 
-export function SceneStage({ scene, surface = 'show', editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange }: SceneStageProps) {
+export function SceneStage({ scene, surface = 'show', editable = false, className = '', onDrop, onDragOver, fixedViewport = null, onViewportChange, ndiCaptureSource }: SceneStageProps) {
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
   const snaps = useMemo(rotationSnaps, []);
@@ -131,6 +136,23 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
     });
   }, [onViewportChange, scene.height, scene.width, viewport.sceneOffsetX, viewport.sceneOffsetY, viewport.sceneScale, viewport.viewportHeight, viewport.viewportWidth]);
 
+  useEffect(() => {
+    if (!ndiCaptureSource) return;
+
+    const syncCaptureSource = () => {
+      const layer = editor.stageRef.current?.getLayers()[0];
+      setNdiCaptureSource(ndiCaptureSource, layer?.getNativeCanvasElement() ?? null);
+    };
+
+    syncCaptureSource();
+    const frameId = requestAnimationFrame(syncCaptureSource);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      setNdiCaptureSource(ndiCaptureSource, null);
+    };
+  }, [editor.stageRef, ndiCaptureSource, scene.height, scene.width, viewport.viewportHeight, viewport.viewportWidth]);
+
   // The editor object itself is a fresh reference per render, but each of
   // these callbacks is internally `useCallback`-stable, so passing them
   // directly preserves identity across renders and lets `SceneNode`'s
@@ -141,6 +163,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
     handleNodeDragStart,
     handleNodeDragMove,
   } = editor;
+  const SceneLayer = editable ? Layer : FastLayer;
 
   return (
     <div ref={viewport.containerRef} className={`relative h-full w-full overflow-hidden ${className}`} onDrop={onDrop} onDragOver={onDragOver}>
@@ -153,7 +176,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
         onMouseMove={editor.handleStageMouseMove}
         onMouseUp={editor.handleStageMouseUp}
       >
-        <Layer listening={editable}>
+        <SceneLayer listening={editable}>
           <Group name="scene-root" x={viewport.sceneOffsetX} y={viewport.sceneOffsetY} scaleX={viewport.sceneScale} scaleY={viewport.sceneScale}>
             {scene.nodes.map((node) => (
               <SceneNode
@@ -195,7 +218,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
               </>
             ) : null}
           </Group>
-        </Layer>
+        </SceneLayer>
 
         {editable && editor.selectionBox ? (
           <Layer listening={false}>

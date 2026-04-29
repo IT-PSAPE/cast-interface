@@ -10,6 +10,34 @@ import { useCommandPalette } from '../features/command-palette/command-palette-c
 import { useWorkbench } from '../contexts/workbench-context';
 import { matchesShortcut } from './use-keyboard-shortcuts-match';
 
+function isEditableTarget(target: HTMLElement | null): boolean {
+  if (!target) return false;
+  return target.tagName === 'INPUT'
+    || target.tagName === 'TEXTAREA'
+    || target.getAttribute('contenteditable') === 'true';
+}
+
+function isInteractiveTarget(target: HTMLElement | null): boolean {
+  if (!target) return false;
+  if (isEditableTarget(target)) return true;
+
+  const interactiveSelector = [
+    'button',
+    'a[href]',
+    'select',
+    '[role="button"]',
+    '[role="menuitem"]',
+    '[role="tab"]',
+    '[role="option"]',
+    '[role="listbox"]',
+    '[role="combobox"]',
+    '[role="dialog"]',
+    '[data-shortcuts-scope="ignore"]',
+  ].join(', ');
+
+  return target.closest(interactiveSelector) !== null;
+}
+
 export function useKeyboardShortcuts(): void {
   const { setStatusText, undo: globalUndoAction, redo: globalRedoAction } = useCast();
   const { open: openCommandPalette } = useCommandPalette();
@@ -22,11 +50,7 @@ export function useKeyboardShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      const isEditable =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.getAttribute('contenteditable') === 'true';
-      if (isEditable) return;
+      if (isInteractiveTarget(target)) return;
 
       const handlers: Record<ShortcutActionId, (event: KeyboardEvent, payload?: string) => void> = {
         copySelection: () => copySelection(),

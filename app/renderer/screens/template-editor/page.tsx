@@ -1,19 +1,19 @@
+import { useMemo } from 'react';
 import type { Template } from '@core/types';
 import { Layers, Music, Plus, Presentation } from 'lucide-react';
-import { ReacstButton } from '@renderer/components 2.0/button';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Dropdown } from '../../components/form/dropdown';
-import { ObjectListPanel } from '../../features/canvas/object-list-panel';
-import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
 import { buildRenderScene } from '../../features/canvas/build-render-scene';
-import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
-import { SplitPanel } from '../../features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { EmptyState } from '@renderer/components/display/empty-state';
 import { Label } from '@renderer/components/display/text';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
+import { TemplateEditorInspectorPanel } from './inspector-panel';
+import { TemplateEditorLayersPanel } from './layers-panel';
 import { TemplateEditorScreenProvider, useTemplateEditorScreen } from './screen-context';
 
 export function TemplateEditorScreen() {
@@ -25,122 +25,116 @@ export function TemplateEditorScreen() {
 }
 
 function TemplateEditorScreenContent() {
-  const { meta, state, actions } = useTemplateEditorScreen();
+  const { state, actions } = useTemplateEditorScreen();
 
   return (
-    <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
-      <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
-        <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
-          <RecastPanel.Root className="h-full border-r border-secondary">
-            <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
-              <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
-                <RecastPanel.Group>
-                  <RecastPanel.GroupTitle>
-                    <Label.sm className="mr-auto">{meta.listTitle}</Label.sm>
-                    <Dropdown>
-                      <Dropdown.Trigger
-                        aria-label="Add"
-                        className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
-                      >
-                        <Plus />
-                      </Dropdown.Trigger>
-                      <Dropdown.Panel placement="bottom-end">
-                        {meta.addActions.map((action) => {
-                          if (action.kind !== 'create-template') return null;
-                          return (
-                            <Dropdown.Item key={action.templateKind} onClick={() => actions.createTemplate(action.templateKind)}>
-                              {action.label}
-                            </Dropdown.Item>
-                          );
-                        })}
-                      </Dropdown.Panel>
-                    </Dropdown>
-                  </RecastPanel.GroupTitle>
-                  <RecastPanel.Content>
-                    {state.templates.length === 0 ? (
-                      <EmptyState.Root>
-                        <EmptyState.Title>No templates yet</EmptyState.Title>
-                        <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
-                      </EmptyState.Root>
-                    ) : (
-                      <ScrollArea.Root>
-                        <ScrollArea.Viewport className="p-2">
-                          <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
-                            {state.templates.map((template, index) => {
-                              const scene = buildRenderScene(null, template.elements);
+    <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full" data-ui-region="editor-layout">
+      <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
+        <RecastPanel.Root className="h-full border-r border-secondary">
+          <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
+            <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
+              <RecastPanel.Group>
+                <RecastPanel.GroupTitle>
+                  <Label.sm className="mr-auto">Templates</Label.sm>
+                  <Dropdown>
+                    <Dropdown.Trigger
+                      aria-label="Add"
+                      className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
+                    >
+                      <Plus />
+                    </Dropdown.Trigger>
+                    <Dropdown.Panel placement="bottom-end">
+                      <Dropdown.Item onClick={() => actions.createTemplate('slides')}>
+                        New presentation template
+                      </Dropdown.Item>
+                      <Dropdown.Item onClick={() => actions.createTemplate('lyrics')}>
+                        New lyric template
+                      </Dropdown.Item>
+                    </Dropdown.Panel>
+                  </Dropdown>
+                </RecastPanel.GroupTitle>
+                <RecastPanel.Content>
+                  {state.templates.length === 0 ? (
+                    <EmptyState.Root>
+                      <EmptyState.Title>No templates yet</EmptyState.Title>
+                      <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
+                    </EmptyState.Root>
+                  ) : (
+                    <ScrollArea.Root>
+                      <ScrollArea.Viewport className="p-2">
+                        <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
+                          {state.templates.map((template, index) => (
+                            <TemplateListItem key={template.id} template={template} index={index} isActive={template.id === state.currentTemplateId} />
+                          ))}
+                        </div>
+                      </ScrollArea.Viewport>
+                      <ScrollArea.Scrollbar>
+                        <ScrollArea.Thumb />
+                      </ScrollArea.Scrollbar>
+                    </ScrollArea.Root>
+                  )}
+                </RecastPanel.Content>
+              </RecastPanel.Group>
+            </SplitPanel.Segment>
+            <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
+              <RecastPanel.Group>
+                <RecastPanel.GroupTitle className="border-t">
+                  <Label.xs className="mr-auto">Layers</Label.xs>
+                </RecastPanel.GroupTitle>
+                <RecastPanel.Content className="overflow-y-auto p-2">
+                  <TemplateEditorLayersPanel />
+                </RecastPanel.Content>
+              </RecastPanel.Group>
+            </SplitPanel.Segment>
+          </SplitPanel.Panel>
+        </RecastPanel.Root>
+      </SplitPanel.Segment>
+      <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
+        <StagePanel />
+      </SplitPanel.Segment>
+      <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
+        <TemplateEditorInspectorPanel />
+      </SplitPanel.Segment>
+    </SplitPanel.Panel>
+  );
+}
 
-                              function handleSelect() {
-                                actions.selectTemplate(template.id);
-                              }
+function TemplateListItem({
+  template,
+  index,
+  isActive,
+}: {
+  template: ReturnType<typeof useTemplateEditorScreen>['state']['templates'][number];
+  index: number;
+  isActive: boolean;
+}) {
+  const { actions } = useTemplateEditorScreen();
+  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
 
-                              function handleCaptionDoubleClick(event: React.MouseEvent) {
-                                event.stopPropagation();
-                                actions.requestTemplateNameFocus(template.id);
-                              }
+  function handleSelect() {
+    actions.selectTemplate(template.id);
+  }
 
-                              return (
-                                <ActiveTemplateTile key={template.id} isActive={template.id === state.currentTemplateId} onClick={handleSelect} selected={template.id === state.currentTemplateId}>
-                                  <Thumbnail.Body>
-                                    <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                                      <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-                                    </SceneFrame>
-                                  </Thumbnail.Body>
-                                  <Thumbnail.Caption>
-                                    <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
-                                      <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                                      <TemplateKindIcon kind={template.kind} />
-                                      <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
-                                    </div>
-                                  </Thumbnail.Caption>
-                                </ActiveTemplateTile>
-                              );
-                            })}
-                          </div>
-                        </ScrollArea.Viewport>
-                        <ScrollArea.Scrollbar>
-                          <ScrollArea.Thumb />
-                        </ScrollArea.Scrollbar>
-                      </ScrollArea.Root>
-                    )}
-                  </RecastPanel.Content>
-                </RecastPanel.Group>
-              </SplitPanel.Segment>
-              <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
-                <RecastPanel.Group>
-                  <RecastPanel.GroupTitle className="border-t">
-                    <Label.xs className="mr-auto">Layers</Label.xs>
-                  </RecastPanel.GroupTitle>
-                  <RecastPanel.Content className="overflow-y-auto p-2">
-                    <ObjectListPanel />
-                  </RecastPanel.Content>
-                </RecastPanel.Group>
-              </SplitPanel.Segment>
-            </SplitPanel.Panel>
-          </RecastPanel.Root>
-        </SplitPanel.Segment>
-        <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
-          <StagePanel />
-        </SplitPanel.Segment>
-        <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
-          <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
-            <InspectorTabsPanel className="flex-1" />
-            {state.currentTemplate ? (
-              <RecastPanel.Footer className="p-3">
-                <ReacstButton
-                  variant="ghost"
-                  onClick={() => { void actions.syncLinkedItems(); }}
-                  disabled={state.linkedItemCount === 0 || state.isSyncing || state.hasPendingChanges}
-                  title={state.hasPendingChanges ? 'Push template changes first' : state.linkedItemCount === 0 ? 'No deck items use this template' : undefined}
-                  className="w-full"
-                >
-                  {state.isSyncing ? 'Syncing…' : `Sync ${state.linkedItemCount} linked ${state.linkedItemCount === 1 ? 'item' : 'items'}`}
-                </ReacstButton>
-              </RecastPanel.Footer>
-            ) : null}
-          </RecastPanel.Root>
-        </SplitPanel.Segment>
-      </SplitPanel.Panel>
-    </section>
+  function handleCaptionDoubleClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    actions.requestTemplateNameFocus(template.id);
+  }
+
+  return (
+    <ActiveTemplateTile isActive={isActive} onClick={handleSelect} selected={isActive}>
+      <Thumbnail.Body>
+        <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+          <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
+        </SceneFrame>
+      </Thumbnail.Body>
+      <Thumbnail.Caption>
+        <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+          <TemplateKindIcon kind={template.kind} />
+          <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
+        </div>
+      </Thumbnail.Caption>
+    </ActiveTemplateTile>
   );
 }
 

@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';

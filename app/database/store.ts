@@ -100,7 +100,7 @@ function normalizeOverlayAnimation(animation: unknown): Required<Overlay['animat
   const parsed = animation as Partial<Overlay['animation']> | null | undefined;
   const rawKind = parsed?.kind;
   const kind = rawKind === 'dissolve' || rawKind === 'fade' || rawKind === 'pulse'
-    ? 'dissolve'
+    ? rawKind
     : 'none';
   const durationMs = Math.max(0, Number.isFinite(parsed?.durationMs) ? parsed?.durationMs ?? 0 : 0);
   const autoClearDurationMs = parsed?.autoClearDurationMs == null
@@ -586,6 +586,17 @@ export class CastRepository {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS stages (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
     `);
 
     this.createCommonIndexes();
@@ -614,6 +625,7 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at);
       CREATE INDEX IF NOT EXISTS idx_overlays_created_at ON overlays(created_at);
       CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
+      CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index);
     `);
   }
 
@@ -1291,13 +1303,12 @@ export class CastRepository {
         'INSERT INTO playlist_entries (id, segment_id, presentation_id, lyric_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       for (const bundle of snapshot.libraryBundles) {
-        for (let playlistOrder = 0; playlistOrder < bundle.playlists.length; playlistOrder += 1) {
-          const tree = bundle.playlists[playlistOrder];
+        for (const tree of bundle.playlists) {
           insertPlaylist.run(
             tree.playlist.id,
             tree.playlist.libraryId,
             tree.playlist.name,
-            playlistOrder,
+            tree.playlist.order,
             tree.playlist.createdAt,
             tree.playlist.updatedAt,
           );
@@ -1463,6 +1474,7 @@ export class CastRepository {
     const now = nowIso();
     const nextTemplateOrder = this.getNextTemplateOrderIndex();
     const nextContentOrder = this.getMaxDeckOrder() + 1;
+    const nextMediaAssetOrder = this.getNextMediaAssetOrderIndex();
     const normalizedReplacementSources = this.collectReplacementMediaSources(brokenReferences, decisionMap);
 
     const insertTemplate = this.db.prepare(
@@ -1485,7 +1497,7 @@ export class CastRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertMediaAsset = this.db.prepare(
-      'INSERT INTO media_assets (id, name, type, src, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
 
     const tx = this.db.transaction(() => {
@@ -1514,20 +1526,21 @@ export class CastRepository {
           );
         });
 
-      for (const replacementSource of normalizedReplacementSources) {
+      normalizedReplacementSources.forEach((replacementSource, replacementIndex) => {
         const assetType = this.inferImportedMediaAssetType(replacementSource.elementTypes, replacementSource.src);
         const assetKey = `${replacementSource.src}:${assetType}`;
-        if (replacementAssetKeys.has(assetKey)) continue;
+        if (replacementAssetKeys.has(assetKey)) return;
         replacementAssetKeys.add(assetKey);
         insertMediaAsset.run(
           createId(),
           path.basename(replacementSource.rawPath),
           assetType,
           replacementSource.src,
+          nextMediaAssetOrder + replacementIndex,
           now,
           now,
         );
-      }
+      });
 
       workingManifest.items
         .slice()
@@ -4035,6 +4048,11 @@ export class CastRepository {
     return (row.maxOrder ?? -1) + 1;
   }
 
+  private getNextMediaAssetOrderIndex(): number {
+    const row = this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM media_assets').get() as { maxOrder: number | null };
+    return (row.maxOrder ?? -1) + 1;
+  }
+
   private getLibraries(): Library[] {
     const rows = this.db
       .prepare('SELECT id, name, order_index, created_at, updated_at FROM libraries ORDER BY order_index ASC, created_at ASC')
@@ -4182,13 +4200,23 @@ export class CastRepository {
 
   private getPlaylistsByLibrary(libraryId: Id): Playlist[] {
     const rows = this.db
-      .prepare('SELECT id, library_id, name, created_at, updated_at FROM playlists WHERE library_id = ? ORDER BY order_index ASC, created_at ASC')
-      .all(libraryId) as Array<{ id: string; library_id: string; name: string; created_at: string; updated_at: string }>;
+      .prepare(
+        'SELECT id, library_id, name, order_index, created_at, updated_at FROM playlists WHERE library_id = ? ORDER BY order_index ASC, created_at ASC'
+      )
+      .all(libraryId) as Array<{
+      id: string;
+      library_id: string;
+      name: string;
+      order_index: number;
+      created_at: string;
+      updated_at: string;
+    }>;
 
     return rows.map((row) => ({
       id: row.id,
       libraryId: row.library_id,
       name: row.name,
+      order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));

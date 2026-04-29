@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Id, Stage } from '@core/types';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
 import { buildRenderScene } from '../../canvas/build-render-scene';
-import { SceneStage } from '../../canvas/scene-stage';
-import { BinPanelLayout } from '../../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useStagePlayback } from '../../../contexts/playback/playback-context';
 import { useStageEditor } from '../../../contexts/asset-editor/asset-editor-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
@@ -54,8 +54,8 @@ interface StageCardProps {
   onEdit: (id: Id) => void;
 }
 
-function StageCard({ stage, index, isActive, onActivate, onEdit }: StageCardProps) {
-  const scene = buildRenderScene(null, stage.elements);
+function StageCardImpl({ stage, index, isActive, onActivate, onEdit }: StageCardProps) {
+  const scene = useMemo(() => buildRenderScene(null, stage.elements), [stage.elements]);
 
   function handleActivate() {
     onActivate(isActive ? null : stage.id);
@@ -69,7 +69,7 @@ function StageCard({ stage, index, isActive, onActivate, onEdit }: StageCardProp
     <Thumbnail.Tile onClick={handleActivate} onDoubleClick={handleEdit} selected={isActive}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="stage" className="absolute inset-0 pointer-events-none" />
+          <LazySceneStage scene={scene} surface="stage" className="absolute inset-0" />
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Caption>
@@ -81,3 +81,5 @@ function StageCard({ stage, index, isActive, onActivate, onEdit }: StageCardProp
     </Thumbnail.Tile>
   );
 }
+
+const StageCard = memo(StageCardImpl);

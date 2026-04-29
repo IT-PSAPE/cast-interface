@@ -4,7 +4,7 @@ import type {
   DeckBundleInspection,
 } from '@core/types';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 
 interface BrokenReferenceReviewListProps {
   inspection: DeckBundleInspection;
