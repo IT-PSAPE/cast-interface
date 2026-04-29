@@ -52,6 +52,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure Rollup native package
+        run: node scripts/ensure-rollup-native.cjs
+
       - name: Validate release version
         shell: bash
         env:

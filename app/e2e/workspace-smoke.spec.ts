@@ -28,9 +28,11 @@ function buildNdiDiagnostics(outputState: NdiOutputState, outputConfigs: NdiOutp
   return {
     outputState,
     outputConfig: outputConfigs.audience,
+    outputConfigs,
     runtimeLoaded: false,
     runtimePath: null,
     activeSender: null,
+    senders: { audience: null, stage: null },
     sourceStatus: 'idle',
     lastError: null,
   };
