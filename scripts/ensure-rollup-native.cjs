@@ -73,34 +73,55 @@ function getLightningCssPlatformPackageName() {
   return null;
 }
 
-function ensureNativePackage({
+function hasPackage(packageName) {
+  try {
+    require.resolve(packageName);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function collectMissingNativePackage({
   dependencyName,
   packageName,
 }) {
   if (!packageName) {
     console.warn(`[ensure-rollup-native] No platform package mapping for ${dependencyName} on ${process.platform}/${process.arch}; skipping.`);
-    return;
+    return null;
   }
 
-  try {
-    require.resolve(packageName);
+  if (hasPackage(packageName)) {
     console.log(`[ensure-rollup-native] Found ${packageName}.`);
-    return;
-  } catch {
-    const version = getInstalledPackageVersion(dependencyName);
-    console.log(`[ensure-rollup-native] Missing ${packageName}; installing ${packageName}@${version}.`);
-    execFileSync('npm', ['install', '--no-save', `${packageName}@${version}`], {
-      stdio: 'inherit',
-    });
+    return null;
   }
+
+  const version = getInstalledPackageVersion(dependencyName);
+  return { packageName, version };
 }
 
-ensureNativePackage({
+const missingPackages = [
+  collectMissingNativePackage({
   dependencyName: 'rollup',
   packageName: getRollupPlatformPackageName(),
-});
-
-ensureNativePackage({
+  }),
+  collectMissingNativePackage({
   dependencyName: 'lightningcss',
   packageName: getLightningCssPlatformPackageName(),
-});
+  }),
+].filter(Boolean);
+
+if (missingPackages.length > 0) {
+  const packagesToInstall = missingPackages.map(({ packageName, version }) => `${packageName}@${version}`);
+  console.log(`[ensure-rollup-native] Installing missing native packages: ${packagesToInstall.join(', ')}.`);
+  execFileSync('npm', ['install', '--no-save', ...packagesToInstall], {
+    stdio: 'inherit',
+  });
+}
+
+for (const { packageName } of missingPackages) {
+  if (!hasPackage(packageName)) {
+    throw new Error(`[ensure-rollup-native] Failed to install ${packageName}.`);
+  }
+  console.log(`[ensure-rollup-native] Verified ${packageName}.`);
+}
