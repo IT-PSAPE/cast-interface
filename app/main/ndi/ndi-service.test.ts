@@ -44,6 +44,8 @@ describe('NdiService', () => {
 
     const diagnostics = service.getDiagnostics();
     expect(diagnostics.sourceStatus).toBe('live');
+    expect(diagnostics.senders.audience).not.toBeNull();
+    expect(diagnostics.senders.stage).toBeNull();
     expect(diagnostics.activeSender?.performance).toMatchObject({
       framesCaptured: 1,
       framesSent: 1,
@@ -84,6 +86,7 @@ describe('NdiService', () => {
 
     const diagnostics = service.getDiagnostics();
     expect(module.sendRgbaFrame).toHaveBeenCalledTimes(2);
+    expect(diagnostics.senders.audience?.performance.framesSent).toBe(2);
     expect(diagnostics.activeSender?.performance.framesSent).toBe(2);
     expect(diagnostics.activeSender?.performance.framesReplayed).toBe(1);
     expect(diagnostics.activeSender?.performance.cacheCopyBytes).toBe(0);
@@ -110,6 +113,7 @@ describe('NdiService', () => {
     service.updateOutputConfig('audience', { withAlpha: true });
 
     const diagnostics = service.getDiagnostics();
+    expect(diagnostics.senders.audience?.performance.cacheCopyBytes).toBe(frame.byteLength);
     expect(diagnostics.activeSender?.performance.cacheCopyBytes).toBe(frame.byteLength);
   });
 
@@ -131,6 +135,7 @@ describe('NdiService', () => {
 
     const diagnostics = service.getDiagnostics();
     expect(module.sendRgbaFrame).not.toHaveBeenCalled();
+    expect(diagnostics.senders.audience?.performance.framesRejected).toBe(1);
     expect(diagnostics.activeSender?.performance.framesRejected).toBe(1);
     expect(diagnostics.lastError).toContain('Rejected invalid NDI frame');
   });
@@ -155,7 +160,34 @@ describe('NdiService', () => {
 
     const diagnostics = service.getDiagnostics();
     expect(module.sendRgbaFrame).not.toHaveBeenCalled();
+    expect(diagnostics.senders.audience?.connectionCount).toBe(0);
+    expect(diagnostics.senders.audience?.performance.framesSkippedNoConnections).toBe(1);
     expect(diagnostics.activeSender?.connectionCount).toBe(0);
     expect(diagnostics.activeSender?.performance.framesSkippedNoConnections).toBe(1);
+  });
+
+  it('exposes stage diagnostics when stage is the only enabled output', () => {
+    const module = createModuleMock();
+    const service = new NdiService({
+      outputConfigs: createDefaultNdiOutputConfigs(),
+      onOutputConfigsChanged: vi.fn(),
+      moduleLoader: () => module,
+    });
+
+    service.setOutputEnabled('stage', true);
+
+    const frame = new Uint8Array(NDI_OUTPUT_WIDTH * NDI_OUTPUT_HEIGHT * 4);
+    service.receiveFrame('stage', frame, NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT, {
+      captureDurationMs: 3,
+      readbackDurationMs: 2,
+      skippedCaptures: 0,
+      heartbeatCaptures: 0,
+    });
+
+    const diagnostics = service.getDiagnostics();
+    expect(diagnostics.outputConfig).toEqual(createDefaultNdiOutputConfigs().stage);
+    expect(diagnostics.senders.audience).toBeNull();
+    expect(diagnostics.senders.stage?.performance.framesSent).toBe(1);
+    expect(diagnostics.activeSender?.senderName).toBe(diagnostics.senders.stage?.senderName);
   });
 });

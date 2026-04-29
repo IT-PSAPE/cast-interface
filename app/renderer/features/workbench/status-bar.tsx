@@ -1,5 +1,6 @@
 import { cv } from '@renderer/utils/cv';
 import { LoaderCircle } from 'lucide-react';
+import type { NdiActiveSenderDiagnostics } from '@core/types';
 import { useCast, useNdi } from '../../contexts/app-context';
 
 const indicatorStyles = cv({
@@ -14,11 +15,11 @@ const indicatorStyles = cv({
 
 export function StatusBar() {
   const { isRunningOperation, operationText, statusText } = useCast();
-  const { state: { diagnostics, outputState } } = useNdi();
-  const audienceStateLabel = diagnostics?.sourceStatus === 'live' ? 'Audience live' : 'Audience idle';
-  // Stage doesn't drive the global `sourceStatus` field, so we surface a simpler
-  // on/off label until per-sender diagnostics land.
-  const stageStateLabel = outputState.stage ? 'Stage live' : 'Stage idle';
+  const { state: { diagnostics } } = useNdi();
+  const audienceLive = isSenderLive(diagnostics?.senders.audience ?? null);
+  const stageLive = isSenderLive(diagnostics?.senders.stage ?? null);
+  const audienceStateLabel = audienceLive ? 'Audience live' : 'Audience idle';
+  const stageStateLabel = stageLive ? 'Stage live' : 'Stage idle';
   const displayText = isRunningOperation ? operationText ?? 'Processing...' : statusText;
 
   return (
@@ -33,14 +34,20 @@ export function StatusBar() {
 
       <div className="ml-auto flex items-center gap-3 text-tertiary">
         <span className="flex items-center gap-1">
-          <span className={indicatorStyles({ active: outputState.audience })} />
+          <span className={indicatorStyles({ active: audienceLive })} />
           {audienceStateLabel}
         </span>
         <span className="flex items-center gap-1">
-          <span className={indicatorStyles({ active: outputState.stage })} />
+          <span className={indicatorStyles({ active: stageLive })} />
           {stageStateLabel}
         </span>
       </div>
     </div>
   );
+}
+
+function isSenderLive(sender: NdiActiveSenderDiagnostics | null): boolean {
+  if (!sender) return false;
+  if (sender.connectionCount === 0) return false;
+  return sender.performance.framesSent > 0;
 }
