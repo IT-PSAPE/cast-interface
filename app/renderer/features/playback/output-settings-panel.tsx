@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { NdiOutputName } from '@core/types';
+import type { NdiActiveSenderDiagnostics, NdiOutputName } from '@core/types';
 import { FieldCheckbox as CheckboxField, FieldInput } from '../../components/form/field';
 import { useNdi } from '../../contexts/app-context';
 import { useImageCacheStats } from '../canvas/use-image-cache-stats';
@@ -16,7 +16,6 @@ const OUTPUT_DESCRIPTIONS: Record<NdiOutputName, string | null> = {
 
 export function OutputSettingsPanel() {
   const { state: { diagnostics } } = useNdi();
-  const performance = diagnostics?.activeSender?.performance;
   const imageCacheStats = useImageCacheStats();
 
   return (
@@ -39,29 +38,10 @@ export function OutputSettingsPanel() {
           <div className="flex flex-col gap-1 text-sm text-secondary">
             <div>Runtime: {diagnostics.runtimeLoaded ? (diagnostics.runtimePath ?? 'Loaded') : 'Not loaded'}</div>
             <div>Status: {diagnostics.sourceStatus}</div>
-            {diagnostics.activeSender ? (
-              <div>
-                Sender: {diagnostics.activeSender.senderName} ({diagnostics.activeSender.width}x{diagnostics.activeSender.height})
-                {' '}· Async send: {diagnostics.activeSender.asyncVideoSend ? 'on' : 'off'}
-                {' '}· Connections: {diagnostics.activeSender.connectionCount ?? 'unknown'}
-              </div>
-            ) : null}
-            {performance ? (
-              <>
-                <div>Frames captured: {performance.framesCaptured}</div>
-                <div>Frames sent: {performance.framesSent}</div>
-                <div>Frames replayed: {performance.framesReplayed}</div>
-                <div>Frames skipped with no connections: {performance.framesSkippedNoConnections}</div>
-                <div>Skipped captures: {performance.skippedCaptures}</div>
-                <div>Heartbeat captures: {performance.heartbeatCaptures}</div>
-                <div>Bytes received: {formatBytes(performance.bytesReceived)}</div>
-                <div>Cache copy bytes: {formatBytes(performance.cacheCopyBytes)}</div>
-                <div>Average capture time: {performance.avgCaptureDurationMs.toFixed(2)} ms</div>
-                <div>Average readback time: {performance.avgReadbackDurationMs.toFixed(2)} ms</div>
-                <div>Average send time: {performance.avgSendDurationMs.toFixed(2)} ms</div>
-                <div>Rejected frames: {performance.framesRejected}</div>
-              </>
-            ) : null}
+            <div>Audience config: {diagnostics.outputConfigs.audience.senderName}</div>
+            <div>Stage config: {diagnostics.outputConfigs.stage.senderName}</div>
+            <SenderDiagnosticsBlock name="audience" diagnostics={diagnostics.senders.audience} />
+            <SenderDiagnosticsBlock name="stage" diagnostics={diagnostics.senders.stage} />
             {diagnostics.lastError ? (
               <div className="text-red-400">Error: {diagnostics.lastError}</div>
             ) : null}
@@ -84,6 +64,35 @@ export function OutputSettingsPanel() {
         </div>
       </section>
     </div>
+  );
+}
+
+function SenderDiagnosticsBlock({ name, diagnostics }: { name: NdiOutputName; diagnostics: NdiActiveSenderDiagnostics | null }) {
+  if (!diagnostics) {
+    return <div>{OUTPUT_TITLES[name]} sender: inactive</div>;
+  }
+
+  const performance = diagnostics.performance;
+  return (
+    <>
+      <div>
+        {OUTPUT_TITLES[name]} sender: {diagnostics.senderName} ({diagnostics.width}x{diagnostics.height})
+        {' '}· Async send: {diagnostics.asyncVideoSend ? 'on' : 'off'}
+        {' '}· Connections: {diagnostics.connectionCount ?? 'unknown'}
+      </div>
+      <div>{OUTPUT_TITLES[name]} frames captured: {performance.framesCaptured}</div>
+      <div>{OUTPUT_TITLES[name]} frames sent: {performance.framesSent}</div>
+      <div>{OUTPUT_TITLES[name]} frames replayed: {performance.framesReplayed}</div>
+      <div>{OUTPUT_TITLES[name]} frames skipped with no connections: {performance.framesSkippedNoConnections}</div>
+      <div>{OUTPUT_TITLES[name]} skipped captures: {performance.skippedCaptures}</div>
+      <div>{OUTPUT_TITLES[name]} heartbeat captures: {performance.heartbeatCaptures}</div>
+      <div>{OUTPUT_TITLES[name]} bytes received: {formatBytes(performance.bytesReceived)}</div>
+      <div>{OUTPUT_TITLES[name]} cache copy bytes: {formatBytes(performance.cacheCopyBytes)}</div>
+      <div>{OUTPUT_TITLES[name]} average capture time: {performance.avgCaptureDurationMs.toFixed(2)} ms</div>
+      <div>{OUTPUT_TITLES[name]} average readback time: {performance.avgReadbackDurationMs.toFixed(2)} ms</div>
+      <div>{OUTPUT_TITLES[name]} average send time: {performance.avgSendDurationMs.toFixed(2)} ms</div>
+      <div>{OUTPUT_TITLES[name]} rejected frames: {performance.framesRejected}</div>
+    </>
   );
 }
 

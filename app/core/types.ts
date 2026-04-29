@@ -448,9 +448,11 @@ export interface NdiSenderPerformanceDiagnostics {
 export interface NdiDiagnostics {
   outputState: NdiOutputState;
   outputConfig: NdiOutputConfig;
+  outputConfigs: NdiOutputConfigMap;
   runtimeLoaded: boolean;
   runtimePath: string | null;
   activeSender: NdiActiveSenderDiagnostics | null;
+  senders: Record<NdiOutputName, NdiActiveSenderDiagnostics | null>;
   sourceStatus: NdiSourceStatus;
   lastError: string | null;
 }

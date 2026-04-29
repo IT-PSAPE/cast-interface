@@ -156,13 +156,25 @@ export class NdiService {
   }
 
   getDiagnostics(): NdiDiagnostics {
-    const audienceSender = this.senders.get('audience');
+    const senderDiagnostics: Record<NdiOutputName, NdiActiveSenderDiagnostics | null> = {
+      audience: this.cloneSenderDiagnosticsForOutput('audience'),
+      stage: this.cloneSenderDiagnosticsForOutput('stage'),
+    };
+    const primaryOutput = senderDiagnostics.audience
+      ? 'audience'
+      : senderDiagnostics.stage
+        ? 'stage'
+        : this.outputState.audience
+          ? 'audience'
+          : 'stage';
     return {
       outputState: this.getOutputState(),
-      outputConfig: { ...this.outputConfigs.audience },
+      outputConfig: { ...this.outputConfigs[primaryOutput] },
+      outputConfigs: this.getOutputConfigs(),
       runtimeLoaded: this.runtimeLoaded,
       runtimePath: this.runtimePath,
-      activeSender: audienceSender ? cloneSenderDiagnostics(audienceSender.diagnostics) : null,
+      activeSender: senderDiagnostics[primaryOutput],
+      senders: senderDiagnostics,
       sourceStatus: this.sourceStatus,
       lastError: this.lastError,
     };
@@ -436,6 +448,11 @@ export class NdiService {
       this.diagnosticsTimer = null;
       this.emitDiagnosticsChange();
     }, DIAGNOSTICS_EMIT_INTERVAL_MS - elapsed);
+  }
+
+  private cloneSenderDiagnosticsForOutput(name: NdiOutputName): NdiActiveSenderDiagnostics | null {
+    const sender = this.senders.get(name);
+    return sender ? cloneSenderDiagnostics(sender.diagnostics) : null;
   }
 }
 

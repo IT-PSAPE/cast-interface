@@ -236,7 +236,13 @@ function PreviewSurface({ showBadge }: { showBadge: boolean }) {
 
   return (
     <SurfaceFrame label="Preview" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage scene={scene} surface="show" className="h-full w-full" ndiCaptureSource="audience" />
+      <SceneStage
+        scene={scene}
+        surface="show"
+        className="h-full w-full"
+        fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
+        ndiCaptureSource="audience"
+      />
     </SurfaceFrame>
   );
 }
@@ -266,7 +272,13 @@ function StageSurface({ showBadge }: { showBadge: boolean }) {
 
   return (
     <SurfaceFrame label="Stage" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage scene={stageScene} surface="stage" className="h-full w-full" ndiCaptureSource="stage" />
+      <SceneStage
+        scene={stageScene}
+        surface="stage"
+        className="h-full w-full"
+        fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
+        ndiCaptureSource="stage"
+      />
     </SurfaceFrame>
   );
 }
