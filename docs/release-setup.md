@@ -5,8 +5,9 @@ This document covers the one-time human setup for signed release packaging in Gi
 ## Current release status
 
 - `.github/workflows/ci.yml` validates pushes and pull requests.
-- `.github/workflows/build.yml` packages installers only when a GitHub Release is published.
-- The release workflow uploads platform artifacts and updater metadata files to the release.
+- `.github/workflows/build.yml` packages unsigned installers on pushes to `main` and on manual dispatch, then uploads them as workflow artifacts.
+- `.github/workflows/release.yml` packages installers when a GitHub Release is published or when manually dispatched for an existing release tag.
+- The release workflow uploads platform artifacts and updater metadata files to the GitHub Release.
 - The app does not currently import or call `electron-updater`, so installed clients do not self-check or self-apply updates yet.
 
 ## Release flow
@@ -16,7 +17,7 @@ This document covers the one-time human setup for signed release packaging in Gi
 3. Commit, push, and publish a matching GitHub Release tag `v<version>`.
 4. GitHub Actions checks out the release tag, runs `npm ci`, validates the version/tag match, then builds and publishes release artifacts for macOS, Windows, and Linux.
 
-No production packaging runs on ordinary pushes or PRs.
+Release publishing does not run on ordinary pushes or PRs.
 
 ## One-time setup
 

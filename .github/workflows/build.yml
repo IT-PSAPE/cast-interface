@@ -1,21 +1,26 @@
-name: Release Build
+name: Build
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: release-${{ github.event.release.id }}
-  cancel-in-progress: false
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-release:
-    name: Build release (${{ matrix.platform }})
-    permissions:
-      contents: write
+  package:
+    name: Package (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -27,14 +32,9 @@ jobs:
           - os: ubuntu-latest
             platform: linux
 
-    runs-on: ${{ matrix.os }}
-
     steps:
-      - name: Checkout release tag
+      - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.release.tag_name }}
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -52,20 +52,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure Rollup native package
+      - name: Ensure native packages
         run: node scripts/ensure-rollup-native.cjs
-
-      - name: Validate release version
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          VERSION="$(node -p "require('./package.json').version")"
-          if [ "$RELEASE_TAG" != "v$VERSION" ]; then
-            echo "::error::Release tag $RELEASE_TAG does not match package.json version $VERSION."
-            exit 1
-          fi
 
       - name: Build native addon
         run: npm run build:ndi-native
@@ -73,58 +61,36 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Run tests
-        run: npm test
-
       - name: Build app
         run: npm run build
 
-      - name: Package and publish (macOS)
+      - name: Package artifact (macOS)
         if: matrix.platform == 'mac'
-        shell: bash
+        run: npx electron-builder --mac --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
-          APPLE_CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
-          APPLE_ID_SECRET: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD_SECRET: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID_SECRET: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          if [ -n "${APPLE_CSC_LINK:-}" ]; then
-            export CSC_LINK="$APPLE_CSC_LINK"
-            export CSC_KEY_PASSWORD="$APPLE_CSC_KEY_PASSWORD"
-            export APPLE_ID="$APPLE_ID_SECRET"
-            export APPLE_APP_SPECIFIC_PASSWORD="$APPLE_APP_SPECIFIC_PASSWORD_SECRET"
-            export APPLE_TEAM_ID="$APPLE_TEAM_ID_SECRET"
-            echo "::notice::Signing macOS build with provided Apple Developer ID certificate."
-          else
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-            echo "::warning::APPLE_CSC_LINK secret not set; building unsigned macOS artifacts. See docs/release-setup.md."
-          fi
-          npx electron-builder --mac --publish always
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - name: Package and publish (Windows)
+      - name: Package artifact (Windows)
         if: matrix.platform == 'win'
-        shell: bash
+        run: npx electron-builder --win --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [ -n "${WIN_CSC_LINK:-}" ]; then
-            export CSC_LINK="$WIN_CSC_LINK"
-            export CSC_KEY_PASSWORD="$WIN_CSC_KEY_PASSWORD"
-            echo "::notice::Signing Windows build with provided code-signing certificate."
-          else
-            export CSC_IDENTITY_AUTO_DISCOVERY=false
-            echo "::warning::WIN_CSC_LINK secret not set; building unsigned Windows artifacts. See docs/release-setup.md."
-          fi
-          npx electron-builder --win --publish always
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - name: Package and publish (Linux)
+      - name: Package artifact (Linux)
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: recast-${{ matrix.platform }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*.AppImage
+            dist/*.blockmap
+            dist/*.deb
+            dist/*.dmg
+            dist/*.exe
+            dist/*.zip
+            dist/latest*.yml
