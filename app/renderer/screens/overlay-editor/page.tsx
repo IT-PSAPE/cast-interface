@@ -5,34 +5,27 @@ import { RecastPanel } from '@renderer/components 2.0/panel';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Dropdown } from '../../components/form/dropdown';
-import { useCreateDeckItem } from '../../features/deck/create-deck-item';
-import { useOverlayEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
-import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
-import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { Label } from '@renderer/components/display/text';
 import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
+import { OverlayEditorScreenProvider, useOverlayEditorScreen } from './screen-context';
 
 export function OverlayEditorScreen() {
-  const { overlays, currentOverlayId, setCurrentOverlayId, createOverlay } = useOverlayEditor();
-  const { open: openCreateDeckItem } = useCreateDeckItem();
-  const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
+  return (
+    <OverlayEditorScreenProvider>
+      <OverlayEditorScreenContent />
+    </OverlayEditorScreenProvider>
+  );
+}
 
-  useEditorLeftPanelNav({
-    items: overlays,
-    currentId: currentOverlayId,
-    activate: (id) => setCurrentOverlayId(id),
-  });
-
-  function handleAddOverlay() {
-    void createOverlay();
-  }
+function OverlayEditorScreenContent() {
+  const { meta, state, actions } = useOverlayEditorScreen();
 
   return (
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
@@ -43,7 +36,7 @@ export function OverlayEditorScreen() {
               <SplitPanel.Segment id="overlay-list" defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
-                    <Label.sm className="mr-auto">Overlays</Label.sm>
+                    <Label.sm className="mr-auto">{meta.listTitle}</Label.sm>
                     <Dropdown>
                       <Dropdown.Trigger
                         aria-label="Add"
@@ -52,52 +45,53 @@ export function OverlayEditorScreen() {
                         <Plus />
                       </Dropdown.Trigger>
                       <Dropdown.Panel placement="bottom-end">
-                        <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
-                        <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
-                        <Dropdown.Separator />
-                        <Dropdown.Item onClick={handleAddOverlay}>New overlay</Dropdown.Item>
+                        {meta.addActions.map((action) => (
+                          <Dropdown.Item key={action.kind} onClick={() => { void actions.createOverlay(); }}>
+                            {action.label}
+                          </Dropdown.Item>
+                        ))}
                       </Dropdown.Panel>
                     </Dropdown>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content>
-                    {overlays.length === 0 ? (
+                    {state.overlays.length === 0 ? (
                       <EmptyState.Root>
                         <EmptyState.Title>No overlays yet</EmptyState.Title>
                         <EmptyState.Description>Click the + button to create your first overlay.</EmptyState.Description>
                       </EmptyState.Root>
                     ) : (
-                    <ScrollArea.Root>
-                      <ScrollArea.Viewport className="p-2">
-                        <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
-                          {overlays.map((overlay, index) => {
-                            const scene = buildRenderScene(null, overlayToLayerElements(overlay));
+                      <ScrollArea.Root>
+                        <ScrollArea.Viewport className="p-2">
+                          <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Library overlays">
+                            {state.overlays.map((overlay, index) => {
+                              const scene = buildRenderScene(null, overlayToLayerElements(overlay));
 
-                            function handleSelect() {
-                              setCurrentOverlayId(overlay.id);
-                            }
+                              function handleSelect() {
+                                actions.selectOverlay(overlay.id);
+                              }
 
-                            return (
-                              <ActiveOverlayTile key={overlay.id} isActive={currentOverlayId === overlay.id} onClick={handleSelect} selected={currentOverlayId === overlay.id}>
-                                <Thumbnail.Body>
-                                  <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                                    <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
-                                  </SceneFrame>
-                                </Thumbnail.Body>
-                                <Thumbnail.Caption>
-                                  <div className="flex items-center gap-2">
-                                    <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                                    <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
-                                  </div>
-                                </Thumbnail.Caption>
-                              </ActiveOverlayTile>
-                            );
-                          })}
-                        </div>
-                      </ScrollArea.Viewport>
-                      <ScrollArea.Scrollbar>
-                        <ScrollArea.Thumb />
-                      </ScrollArea.Scrollbar>
-                    </ScrollArea.Root>
+                              return (
+                                <ActiveOverlayTile key={overlay.id} isActive={state.currentOverlayId === overlay.id} onClick={handleSelect} selected={state.currentOverlayId === overlay.id}>
+                                  <Thumbnail.Body>
+                                    <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
+                                      <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+                                    </SceneFrame>
+                                  </Thumbnail.Body>
+                                  <Thumbnail.Caption>
+                                    <div className="flex items-center gap-2">
+                                      <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
+                                      <span className="min-w-0 truncate text-sm text-tertiary">{overlay.name}</span>
+                                    </div>
+                                  </Thumbnail.Caption>
+                                </ActiveOverlayTile>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea.Viewport>
+                        <ScrollArea.Scrollbar>
+                          <ScrollArea.Thumb />
+                        </ScrollArea.Scrollbar>
+                      </ScrollArea.Root>
                     )}
                   </RecastPanel.Content>
                 </RecastPanel.Group>
@@ -105,7 +99,7 @@ export function OverlayEditorScreen() {
               <SplitPanel.Segment id="overlay-objects" defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
-                    <Label.xs className="mr-auto">Objects</Label.xs>
+                    <Label.xs className="mr-auto">Layers</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
@@ -121,10 +115,10 @@ export function OverlayEditorScreen() {
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {inspectorState.isVisible && (
+            {state.inspectorState.isVisible && (
               <RecastPanel.Footer className="p-3">
-                <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
-                  {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
+                <ReacstButton onClick={actions.pushChanges} disabled={state.inspectorState.isPushingChanges} className="w-full">
+                  {state.inspectorState.isPushingChanges ? 'Pushing…' : state.inspectorState.pushLabel}
                 </ReacstButton>
               </RecastPanel.Footer>
             )}

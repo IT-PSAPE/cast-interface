@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { getSlideDeckItemId } from '@core/deck-items';
-import type { DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Template } from '@core/types';
+import type { DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Stage, Template } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
 import { useCast } from './app-context';
 
@@ -13,12 +13,14 @@ interface ProjectContent {
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
   templates: Template[];
+  stages: Stage[];
   deckItemsById: ReadonlyMap<Id, DeckItem>;
   slidesByDeckItemId: ReadonlyMap<Id, Slide[]>;
   slideElementsBySlideId: ReadonlyMap<Id, SlideElement[]>;
   mediaAssetsById: ReadonlyMap<Id, MediaAsset>;
   overlaysById: ReadonlyMap<Id, Overlay>;
   templatesById: ReadonlyMap<Id, Template>;
+  stagesById: ReadonlyMap<Id, Stage>;
 }
 
 function stableArray<T extends { id: Id; updatedAt: string }>(prev: T[] | null, next: T[]): T[] {
@@ -40,6 +42,7 @@ export function useProjectContent(): ProjectContent {
     mediaAssets: MediaAsset[];
     overlays: Overlay[];
     templates: Template[];
+    stages: Stage[];
   } | null>(null);
 
   const stableInputs = useMemo(() => {
@@ -51,6 +54,7 @@ export function useProjectContent(): ProjectContent {
       mediaAssets: snapshot?.mediaAssets ?? [],
       overlays: snapshot?.overlays ?? [],
       templates: snapshot?.templates ?? [],
+      stages: snapshot?.stages ?? [],
     };
 
     const prev = prevRef.current;
@@ -62,12 +66,13 @@ export function useProjectContent(): ProjectContent {
       mediaAssets: stableArray(prev?.mediaAssets ?? null, raw.mediaAssets),
       overlays: stableArray(prev?.overlays ?? null, raw.overlays),
       templates: stableArray(prev?.templates ?? null, raw.templates),
+      stages: stableArray(prev?.stages ?? null, raw.stages),
     };
     prevRef.current = result;
     return result;
   }, [snapshot]);
 
-  const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, templates } = stableInputs;
+  const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, templates, stages } = stableInputs;
 
   const deckItems = useMemo(() => {
     return [...presentations, ...lyrics].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
@@ -127,6 +132,12 @@ export function useProjectContent(): ProjectContent {
     return map;
   }, [templates]);
 
+  const stagesById = useMemo(() => {
+    const map = new Map<Id, Stage>();
+    for (const stage of stages) map.set(stage.id, stage);
+    return map;
+  }, [stages]);
+
   return useMemo(() => ({
     presentations,
     lyrics,
@@ -136,15 +147,17 @@ export function useProjectContent(): ProjectContent {
     mediaAssets,
     overlays,
     templates,
+    stages,
     deckItemsById,
     slidesByDeckItemId,
     slideElementsBySlideId,
     mediaAssetsById,
     overlaysById,
     templatesById,
+    stagesById,
   }), [
-    presentations, lyrics, deckItems, slides, slideElements, mediaAssets, overlays, templates,
+    presentations, lyrics, deckItems, slides, slideElements, mediaAssets, overlays, templates, stages,
     deckItemsById, slidesByDeckItemId, slideElementsBySlideId,
-    mediaAssetsById, overlaysById, templatesById,
+    mediaAssetsById, overlaysById, templatesById, stagesById,
   ]);
 }

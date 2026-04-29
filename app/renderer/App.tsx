@@ -11,7 +11,7 @@ import { CommandPaletteProvider } from './features/command-palette/command-palet
 import { BundleDropImport } from './features/deck/bundle-drop-import';
 import { CreateDeckItemProvider } from './features/deck/create-deck-item';
 import { LyricEditorProvider } from './features/deck/lyric-editor';
-import { NdiFrameCapture } from './features/playback/ndi-frame-capture';
+import { NdiOutputs } from './features/playback/ndi-outputs';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
 import { SplitPanel } from './features/workbench/split-panel';
@@ -32,7 +32,7 @@ export function App() {
                     <CreateDeckItemProvider>
                       <CanvasProvider>
                         <CommandPaletteProvider>
-                          <NdiFrameCapture />
+                          <NdiOutputs />
                           <SplitPanel>
                             <AppLayoutContent />
                           </SplitPanel>

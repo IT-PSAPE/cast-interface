@@ -18,9 +18,16 @@ export const NDI_OUTPUT_DEFINITIONS: Record<NdiOutputName, NdiOutputDefinition> 
     height: NDI_OUTPUT_HEIGHT,
     withAlpha: false,
   },
+  stage: {
+    output: 'stage',
+    senderName: 'Recast - Stage',
+    width: NDI_OUTPUT_WIDTH,
+    height: NDI_OUTPUT_HEIGHT,
+    withAlpha: false,
+  },
 };
 
-export const NDI_OUTPUT_ORDER: NdiOutputName[] = ['audience'];
+export const NDI_OUTPUT_ORDER: NdiOutputName[] = ['audience', 'stage'];
 
 export function createDefaultNdiOutputConfigs(): NdiOutputConfigMap {
   return {
@@ -28,24 +35,31 @@ export function createDefaultNdiOutputConfigs(): NdiOutputConfigMap {
       senderName: NDI_OUTPUT_DEFINITIONS.audience.senderName,
       withAlpha: NDI_OUTPUT_DEFINITIONS.audience.withAlpha,
     },
+    stage: {
+      senderName: NDI_OUTPUT_DEFINITIONS.stage.senderName,
+      withAlpha: NDI_OUTPUT_DEFINITIONS.stage.withAlpha,
+    },
   };
+}
+
+function normalizeOutputConfigEntry(
+  entry: Partial<NdiOutputConfig> | undefined,
+  fallback: NdiOutputConfig,
+): NdiOutputConfig {
+  const senderName = typeof entry?.senderName === 'string' && entry.senderName.trim()
+    ? entry.senderName.trim()
+    : fallback.senderName;
+  const withAlpha = typeof entry?.withAlpha === 'boolean'
+    ? entry.withAlpha
+    : fallback.withAlpha;
+  return { senderName, withAlpha };
 }
 
 export function normalizeNdiOutputConfigs(configs?: PartialNdiOutputConfigMap | null): NdiOutputConfigMap {
   const defaults = createDefaultNdiOutputConfigs();
-  const audience = configs?.audience;
-  const senderName = typeof audience?.senderName === 'string' && audience.senderName.trim()
-    ? audience.senderName.trim()
-    : defaults.audience.senderName;
-  const withAlpha = typeof audience?.withAlpha === 'boolean'
-    ? audience.withAlpha
-    : defaults.audience.withAlpha;
-
   return {
-    audience: {
-      senderName,
-      withAlpha,
-    },
+    audience: normalizeOutputConfigEntry(configs?.audience, defaults.audience),
+    stage: normalizeOutputConfigEntry(configs?.stage, defaults.stage),
   };
 }
 
@@ -55,6 +69,10 @@ export function migrateLegacyNdiOutputConfigs(configs?: PartialNdiOutputConfigMa
     audience: {
       senderName: normalized.audience.senderName,
       withAlpha: NDI_OUTPUT_DEFINITIONS.audience.withAlpha,
+    },
+    stage: {
+      senderName: normalized.stage.senderName,
+      withAlpha: NDI_OUTPUT_DEFINITIONS.stage.withAlpha,
     },
   };
 }

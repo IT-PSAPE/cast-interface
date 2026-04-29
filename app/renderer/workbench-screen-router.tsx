@@ -4,6 +4,7 @@ import { DeckEditorScreen } from './screens/deck-editor/page';
 import { OverlayEditorScreen } from './screens/overlay-editor/page';
 import { SettingsScreen } from './screens/settings/page';
 import { ShowScreen } from './screens/show/page';
+import { StageEditorScreen } from './screens/stage-editor/page';
 import { TemplateEditorScreen } from './screens/template-editor/page';
 
 export function WorkbenchScreenRouter() {
@@ -25,6 +26,10 @@ export function WorkbenchScreenRouter() {
 
   if (workbenchMode === 'template-editor') {
     return <TemplateEditorScreen />;
+  }
+
+  if (workbenchMode === 'stage-editor') {
+    return <StageEditorScreen />;
   }
 
   return <SettingsScreen />;

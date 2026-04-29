@@ -1,9 +1,8 @@
-import type { Template } from '@core/types';
-import { Layers, Music, Plus, Presentation } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { RecastPanel } from '@renderer/components 2.0/panel';
-import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
+import { SceneFrame } from '../../components/display/scene-frame';
 import { Dropdown } from '../../components/form/dropdown';
 import { ObjectListPanel } from '../../features/canvas/object-list-panel';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
@@ -11,29 +10,29 @@ import { buildRenderScene } from '../../features/canvas/build-render-scene';
 import { SceneStage } from '../../features/canvas/scene-stage';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
-import { EmptyState } from '@renderer/components/display/empty-state';
 import { Label } from '@renderer/components/display/text';
+import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
-import { TemplateEditorScreenProvider, useTemplateEditorScreen } from './screen-context';
+import { StageEditorScreenProvider, useStageEditorScreen } from './screen-context';
 
-export function TemplateEditorScreen() {
+export function StageEditorScreen() {
   return (
-    <TemplateEditorScreenProvider>
-      <TemplateEditorScreenContent />
-    </TemplateEditorScreenProvider>
+    <StageEditorScreenProvider>
+      <StageEditorScreenContent />
+    </StageEditorScreenProvider>
   );
 }
 
-function TemplateEditorScreenContent() {
-  const { meta, state, actions } = useTemplateEditorScreen();
+function StageEditorScreenContent() {
+  const { meta, state, actions } = useStageEditorScreen();
 
   return (
     <section data-ui-region="editor-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full">
         <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
           <RecastPanel.Root className="h-full border-r border-secondary">
-            <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
-              <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
+            <SplitPanel.Panel splitId="stage-list-panel" orientation="vertical" className="h-full">
+              <SplitPanel.Segment id="stage-list" defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
                     <Label.sm className="mr-auto">{meta.listTitle}</Label.sm>
@@ -45,54 +44,45 @@ function TemplateEditorScreenContent() {
                         <Plus />
                       </Dropdown.Trigger>
                       <Dropdown.Panel placement="bottom-end">
-                        {meta.addActions.map((action) => {
-                          if (action.kind !== 'create-template') return null;
-                          return (
-                            <Dropdown.Item key={action.templateKind} onClick={() => actions.createTemplate(action.templateKind)}>
-                              {action.label}
-                            </Dropdown.Item>
-                          );
-                        })}
+                        {meta.addActions.map((action) => (
+                          <Dropdown.Item key={action.kind} onClick={() => { void actions.createStage(); }}>
+                            {action.label}
+                          </Dropdown.Item>
+                        ))}
                       </Dropdown.Panel>
                     </Dropdown>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content>
-                    {state.templates.length === 0 ? (
+                    {state.stages.length === 0 ? (
                       <EmptyState.Root>
-                        <EmptyState.Title>No templates yet</EmptyState.Title>
-                        <EmptyState.Description>Click the + button to create your first template.</EmptyState.Description>
+                        <EmptyState.Title>No stages yet</EmptyState.Title>
+                        <EmptyState.Description>Click the + button to create your first stage layout.</EmptyState.Description>
                       </EmptyState.Root>
                     ) : (
                       <ScrollArea.Root>
                         <ScrollArea.Viewport className="p-2">
-                          <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Templates">
-                            {state.templates.map((template, index) => {
-                              const scene = buildRenderScene(null, template.elements);
+                          <div className="grid min-w-0 grid-cols-1 content-start gap-1" role="grid" aria-label="Stages">
+                            {state.stages.map((stage, index) => {
+                              const scene = buildRenderScene(null, stage.elements);
 
                               function handleSelect() {
-                                actions.selectTemplate(template.id);
-                              }
-
-                              function handleCaptionDoubleClick(event: React.MouseEvent) {
-                                event.stopPropagation();
-                                actions.requestTemplateNameFocus(template.id);
+                                actions.selectStage(stage.id);
                               }
 
                               return (
-                                <ActiveTemplateTile key={template.id} isActive={template.id === state.currentTemplateId} onClick={handleSelect} selected={template.id === state.currentTemplateId}>
+                                <ActiveStageTile key={stage.id} isActive={state.currentStageId === stage.id} onClick={handleSelect} selected={state.currentStageId === stage.id}>
                                   <Thumbnail.Body>
                                     <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-                                      <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+                                      <SceneStage scene={scene} surface="stage" className="absolute inset-0 pointer-events-none" />
                                     </SceneFrame>
                                   </Thumbnail.Body>
                                   <Thumbnail.Caption>
-                                    <div className="flex items-center gap-2" onDoubleClick={handleCaptionDoubleClick}>
+                                    <div className="flex items-center gap-2">
                                       <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-                                      <TemplateKindIcon kind={template.kind} />
-                                      <span className="min-w-0 truncate text-sm text-tertiary">{template.name}</span>
+                                      <span className="min-w-0 truncate text-sm text-tertiary">{stage.name}</span>
                                     </div>
                                   </Thumbnail.Caption>
-                                </ActiveTemplateTile>
+                                </ActiveStageTile>
                               );
                             })}
                           </div>
@@ -105,7 +95,7 @@ function TemplateEditorScreenContent() {
                   </RecastPanel.Content>
                 </RecastPanel.Group>
               </SplitPanel.Segment>
-              <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
+              <SplitPanel.Segment id="stage-objects" defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
                     <Label.xs className="mr-auto">Layers</Label.xs>
@@ -124,19 +114,13 @@ function TemplateEditorScreenContent() {
         <SplitPanel.Segment id="editor-right" defaultSize={320} minSize={140} collapsible>
           <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {state.currentTemplate ? (
+            {state.inspectorState.isVisible && (
               <RecastPanel.Footer className="p-3">
-                <ReacstButton
-                  variant="ghost"
-                  onClick={() => { void actions.syncLinkedItems(); }}
-                  disabled={state.linkedItemCount === 0 || state.isSyncing || state.hasPendingChanges}
-                  title={state.hasPendingChanges ? 'Push template changes first' : state.linkedItemCount === 0 ? 'No deck items use this template' : undefined}
-                  className="w-full"
-                >
-                  {state.isSyncing ? 'Syncing…' : `Sync ${state.linkedItemCount} linked ${state.linkedItemCount === 1 ? 'item' : 'items'}`}
+                <ReacstButton onClick={actions.pushChanges} disabled={state.inspectorState.isPushingChanges} className="w-full">
+                  {state.inspectorState.isPushingChanges ? 'Pushing…' : state.inspectorState.pushLabel}
                 </ReacstButton>
               </RecastPanel.Footer>
-            ) : null}
+            )}
           </RecastPanel.Root>
         </SplitPanel.Segment>
       </SplitPanel.Panel>
@@ -144,17 +128,7 @@ function TemplateEditorScreenContent() {
   );
 }
 
-function ActiveTemplateTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
+function ActiveStageTile({ isActive, ...props }: React.ComponentProps<typeof Thumbnail.Tile> & { isActive: boolean }) {
   const ref = useScrollAreaActiveItem(isActive);
   return <Thumbnail.Tile ref={ref} {...props} />;
-}
-
-function TemplateKindIcon({ kind }: { kind: Template['kind'] }) {
-  if (kind === 'lyrics') {
-    return <Music size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />;
-  }
-  if (kind === 'overlays') {
-    return <Layers size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />;
-  }
-  return <Presentation size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />;
 }

@@ -1,12 +1,8 @@
-import { isLyricDeckItem } from '@core/deck-items';
-import { Globe, Image, PencilLine, Square, Type } from 'lucide-react';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { Image, Square, Type } from 'lucide-react';
+import { ReacstButtonGroup } from '@renderer/components/controls/button-group';
 import { MediaPickerDialog } from '../../components/overlays/media-picker-dialog';
-import { useCast } from '../../contexts/app-context';
 import { useElements } from '../../contexts/canvas/canvas-context';
-import { useNavigation } from '../../contexts/navigation-context';
-import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useWorkbench } from '../../contexts/workbench-context';
+import { useActiveEditorSource } from '../../contexts/canvas/use-active-editor-source';
 import { useStagePanelController } from './use-stage-panel-controller';
 import { StageViewport } from './stage-viewport';
 import { EmptyState } from '../../components/display/empty-state';
@@ -20,24 +16,12 @@ export function StagePanel() {
   const { actions, state } = useStagePanelController();
   const { x, y, width, height } = state.selectionMetrics;
   const { createText, createShape } = useElements();
-  const { setStatusText } = useCast();
-  const { currentDeckItem } = useNavigation();
-  const { currentTemplate } = useTemplateEditor();
-  const { state: { workbenchMode } } = useWorkbench();
-  const hideAddText = workbenchMode === 'deck-editor'
-    ? isLyricDeckItem(currentDeckItem)
-    : workbenchMode === 'template-editor'
-      ? currentTemplate?.kind === 'lyrics'
-      : false;
+  const activeEditorSource = useActiveEditorSource();
 
   function handleAddMedia() {
     if (actions.openMediaPicker) {
       actions.openMediaPicker();
     }
-  }
-
-  function handleUnavailable() {
-    setStatusText('This element type is not yet available.');
   }
 
   return (
@@ -50,25 +34,23 @@ export function StagePanel() {
           <>
             <StageViewport />
             <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
-              <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border border-primary bg-tertiary/90 px-1 py-0.5 shadow-2xl backdrop-blur-sm">
-                {!hideAddText ? (
-                  <ReacstButton.Icon label="Add Text" onClick={createText}>
-                    <Type size={18} strokeWidth={1.5} />
-                  </ReacstButton.Icon>
+              <ReacstButtonGroup.Root className="pointer-events-auto">
+                {activeEditorSource.createCapabilities.text ? (
+                  <ReacstButtonGroup.Icon native label="Add text" onClick={createText}>
+                    <Type strokeWidth={1.5} />
+                  </ReacstButtonGroup.Icon>
                 ) : null}
-                <ReacstButton.Icon label="Add Shape" onClick={createShape}>
-                  <Square size={18} strokeWidth={1.5} />
-                </ReacstButton.Icon>
-                <ReacstButton.Icon label="Add Media" onClick={handleAddMedia}>
-                  <Image size={18} strokeWidth={1.5} />
-                </ReacstButton.Icon>
-                <ReacstButton.Icon label="Draw Path" onClick={handleUnavailable} disabled>
-                  <PencilLine size={18} strokeWidth={1.5} />
-                </ReacstButton.Icon>
-                <ReacstButton.Icon label="Add Web Source" onClick={handleUnavailable} disabled>
-                  <Globe size={18} strokeWidth={1.5} />
-                </ReacstButton.Icon>
-              </div>
+                {activeEditorSource.createCapabilities.shape ? (
+                  <ReacstButtonGroup.Icon native label="Add shape" onClick={createShape}>
+                    <Square strokeWidth={1.5} />
+                  </ReacstButtonGroup.Icon>
+                ) : null}
+                {activeEditorSource.createCapabilities.media ? (
+                  <ReacstButtonGroup.Icon native label="Add media" onClick={handleAddMedia}>
+                    <Image strokeWidth={1.5} />
+                  </ReacstButtonGroup.Icon>
+                ) : null}
+              </ReacstButtonGroup.Root>
             </div>
             {state.showMediaPicker ? (
               <MediaPickerDialog

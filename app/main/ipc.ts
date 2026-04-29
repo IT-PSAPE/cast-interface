@@ -13,6 +13,8 @@ import type {
   NdiOutputName,
   OverlayCreateInput,
   OverlayUpdateInput,
+  StageCreateInput,
+  StageUpdateInput,
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
@@ -207,6 +209,10 @@ export const registerIpcHandlers = (
   safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
     repo.applyTemplateToOverlay(templateId, overlayId)
   );
+  safeHandle(IPC.createStage, (_event, input: StageCreateInput) => repo.createStage(input));
+  safeHandle(IPC.updateStage, (_event, input: StageUpdateInput) => repo.updateStage(input));
+  safeHandle(IPC.deleteStage, (_event, stageId: Id) => repo.deleteStage(stageId));
+  safeHandle(IPC.duplicateStage, (_event, stageId: Id) => repo.duplicateStage(stageId));
   safeHandle(IPC.renameLibrary, (_event, id: Id, name: string) => repo.renameLibrary(id, name));
   safeHandle(IPC.renamePlaylist, (_event, id: Id, name: string) => repo.renamePlaylist(id, name));
   safeHandle(IPC.renamePresentation, (_event, id: Id, title: string) => repo.renamePresentation(id, title));
@@ -225,7 +231,7 @@ export const registerIpcHandlers = (
     return ndiService.updateOutputConfig(name, config);
   });
   safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
-  ipcMain.on(IPC.sendNdiFrame, (_event, buffer: ArrayBuffer, width: number, height: number) => {
-    ndiService.receiveFrame(new Uint8Array(buffer), width, height);
+  ipcMain.on(IPC.sendNdiFrame, (_event, name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
+    ndiService.receiveFrame(name, new Uint8Array(buffer), width, height);
   });
 };

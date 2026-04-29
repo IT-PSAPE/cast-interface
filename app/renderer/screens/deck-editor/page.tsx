@@ -1,23 +1,18 @@
-import { Play, Plus } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ChevronDown, Play, Plus, Search } from 'lucide-react';
 import { ReacstButton } from '@renderer/components 2.0/button';
 import { RecastPanel } from '@renderer/components 2.0/panel';
 import type { Id } from '@core/types';
+import { cn } from '@renderer/utils/cn';
 import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dropdown } from '../../components/form/dropdown';
 import { FieldTextarea } from '../../components/form/field';
-import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
-import { useCreateDeckItem } from '../../features/deck/create-deck-item';
-import { useNavigation } from '../../contexts/navigation-context';
-import { useDeckEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useSlides } from '../../contexts/slide-context';
+import { Popover } from '../../components/overlays/popover';
 import { getSlideVisualState, slideTextPreview } from '../../utils/slides';
 import { InspectorTabsPanel } from '../../features/canvas/inspector-tabs-panel';
-import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { StagePanel } from '../../features/canvas/stage-panel';
 import { SplitPanel } from '../../features/workbench/split-panel';
-import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
-import { useSlideNotesPanel } from '../../features/deck/use-slide-notes-panel';
 import { ObjectListPanel } from '@renderer/features/canvas/object-list-panel';
 import { Thumbnail } from '@renderer/components/display/thumbnail';
 import { SceneFrame } from '@renderer/components/display/scene-frame';
@@ -26,35 +21,18 @@ import type { RenderScene } from '@renderer/features/canvas/scene-types';
 import { EmptyState } from '@renderer/components/display/empty-state';
 import { ScrollArea, useScrollAreaActiveItem } from '@renderer/components/layout/scroll-area';
 import { Label } from '@renderer/components/display/text';
+import { DeckEditorScreenProvider, useDeckEditorScreen } from './screen-context';
 
 export function DeckEditorScreen() {
-  const { currentDeckItem } = useNavigation();
-  const { open: openCreateDeckItem } = useCreateDeckItem();
-  const { effectiveElements } = useElements();
-  const { getSlideElements } = useDeckEditor();
-  const { slides, currentSlide, currentSlideIndex, liveSlideIndex, setCurrentSlideIndex, createSlide } = useSlides();
-  const { getThumbnailScene } = useRenderScenes();
-  const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
-  const {
-    canEdit,
-    notesDraft,
-    isDirty,
-    hasSlide,
-    placeholder,
-    handleNotesChange,
-    handleSaveNotes,
-    handleResetNotes,
-  } = useSlideNotesPanel();
+  return (
+    <DeckEditorScreenProvider>
+      <DeckEditorScreenContent />
+    </DeckEditorScreenProvider>
+  );
+}
 
-  useEditorLeftPanelNav({
-    items: slides,
-    currentId: currentSlide?.id ?? null,
-    activate: (_id, index) => setCurrentSlideIndex(index),
-  });
-
-  function handleAddSlide() {
-    void createSlide();
-  }
+function DeckEditorScreenContent() {
+  const { meta, state, actions } = useDeckEditorScreen();
 
   return (
     <section data-ui-region="deck-editor-layout" className="h-full min-h-0 overflow-hidden">
@@ -66,82 +44,90 @@ export function DeckEditorScreen() {
               <SplitPanel.Segment id={'slide-list'} defaultSize={440} minSize={180}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle>
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      {currentDeckItem ? <DeckItemIcon entity={currentDeckItem} className="shrink-0 text-tertiary" /> : null}
-                      <span className="truncate text-sm font-medium text-primary" title={currentDeckItem?.title ?? 'No item selected'}>
-                        {currentDeckItem?.title ?? 'No item selected'}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      <Dropdown>
-                        <Dropdown.Trigger
-                          aria-label="Add"
-                          className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
-                        >
-                          <Plus />
-                        </Dropdown.Trigger>
-                        <Dropdown.Panel placement="bottom-end">
-                          <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
-                          <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
-                          <Dropdown.Separator />
-                          <Dropdown.Item onClick={handleAddSlide} disabled={!currentDeckItem}>New slide</Dropdown.Item>
-                        </Dropdown.Panel>
-                      </Dropdown>
-                    </div>
+                    <DeckItemPicker />
+                    <Dropdown>
+                      <Dropdown.Trigger
+                        aria-label="Add"
+                        className="cursor-pointer rounded-sm bg-tertiary p-1 text-primary transition-colors hover:text-primary [&>svg]:size-4"
+                      >
+                        <Plus />
+                      </Dropdown.Trigger>
+                      <Dropdown.Panel placement="bottom-end">
+                        {meta.addActions.slice(0, 2).map((action) => {
+                          const kind = action.kind;
+                          if (!kind) return null;
+                          return (
+                            <Dropdown.Item key={action.id} onClick={() => actions.openCreateDeckItem(kind)}>
+                              {action.label}
+                            </Dropdown.Item>
+                          );
+                        })}
+                        <Dropdown.Separator />
+                        {(() => {
+                          const slideAction = meta.addActions.find((action) => action.id === 'new-slide');
+                          if (!slideAction) return null;
+                          return (
+                            <Dropdown.Item onClick={() => { void actions.createSlide(); }} disabled={slideAction.disabled}>
+                              {slideAction.label}
+                            </Dropdown.Item>
+                          );
+                        })()}
+                      </Dropdown.Panel>
+                    </Dropdown>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="min-h-0">
-                  {!currentDeckItem ? (
-                    <EmptyState.Root>
-                      <EmptyState.Title>No item selected</EmptyState.Title>
-                      <EmptyState.Description>Pick a presentation or lyric from the menu above to start editing.</EmptyState.Description>
-                    </EmptyState.Root>
-                  ) : slides.length === 0 ? (
-                    <EmptyState.Root>
-                      <EmptyState.Title>No slides yet</EmptyState.Title>
-                      <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
-                    </EmptyState.Root>
-                  ) : (
-                    <ScrollArea.Root>
-                      <ScrollArea.Viewport className="p-2">
-                        <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
-                          {slides.map((slide, index) => {
-                            const elements = currentSlide?.id === slide.id ? effectiveElements : getSlideElements(slide.id);
-                            const scene = getThumbnailScene(slide.id, 'deck-editor');
-                            if (!scene) return null;
-                            const state = getSlideVisualState(index, liveSlideIndex, currentSlideIndex, elements);
+                    {!state.currentDeckItem ? (
+                      <EmptyState.Root>
+                        <EmptyState.Title>No item selected</EmptyState.Title>
+                        <EmptyState.Description>Pick a presentation or lyric from the menu above to start editing.</EmptyState.Description>
+                      </EmptyState.Root>
+                    ) : state.slides.length === 0 ? (
+                      <EmptyState.Root>
+                        <EmptyState.Title>No slides yet</EmptyState.Title>
+                        <EmptyState.Description>Click the + button to add your first slide.</EmptyState.Description>
+                      </EmptyState.Root>
+                    ) : (
+                      <ScrollArea.Root>
+                        <ScrollArea.Viewport className="p-2">
+                          <div className="grid min-w-0 grid-cols-1 content-start gap-3" role="grid" aria-label={`Current ${state.currentDeckItem?.type === 'lyric' ? 'lyrics' : 'slides'}`}>
+                            {state.slides.map((slide, index) => {
+                              const elements = state.currentSlide?.id === slide.id ? state.effectiveElements : actions.getSlideElements(slide.id);
+                              const scene = actions.getThumbnailScene(slide.id, 'deck-editor');
+                              if (!scene) return null;
+                              const visualState = getSlideVisualState(index, state.liveSlideIndex, state.currentSlideIndex, elements);
 
-                            function handleSelect() {
-                              setCurrentSlideIndex(index);
-                            }
+                              function handleSelect() {
+                                actions.setCurrentSlideIndex(index);
+                              }
 
-                            return (
-                              <SlideTile
-                                key={slide.id}
-                                slideId={slide.id}
-                                scene={scene}
-                                index={index}
-                                isActive={index === currentSlideIndex}
-                                isLive={state === 'live'}
-                                isEmpty={state === 'warning'}
-                                textPreview={slideTextPreview(elements)}
-                                onSelect={handleSelect}
-                              />
-                            );
-                          })}
-                        </div>
-                      </ScrollArea.Viewport>
-                      <ScrollArea.Scrollbar>
-                        <ScrollArea.Thumb />
-                      </ScrollArea.Scrollbar>
-                    </ScrollArea.Root>
-                  )}
+                              return (
+                                <SlideTile
+                                  key={slide.id}
+                                  slideId={slide.id}
+                                  scene={scene}
+                                  index={index}
+                                  isActive={index === state.currentSlideIndex}
+                                  isLive={visualState === 'live'}
+                                  isEmpty={visualState === 'warning'}
+                                  textPreview={slideTextPreview(elements)}
+                                  onSelect={handleSelect}
+                                />
+                              );
+                            })}
+                          </div>
+                        </ScrollArea.Viewport>
+                        <ScrollArea.Scrollbar>
+                          <ScrollArea.Thumb />
+                        </ScrollArea.Scrollbar>
+                      </ScrollArea.Root>
+                    )}
                   </RecastPanel.Content>
                 </RecastPanel.Group>
               </SplitPanel.Segment>
               <SplitPanel.Segment id={"slide-objects"} defaultSize={220} minSize={160}>
                 <RecastPanel.Group>
                   <RecastPanel.GroupTitle className="border-t">
-                    <Label.xs className="mr-auto">Objects</Label.xs>
+                    <Label.xs className="mr-auto">Layers</Label.xs>
                   </RecastPanel.GroupTitle>
                   <RecastPanel.Content className="overflow-y-auto p-2">
                     <ObjectListPanel />
@@ -165,18 +151,18 @@ export function DeckEditorScreen() {
               >
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-end">
                   <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-primary bg-primary/95 p-1 shadow-sm backdrop-blur-sm">
-                    <ReacstButton onClick={handleResetNotes} disabled={!hasSlide || !isDirty} variant="ghost">
+                    <ReacstButton onClick={state.notesPanel.handleResetNotes} disabled={!state.notesPanel.hasSlide || !state.notesPanel.isDirty} variant="ghost">
                       Reset
                     </ReacstButton>
-                    <ReacstButton onClick={handleSaveNotes} disabled={!canEdit || !isDirty}>
+                    <ReacstButton onClick={state.notesPanel.handleSaveNotes} disabled={!state.notesPanel.canEdit || !state.notesPanel.isDirty}>
                       Save
                     </ReacstButton>
                   </div>
                 </div>
                 <FieldTextarea
-                  value={notesDraft}
-                  onChange={handleNotesChange}
-                  placeholder={placeholder}
+                  value={state.notesPanel.notesDraft}
+                  onChange={state.notesPanel.handleNotesChange}
+                  placeholder={state.notesPanel.placeholder}
                   className="h-full min-h-0 w-full resize-none rounded-none border-0 bg-transparent px-3 pb-3 pt-14 leading-relaxed focus:border-0"
                 />
               </section>
@@ -188,10 +174,10 @@ export function DeckEditorScreen() {
         <SplitPanel.Segment id="edit-right" defaultSize={320} minSize={140} collapsible>
           <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
             <InspectorTabsPanel className="flex-1" />
-            {inspectorState.isVisible && (
+            {state.inspectorState.isVisible && (
               <RecastPanel.Footer className="p-3">
-                <ReacstButton onClick={handlePushChanges} disabled={inspectorState.isPushingChanges} className="w-full">
-                  {inspectorState.isPushingChanges ? 'Pushing…' : inspectorState.pushLabel}
+                <ReacstButton onClick={actions.pushChanges} disabled={state.inspectorState.isPushingChanges} className="w-full">
+                  {state.inspectorState.isPushingChanges ? 'Pushing…' : state.inspectorState.pushLabel}
                 </ReacstButton>
               </RecastPanel.Footer>
             )}
@@ -231,9 +217,9 @@ function SlideTile({ slideId, scene, index, isActive, isLive, isEmpty, textPrevi
 }
 
 function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textPreview, onSelect }: SlideTileProps) {
-  const { slides, duplicateSlide, deleteSlide, moveSlide } = useSlides();
+  const { state, actions } = useDeckEditorScreen();
   const isFirst = index === 0;
-  const isLast = index === slides.length - 1;
+  const isLast = index === state.slides.length - 1;
   const activeRef = useScrollAreaActiveItem<HTMLDivElement>(isActive);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
@@ -275,13 +261,131 @@ function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textP
       </Thumbnail.Tile>
       <ContextMenu.Portal>
         <ContextMenu.Menu>
-          <ContextMenu.Item onSelect={() => { void duplicateSlide(slideId); }}>Duplicate</ContextMenu.Item>
-          <ContextMenu.Item onSelect={() => { void deleteSlide(slideId); }}>Delete</ContextMenu.Item>
+          <ContextMenu.Item onSelect={() => { void actions.duplicateSlide(slideId); }}>Duplicate</ContextMenu.Item>
+          <ContextMenu.Item onSelect={() => { void actions.deleteSlide(slideId); }}>Delete</ContextMenu.Item>
           <ContextMenu.Separator />
-          <ContextMenu.Item disabled={isFirst} onSelect={() => { void moveSlide(slideId, 'up'); }}>Move up</ContextMenu.Item>
-          <ContextMenu.Item disabled={isLast} onSelect={() => { void moveSlide(slideId, 'down'); }}>Move down</ContextMenu.Item>
+          <ContextMenu.Item disabled={isFirst} onSelect={() => { void actions.moveSlide(slideId, 'up'); }}>Move up</ContextMenu.Item>
+          <ContextMenu.Item disabled={isLast} onSelect={() => { void actions.moveSlide(slideId, 'down'); }}>Move down</ContextMenu.Item>
         </ContextMenu.Menu>
       </ContextMenu.Portal>
+    </>
+  );
+}
+
+// Combobox-style picker that replaces the static deck-item title in the
+// edit screen's left panel. Click the trigger to open a popover with a
+// search input and a filtered list of deck items; pick one to switch.
+function DeckItemPicker() {
+  const { state, actions } = useDeckEditorScreen();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return state.deckItems;
+    return state.deckItems.filter((item) => item.title.toLowerCase().includes(q));
+  }, [filter, state.deckItems]);
+
+  function handleOpen() {
+    setOpen(true);
+    setFilter('');
+    setHighlightedIndex(0);
+    // Focus the search input on next paint, after the popover mounts.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function handleClose() {
+    setOpen(false);
+  }
+
+  function handleSelect(id: Id) {
+    actions.browseDeckItem(id);
+    handleClose();
+  }
+
+  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedIndex((prev) => Math.min(prev + 1, Math.max(0, filtered.length - 1)));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const target = filtered[highlightedIndex];
+      if (target) handleSelect(target.id);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      handleClose();
+    }
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={open ? handleClose : handleOpen}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="h-6.5 flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 py-0.5 text-left transition-colors hover:bg-tertiary"
+        title={state.currentDeckItem?.title ?? 'No item selected'}
+      >
+        {state.currentDeckItem ? <DeckItemIcon entity={state.currentDeckItem} className="shrink-0 text-tertiary" /> : null}
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary">
+          {state.currentDeckItem?.title ?? 'No item selected'}
+        </span>
+        <ChevronDown className="size-3.5 shrink-0 text-tertiary" />
+      </button>
+      <Popover anchor={triggerRef.current} open={open} onClose={handleClose} placement="bottom-start" offset={4} axisLock>
+        <div className="flex w-72 flex-col overflow-hidden rounded-md border border-primary bg-primary shadow-lg">
+          <div className="flex items-center gap-1.5 border-b border-primary px-2 py-1.5">
+            <Search className="size-3.5 shrink-0 text-tertiary" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={filter}
+              onChange={(event) => { setFilter(event.target.value); setHighlightedIndex(0); }}
+              onKeyDown={handleInputKeyDown}
+              placeholder="Search deck items"
+              className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
+            />
+          </div>
+          <div ref={listRef} className="max-h-72 overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <div className="px-2 py-1.5 text-sm text-tertiary">No deck items match.</div>
+            ) : (
+              filtered.map((item, index) => {
+                const isCurrent = item.id === state.currentDeckItemId;
+                const isHighlighted = index === highlightedIndex;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isCurrent}
+                    onClick={() => handleSelect(item.id)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
+                      isCurrent ? 'text-primary' : 'text-secondary',
+                      isHighlighted ? 'bg-tertiary text-primary' : 'hover:bg-tertiary hover:text-primary',
+                    )}
+                  >
+                    <DeckItemIcon entity={item} className="shrink-0 text-tertiary" />
+                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    {isCurrent ? <span className="shrink-0 text-xs uppercase tracking-wide text-tertiary">current</span> : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </Popover>
     </>
   );
 }
