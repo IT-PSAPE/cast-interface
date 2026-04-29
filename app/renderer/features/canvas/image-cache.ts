@@ -21,7 +21,19 @@ interface ImageCacheStats {
   errorCount: number;
 }
 
+// Cache the latest snapshot so `getImageCacheStats` returns a stable reference
+// when nothing has changed. `useSyncExternalStore` compares snapshots by
+// Object.is, so allocating a fresh object on every call would re-render
+// indefinitely. We invalidate the cache whenever any state-affecting mutation
+// fires.
+let cachedStats: ImageCacheStats | null = null;
+
+function invalidateStats() {
+  cachedStats = null;
+}
+
 function emitStatsChange() {
+  invalidateStats();
   for (const listener of statsListeners) {
     listener();
   }
@@ -119,6 +131,8 @@ export function getImageCacheEntry(src: string): ImageCacheEntry {
 }
 
 export function getImageCacheStats(): ImageCacheStats {
+  if (cachedStats) return cachedStats;
+
   let loadingCount = 0;
   let loadedCount = 0;
   let errorCount = 0;
@@ -129,13 +143,14 @@ export function getImageCacheStats(): ImageCacheStats {
     else errorCount += 1;
   }
 
-  return {
+  cachedStats = {
     entryCount: cache.size,
     totalEstimatedBytes,
     loadingCount,
     loadedCount,
     errorCount,
   };
+  return cachedStats;
 }
 
 export function subscribeImageCacheStats(listener: () => void): () => void {

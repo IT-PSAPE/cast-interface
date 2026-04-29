@@ -5,18 +5,18 @@ This document covers the one-time human setup for signed release packaging in Gi
 ## Current release status
 
 - `.github/workflows/ci.yml` validates pushes and pull requests.
-- `.github/workflows/build.yml` packages installers only when a GitHub Release is published.
-- The release workflow uploads platform artifacts and updater metadata files to the release.
+- `.github/workflows/release.yml` is a single workflow that runs on pushes to `main`, PRs targeting `main`, and manual dispatch. It guards on branch, builds unsigned installers for every event, and — only when a push to `main` introduces a new `package.json` version — signs the installers and creates a matching GitHub Release with auto-generated notes.
+- PR builds upload installers as workflow artifacts so reviewers can smoke-test, but never create a release.
 - The app does not currently import or call `electron-updater`, so installed clients do not self-check or self-apply updates yet.
 
 ## Release flow
 
 1. Ensure the change has passed CI.
 2. Bump `version` in [../package.json](../package.json).
-3. Commit, push, and publish a matching GitHub Release tag `v<version>`.
-4. GitHub Actions checks out the release tag, runs `npm ci`, validates the version/tag match, then builds and publishes release artifacts for macOS, Windows, and Linux.
+3. Commit and push (or merge a PR) to `main`.
+4. GitHub Actions detects that `v<version>` is newer than the latest release tag, builds and signs installers for macOS, Windows, and Linux, then creates the GitHub Release `v<version>` with auto-generated notes and the platform installers + `latest*.yml` updater metadata attached.
 
-No production packaging runs on ordinary pushes or PRs.
+No manual tagging, `gh release create`, or `npm version` step is required. If `package.json` is unchanged, the workflow still builds and uploads workflow artifacts but skips release creation.
 
 ## One-time setup
 
@@ -80,20 +80,20 @@ That work is not present in the current codebase. When the project is ready to a
 
 ## Cutting a release
 
-1. Bump the version:
+1. Bump the version in `package.json` (manually, or via `npm version patch` / `minor` / `major` — without `--git-tag-version` if you don't want a local tag, since the workflow handles tagging):
 
 ```bash
-npm version patch
-git push && git push --tags
+npm version patch --no-git-tag-version
 ```
 
-2. Publish the GitHub Release:
+2. Commit and push to `main` (directly or via PR merge):
 
 ```bash
-gh release create v$(node -p "require('./package.json').version") --generate-notes
+git commit -am "chore: bump version"
+git push
 ```
 
-3. Watch the workflow:
+3. Watch the workflow create the release:
 
 ```bash
 gh run watch
@@ -101,7 +101,7 @@ gh run watch
 
 ## Troubleshooting
 
-- `Release tag v<version> does not match package.json version`: publish a new release with a tag that matches the committed version.
+- Release was not created after pushing to `main`: confirm `package.json#version` actually changed and that `v<version>` does not already exist as a GitHub Release. Check the `guard` job's notice line for `should_release=...`.
 - macOS artifact is produced but cannot be opened cleanly: signing or notarization secrets are missing or invalid.
 - Windows artifact shows SmartScreen warnings: the build is unsigned or the signing certificate reputation is still warming up.
 - Installed app does not auto-update: expected until `electron-updater` wiring is added to the app itself.

@@ -14,7 +14,9 @@ export interface ShortcutAccelerator {
 
 export type ShortcutActionId =
   | 'copySelection'
+  | 'cutSelection'
   | 'pasteSelection'
+  | 'duplicateSelection'
   | 'undo'
   | 'redo'
   | 'globalUndo'
@@ -52,6 +54,15 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     accelerator: { mac: 'Cmd+C', other: 'Ctrl+C' },
   },
   {
+    id: 'cutSelection',
+    label: 'Cut',
+    category: 'editing',
+    context: 'editWithSelection',
+    key: 'x',
+    modifiers: { meta: true },
+    accelerator: { mac: 'Cmd+X', other: 'Ctrl+X' },
+  },
+  {
     id: 'pasteSelection',
     label: 'Paste',
     category: 'editing',
@@ -59,6 +70,15 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     key: 'v',
     modifiers: { meta: true },
     accelerator: { mac: 'Cmd+V', other: 'Ctrl+V' },
+  },
+  {
+    id: 'duplicateSelection',
+    label: 'Duplicate',
+    category: 'editing',
+    context: 'editWithSelection',
+    key: 'd',
+    modifiers: { meta: true },
+    accelerator: { mac: 'Cmd+D', other: 'Ctrl+D' },
   },
   {
     id: 'redo',

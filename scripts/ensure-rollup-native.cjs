@@ -4,14 +4,20 @@ const { execFileSync } = require('node:child_process');
 const { existsSync, readFileSync } = require('node:fs');
 const path = require('node:path');
 
-function getRollupVersion() {
-  const rollupPackageJsonPath = path.join(process.cwd(), 'node_modules', 'rollup', 'package.json');
-  if (!existsSync(rollupPackageJsonPath)) {
-    throw new Error('rollup is not installed. Run npm ci before ensure-rollup-native.');
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmExecOptions = {
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+};
+
+function getInstalledPackageVersion(packageName) {
+  const packageJsonPath = path.join(process.cwd(), 'node_modules', ...packageName.split('/'), 'package.json');
+  if (!existsSync(packageJsonPath)) {
+    throw new Error(`${packageName} is not installed. Run npm ci before ensure-rollup-native.`);
   }
 
-  const rollupPackageJson = JSON.parse(readFileSync(rollupPackageJsonPath, 'utf8'));
-  return rollupPackageJson.version;
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+  return packageJson.version;
 }
 
 function isMusl() {
@@ -22,7 +28,7 @@ function isMusl() {
   return !report?.header?.glibcVersionRuntime;
 }
 
-function getPlatformPackageName() {
+function getRollupPlatformPackageName() {
   const { platform, arch } = process;
 
   if (platform === 'darwin') {
@@ -48,24 +54,107 @@ function getPlatformPackageName() {
   return null;
 }
 
-function ensureRollupNative() {
-  const packageName = getPlatformPackageName();
-  if (!packageName) {
-    console.warn(`[ensure-rollup-native] No platform package mapping for ${process.platform}/${process.arch}; skipping.`);
-    return;
+function getLightningCssPlatformPackageName() {
+  const { platform, arch } = process;
+
+  if (platform === 'darwin') {
+    if (arch === 'arm64') return 'lightningcss-darwin-arm64';
+    if (arch === 'x64') return 'lightningcss-darwin-x64';
+    return null;
   }
 
+  if (platform === 'linux') {
+    if (arch === 'x64') return isMusl() ? 'lightningcss-linux-x64-musl' : 'lightningcss-linux-x64-gnu';
+    if (arch === 'arm64') return isMusl() ? 'lightningcss-linux-arm64-musl' : 'lightningcss-linux-arm64-gnu';
+    if (arch === 'arm') return 'lightningcss-linux-arm-gnueabihf';
+    return null;
+  }
+
+  if (platform === 'win32') {
+    if (arch === 'x64') return 'lightningcss-win32-x64-msvc';
+    if (arch === 'arm64') return 'lightningcss-win32-arm64-msvc';
+    return null;
+  }
+
+  return null;
+}
+
+function getTailwindOxidePlatformPackageName() {
+  const { platform, arch } = process;
+
+  if (platform === 'darwin') {
+    if (arch === 'arm64') return '@tailwindcss/oxide-darwin-arm64';
+    if (arch === 'x64') return '@tailwindcss/oxide-darwin-x64';
+    return null;
+  }
+
+  if (platform === 'linux') {
+    if (arch === 'x64') return isMusl() ? '@tailwindcss/oxide-linux-x64-musl' : '@tailwindcss/oxide-linux-x64-gnu';
+    if (arch === 'arm64') return isMusl() ? '@tailwindcss/oxide-linux-arm64-musl' : '@tailwindcss/oxide-linux-arm64-gnu';
+    if (arch === 'arm') return '@tailwindcss/oxide-linux-arm-gnueabihf';
+    return null;
+  }
+
+  if (platform === 'win32') {
+    if (arch === 'x64') return '@tailwindcss/oxide-win32-x64-msvc';
+    if (arch === 'arm64') return '@tailwindcss/oxide-win32-arm64-msvc';
+    return null;
+  }
+
+  return null;
+}
+
+function hasPackage(packageName) {
   try {
     require.resolve(packageName);
-    console.log(`[ensure-rollup-native] Found ${packageName}.`);
-    return;
+    return true;
   } catch {
-    const version = getRollupVersion();
-    console.log(`[ensure-rollup-native] Missing ${packageName}; installing ${packageName}@${version}.`);
-    execFileSync('npm', ['install', '--no-save', `${packageName}@${version}`], {
-      stdio: 'inherit',
-    });
+    return false;
   }
 }
 
-ensureRollupNative();
+function collectMissingNativePackage({
+  dependencyName,
+  packageName,
+}) {
+  if (!packageName) {
+    console.warn(`[ensure-rollup-native] No platform package mapping for ${dependencyName} on ${process.platform}/${process.arch}; skipping.`);
+    return null;
+  }
+
+  if (hasPackage(packageName)) {
+    console.log(`[ensure-rollup-native] Found ${packageName}.`);
+    return null;
+  }
+
+  const version = getInstalledPackageVersion(dependencyName);
+  return { packageName, version };
+}
+
+const missingPackages = [
+  collectMissingNativePackage({
+    dependencyName: 'rollup',
+    packageName: getRollupPlatformPackageName(),
+  }),
+  collectMissingNativePackage({
+    dependencyName: 'lightningcss',
+    packageName: getLightningCssPlatformPackageName(),
+  }),
+  collectMissingNativePackage({
+    dependencyName: '@tailwindcss/oxide',
+    packageName: getTailwindOxidePlatformPackageName(),
+  }),
+].filter(Boolean);
+
+if (missingPackages.length > 0) {
+  const packagesToInstall = missingPackages.map(({ packageName, version }) => `${packageName}@${version}`);
+  console.log(`[ensure-rollup-native] Installing missing native packages: ${packagesToInstall.join(', ')}.`);
+  execFileSync(npmCommand, ['install', '--no-save', ...packagesToInstall], npmExecOptions);
+}
+
+for (const { packageName } of missingPackages) {
+  if (!hasPackage(packageName)) {
+    throw new Error(`[ensure-rollup-native] Failed to install ${packageName}.`);
+  }
+  console.log(`[ensure-rollup-native] Verified ${packageName}.`);
+}

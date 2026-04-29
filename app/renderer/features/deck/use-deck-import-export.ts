@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type {
   DeckBundleBrokenReferenceAction,
   DeckBundleBrokenReferenceDecision,
+  DeckBundleExportOptions,
   DeckBundleInspection,
   DeckItem,
   Id,
@@ -12,6 +13,12 @@ import { useProjectContent } from '../../contexts/use-project-content';
 interface ImportDecisionState {
   action: DeckBundleBrokenReferenceAction;
   replacementPath: string | null;
+}
+
+interface ExtraIncludeFlags {
+  includeAllTemplates: boolean;
+  includeOverlays: boolean;
+  includeStages: boolean;
 }
 
 interface ImportExportSettingsState {
@@ -26,14 +33,20 @@ interface ImportExportSettingsState {
   decisionMap: ReadonlyMap<string, ImportDecisionState>;
   blockedImportReasons: string[];
   message: string | null;
+  extras: ExtraIncludeFlags;
 }
 
 interface ImportExportSettingsActions {
   setFilterText: (value: string) => void;
   toggleSelectedId: (id: Id) => void;
+  addToSelection: (ids: Id[]) => void;
+  removeFromSelection: (ids: Id[]) => void;
   selectAllVisible: () => void;
   clearSelection: () => void;
+  setExtraFlag: (flag: keyof ExtraIncludeFlags, value: boolean) => void;
   exportSelected: () => Promise<void>;
+  exportIds: (ids: Id[], suggestedName: string) => Promise<void>;
+  exportWorkspace: () => Promise<void>;
   chooseImportBundle: () => Promise<void>;
   clearImportReview: () => void;
   setBrokenReferenceAction: (source: string, action: DeckBundleBrokenReferenceAction) => void;
@@ -52,6 +65,23 @@ export function useDeckImportExport(): { state: ImportExportSettingsState; actio
   const [inspection, setInspection] = useState<DeckBundleInspection | null>(null);
   const [decisionMap, setDecisionMap] = useState<Map<string, ImportDecisionState>>(new Map());
   const [message, setMessage] = useState<string | null>(null);
+  const [extras, setExtras] = useState<ExtraIncludeFlags>({
+    includeAllTemplates: false,
+    includeOverlays: false,
+    includeStages: false,
+  });
+
+  function handleSetExtraFlag(flag: keyof ExtraIncludeFlags, value: boolean) {
+    setExtras((current) => ({ ...current, [flag]: value }));
+  }
+
+  function buildExportOptions(): DeckBundleExportOptions {
+    return {
+      includeAllTemplates: extras.includeAllTemplates,
+      includeOverlays: extras.includeOverlays,
+      includeStages: extras.includeStages,
+    };
+  }
 
   const normalizedFilterText = filterText.trim().toLowerCase();
   const filteredItems = useMemo(() => {
@@ -105,6 +135,24 @@ export function useDeckImportExport(): { state: ImportExportSettingsState; actio
     });
   }
 
+  function handleAddToSelection(ids: Id[]) {
+    if (ids.length === 0) return;
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) next.add(id);
+      return next;
+    });
+  }
+
+  function handleRemoveFromSelection(ids: Id[]) {
+    if (ids.length === 0) return;
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) next.delete(id);
+      return next;
+    });
+  }
+
   function handleSelectAllVisible() {
     setSelectedIds(new Set(filteredItems.map((item) => item.id)));
   }
@@ -121,18 +169,40 @@ export function useDeckImportExport(): { state: ImportExportSettingsState; actio
 
   async function handleExportSelected() {
     if (selectedIds.size === 0 || exportInFlight) return;
+    await runExport(Array.from(selectedIds), buildSuggestedBundleName(), buildExportOptions());
+  }
+
+  async function runExport(itemIds: Id[], suggestedName: string, options: DeckBundleExportOptions) {
+    const hasItems = itemIds.length > 0;
+    const hasExtras = Boolean(options.includeAllTemplates || options.includeOverlays || options.includeStages);
+    if ((!hasItems && !hasExtras) || exportInFlight) return;
     setExportInFlight(true);
     updateMessage(null);
     try {
-      const filePath = await window.castApi.chooseDeckBundleExportPath(buildSuggestedBundleName());
+      const filePath = await window.castApi.chooseDeckBundleExportPath(suggestedName);
       if (!filePath) return;
-      const result = await window.castApi.exportDeckBundle(Array.from(selectedIds), filePath);
-      updateMessage(`Exported ${result.itemCount} item${result.itemCount === 1 ? '' : 's'}.`);
+      const result = await window.castApi.exportDeckBundle(itemIds, filePath, options);
+      const extrasNote = describeExtras(options);
+      const itemNote = `${result.itemCount} item${result.itemCount === 1 ? '' : 's'}`;
+      updateMessage(extrasNote ? `Exported ${itemNote} (${extrasNote}).` : `Exported ${itemNote}.`);
     } catch (error) {
       updateMessage((error as Error).message);
     } finally {
       setExportInFlight(false);
     }
+  }
+
+  async function handleExportIds(ids: Id[], suggestedName: string) {
+    await runExport(Array.from(new Set(ids)), suggestedName, buildExportOptions());
+  }
+
+  async function handleExportWorkspace() {
+    const allIds = deckItems.map((item) => item.id);
+    await runExport(allIds, 'cast-workspace', {
+      includeAllTemplates: true,
+      includeOverlays: true,
+      includeStages: true,
+    });
   }
 
   async function inspectBundle(filePath: string) {
@@ -232,13 +302,19 @@ export function useDeckImportExport(): { state: ImportExportSettingsState; actio
       decisionMap,
       blockedImportReasons,
       message,
+      extras,
     },
     actions: {
       setFilterText: handleFilterTextChange,
       toggleSelectedId: handleToggleSelectedId,
+      addToSelection: handleAddToSelection,
+      removeFromSelection: handleRemoveFromSelection,
       selectAllVisible: handleSelectAllVisible,
       clearSelection: handleClearSelection,
+      setExtraFlag: handleSetExtraFlag,
       exportSelected: handleExportSelected,
+      exportIds: handleExportIds,
+      exportWorkspace: handleExportWorkspace,
       chooseImportBundle: handleChooseImportBundle,
       clearImportReview: handleClearImportReview,
       setBrokenReferenceAction: handleSetBrokenReferenceAction,
@@ -246,4 +322,12 @@ export function useDeckImportExport(): { state: ImportExportSettingsState; actio
       finalizeImport: handleFinalizeImport,
     },
   };
+}
+
+function describeExtras(options: DeckBundleExportOptions): string {
+  const parts: string[] = [];
+  if (options.includeAllTemplates) parts.push('all templates');
+  if (options.includeOverlays) parts.push('overlays');
+  if (options.includeStages) parts.push('page layouts');
+  return parts.join(', ');
 }

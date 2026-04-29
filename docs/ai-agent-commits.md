@@ -3,7 +3,7 @@
 This repo has two GitHub Actions paths:
 
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml): runs on pull requests and branch pushes for validation.
-- [.github/workflows/build.yml](../.github/workflows/build.yml): packages production artifacts only when a GitHub Release is published.
+- [.github/workflows/release.yml](../.github/workflows/release.yml): packages production artifacts only when a GitHub Release is published.
 
 ## Commit messages
 

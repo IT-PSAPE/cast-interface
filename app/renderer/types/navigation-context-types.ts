@@ -49,6 +49,8 @@ export interface NavigationActionsValue {
   reorderPlaylist: (playlistId: Id, newOrder: number) => Promise<void>;
   reorderSegment: (segmentId: Id, newOrder: number) => Promise<void>;
   movePlaylistEntry: (entryId: Id, segmentId: Id, newOrder: number) => Promise<void>;
+  movePlaylistEntryDirection: (entryId: Id, direction: 'up' | 'down') => Promise<void>;
+  removePlaylistEntry: (entryId: Id) => Promise<void>;
 }
 
 export type NavigationContextValue = NavigationStateValue & NavigationActionsValue;

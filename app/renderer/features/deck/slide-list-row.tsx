@@ -4,6 +4,7 @@ import { cn } from '@renderer/utils/cn';
 import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { RenameField } from '@renderer/components/form/rename-field';
 import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
+import { useConfirm } from '../../components/overlays/confirm-dialog';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useScrollAreaActiveItem } from '../../components/layout/scroll-area';
@@ -35,10 +36,21 @@ function SlideOutlineRowBody({ row, scene, isFocused, onSelect, onOpen, onTextCo
   // in continuous mode the row may belong to a different deck item, so we disable
   // the menu when the slide isn't part of the active context.
   const { slides, duplicateSlide, deleteSlide, moveSlide } = useSlides();
+  const confirm = useConfirm();
   const slideIndex = slides.findIndex((s) => s.id === row.slide.id);
   const slideOwned = slideIndex !== -1;
   const isFirst = slideIndex === 0;
   const isLast = slideIndex === slides.length - 1;
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Delete slide ${row.index + 1}?`,
+      description: 'This slide and all its elements will be permanently removed.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) await deleteSlide(row.slide.id);
+  }
 
   const activeRef = useScrollAreaActiveItem<HTMLDivElement>(isFocused);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger({ disabled: !slideOwned });
@@ -124,10 +136,10 @@ function SlideOutlineRowBody({ row, scene, isFocused, onSelect, onOpen, onTextCo
         <ContextMenu.Portal>
           <ContextMenu.Menu>
             <ContextMenu.Item onSelect={() => { void duplicateSlide(row.slide.id); }}>Duplicate</ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => { void deleteSlide(row.slide.id); }}>Delete</ContextMenu.Item>
-            <ContextMenu.Separator />
             <ContextMenu.Item disabled={isFirst} onSelect={() => { void moveSlide(row.slide.id, 'up'); }}>Move up</ContextMenu.Item>
             <ContextMenu.Item disabled={isLast} onSelect={() => { void moveSlide(row.slide.id, 'down'); }}>Move down</ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
           </ContextMenu.Menu>
         </ContextMenu.Portal>
       )}

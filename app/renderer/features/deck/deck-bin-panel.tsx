@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
 import type { DeckItem, Id, Slide } from '@core/types';
 import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
+import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
+import { useConfirm } from '../../components/overlays/confirm-dialog';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { SelectableRow } from '../../components/display/selectable-row';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useResourceDrawer } from '../workbench/resource-drawer-context';
+import { useLibraryPanelManagement } from '../library/use-library-panel-management';
 import { buildThumbnailScene } from '../canvas/build-render-scene';
 import { SceneStage } from '../canvas/scene-stage';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
@@ -62,8 +65,42 @@ interface DeckItemProps {
   onRename: (itemId: Id, title: string) => void;
 }
 
-function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
+function DeckItemContextMenuItems({ item, renameRef }: { item: DeckItem; renameRef: React.RefObject<RenameFieldHandle | null> }) {
+  const { deleteDeckItem } = useLibraryPanelManagement();
+  const confirm = useConfirm();
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Delete "${item.title}"?`,
+      description: 'This permanently removes the item and all its slides. This action cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) await deleteDeckItem(item.id);
+  }
+
+  return (
+    <ContextMenu.Portal>
+      <ContextMenu.Menu>
+        <ContextMenu.Item onSelect={() => { renameRef.current?.startEditing(); }}>Rename</ContextMenu.Item>
+        <ContextMenu.Separator />
+        <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu.Portal>
+  );
+}
+
+function DeckItemRow(props: DeckItemProps) {
+  return (
+    <ContextMenu.Root>
+      <DeckItemRowBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function DeckItemRowBody({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
   const renameRef = useRef<RenameFieldHandle>(null);
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
   useEffect(() => {
     if (isEditing) renameRef.current?.startEditing();
@@ -82,8 +119,16 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onRename }: 
   }
 
   return (
-    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
-      <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
+    <>
+      <SelectableRow.Root
+        {...triggerHandlers}
+        ref={triggerRef}
+        selected={isSelected}
+        onClick={handleOpen}
+        className="h-9 cursor-grab"
+        draggable
+        onDragStart={handleDragStart}
+      >
         <SelectableRow.Leading>
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
         </SelectableRow.Leading>
@@ -94,16 +139,26 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onRename }: 
           <span className="text-xs text-tertiary">{slides.length} {slides.length === 1 ? 'slide' : 'slides'}</span>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
-    </div>
+      <DeckItemContextMenuItems item={item} renameRef={renameRef} />
+    </>
   );
 }
 
-function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
+function DeckItemTile(props: DeckItemProps) {
+  return (
+    <ContextMenu.Root>
+      <DeckItemTileBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function DeckItemTileBody({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
   const { slideElementsBySlideId } = useProjectContent();
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
   const scene = firstSlide ? buildThumbnailScene(firstSlide, firstSlideElements) : null;
   const renameRef = useRef<RenameFieldHandle>(null);
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
   useEffect(() => {
     if (isEditing) renameRef.current?.startEditing();
@@ -122,23 +177,32 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onRename }:
   }
 
   return (
-    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
-      <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
-        <Thumbnail.Body>
-          <ScenePreview scene={scene} />
-        </Thumbnail.Body>
-        <Thumbnail.Caption>
-          <div className="flex items-center gap-2">
-            <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
-            <RenameField
-              ref={renameRef}
-              value={item.title}
-              onValueChange={handleRename} className="label-xs"
-            />
-          </div>
-        </Thumbnail.Caption>
-      </Thumbnail.Tile>
-    </div>
+    <>
+      <div
+        {...triggerHandlers}
+        ref={triggerRef}
+        className="group cursor-grab"
+        draggable
+        onDragStart={handleDragStart}
+      >
+        <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
+          <Thumbnail.Body>
+            <ScenePreview scene={scene} />
+          </Thumbnail.Body>
+          <Thumbnail.Caption>
+            <div className="flex items-center gap-2">
+              <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
+              <RenameField
+                ref={renameRef}
+                value={item.title}
+                onValueChange={handleRename} className="label-xs"
+              />
+            </div>
+          </Thumbnail.Caption>
+        </Thumbnail.Tile>
+      </div>
+      <DeckItemContextMenuItems item={item} renameRef={renameRef} />
+    </>
   );
 }
 

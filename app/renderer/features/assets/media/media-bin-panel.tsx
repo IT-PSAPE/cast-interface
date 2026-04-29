@@ -2,12 +2,16 @@ import { useState } from 'react';
 import type { Id, MediaAsset } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { AlertTriangle } from 'lucide-react';
+import { ContextMenu, useContextMenuTrigger } from '../../../components/overlays/context-menu';
+import { useConfirm } from '../../../components/overlays/confirm-dialog';
 import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
+import { useElements } from '../../../contexts/canvas/canvas-context';
+import { useCast } from '../../../contexts/app-context';
 import { useMediaBin } from './use-media-bin';
 
 interface MediaBinPanelProps {
@@ -39,50 +43,121 @@ function MediaBinItem({ mode, ...props }: MediaItemProps & { mode: NonNullable<R
   return <MediaTile {...props} />;
 }
 
-function MediaRow({ asset, isActive, onAssignLayer }: MediaItemProps) {
-  function handleAssignLayer() {
-    onAssignLayer(asset.id);
+function useMediaContextActions(asset: MediaAsset) {
+  const { deleteMedia } = useElements();
+  const { mutatePatch, setStatusText } = useCast();
+  const confirm = useConfirm();
+
+  async function handleReplaceSource() {
+    const filePath = await window.castApi.chooseImportReplacementMediaPath();
+    if (!filePath) return;
+    const nextSrc = `cast-media://${encodeURIComponent(filePath)}`;
+    await mutatePatch(() => window.castApi.updateMediaAssetSrc(asset.id, nextSrc));
+    setStatusText(`Replaced source for ${asset.name}`);
   }
 
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Delete "${asset.name}"?`,
+      description: 'Slides and elements that reference this media will lose their source.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    await deleteMedia(asset.id);
+    setStatusText(`Deleted ${asset.name}`);
+  }
+
+  return { handleReplaceSource, handleDelete };
+}
+
+function MediaContextMenuItems({ asset }: { asset: MediaAsset }) {
+  const { handleReplaceSource, handleDelete } = useMediaContextActions(asset);
   return (
-    <SelectableRow.Root
-      selected={isActive}
-      onClick={handleAssignLayer}
-      className="h-9"
-    >
-      <SelectableRow.Leading>
-        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-      </SelectableRow.Leading>
-      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-      <SelectableRow.Trailing>
-        <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-      </SelectableRow.Trailing>
-    </SelectableRow.Root>
+    <ContextMenu.Portal>
+      <ContextMenu.Menu>
+        <ContextMenu.Item onSelect={() => { void handleReplaceSource(); }}>Replace source…</ContextMenu.Item>
+        <ContextMenu.Separator />
+        <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu.Portal>
   );
 }
 
-function MediaTile({ asset, isActive, onAssignLayer }: MediaItemProps) {
+function MediaRow(props: MediaItemProps) {
+  return (
+    <ContextMenu.Root>
+      <MediaRowBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function MediaRowBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
   return (
-    <Thumbnail.Tile
-      onClick={handleAssignLayer}
-      selected={isActive}
-      className={cn(isActive ? 'ring-1 ring-brand-400/35' : '')}
-    >
-      <Thumbnail.Body>
-        <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
-        <MediaThumbnail asset={asset} />
-      </Thumbnail.Body>
-      <Thumbnail.Caption>
-        <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
-          <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-          <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
-        </div>
-      </Thumbnail.Caption>
-    </Thumbnail.Tile>
+    <>
+      <SelectableRow.Root
+        {...triggerHandlers}
+        ref={triggerRef}
+        selected={isActive}
+        onClick={handleAssignLayer}
+        className="h-9"
+      >
+        <SelectableRow.Leading>
+          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+        </SelectableRow.Leading>
+        <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+        <SelectableRow.Trailing>
+          <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
+        </SelectableRow.Trailing>
+      </SelectableRow.Root>
+      <MediaContextMenuItems asset={asset} />
+    </>
+  );
+}
+
+function MediaTile(props: MediaItemProps) {
+  return (
+    <ContextMenu.Root>
+      <MediaTileBody {...props} />
+    </ContextMenu.Root>
+  );
+}
+
+function MediaTileBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
+  const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+
+  function handleAssignLayer() {
+    onAssignLayer(asset.id);
+  }
+
+  return (
+    <>
+      <div {...triggerHandlers} ref={triggerRef}>
+        <Thumbnail.Tile
+          onClick={handleAssignLayer}
+          selected={isActive}
+          className={cn(isActive ? 'ring-1 ring-brand-400/35' : '')}
+        >
+          <Thumbnail.Body>
+            <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
+            <MediaThumbnail asset={asset} />
+          </Thumbnail.Body>
+          <Thumbnail.Caption>
+            <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
+              <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+              <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
+            </div>
+          </Thumbnail.Caption>
+        </Thumbnail.Tile>
+      </div>
+      <MediaContextMenuItems asset={asset} />
+    </>
   );
 }
 

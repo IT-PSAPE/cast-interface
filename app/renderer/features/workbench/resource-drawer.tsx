@@ -12,12 +12,10 @@ import { useCreateDeckItem } from '../deck/create-deck-item';
 import { useResourceDrawer } from './resource-drawer-context';
 import { useGridSize } from '../../hooks/use-grid-size';
 import type { DrawerTab, ResourceDrawerViewMode } from '../../types/ui';
-import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
 import {
-  useAudioBinSort,
   useDeckBinSort,
   useMediaBinSort,
   useTemplateBinSort,
@@ -42,12 +40,10 @@ const TRIGGER_CLASS = 'cursor-pointer transition-colors p-1 rounded-sm bg-transp
 
 const IMPORT_ACCEPT_BY_TAB = {
   media: 'image/*,video/*',
-  audio: 'audio/*',
 } as const;
 
 const IMPORT_TYPE_PREFIXES_BY_TAB = {
   media: ['image/', 'video/'],
-  audio: ['audio/'],
 } as const;
 
 interface ResourceDrawerContextValue {
@@ -77,7 +73,7 @@ function useDrawer() {
 }
 
 function isImportTab(tab: DrawerTab): tab is keyof typeof IMPORT_ACCEPT_BY_TAB {
-  return tab === 'media' || tab === 'audio';
+  return tab === 'media';
 }
 
 function hasImportableFiles(transfer: DataTransfer, tab: DrawerTab): boolean {
@@ -138,9 +134,9 @@ function Root({ children }: { children: ReactNode }) {
       gridSizeMin,
       gridSizeMax,
       gridSizeStep,
-      showGridSizeControl: drawerViewMode === 'grid' && drawerTab !== 'audio',
-      showImportAction: drawerTab === 'media' || drawerTab === 'audio',
-      showModeControl: drawerTab !== 'audio',
+      showGridSizeControl: drawerViewMode === 'grid',
+      showImportAction: drawerTab === 'media',
+      showModeControl: true,
     },
     actions: { setDrawerTab, setGridSize, handleImport },
   };
@@ -174,7 +170,6 @@ function Header() {
       <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5">
         <Tabs.Trigger value="deck">Deck</Tabs.Trigger>
         <Tabs.Trigger value="media">Media</Tabs.Trigger>
-        <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
         <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
       </Tabs.List>
       <Toolbar />
@@ -186,7 +181,7 @@ function Header() {
 // Right-side controls: grid size, view mode, import file picker, more actions.
 
 function Toolbar() {
-  const { actions, meta, state } = useDrawer();
+  const { actions, meta } = useDrawer();
   const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -228,7 +223,7 @@ function Toolbar() {
       <FileTrigger.Root
         hidden
         inputRef={importInputRef}
-        accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media}
+        accept={IMPORT_ACCEPT_BY_TAB.media}
         multiple
         onSelect={handleImportSelect}
       />
@@ -245,7 +240,6 @@ function MoreActionsMenu({ onImportClick }: { onImportClick: () => void }) {
   const { open: openCreateDeckItem } = useCreateDeckItem();
   const { createTemplate } = useTemplateEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const audioSort = useAudioBinSort();
   const deckSort = useDeckBinSort();
   const mediaSort = useMediaBinSort();
   const templateSort = useTemplateBinSort();
@@ -276,13 +270,6 @@ function MoreActionsMenu({ onImportClick }: { onImportClick: () => void }) {
             <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={mediaSort.sort} onChange={mediaSort.setSort} />
           </>
         )}
-        {state.drawerTab === 'audio' && (
-          <>
-            <Dropdown.Item onClick={onImportClick}>Import audio</Dropdown.Item>
-            <Dropdown.Separator />
-            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={audioSort.sort} onChange={audioSort.setSort} />
-          </>
-        )}
         {state.drawerTab === 'templates' && (
           <>
             <Dropdown.Item onClick={() => handleCreateTemplate('slides')}>New slides template</Dropdown.Item>
@@ -308,7 +295,6 @@ function Body() {
     <div className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
       {drawerTab === 'deck' && <DeckBinPanel filterText="" gridItemSize={gridItemSize} />}
       {drawerTab === 'media' && <MediaBinPanel filterText="" gridItemSize={gridItemSize} />}
-      {drawerTab === 'audio' && <AudioBinPanel filterText="" gridItemSize={gridItemSize} />}
       {drawerTab === 'templates' && <TemplateBinPanel filterText="" gridItemSize={gridItemSize} />}
     </div>
   );

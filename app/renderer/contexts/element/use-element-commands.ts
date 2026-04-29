@@ -21,9 +21,10 @@ interface CommandsParams {
   currentDeckItem: DeckItem | null;
   mutatePatch: (action: () => Promise<SnapshotPatch>) => Promise<unknown>;
   setStatusText: (text: string) => void;
+  pushHistorySnapshot: () => void;
 }
 
-export function useElementCommands({ activeEditorSource, currentDeckItem, mutatePatch, setStatusText }: CommandsParams) {
+export function useElementCommands({ activeEditorSource, currentDeckItem, mutatePatch, setStatusText, pushHistorySnapshot }: CommandsParams) {
   const { state: { overlayDefaults } } = useWorkbench();
   const isLyricItem = isLyricDeckItem(currentDeckItem);
   const { slideElementsBySlideId } = useProjectContent();
@@ -40,6 +41,7 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
   }
 
   function addToSource(element: SlideElement) {
+    pushHistorySnapshot();
     replaceSourceElements([...activeEditorSource.elements, element]);
   }
 

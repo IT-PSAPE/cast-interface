@@ -1,5 +1,5 @@
 import { useMemo, type CSSProperties } from 'react';
-import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
+import { PanelBottom, PanelLeft, PanelRight, Search, Settings } from 'lucide-react';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
 import { ReacstButton } from '@renderer/components/controls/button';
@@ -7,6 +7,9 @@ import { SegmentedControl } from '@renderer/components/controls/segmented-contro
 import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
 import { useNdi } from '@renderer/contexts/app-context';
+import { useCommandPalette } from '../command-palette/command-palette-context';
+
+const isMac = window.castApi.platform === 'darwin';
 
 const dragStyle = { WebkitAppRegion: 'drag' } as CSSProperties;
 const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;
@@ -42,6 +45,7 @@ export function AppToolbar() {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const panelToggles = useWorkbenchPanelToggles();
   const { state: { outputState }, actions: { toggleAudienceOutput, toggleStageOutput } } = useNdi();
+  const { open: openCommandPalette } = useCommandPalette();
 
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
@@ -80,7 +84,25 @@ export function AppToolbar() {
         </SegmentedControl>
       </div>
 
-      <div aria-hidden="true" className="min-w-6 flex-1 self-stretch" style={dragStyle} />
+      <div aria-hidden="true" className="min-w-3 flex-1 self-stretch" style={dragStyle} />
+
+      <div style={noDragStyle} className="min-w-0 max-w-md flex-[2_0_180px]">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          aria-label="Open command palette"
+          title={`Search commands (${isMac ? '⌘' : 'Ctrl+'}K)`}
+          className="group flex h-7 w-full min-w-0 items-center gap-2 rounded-md border border-primary bg-tertiary px-2 text-left text-sm text-tertiary transition-colors hover:border-secondary hover:bg-quaternary hover:text-secondary"
+        >
+          <Search className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">Search commands</span>
+          <kbd className="shrink-0 rounded border border-primary bg-primary px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-tertiary">
+            {isMac ? '⌘K' : 'Ctrl+K'}
+          </kbd>
+        </button>
+      </div>
+
+      <div aria-hidden="true" className="min-w-3 flex-1 self-stretch" style={dragStyle} />
 
       <div className="flex items-center gap-2" style={noDragStyle}>
         <ReacstButton

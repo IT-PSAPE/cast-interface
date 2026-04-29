@@ -3,6 +3,7 @@ import { IPC, NDI_EVENTS } from '@core/ipc';
 import type {
   AppSnapshot,
   DeckBundleBrokenReferenceDecision,
+  DeckBundleExportOptions,
   DeckBundleInspection,
   ElementCreateInput,
   ElementUpdateInput,
@@ -35,7 +36,8 @@ const api = {
   chooseDeckBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseDeckBundleExportPath, suggestedName) as Promise<string | null>,
   chooseDeckBundleImportPath: () => ipcRenderer.invoke(IPC.chooseDeckBundleImportPath) as Promise<string | null>,
   chooseImportReplacementMediaPath: () => ipcRenderer.invoke(IPC.chooseImportReplacementMediaPath) as Promise<string | null>,
-  exportDeckBundle: (itemIds: Id[], filePath: string) => ipcRenderer.invoke(IPC.exportDeckBundle, itemIds, filePath) as Promise<{ filePath: string; itemCount: number }>,
+  exportDeckBundle: (itemIds: Id[], filePath: string, options?: DeckBundleExportOptions) =>
+    ipcRenderer.invoke(IPC.exportDeckBundle, itemIds, filePath, options) as Promise<{ filePath: string; itemCount: number }>,
   inspectImportBundle: (filePath: string) => ipcRenderer.invoke(IPC.inspectImportBundle, filePath) as Promise<DeckBundleInspection>,
   finalizeImportBundle: (filePath: string, decisions: DeckBundleBrokenReferenceDecision[]) =>
     ipcRenderer.invoke(IPC.finalizeImportBundle, filePath, decisions) as Promise<AppSnapshot>,

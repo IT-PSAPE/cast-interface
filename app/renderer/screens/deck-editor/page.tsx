@@ -4,6 +4,7 @@ import { RecastPanel } from '@renderer/components/layout/panel';
 import type { Id } from '@core/types';
 import { cn } from '@renderer/utils/cn';
 import { ContextMenu, useContextMenuTrigger } from '../../components/overlays/context-menu';
+import { useConfirm } from '../../components/overlays/confirm-dialog';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dropdown } from '../../components/form/dropdown';
 import { FieldTextarea } from '../../components/form/field';
@@ -207,10 +208,21 @@ function SlideTile({ slideId, scene, index, isActive, isLive, isEmpty, textPrevi
 
 function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textPreview, onSelect }: SlideTileProps) {
   const { state, actions } = useDeckEditorScreen();
+  const confirm = useConfirm();
   const isFirst = index === 0;
   const isLast = index === state.slides.length - 1;
   const activeRef = useScrollAreaActiveItem<HTMLDivElement>(isActive);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Delete slide ${index + 1}?`,
+      description: 'This slide and all its elements will be permanently removed.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) await actions.deleteSlide(slideId);
+  }
 
   return (
     <>
@@ -251,10 +263,10 @@ function SlideTileBody({ slideId, scene, index, isActive, isLive, isEmpty, textP
       <ContextMenu.Portal>
         <ContextMenu.Menu>
           <ContextMenu.Item onSelect={() => { void actions.duplicateSlide(slideId); }}>Duplicate</ContextMenu.Item>
-          <ContextMenu.Item onSelect={() => { void actions.deleteSlide(slideId); }}>Delete</ContextMenu.Item>
-          <ContextMenu.Separator />
           <ContextMenu.Item disabled={isFirst} onSelect={() => { void actions.moveSlide(slideId, 'up'); }}>Move up</ContextMenu.Item>
           <ContextMenu.Item disabled={isLast} onSelect={() => { void actions.moveSlide(slideId, 'down'); }}>Move down</ContextMenu.Item>
+          <ContextMenu.Separator />
+          <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
         </ContextMenu.Menu>
       </ContextMenu.Portal>
     </>

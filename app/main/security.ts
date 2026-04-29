@@ -70,8 +70,13 @@ export function resolveTrustedCastMediaRequest(request: CastMediaRequest): strin
     return null;
   }
 
+  // Chromium strips Referer for cross-scheme fetches by default (e.g. file:// →
+  // cast-media://), so a missing referrer is normal in packaged builds. Only
+  // reject when a referrer IS present and points somewhere we don't trust —
+  // the privileged scheme registration already prevents external contexts
+  // from issuing cast-media:// requests.
   const referrer = extractTrustedReferrer(request);
-  if (!isTrustedAppUrl(referrer)) {
+  if (referrer && !isTrustedAppUrl(referrer)) {
     return null;
   }
 

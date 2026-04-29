@@ -12,6 +12,10 @@ interface SceneStageViewport {
   sceneScale: number;
   sceneOffsetX: number;
   sceneOffsetY: number;
+  // CSS scale to apply to the Stage wrapper so a fixed-resolution canvas
+  // (e.g. 1920x1080 for NDI capture) visually shrinks to fit the on-screen
+  // container. 1 when no fixedViewport is in use.
+  displayScale: number;
 }
 
 export interface SceneViewportTransform {
@@ -39,16 +43,17 @@ export function useSceneStageViewport(sceneWidth: number, sceneHeight: number, f
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<ViewportSize>({ width: 1, height: 1 });
 
+  // Always observe the container — even with a fixedViewport — so we can
+  // compute a CSS displayScale that fits the fixed-resolution canvas inside
+  // the actual on-screen container (preview surfaces, NDI thumbnails, etc.).
   useLayoutEffect(() => {
-    if (fixedViewport) return;
     const target = containerRef.current;
     if (!target) return;
     const rect = target.getBoundingClientRect();
     setContainerSize({ width: Math.max(1, rect.width), height: Math.max(1, rect.height) });
-  }, [fixedViewport]);
+  }, []);
 
   useEffect(() => {
-    if (fixedViewport) return;
     const target = containerRef.current;
     if (!target) return;
 
@@ -59,7 +64,7 @@ export function useSceneStageViewport(sceneWidth: number, sceneHeight: number, f
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [fixedViewport]);
+  }, []);
 
   return useMemo(() => {
     const viewportWidth = fixedViewport ? fixedViewport.width : Math.max(1, containerSize.width);
@@ -69,6 +74,9 @@ export function useSceneStageViewport(sceneWidth: number, sceneHeight: number, f
     const drawHeight = sceneHeight * sceneScale;
     const sceneOffsetX = (viewportWidth - drawWidth) / 2;
     const sceneOffsetY = (viewportHeight - drawHeight) / 2;
+    const displayScale = fixedViewport
+      ? Math.min(containerSize.width / fixedViewport.width, containerSize.height / fixedViewport.height)
+      : 1;
 
     return {
       containerRef,
@@ -77,6 +85,7 @@ export function useSceneStageViewport(sceneWidth: number, sceneHeight: number, f
       sceneScale,
       sceneOffsetX,
       sceneOffsetY,
+      displayScale,
     };
   }, [containerSize.height, containerSize.width, fixedViewport, sceneHeight, sceneWidth]);
 }

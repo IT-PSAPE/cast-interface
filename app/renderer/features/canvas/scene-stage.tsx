@@ -1,8 +1,11 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Fragment } from 'react';
 import { FastLayer, Layer, Line, Rect, Stage, Transformer, Group } from 'react-konva';
 import type Konva from 'konva';
-import type { NdiOutputName } from '@core/types';
+import type { Id, NdiOutputName } from '@core/types';
+import { ContextMenu } from '../../components/overlays/context-menu';
+import { useElements } from '../../contexts/canvas/canvas-context';
+import { hasClipboardContent } from '../../contexts/element/use-element-history';
 import type { RenderNode, RenderScene, SceneSurface } from './scene-types';
 import { SceneNodeMedia } from './scene-node-media';
 import { SceneNodeShape } from './scene-node-shape';
@@ -50,13 +53,14 @@ interface SceneNodeProps {
   onDragEnd: () => void;
   onTransform: () => void;
   onTransformEnd: () => void;
+  onContextMenu: (id: Id, x: number, y: number) => void;
   setNodeRef: (id: string, node: Konva.Group | null) => void;
 }
 
 const SceneNode = memo(function SceneNode({
   node, surface, editable, isBeingEdited,
   onSelect, onDoubleClick, onDragStart, onDragMove, onDragEnd,
-  onTransform, onTransformEnd, setNodeRef,
+  onTransform, onTransformEnd, onContextMenu, setNodeRef,
 }: SceneNodeProps) {
   if (node.visual.visible === false) return null;
 
@@ -68,6 +72,15 @@ const SceneNode = memo(function SceneNode({
   function handleDblClick(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     event.cancelBubble = true;
     onDoubleClick(node.id);
+  }
+
+  function handleContextMenu(event: Konva.KonvaEventObject<PointerEvent>) {
+    event.cancelBubble = true;
+    event.evt.preventDefault();
+    // Stop the native event so the wrapper's React onContextMenu doesn't also
+    // fire and treat this as an empty-canvas right-click.
+    event.evt.stopPropagation();
+    onContextMenu(node.id, event.evt.clientX, event.evt.clientY);
   }
 
   function handleDragStart() {
@@ -109,6 +122,7 @@ const SceneNode = memo(function SceneNode({
         onDragEnd={editable ? onDragEnd : undefined}
         onTransform={editable ? onTransform : undefined}
         onTransformEnd={editable ? onTransformEnd : undefined}
+        onContextMenu={editable ? handleContextMenu : undefined}
       >
         {renderNodeContent(node, surface)}
       </Group>
@@ -122,6 +136,29 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
   const editor = useSceneStageEditor({ scene, editable });
   const viewport = useSceneStageViewport(scene.width, scene.height, fixedViewport);
   const snaps = useMemo(rotationSnaps, []);
+  const {
+    selectedElementIds, selectElement,
+    copySelection, cutSelection, pasteSelection, duplicateSelection, deleteSelected,
+  } = useElements();
+  const [menuState, setMenuState] = useState<{ x: number; y: number; targetId: Id | null } | null>(null);
+  const menuPosition = menuState ? { x: menuState.x, y: menuState.y } : null;
+
+  const handleNodeContextMenu = useCallback((id: Id, x: number, y: number) => {
+    if (!editable) return;
+    if (!selectedElementIds.includes(id)) selectElement(id);
+    setMenuState({ x, y, targetId: id });
+  }, [editable, selectElement, selectedElementIds]);
+
+  const handleEmptyContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!editable) return;
+    event.preventDefault();
+    setMenuState({ x: event.clientX, y: event.clientY, targetId: null });
+  }, [editable]);
+
+  const closeMenu = useCallback(() => setMenuState(null), []);
+
+  const hasSelection = selectedElementIds.length > 0;
+  const canPaste = hasClipboardContent();
 
   useEffect(() => {
     if (!onViewportChange) return;
@@ -165,13 +202,30 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
   } = editor;
   const SceneLayer = editable ? Layer : FastLayer;
 
+  // Konva renders Stage at its literal width/height in CSS pixels. When
+  // fixedViewport is set (preview/monitor/stage NDI surfaces) those dimensions
+  // are 1920x1080 — far larger than the actual on-screen container — so we
+  // visually scale the wrapper to fit. The canvas keeps its native resolution
+  // for capture; only the display is scaled.
+  const displayScale = viewport.displayScale;
+  const stageWrapperStyle: React.CSSProperties | undefined = displayScale === 1
+    ? undefined
+    : { transform: `scale(${displayScale})`, transformOrigin: 'top left', width: viewport.viewportWidth, height: viewport.viewportHeight };
+
   return (
-    <div ref={viewport.containerRef} className={`relative h-full w-full overflow-hidden ${className}`} onDrop={onDrop} onDragOver={onDragOver}>
+    <div
+      ref={viewport.containerRef}
+      className={`relative h-full w-full overflow-hidden ${className}`}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onContextMenu={editable ? handleEmptyContextMenu : undefined}
+    >
+      <div style={stageWrapperStyle}>
       <Stage
         ref={editor.stageRef}
         width={viewport.viewportWidth}
         height={viewport.viewportHeight}
-        className="h-full w-full"
+        className={displayScale === 1 ? 'h-full w-full' : ''}
         onMouseDown={editor.handleStageMouseDown}
         onMouseMove={editor.handleStageMouseMove}
         onMouseUp={editor.handleStageMouseUp}
@@ -192,6 +246,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
                 onDragEnd={editor.handleNodeDragEnd}
                 onTransform={editor.handleNodeTransform}
                 onTransformEnd={editor.handleNodeTransformEnd}
+                onContextMenu={handleNodeContextMenu}
                 setNodeRef={editor.setNodeRef}
               />
             ))}
@@ -234,6 +289,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
           </Layer>
         ) : null}
       </Stage>
+      </div>
       {editable && editor.editingTextId ? (
         <InlineTextEditor
           editingTextId={editor.editingTextId}
@@ -244,6 +300,32 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
           onCommit={editor.commitTextEdit}
           onCancel={editor.cancelTextEdit}
         />
+      ) : null}
+      {editable ? (
+        <ContextMenu.Root
+          open={menuState !== null}
+          position={menuPosition}
+          onOpenChange={(next) => { if (!next) closeMenu(); }}
+        >
+          <ContextMenu.Portal>
+            <ContextMenu.Menu>
+              {hasSelection ? (
+                <>
+                  <ContextMenu.Item onSelect={() => { void cutSelection(); }}>Cut</ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => copySelection()}>Copy</ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => { void duplicateSelection(); }}>Duplicate</ContextMenu.Item>
+                </>
+              ) : null}
+              <ContextMenu.Item disabled={!canPaste} onSelect={() => { void pasteSelection(); }}>Paste</ContextMenu.Item>
+              {hasSelection ? (
+                <>
+                  <ContextMenu.Separator />
+                  <ContextMenu.Item variant="destructive" onSelect={() => { void deleteSelected(); }}>Delete</ContextMenu.Item>
+                </>
+              ) : null}
+            </ContextMenu.Menu>
+          </ContextMenu.Portal>
+        </ContextMenu.Root>
       ) : null}
     </div>
   );

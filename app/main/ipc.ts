@@ -4,6 +4,7 @@ import { IPC, NDI_EVENTS, type InlineWindowMenuItem } from '@core/ipc';
 import type {
   AppSnapshot,
   DeckBundleBrokenReferenceDecision,
+  DeckBundleExportOptions,
   ElementCreateInput,
   ElementUpdateInput,
   Id,
@@ -121,8 +122,8 @@ export const registerIpcHandlers = (
     });
     return result.canceled ? null : (result.filePaths[0] ?? null);
   });
-  safeHandle(IPC.exportDeckBundle, async (_event, itemIds: Id[], filePath: string) => {
-    const bundle = repo.exportDeckBundle(itemIds);
+  safeHandle(IPC.exportDeckBundle, async (_event, itemIds: Id[], filePath: string, options?: DeckBundleExportOptions) => {
+    const bundle = repo.exportDeckBundle(itemIds, options);
     const normalizedPath = ensureBundleExtension(filePath);
     await writeDeckBundleArchive(normalizedPath, bundle);
     return { filePath: normalizedPath, itemCount: bundle.items.length };

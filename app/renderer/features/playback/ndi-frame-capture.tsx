@@ -222,6 +222,7 @@ export function NdiFrameCapture({ senderName, scene, surface = 'show', enabled }
                   strokeColor: '',
                   strokeWidth: 0,
                   strokePosition: 'inside',
+                  borderRadius: 0,
                   shadowEnabled: false,
                   shadowColor: '',
                   shadowBlur: 0,

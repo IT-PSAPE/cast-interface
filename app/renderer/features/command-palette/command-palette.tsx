@@ -1,29 +1,66 @@
-import { Folder, LayoutGrid, ListMusic, Search } from 'lucide-react';
+import { Folder, Layers2, LayoutTemplate, ListMusic, Monitor, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Id, LibraryPlaylistBundle, Playlist, Library } from '@core/types';
+import type { Id, Library, LibraryPlaylistBundle, MediaAsset, Overlay, Playlist, Stage, Template } from '@core/types';
 import { Dialog } from '@renderer/components/overlays/dialog';
+import { DeckItemIcon, MediaAssetIcon } from '@renderer/components/display/entity-icon';
 import { useCast } from '@renderer/contexts/app-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { useProjectContent } from '@renderer/contexts/use-project-content';
+import { useAudio, usePresentationMediaLayer } from '@renderer/contexts/playback/playback-context';
+import {
+  useOverlayEditor,
+  useStageEditor,
+  useTemplateEditor,
+} from '@renderer/contexts/asset-editor/asset-editor-context';
 import { cn } from '@renderer/utils/cn';
 import { useCommandPalette } from './command-palette-context';
 
+type ResultKind =
+  | 'library'
+  | 'playlist'
+  | 'deckItem'
+  | 'overlay'
+  | 'template'
+  | 'stage'
+  | 'media'
+  | 'audio';
+
 interface ResultItem {
   id: string;
-  kind: 'library' | 'playlist' | 'deckItem';
+  kind: ResultKind;
   label: string;
   subtitle?: string;
   icon: ReactNode;
   onSelect: () => void;
 }
 
+const SECTION_ORDER: Array<{ kind: ResultKind; title: string }> = [
+  { kind: 'library', title: 'Libraries' },
+  { kind: 'playlist', title: 'Playlists' },
+  { kind: 'deckItem', title: 'Deck items' },
+  { kind: 'overlay', title: 'Overlays' },
+  { kind: 'template', title: 'Templates' },
+  { kind: 'stage', title: 'Stages' },
+  { kind: 'media', title: 'Media' },
+  { kind: 'audio', title: 'Audio' },
+];
+
+const SECTION_BY_KIND = new Map(SECTION_ORDER.map((entry, index) => [entry.kind, { ...entry, order: index }]));
+
+const RESULT_LIMIT = 50;
+
 export function CommandPalette() {
   const { isOpen, close } = useCommandPalette();
   const { snapshot } = useCast();
-  const { deckItems } = useProjectContent();
+  const { deckItems, mediaAssets } = useProjectContent();
   const navigation = useNavigation();
   const { actions: workbenchActions } = useWorkbench();
+  const overlayEditor = useOverlayEditor();
+  const templateEditor = useTemplateEditor();
+  const stageEditor = useStageEditor();
+  const { setMediaLayerAsset } = usePresentationMediaLayer();
+  const audio = useAudio();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -44,46 +81,124 @@ export function CommandPalette() {
 
     const libraryById = new Map<Id, Library>(snapshot.libraries.map((library) => [library.id, library]));
 
+    const libraryItems: ResultItem[] = snapshot.libraries.map((library) => ({
+      id: `library:${library.id}`,
+      kind: 'library',
+      label: library.name,
+      subtitle: 'Library',
+      icon: <Folder size={16} />,
+      onSelect: () => {
+        navigation.selectLibrary(library.id);
+        workbenchActions.setWorkbenchMode('show');
+      },
+    }));
+
+    const playlistItems: ResultItem[] = flattenPlaylists(snapshot.libraryBundles, libraryById).map(({ playlist, library }) => ({
+      id: `playlist:${playlist.id}`,
+      kind: 'playlist',
+      label: playlist.name,
+      subtitle: `Playlist · ${library.name}`,
+      icon: <ListMusic size={16} />,
+      onSelect: () => {
+        navigation.selectLibrary(library.id);
+        navigation.setCurrentPlaylistId(playlist.id);
+        workbenchActions.setWorkbenchMode('show');
+      },
+    }));
+
+    const deckItemResults: ResultItem[] = deckItems.map((item) => ({
+      id: `deckItem:${item.id}`,
+      kind: 'deckItem',
+      label: item.title,
+      subtitle: item.type === 'lyric' ? 'Lyric' : 'Presentation',
+      icon: <DeckItemIcon entity={item} size={16} />,
+      onSelect: () => {
+        navigation.browseDeckItem(item.id);
+        workbenchActions.setWorkbenchMode('deck-editor');
+      },
+    }));
+
+    const overlayResults: ResultItem[] = overlayEditor.overlays.map((overlay: Overlay) => ({
+      id: `overlay:${overlay.id}`,
+      kind: 'overlay',
+      label: overlay.name,
+      subtitle: 'Overlay',
+      icon: <Layers2 size={16} />,
+      onSelect: () => {
+        overlayEditor.setCurrentOverlayId(overlay.id);
+        workbenchActions.setWorkbenchMode('overlay-editor');
+      },
+    }));
+
+    const templateResults: ResultItem[] = templateEditor.templates.map((template: Template) => ({
+      id: `template:${template.id}`,
+      kind: 'template',
+      label: template.name,
+      subtitle: `Template · ${template.kind}`,
+      icon: <LayoutTemplate size={16} />,
+      onSelect: () => {
+        templateEditor.openTemplateEditor(template.id);
+        workbenchActions.setWorkbenchMode('template-editor');
+      },
+    }));
+
+    const stageResults: ResultItem[] = stageEditor.stages.map((stage: Stage) => ({
+      id: `stage:${stage.id}`,
+      kind: 'stage',
+      label: stage.name,
+      subtitle: 'Stage layout',
+      icon: <Monitor size={16} />,
+      onSelect: () => {
+        stageEditor.setCurrentStageId(stage.id);
+        workbenchActions.setWorkbenchMode('stage-editor');
+      },
+    }));
+
+    const mediaResults: ResultItem[] = mediaAssets
+      .filter((asset: MediaAsset) => asset.type !== 'audio')
+      .map((asset) => ({
+        id: `media:${asset.id}`,
+        kind: 'media',
+        label: asset.name,
+        subtitle: `Media · ${asset.type}`,
+        icon: <MediaAssetIcon asset={asset} size={16} />,
+        onSelect: () => {
+          // Open the media bin and set this asset as the active media layer.
+          // Behaves like clicking the asset in the resource drawer.
+          workbenchActions.setDrawerTab('media');
+          setMediaLayerAsset(asset.id);
+        },
+      }));
+
+    const audioResults: ResultItem[] = mediaAssets
+      .filter((asset: MediaAsset) => asset.type === 'audio')
+      .map((asset) => ({
+        id: `audio:${asset.id}`,
+        kind: 'audio',
+        label: asset.name,
+        subtitle: 'Audio',
+        icon: <MediaAssetIcon asset={asset} size={16} />,
+        onSelect: () => {
+          // Same behavior as clicking an audio row in the audio bin: arm it
+          // for playback. Don't switch screens — the user is presenting.
+          audio.armAudio(asset.id);
+        },
+      }));
+
     const all: ResultItem[] = [
-      ...snapshot.libraries.map((library) => ({
-        id: `library:${library.id}`,
-        kind: 'library' as const,
-        label: library.name,
-        subtitle: 'Library',
-        icon: <Folder size={16} />,
-        onSelect: () => {
-          navigation.selectLibrary(library.id);
-          workbenchActions.setWorkbenchMode('show');
-        },
-      })),
-      ...flattenPlaylists(snapshot.libraryBundles).map(({ playlist, library }) => ({
-        id: `playlist:${playlist.id}`,
-        kind: 'playlist' as const,
-        label: playlist.name,
-        subtitle: `Playlist · ${library.name}`,
-        icon: <ListMusic size={16} />,
-        onSelect: () => {
-          navigation.selectLibrary(library.id);
-          navigation.setCurrentPlaylistId(playlist.id);
-          workbenchActions.setWorkbenchMode('show');
-        },
-      })),
-      ...deckItems.map((item) => ({
-        id: `deckItem:${item.id}`,
-        kind: 'deckItem' as const,
-        label: item.title,
-        subtitle: item.type === 'lyric' ? 'Lyric' : 'Presentation',
-        icon: <LayoutGrid size={16} />,
-        onSelect: () => {
-          navigation.browseDeckItem(item.id);
-          workbenchActions.setWorkbenchMode('deck-editor');
-        },
-      })),
+      ...libraryItems,
+      ...playlistItems,
+      ...deckItemResults,
+      ...overlayResults,
+      ...templateResults,
+      ...stageResults,
+      ...mediaResults,
+      ...audioResults,
     ];
 
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
-      return all.slice(0, 30);
+      return all.slice(0, RESULT_LIMIT);
     }
 
     return all
@@ -91,20 +206,10 @@ export function CommandPalette() {
       .filter((scored) => scored.score > 0)
       .sort((left, right) => right.score - left.score || left.item.label.localeCompare(right.item.label))
       .map(({ item }) => item)
-      .slice(0, 30);
+      .slice(0, RESULT_LIMIT);
+  }, [snapshot, deckItems, mediaAssets, overlayEditor, templateEditor, stageEditor, audio, setMediaLayerAsset, query, navigation, workbenchActions]);
 
-    function flattenPlaylists(bundles: LibraryPlaylistBundle[]): Array<{ playlist: Playlist; library: Library }> {
-      const out: Array<{ playlist: Playlist; library: Library }> = [];
-      for (const bundle of bundles) {
-        for (const tree of bundle.playlists) {
-          const library = libraryById.get(tree.playlist.libraryId);
-          if (!library) continue;
-          out.push({ playlist: tree.playlist, library });
-        }
-      }
-      return out;
-    }
-  }, [snapshot, deckItems, query, navigation, workbenchActions]);
+  const sectionedResults = useMemo(() => groupBySection(results), [results]);
 
   useEffect(() => {
     if (activeIndex >= results.length) setActiveIndex(0);
@@ -139,7 +244,7 @@ export function CommandPalette() {
                 value={query}
                 onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
                 onKeyDown={handleKeyDown}
-                placeholder="Jump to a library, playlist, or deck…"
+                placeholder="Search libraries, playlists, decks, overlays, templates, stages, media…"
                 className="w-full bg-transparent text-sm text-primary placeholder:text-tertiary outline-none"
                 autoComplete="off"
                 spellCheck={false}
@@ -151,29 +256,42 @@ export function CommandPalette() {
                   {snapshot ? 'No matches' : 'Loading…'}
                 </div>
               ) : (
-                <ul role="listbox" className="flex flex-col">
-                  {results.map((item, index) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={index === activeIndex}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => { item.onSelect(); close(); }}
-                        className={cn(
-                          'w-full flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm',
-                          index === activeIndex ? 'bg-secondary text-primary' : 'text-primary',
-                        )}
-                      >
-                        <span className="text-secondary shrink-0">{item.icon}</span>
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                        {item.subtitle && (
-                          <span className="text-xs text-tertiary shrink-0">{item.subtitle}</span>
-                        )}
-                      </button>
-                    </li>
+                <div role="listbox" className="flex flex-col">
+                  {sectionedResults.map(({ kind, title, items }) => (
+                    <section key={kind} className="flex flex-col">
+                      <h3 className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-tertiary">
+                        {title}
+                      </h3>
+                      <ul className="flex flex-col">
+                        {items.map((item) => {
+                          const flatIndex = results.indexOf(item);
+                          const isActive = flatIndex === activeIndex;
+                          return (
+                            <li key={item.id}>
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                                onMouseEnter={() => setActiveIndex(flatIndex)}
+                                onClick={() => { item.onSelect(); close(); }}
+                                className={cn(
+                                  'w-full flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm',
+                                  isActive ? 'bg-secondary text-primary' : 'text-primary',
+                                )}
+                              >
+                                <span className="text-secondary shrink-0">{item.icon}</span>
+                                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                                {item.subtitle && (
+                                  <span className="text-xs text-tertiary shrink-0">{item.subtitle}</span>
+                                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
                   ))}
-                </ul>
+                </div>
               )}
             </Dialog.Body>
           </Dialog.Content>
@@ -181,6 +299,33 @@ export function CommandPalette() {
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+function flattenPlaylists(bundles: LibraryPlaylistBundle[], libraryById: Map<Id, Library>): Array<{ playlist: Playlist; library: Library }> {
+  const out: Array<{ playlist: Playlist; library: Library }> = [];
+  for (const bundle of bundles) {
+    for (const tree of bundle.playlists) {
+      const library = libraryById.get(tree.playlist.libraryId);
+      if (!library) continue;
+      out.push({ playlist: tree.playlist, library });
+    }
+  }
+  return out;
+}
+
+function groupBySection(items: ResultItem[]): Array<{ kind: ResultKind; title: string; items: ResultItem[] }> {
+  const groups = new Map<ResultKind, ResultItem[]>();
+  for (const item of items) {
+    const list = groups.get(item.kind) ?? [];
+    list.push(item);
+    groups.set(item.kind, list);
+  }
+  return [...groups.entries()]
+    .map(([kind, sectionItems]) => {
+      const meta = SECTION_BY_KIND.get(kind);
+      return { kind, title: meta?.title ?? kind, order: meta?.order ?? Number.MAX_SAFE_INTEGER, items: sectionItems };
+    })
+    .sort((left, right) => left.order - right.order);
 }
 
 function scoreMatch(item: ResultItem, query: string): number {
