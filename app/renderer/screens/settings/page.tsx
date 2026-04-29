@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Panel } from '../../components/layout/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { SelectableRow } from '../../components/display/selectable-row';
 import { AppearanceSettingsPanel } from './appearance-settings-panel';
 import { OutputSettingsPanel } from '../../features/playback/output-settings-panel';
 import { OverlaySettingsPanel } from '../../features/assets/overlays/overlay-settings-panel';
 import { ImportExportPanel } from '../../features/deck/import-export-panel';
-import { SplitPanel } from '../../features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 
 type SettingsTabId = 'appearance' | 'output' | 'overlays' | 'deck';
 
@@ -23,8 +23,9 @@ export function SettingsScreen() {
     <section data-ui-region="settings-layout" className="h-full min-h-0 overflow-hidden">
       <SplitPanel.Panel splitId="settings-main" orientation="horizontal" className="h-full">
         <SplitPanel.Segment id="settings-left" defaultSize={240} minSize={180}>
-          <Panel as="aside" bordered="right" className="bg-primary/35 p-3">
-            <div className="flex flex-col gap-1">
+          <RecastPanel.Root className="h-full border-r border-secondary bg-primary/35">
+            <RecastPanel.Content className="p-3">
+              <div className="flex flex-col gap-1">
               {SETTINGS_TABS.map((tab) => (
                 <SelectableRow.Root
                   key={tab.id}
@@ -34,8 +35,9 @@ export function SettingsScreen() {
                   <SelectableRow.Label>{tab.title}</SelectableRow.Label>
                 </SelectableRow.Root>
               ))}
-            </div>
-          </Panel>
+              </div>
+            </RecastPanel.Content>
+          </RecastPanel.Root>
         </SplitPanel.Segment>
 
         <SplitPanel.Segment id="settings-right" defaultSize={960} minSize={320}>

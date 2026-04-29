@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { MediaAsset } from '@core/types';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
-import { useInspector } from './inspector-context';
-import { useWorkbench } from '../../contexts/workbench-context';
+import { useActiveEditorSource } from '../../contexts/canvas/use-active-editor-source';
+import { useInspector } from '../inspector/inspector-context';
 import { mapViewportPointToScene, type SceneViewportTransform } from './use-scene-stage-viewport';
 
 interface StageViewportControllerActions {
@@ -32,11 +32,11 @@ function parseDraggedMedia(raw: string): MediaAsset | null {
 }
 
 export function useStageViewportController(): StageViewportController {
-  const { state: { workbenchMode } } = useWorkbench();
+  const activeEditorSource = useActiveEditorSource();
   const { setInspectorTab } = useInspector();
   const { editScene, showScene } = useRenderScenes();
   const { createFromMedia } = useElements();
-  const editable = workbenchMode === 'deck-editor' || workbenchMode === 'overlay-editor' || workbenchMode === 'template-editor';
+  const editable = activeEditorSource.editable;
   const scene = editable ? editScene : showScene;
   const viewportRef = useRef<SceneViewportTransform>({
     viewportWidth: scene.width,

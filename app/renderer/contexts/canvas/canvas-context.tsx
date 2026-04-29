@@ -1,23 +1,24 @@
 import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { overlayToLayerElements } from '@core/presentation-layers';
 import { isLyricDeckItem } from '@core/deck-items';
-import type { ElementUpdateInput, Id, MediaAsset, Overlay, OverlayUpdateInput, Slide, SlideElement } from '@core/types';
+import type { ElementUpdateInput, Id, MediaAsset, Overlay, Slide, SlideElement } from '@core/types';
 import { applyVisualPayload, readVisualPayload } from '@core/element-payload';
 import { sortElements } from '../../utils/slides';
 import { useCast } from '../app-context';
 import { useNavigation } from '../navigation-context';
-import { useOverlayEditor, useDeckEditor, useTemplateEditor } from '../asset-editor/asset-editor-context';
-import { usePresentationLayers } from '../playback/playback-context';
+import { useDeckEditor } from '../asset-editor/asset-editor-context';
+import { usePresentationRenderLayer } from '../playback/playback-context';
 import { useSlides } from '../slide-context';
+import { useProjectContent } from '../use-project-content';
 import { useWorkbench } from '../workbench-context';
 import { useElementCommands } from '../element/use-element-commands';
 import { useElementHistory } from '../element/use-element-history';
 import { useElementInspectorSync } from '../element/use-element-inspector-sync';
 import { useElementSelection } from '../element/use-element-selection';
-import type { ElementContextValue } from '../element/element-context.types';
-import { cloneElements } from '../element/element-context-utils';
+import type { ElementContextValue } from '../../types/element-context.types';
+import { cloneElements } from '../../utils/element-context-utils';
 import { buildLayeredRenderScene, buildRenderScene, buildThumbnailScene } from '../../features/canvas/build-render-scene';
 import type { RenderScene, SceneSourcePolicy, SceneSurface } from '../../features/canvas/scene-types';
+import { useActiveEditorSource } from './use-active-editor-source';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -37,7 +38,8 @@ interface CanvasContextValue {
 
 // ─── Context ────────────────────────────────────────────────────────
 
-const CanvasContext = createContext<CanvasContextValue | null>(null);
+const CanvasElementsContext = createContext<ElementContextValue | null>(null);
+const CanvasScenesContext = createContext<RenderSceneValue | null>(null);
 
 // ─── Exports for scene utilities ────────────────────────────────────
 
@@ -56,17 +58,17 @@ export function selectThumbnailElements(policy: SceneSourcePolicy, effectiveElem
 // ─── Provider ───────────────────────────────────────────────────────
 
 export function CanvasProvider({ children }: { children: ReactNode }) {
-  const { mutate, mutatePatch, setStatusText } = useCast();
+  const { mutatePatch, setStatusText } = useCast();
   const { currentDeckItem } = useNavigation();
-  const { currentSlide, liveSlide, liveElements, slides, slideElementsById } = useSlides();
-  const { currentOverlay, updateOverlayDraft } = useOverlayEditor();
+  const { currentSlide, liveSlide, liveElements, slideElementsById } = useSlides();
+  const { slides: projectSlides, slideElementsBySlideId: projectSlideElementsBySlideId } = useProjectContent();
   const { getSlideElements, replaceSlideElements } = useDeckEditor();
-  const { currentTemplate, replaceTemplateElements } = useTemplateEditor();
-  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationLayers();
+  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationRenderLayer();
   const { state: { workbenchMode } } = useWorkbench();
-  const isOverlayEdit = workbenchMode === 'overlay-editor';
-  const isSlideEdit = workbenchMode === 'deck-editor';
-  const isTemplateEdit = workbenchMode === 'template-editor';
+  const activeEditorSource = useActiveEditorSource();
+  const isDeckEdit = activeEditorSource.mode === 'deck-editor';
+  const isOverlayEdit = activeEditorSource.mode === 'overlay-editor';
+  const isTemplateEdit = activeEditorSource.mode === 'template-editor';
 
   // ════════════════════════════════════════════════════════════════════
   // Element editing
@@ -77,18 +79,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   const previousSlideIdRef = useRef<Id | null>(null);
   const previousSlideElementsRef = useRef<SlideElement[]>([]);
 
-  const baseElements = useMemo(() => {
-    if (isOverlayEdit) {
-      if (!currentOverlay) return [];
-      return sortElements(overlayToLayerElements(currentOverlay));
-    }
-    if (isTemplateEdit) {
-      if (!currentTemplate) return [];
-      return sortElements(currentTemplate.elements);
-    }
-    if (!currentSlide) return [];
-    return sortElements(getSlideElements(currentSlide.id));
-  }, [currentOverlay, currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isTemplateEdit]);
+  const baseElements = useMemo(() => sortElements(activeEditorSource.elements), [activeEditorSource.elements]);
 
   const effectiveElements = useMemo(
     () => sortElements(baseElements.map((element) => ({ ...element, ...(draftElements[element.id] ?? {}) }))),
@@ -99,55 +90,55 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     const previousSlideId = previousSlideIdRef.current;
     const previousSlideElements = previousSlideElementsRef.current;
 
-    if (previousSlideId && (!isSlideEdit || previousSlideId !== currentSlide?.id)) {
+    const currentDeckSlideId = activeEditorSource.mode === 'deck-editor' ? activeEditorSource.meta.slideId : null;
+
+    if (previousSlideId && (!isDeckEdit || previousSlideId !== currentDeckSlideId)) {
       replaceSlideElements(previousSlideId, previousSlideElements);
       setDraftElements((current) => removeDraftPatchesForElements(current, previousSlideElements));
     }
 
-    if (!isSlideEdit) {
+    if (!isDeckEdit) {
       previousSlideIdRef.current = null;
       previousSlideElementsRef.current = [];
       return;
     }
 
-    previousSlideIdRef.current = currentSlide?.id ?? null;
+    previousSlideIdRef.current = currentDeckSlideId;
     previousSlideElementsRef.current = cloneElements(effectiveElements);
-  }, [currentSlide?.id, effectiveElements, isSlideEdit, replaceSlideElements]);
+  }, [activeEditorSource, effectiveElements, isDeckEdit, replaceSlideElements]);
 
   const selection = useElementSelection({ effectiveElements });
 
   useEffect(() => {
     if (!isOverlayEdit) return;
+    const currentOverlay = activeEditorSource.meta.overlay;
     if (!currentOverlay) {
       selection.clearSelection();
       return;
     }
     if (isOverlaySelectionValid(currentOverlay, selection.primarySelectedElementId)) return;
     selection.clearSelection();
-  }, [currentOverlay, isOverlayEdit, selection.clearSelection, selection.primarySelectedElementId]);
-
-  const stageOverlayElementUpdates = useCallback((updates: ElementUpdateInput[]) => {
-    if (!currentOverlay) return;
-    updateOverlayDraft(applyOverlayDraftUpdates(currentOverlay, updates));
-  }, [currentOverlay, updateOverlayDraft]);
+  }, [activeEditorSource, isOverlayEdit, selection.clearSelection, selection.primarySelectedElementId]);
 
   const saveElementUpdate = useCallback(async (input: ElementUpdateInput) => {
-    if (isOverlayEdit) { stageOverlayElementUpdates([input]); return; }
-    if (isTemplateEdit) { if (!currentTemplate) return; replaceTemplateElements(applyElementUpdates(currentTemplate.elements, [input])); return; }
-    if (isSlideEdit) { if (!currentSlide) return; replaceSlideElements(currentSlide.id, applyElementUpdates(getSlideElements(currentSlide.id), [input])); return; }
+    if (activeEditorSource.editable && activeEditorSource.hasSource) {
+      activeEditorSource.replaceElements(applyElementUpdates(activeEditorSource.elements, [input]));
+      return;
+    }
     await mutatePatch(() => window.castApi.updateElement(input));
-  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
+  }, [activeEditorSource, mutatePatch]);
 
   const saveElementUpdates = useCallback(async (updates: ElementUpdateInput[]) => {
     if (updates.length === 0) return;
-    if (isOverlayEdit) { stageOverlayElementUpdates(updates); return; }
-    if (isTemplateEdit) { if (!currentTemplate) return; replaceTemplateElements(applyElementUpdates(currentTemplate.elements, updates)); return; }
-    if (isSlideEdit) { if (!currentSlide) return; replaceSlideElements(currentSlide.id, applyElementUpdates(getSlideElements(currentSlide.id), updates)); return; }
+    if (activeEditorSource.editable && activeEditorSource.hasSource) {
+      activeEditorSource.replaceElements(applyElementUpdates(activeEditorSource.elements, updates));
+      return;
+    }
     await mutatePatch(() => {
       if (updates.length === 1) return window.castApi.updateElement(updates[0]);
       return window.castApi.updateElementsBatch(updates);
     });
-  }, [currentSlide, currentTemplate, getSlideElements, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, stageOverlayElementUpdates]);
+  }, [activeEditorSource, mutatePatch]);
 
   const inspector = useElementInspectorSync({
     selectedElementId: selection.primarySelectedElementId,
@@ -162,7 +153,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     baseElements,
     effectiveElements,
     currentSlide,
-    historyKey: isOverlayEdit ? currentOverlay?.id ?? null : isTemplateEdit ? currentTemplate?.id ?? null : currentSlide?.id ?? null,
+    historyKey: activeEditorSource.historyKey,
     selectedElementIds: selection.selectedElementIds,
     mutatePatch,
     setStatusText,
@@ -170,17 +161,15 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     setDraftElements,
     setCanvasInteracting,
     saveElementUpdates,
-    replaceElements: isSlideEdit && currentSlide
-      ? async (elements) => { replaceSlideElements(currentSlide.id, elements); }
-      : isTemplateEdit && currentTemplate
-        ? async (elements) => { replaceTemplateElements(elements); }
-        : undefined,
+    replaceElements: activeEditorSource.editable && activeEditorSource.hasSource
+      ? async (elements) => { activeEditorSource.replaceElements(elements); }
+      : undefined,
   });
 
   const deleteSelected = useCallback(async () => {
     const protectedLyricTextIds = new Set(getProtectedLyricTextSelectionIds(
       effectiveElements, selection.selectedElementIds,
-      isTemplateEdit ? currentTemplate?.kind === 'lyrics' : isLyricDeckItem(currentDeckItem),
+      isTemplateEdit ? activeEditorSource.meta.templateKind === 'lyrics' : isDeckEdit && isLyricDeckItem(currentDeckItem),
     ));
     const targetIds = getUnlockedSelectedElementIds(effectiveElements, selection.selectedElementIds)
       .filter((id) => !protectedLyricTextIds.has(id));
@@ -189,15 +178,8 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (targetIds.length === 0) return;
-    if (isOverlayEdit) {
-      if (!currentOverlay) return;
-      updateOverlayDraft({ id: currentOverlay.id, elements: currentOverlay.elements.filter((el) => !targetIds.includes(el.id)) });
-    } else if (isTemplateEdit) {
-      if (!currentTemplate) return;
-      replaceTemplateElements(currentTemplate.elements.filter((el) => !targetIds.includes(el.id)));
-    } else if (isSlideEdit) {
-      if (!currentSlide) return;
-      replaceSlideElements(currentSlide.id, getSlideElements(currentSlide.id).filter((el) => !targetIds.includes(el.id)));
+    if (activeEditorSource.editable && activeEditorSource.hasSource) {
+      activeEditorSource.replaceElements(activeEditorSource.elements.filter((el) => !targetIds.includes(el.id)));
     } else {
       history.pushHistorySnapshot();
       await mutatePatch(() => targetIds.length === 1 ? window.castApi.deleteElement(targetIds[0]) : window.castApi.deleteElementsBatch(targetIds));
@@ -205,7 +187,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     setStatusText('Deleted selected object(s)');
     selection.selectElements(selection.selectedElementIds.filter((id) => protectedLyricTextIds.has(id)));
     setDraftElements({});
-  }, [currentDeckItem, currentOverlay, currentSlide, currentTemplate, effectiveElements, getSlideElements, history, isOverlayEdit, isSlideEdit, isTemplateEdit, mutatePatch, replaceSlideElements, replaceTemplateElements, selection, setStatusText, updateOverlayDraft]);
+  }, [activeEditorSource, currentDeckItem, effectiveElements, history, isDeckEdit, isTemplateEdit, mutatePatch, selection, setStatusText]);
 
   const toggleElementVisibility = useCallback(async (id: Id, visible: boolean) => {
     const target = effectiveElements.find((el) => el.id === id);
@@ -227,7 +209,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   }, [effectiveElements, inspector, saveElementUpdate, selection.primarySelectedElementId]);
 
   const { createText, createShape, createFromMedia, createOverlay, toggleOverlay, importMedia, deleteMedia, changeMediaSrc } = useElementCommands({
-    currentSlide, currentDeckItem, currentTemplate, mutate, mutatePatch, setStatusText,
+    activeEditorSource, currentDeckItem, mutatePatch, setStatusText,
   });
 
   const elementsValue = useMemo<ElementContextValue>(() => ({
@@ -261,7 +243,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   }), [
     baseElements, createFromMedia, createOverlay, createShape, createText, deleteMedia,
     deleteSelected, draftElements, effectiveElements, history, importMedia, inspector,
-    isOverlayEdit, isSlideEdit, isTemplateEdit, isCanvasInteracting, selection,
+    isOverlayEdit, isTemplateEdit, isCanvasInteracting, selection,
     setDraftElements, toggleElementLock, toggleElementVisibility, toggleOverlay, changeMediaSrc,
   ]);
 
@@ -270,8 +252,8 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   // ════════════════════════════════════════════════════════════════════
 
   const editScene = useMemo(() => {
-    return buildRenderScene(isOverlayEdit || isTemplateEdit ? null : currentSlide, effectiveElements);
-  }, [currentSlide, effectiveElements, isOverlayEdit, isTemplateEdit]);
+    return buildRenderScene(activeEditorSource.frame, effectiveElements);
+  }, [activeEditorSource.frame, effectiveElements]);
 
   const showScene = useMemo(() => {
     const currentElements = currentSlide ? (slideElementsById.get(currentSlide.id) ?? []) : [];
@@ -319,11 +301,11 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   const hasLiveProgram = liveSlide !== null;
   const programScene = !hasLiveProgram ? liveScene : isEditing && frozenProgramScene ? frozenProgramScene : liveScene;
 
-  const slidesById = useMemo(() => {
-    const map = new Map<Id, (typeof slides)[number]>();
-    for (const slide of slides) map.set(slide.id, slide);
+  const projectSlidesById = useMemo(() => {
+    const map = new Map<Id, (typeof projectSlides)[number]>();
+    for (const slide of projectSlides) map.set(slide.id, slide);
     return map;
-  }, [slides]);
+  }, [projectSlides]);
 
   // Thumbnail scene cache keyed by slide id. Each entry remembers the slide
   // and elements references it was built from; returns the cached scene when
@@ -335,17 +317,17 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const cache = thumbnailCacheRef.current;
     for (const id of cache.keys()) {
-      if (!slidesById.has(id)) cache.delete(id);
+      if (!projectSlidesById.has(id)) cache.delete(id);
     }
-  }, [slidesById]);
+  }, [projectSlidesById]);
 
   const getThumbnailScene = useCallback((slideId: Id, surface: SceneSurface): RenderScene | null => {
-    const slide = slidesById.get(slideId);
+    const slide = projectSlidesById.get(slideId);
     if (!slide) return null;
     const policy = thumbnailSourcePolicy(surface, currentSlide?.id === slideId);
     const elements = policy === 'draft'
       ? (currentSlide?.id === slideId ? effectiveElements : getSlideElements(slideId))
-      : (slideElementsById.get(slideId) ?? []);
+      : (projectSlideElementsBySlideId.get(slideId) ?? []);
     const cache = thumbnailCacheRef.current;
     const cached = cache.get(slideId);
     if (cached && cached.slide === slide && cached.elements === elements) {
@@ -354,7 +336,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     const scene = buildThumbnailScene(slide, elements);
     cache.set(slideId, { slide, elements, scene });
     return scene;
-  }, [currentSlide?.id, effectiveElements, getSlideElements, slideElementsById, slidesById]);
+  }, [currentSlide?.id, effectiveElements, getSlideElements, projectSlideElementsBySlideId, projectSlidesById]);
 
   const scenesValue = useMemo<RenderSceneValue>(() => ({
     editScene, showScene, liveScene, programScene, getThumbnailScene, commitProgramScene,
@@ -364,28 +346,33 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   // Combined value
   // ════════════════════════════════════════════════════════════════════
 
-  const value = useMemo<CanvasContextValue>(
-    () => ({ elements: elementsValue, scenes: scenesValue }),
-    [elementsValue, scenesValue],
+  return (
+    <CanvasElementsContext.Provider value={elementsValue}>
+      <CanvasScenesContext.Provider value={scenesValue}>
+        {children}
+      </CanvasScenesContext.Provider>
+    </CanvasElementsContext.Provider>
   );
-
-  return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }
 
 // ─── Hooks ──────────────────────────────────────────────────────────
 
 export function useCanvas(): CanvasContextValue {
-  const ctx = useContext(CanvasContext);
-  if (!ctx) throw new Error('useCanvas must be used within CanvasProvider');
-  return ctx;
+  const elements = useElements();
+  const scenes = useRenderScenes();
+  return { elements, scenes };
 }
 
 export function useElements(): ElementContextValue {
-  return useCanvas().elements;
+  const ctx = useContext(CanvasElementsContext);
+  if (!ctx) throw new Error('useElements must be used within CanvasProvider');
+  return ctx;
 }
 
 export function useRenderScenes(): RenderSceneValue {
-  return useCanvas().scenes;
+  const ctx = useContext(CanvasScenesContext);
+  if (!ctx) throw new Error('useRenderScenes must be used within CanvasProvider');
+  return ctx;
 }
 
 // ─── Element helpers ────────────────────────────────────────────────
@@ -434,26 +421,4 @@ function removeDraftPatchesForElements(draftElements: Record<Id, Partial<SlideEl
     changed = true;
   }
   return changed ? nextDrafts : draftElements;
-}
-
-function applyOverlayDraftUpdates(overlay: Overlay, updates: ElementUpdateInput[]): OverlayUpdateInput {
-  if (updates.length === 0) return { id: overlay.id, elements: overlay.elements };
-  if (overlay.elements.length === 0) {
-    const fallbackUpdate = updates.find((update) => update.id === overlay.id);
-    if (!fallbackUpdate) return { id: overlay.id, elements: overlay.elements };
-    return {
-      id: overlay.id,
-      elements: [{
-        id: overlay.id, slideId: overlay.id,
-        type: overlay.type === 'shape' ? 'shape' : overlay.type === 'text' ? 'text' : overlay.type === 'video' ? 'video' : 'image',
-        x: fallbackUpdate.x ?? overlay.x, y: fallbackUpdate.y ?? overlay.y,
-        width: fallbackUpdate.width ?? overlay.width, height: fallbackUpdate.height ?? overlay.height,
-        rotation: fallbackUpdate.rotation ?? 0, opacity: fallbackUpdate.opacity ?? overlay.opacity,
-        zIndex: fallbackUpdate.zIndex ?? overlay.zIndex, layer: fallbackUpdate.layer ?? 'content',
-        payload: fallbackUpdate.payload ?? overlay.payload,
-        createdAt: overlay.createdAt, updatedAt: new Date().toISOString(),
-      }],
-    };
-  }
-  return { id: overlay.id, elements: applyElementUpdates(overlay.elements, updates) };
 }

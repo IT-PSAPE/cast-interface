@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import type { PaneId, SplitId } from './workbench-panel-layout';
-import { usePanelRoute } from './split-panel';
+import type { PaneId, SplitId } from '@renderer/components/layout/panel-split/workbench-panel-layout';
+import { usePanelRoute } from '@renderer/components/layout/panel-split/split-panel';
 import { type PanelToggleButton } from './app-toolbar';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
@@ -28,6 +28,10 @@ const PANEL_TOGGLE_CONFIGS: Record<WorkbenchMode, PanelToggleConfig[]> = {
     { id: 'right', label: 'Right', splitId: 'editor-main', paneId: 'editor-right' },
   ],
   'template-editor': [
+    { id: 'left', label: 'Left', splitId: 'editor-main', paneId: 'editor-left' },
+    { id: 'right', label: 'Right', splitId: 'editor-main', paneId: 'editor-right' },
+  ],
+  'stage-editor': [
     { id: 'left', label: 'Left', splitId: 'editor-main', paneId: 'editor-left' },
     { id: 'right', label: 'Right', splitId: 'editor-main', paneId: 'editor-right' },
   ],

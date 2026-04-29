@@ -107,15 +107,15 @@ function AccordionItem({ value, children, className, ref, ...props }: AccordionI
 
 // ─── Trigger ────────────────────────────────────────────
 
-type AccordionTriggerProps = HTMLAttributes<HTMLButtonElement>;
+type AccordionTriggerProps = HTMLAttributes<HTMLDivElement>;
 
 function AccordionTrigger({ children, className, onClick, ...props }: AccordionTriggerProps) {
     const { toggle } = useAccordion();
     const { value, isOpen } = useAccordionItem();
 
     return (
-        <button
-            type="button"
+        <div
+            role="button"
             className={cn("w-full cursor-pointer", className)}
             data-state={isOpen ? "open" : "closed"}
             onClick={(e) => {
@@ -125,7 +125,7 @@ function AccordionTrigger({ children, className, onClick, ...props }: AccordionT
             {...props}
         >
             {children}
-        </button>
+        </div>
     );
 }
 
@@ -137,12 +137,8 @@ function AccordionContent({ children, className, ...props }: AccordionContentPro
     const { isOpen } = useAccordionItem();
 
     return (
-        <div
-            className={cn("grid transition-[grid-template-rows] duration-200 ease-out", isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
-            data-state={isOpen ? "open" : "closed"}
-            {...props}
-        >
-            <div className={cn("overflow-hidden", className)}>
+        <div className={cn("overflow-clip", isOpen ? "h-fit" : "h-0")} >
+            <div className={cn("overflow-hidden", className)} {...props}>
                 {children}
             </div>
         </div>

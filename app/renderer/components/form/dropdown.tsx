@@ -194,13 +194,13 @@ function Panel({ children, className, placement }: PanelProps) {
   const ctx = useDropdown();
 
   return (
-    <Popover anchor={ctx.triggerRef.current} open={ctx.open} onClose={ctx.onClose} placement={placement} offset={4}>
+    <Popover anchor={ctx.triggerRef.current} open={ctx.open} onClose={ctx.onClose} placement={placement} offset={4} axisLock>
       <div
         ref={ctx.panelRef}
         role="menu"
         onKeyDown={ctx.handleKeyDown}
         className={cn('min-w-30 rounded-md border border-primary bg-primary shadow-lg max-h-60 overflow-y-auto p-1', className)}
-        // style={{ minWidth: ctx.triggerRef.current?.offsetWidth }}
+      // style={{ minWidth: ctx.triggerRef.current?.offsetWidth }}
       >
         {children}
       </div>
@@ -234,12 +234,7 @@ function Item({ children, onClick, disabled = false, className }: ItemProps) {
       role="menuitem"
       onClick={handleClick}
       onPointerDown={(e) => e.preventDefault()}
-      className={cn(
-        'flex items-center gap-2 rounded px-2 py-1.5 text-sm select-none text-secondary data-[highlighted]:bg-secondary hover:bg-tertiary data-[highlighted]:text-primary',
-        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-        className,
-      )}
-    >
+      className={cn('w-full flex gap-2 rounded px-2 py-1.5 text-sm text-left select-none text-secondary data-[highlighted]:bg-secondary hover:bg-tertiary data-[highlighted]:text-primary', disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer', className)}>
       {children}
     </button>
   );

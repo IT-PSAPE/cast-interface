@@ -1,7 +1,6 @@
+import { useEffect, useRef } from 'react';
 import type { DeckItem, Id, Slide } from '@core/types';
-import { Ellipsis } from 'lucide-react';
-import { EditableField } from '../../components/form/editable-field';
-import { Button } from '../../components/controls/button';
+import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { SelectableRow } from '../../components/display/selectable-row';
@@ -10,8 +9,9 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { useResourceDrawer } from '../workbench/resource-drawer-context';
 import { buildThumbnailScene } from '../canvas/build-render-scene';
 import { SceneStage } from '../canvas/scene-stage';
-import { BinPanelLayout } from '../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useDeckBin } from './use-deck-bin';
+import { writeDeckItemDragData } from '../../utils/deck-item-drag';
 
 interface DeckBinPanelProps {
   filterText: string;
@@ -22,8 +22,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
   const {
     filteredDeckItems,
-    menu,
-    menuItems,
     editingDeckItemId,
     browseDeckItem,
     isDetachedDeckBrowser,
@@ -36,9 +34,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
     <BinPanelLayout
       gridItemSize={gridItemSize}
       mode={drawerViewMode}
-      menuState={menu.menuState}
-      menuItems={menuItems}
-      onCloseMenu={menu.close}
     >
       {filteredDeckItems.map((presentation) => {
         const shared = {
@@ -48,8 +43,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
           isSelected: isDetachedDeckBrowser && currentDrawerDeckItemId === presentation.id,
           isEditing: editingDeckItemId === presentation.id,
           onOpen: browseDeckItem,
-          onOpenMenu: menu.openFromButton,
-          onContextMenu: menu.openFromEvent,
           onRename: handleRename,
         };
         return drawerViewMode === 'list'
@@ -66,23 +59,22 @@ interface DeckItemProps {
   isSelected: boolean;
   isEditing: boolean;
   onOpen: (itemId: Id) => void;
-  onOpenMenu: (button: HTMLElement, data: Id) => void;
-  onContextMenu: (event: React.MouseEvent, data: Id) => void;
   onRename: (itemId: Id, title: string) => void;
 }
 
-function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
+  const renameRef = useRef<RenameFieldHandle>(null);
+
+  useEffect(() => {
+    if (isEditing) renameRef.current?.startEditing();
+  }, [isEditing]);
+
   function handleOpen() {
     onOpen(item.id);
   }
 
-  function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    onOpenMenu(event.currentTarget, item.id);
-  }
-
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, item.id);
+  function handleDragStart(event: React.DragEvent<HTMLElement>) {
+    writeDeckItemDragData(event.dataTransfer, item.id);
   }
 
   function handleRename(title: string) {
@@ -90,47 +82,39 @@ function DeckItemRow({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, 
   }
 
   return (
-    <div className="group" onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
       <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
         <SelectableRow.Leading>
           <DeckItemIcon entity={item} size={14} strokeWidth={1.75} />
         </SelectableRow.Leading>
         <SelectableRow.Label>
-          <EditableField
-            value={item.title}
-            onCommit={handleRename}
-            editing={isEditing}
-            className="min-w-0 truncate text-sm text-secondary"
-          />
+          <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
         </SelectableRow.Label>
         <SelectableRow.Trailing>
           <span className="text-xs text-tertiary">{slides.length} {slides.length === 1 ? 'slide' : 'slides'}</span>
-          <Button.Icon label="Deck item options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
-            <Ellipsis size={14} />
-          </Button.Icon>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
     </div>
   );
 }
 
-function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu, onContextMenu, onRename }: DeckItemProps) {
+function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onRename }: DeckItemProps) {
   const { slideElementsBySlideId } = useProjectContent();
   const firstSlide = slides[0] ?? null;
   const firstSlideElements = firstSlide ? slideElementsBySlideId.get(firstSlide.id) ?? [] : [];
   const scene = firstSlide ? buildThumbnailScene(firstSlide, firstSlideElements) : null;
+  const renameRef = useRef<RenameFieldHandle>(null);
+
+  useEffect(() => {
+    if (isEditing) renameRef.current?.startEditing();
+  }, [isEditing]);
 
   function handleOpen() {
     onOpen(item.id);
   }
 
-  function handleMenuClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    onOpenMenu(event.currentTarget, item.id);
-  }
-
-  function handleContextMenu(event: React.MouseEvent<HTMLElement>) {
-    onContextMenu(event, item.id);
+  function handleDragStart(event: React.DragEvent<HTMLElement>) {
+    writeDeckItemDragData(event.dataTransfer, item.id);
   }
 
   function handleRename(title: string) {
@@ -138,26 +122,18 @@ function DeckItemTile({ item, slides, isSelected, isEditing, onOpen, onOpenMenu,
   }
 
   return (
-    <div className="group cursor-pointer" onContextMenu={handleContextMenu}>
+    <div className="group cursor-grab" draggable onDragStart={handleDragStart}>
       <Thumbnail.Tile onClick={handleOpen} selected={isSelected}>
         <Thumbnail.Body>
-          <>
-            <ScenePreview scene={scene} />
-            <div className="absolute right-1 top-1 hidden group-hover:block">
-              <Button.Icon label="Deck item options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-                <Ellipsis />
-              </Button.Icon>
-            </div>
-          </>
+          <ScenePreview scene={scene} />
         </Thumbnail.Body>
         <Thumbnail.Caption>
           <div className="flex items-center gap-2">
             <DeckItemIcon entity={item} className="shrink-0 text-tertiary" size={14} strokeWidth={1.75} />
-            <EditableField
+            <RenameField
+              ref={renameRef}
               value={item.title}
-              onCommit={handleRename}
-              editing={isEditing}
-              className="min-w-0 truncate text-sm text-secondary"
+              onValueChange={handleRename} className="label-xs"
             />
           </div>
         </Thumbnail.Caption>

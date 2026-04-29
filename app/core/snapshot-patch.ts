@@ -1,4 +1,4 @@
-import type { AppSnapshot, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Template } from './types';
+import type { AppSnapshot, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Stage, Template } from './types';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -30,6 +30,7 @@ export interface SnapshotPatch {
     mediaAssets?: MediaAsset[];
     overlays?: Overlay[];
     templates?: Template[];
+    stages?: Stage[];
     libraryBundles?: LibraryPlaylistBundle[];
   };
   deletes: {
@@ -41,8 +42,32 @@ export interface SnapshotPatch {
     mediaAssets?: Id[];
     overlays?: Id[];
     templates?: Id[];
+    stages?: Id[];
   };
 }
+
+type SnapshotTableKey =
+  | 'libraries'
+  | 'presentations'
+  | 'lyrics'
+  | 'slides'
+  | 'slideElements'
+  | 'mediaAssets'
+  | 'overlays'
+  | 'templates'
+  | 'stages';
+
+type SnapshotTableRecordMap = {
+  libraries: Library;
+  presentations: Presentation;
+  lyrics: Lyric;
+  slides: Slide;
+  slideElements: SlideElement;
+  mediaAssets: MediaAsset;
+  overlays: Overlay;
+  templates: Template;
+  stages: Stage;
+};
 
 // ─── Utilities ──────────────────────────────────────────────────────
 
@@ -67,9 +92,36 @@ export function applyPatch(snapshot: AppSnapshot, patch: SnapshotPatch): AppSnap
     mediaAssets: mergeTable(snapshot.mediaAssets, patch.upserts.mediaAssets, patch.deletes.mediaAssets),
     overlays: mergeTable(snapshot.overlays, patch.upserts.overlays, patch.deletes.overlays),
     templates: mergeTable(snapshot.templates, patch.upserts.templates, patch.deletes.templates),
+    stages: mergeTable(snapshot.stages, patch.upserts.stages, patch.deletes.stages),
     libraryBundles: patch.upserts.libraryBundles ?? snapshot.libraryBundles,
   };
   return next;
+}
+
+/**
+ * Build the inverse of a SnapshotPatch relative to the pre-patch snapshot.
+ * The returned patch restores the previous state when applied to the post-patch
+ * snapshot. This lets the renderer keep compact undo history entries instead of
+ * retaining entire AppSnapshot objects for patch-based mutations.
+ */
+export function invertPatch(snapshot: AppSnapshot, patch: SnapshotPatch): SnapshotPatch {
+  const inverse: SnapshotPatch = createEmptyPatch(patch.version);
+
+  invertTable(snapshot.libraries, patch.upserts.libraries, patch.deletes.libraries, inverse, 'libraries');
+  invertTable(snapshot.presentations, patch.upserts.presentations, patch.deletes.presentations, inverse, 'presentations');
+  invertTable(snapshot.lyrics, patch.upserts.lyrics, patch.deletes.lyrics, inverse, 'lyrics');
+  invertTable(snapshot.slides, patch.upserts.slides, patch.deletes.slides, inverse, 'slides');
+  invertTable(snapshot.slideElements, patch.upserts.slideElements, patch.deletes.slideElements, inverse, 'slideElements');
+  invertTable(snapshot.mediaAssets, patch.upserts.mediaAssets, patch.deletes.mediaAssets, inverse, 'mediaAssets');
+  invertTable(snapshot.overlays, patch.upserts.overlays, patch.deletes.overlays, inverse, 'overlays');
+  invertTable(snapshot.templates, patch.upserts.templates, patch.deletes.templates, inverse, 'templates');
+  invertTable(snapshot.stages, patch.upserts.stages, patch.deletes.stages, inverse, 'stages');
+
+  if (patch.upserts.libraryBundles) {
+    inverse.upserts.libraryBundles = snapshot.libraryBundles;
+  }
+
+  return inverse;
 }
 
 function mergeTable<T extends { id: Id }>(current: T[], upserts: T[] | undefined, deletes: Id[] | undefined): T[] {
@@ -100,6 +152,103 @@ function mergeTable<T extends { id: Id }>(current: T[], upserts: T[] | undefined
   }
 
   return next;
+}
+
+function invertTable<K extends SnapshotTableKey>(
+  current: SnapshotTableRecordMap[K][],
+  upserts: SnapshotTableRecordMap[K][] | undefined,
+  deletes: Id[] | undefined,
+  inverse: SnapshotPatch,
+  key: K,
+): void {
+  const currentById = new Map(current.map((record) => [record.id, record] as const));
+
+  if (upserts) {
+    for (const record of upserts) {
+      const previous = currentById.get(record.id);
+      if (previous) {
+        appendInverseUpsert(inverse, key, previous);
+      } else {
+        appendInverseDelete(inverse, key, record.id);
+      }
+    }
+  }
+
+  if (deletes) {
+    for (const id of deletes) {
+      const previous = currentById.get(id);
+      if (!previous) continue;
+      appendInverseUpsert(inverse, key, previous);
+    }
+  }
+}
+
+function appendInverseUpsert<K extends SnapshotTableKey>(
+  inverse: SnapshotPatch,
+  key: K,
+  value: SnapshotTableRecordMap[K],
+): void {
+  switch (key) {
+    case 'libraries':
+      inverse.upserts.libraries = [...(inverse.upserts.libraries ?? []), value as Library];
+      return;
+    case 'presentations':
+      inverse.upserts.presentations = [...(inverse.upserts.presentations ?? []), value as Presentation];
+      return;
+    case 'lyrics':
+      inverse.upserts.lyrics = [...(inverse.upserts.lyrics ?? []), value as Lyric];
+      return;
+    case 'slides':
+      inverse.upserts.slides = [...(inverse.upserts.slides ?? []), value as Slide];
+      return;
+    case 'slideElements':
+      inverse.upserts.slideElements = [...(inverse.upserts.slideElements ?? []), value as SlideElement];
+      return;
+    case 'mediaAssets':
+      inverse.upserts.mediaAssets = [...(inverse.upserts.mediaAssets ?? []), value as MediaAsset];
+      return;
+    case 'overlays':
+      inverse.upserts.overlays = [...(inverse.upserts.overlays ?? []), value as Overlay];
+      return;
+    case 'templates':
+      inverse.upserts.templates = [...(inverse.upserts.templates ?? []), value as Template];
+      return;
+    case 'stages':
+      inverse.upserts.stages = [...(inverse.upserts.stages ?? []), value as Stage];
+      return;
+  }
+}
+
+function appendInverseDelete(inverse: SnapshotPatch, key: SnapshotTableKey, id: Id): void {
+  switch (key) {
+    case 'libraries':
+      inverse.deletes.libraries = [...(inverse.deletes.libraries ?? []), id];
+      return;
+    case 'presentations':
+      inverse.deletes.presentations = [...(inverse.deletes.presentations ?? []), id];
+      return;
+    case 'lyrics':
+      inverse.deletes.lyrics = [...(inverse.deletes.lyrics ?? []), id];
+      return;
+    case 'slides':
+      inverse.deletes.slides = [...(inverse.deletes.slides ?? []), id];
+      return;
+    case 'slideElements':
+      inverse.deletes.slideElements = [...(inverse.deletes.slideElements ?? []), id];
+      return;
+    case 'mediaAssets':
+      inverse.deletes.mediaAssets = [...(inverse.deletes.mediaAssets ?? []), id];
+      return;
+    case 'overlays':
+      inverse.deletes.overlays = [...(inverse.deletes.overlays ?? []), id];
+      return;
+    case 'templates':
+      inverse.deletes.templates = [...(inverse.deletes.templates ?? []), id];
+      return;
+    case 'stages':
+      inverse.deletes.stages = [...(inverse.deletes.stages ?? []), id];
+      return;
+  }
 }
 
 export function isSnapshotPatch(value: unknown): value is SnapshotPatch {

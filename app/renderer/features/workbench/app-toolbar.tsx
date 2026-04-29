@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import { PanelBottom, PanelLeft, PanelRight, Settings } from 'lucide-react';
 import { useWorkbench } from '../../contexts/workbench-context';
 import type { WorkbenchMode } from '../../types/ui';
-import { Button } from '@renderer/components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
@@ -41,7 +41,7 @@ export interface PanelToggleButton {
 export function AppToolbar() {
   const { state: { workbenchMode }, actions: { setWorkbenchMode } } = useWorkbench();
   const panelToggles = useWorkbenchPanelToggles();
-  const { state: { outputState }, actions: { toggleAudienceOutput } } = useNdi();
+  const { state: { outputState }, actions: { toggleAudienceOutput, toggleStageOutput } } = useNdi();
 
   const activePanelIds = useMemo(
     () => panelToggles.filter((toggle) => toggle.active).map((toggle) => toggle.id),
@@ -76,13 +76,14 @@ export function AppToolbar() {
           <SegmentedControl.Label value="deck-editor">Edit</SegmentedControl.Label>
           <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
           <SegmentedControl.Label value="template-editor">Templates</SegmentedControl.Label>
+          <SegmentedControl.Label value="stage-editor">Stage</SegmentedControl.Label>
         </SegmentedControl>
       </div>
 
       <div aria-hidden="true" className="min-w-6 flex-1 self-stretch" style={dragStyle} />
 
       <div className="flex items-center gap-2" style={noDragStyle}>
-        <Button
+        <ReacstButton
           variant="ghost"
           onClick={toggleAudienceOutput}
           type="button"
@@ -91,7 +92,17 @@ export function AppToolbar() {
         >
           <span className={outputDotStyles({ active: outputState.audience })} aria-hidden="true" />
           <span className="text-primary">Audience</span>
-        </Button>
+        </ReacstButton>
+        <ReacstButton
+          variant="ghost"
+          onClick={toggleStageOutput}
+          type="button"
+          className={outputBorderStyles({ active: outputState.stage })}
+          aria-pressed={outputState.stage}
+        >
+          <span className={outputDotStyles({ active: outputState.stage })} aria-hidden="true" />
+          <span className="text-primary">Stage</span>
+        </ReacstButton>
 
         <SegmentedControl
           label="Panel visibility"
@@ -102,9 +113,9 @@ export function AppToolbar() {
           {panelToggles.map(renderPanelToggleItem)}
         </SegmentedControl>
 
-        <Button.Icon label="Settings" onClick={handleOpenSettings}>
+        <ReacstButton.Icon label="Settings" onClick={handleOpenSettings}>
           <Settings />
-        </Button.Icon>
+        </ReacstButton.Icon>
       </div>
     </div>
   );
@@ -120,7 +131,7 @@ function renderPanelToggleItem(toggle: PanelToggleButton) {
 }
 
 function isWorkbenchMode(value: string): value is WorkbenchMode {
-  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'settings';
+  return value === 'show' || value === 'deck-editor' || value === 'overlay-editor' || value === 'template-editor' || value === 'stage-editor' || value === 'settings';
 }
 
 function panelToggleIcon(id: PanelToggleButton['id']) {

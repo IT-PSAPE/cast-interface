@@ -1,30 +1,21 @@
 import { useMemo, useState } from 'react';
 import type { DeckItem, Id } from '@core/types';
-import type { ContextMenuItem } from '../../components/overlays/context-menu';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
 import { filterByText } from '../../utils/filter-by-text';
-import { buildDeckItemMenuItems } from './build-deck-menu-items';
 import { useLibraryPanelManagement } from '../library/use-library-panel-management';
 import { useDeckBinSort, compareByKey, type BinSort, type DeckBinSortKey } from '../workbench/use-bin-sort';
 
 export function useDeckBin(filterText: string) {
   const {
     currentDrawerDeckItemId,
-    currentPlaylistId,
-    currentLibraryBundle,
     browseDeckItem,
     isDetachedDeckBrowser,
   } = useNavigation();
   const { deckItems, slidesByDeckItemId } = useProjectContent();
   const {
     renameDeckItem,
-    deleteDeckItem,
-    moveDeckItem,
-    movePlaylistEntryToSegment,
   } = useLibraryPanelManagement();
-  const menu = useContextMenuState<Id>();
   const [editingDeckItemId, setEditingPresentationId] = useState<Id | null>(null);
   const { sort } = useDeckBinSort();
 
@@ -37,20 +28,6 @@ export function useDeckBin(filterText: string) {
     return sortDeckItems(filtered, sort, slidesByDeckItemId);
   }, [deckItems, filterText, slidesByDeckItemId, sort]);
 
-  const menuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!menu.menuState) return [];
-    return buildDeckItemMenuItems({
-      itemId: menu.menuState.data,
-      scope: 'library',
-      selectedTree: currentLibraryBundle?.playlists.find((tree) => tree.playlist.id === currentPlaylistId) ?? null,
-      itemIds: deckItems.map((item) => item.id),
-      moveDeckItem,
-      movePlaylistEntryToSegment,
-      beginRenameDeckItem: setEditingPresentationId,
-      deleteDeckItem,
-    });
-  }, [browseDeckItem, deckItems, currentLibraryBundle, currentPlaylistId, deleteDeckItem, menu.menuState, moveDeckItem, movePlaylistEntryToSegment]);
-
   function handleRename(itemId: Id, title: string) {
     void renameDeckItem(itemId, title);
     setEditingPresentationId(null);
@@ -58,8 +35,6 @@ export function useDeckBin(filterText: string) {
 
   return {
     filteredDeckItems,
-    menu,
-    menuItems,
     editingDeckItemId,
     browseDeckItem,
     isDetachedDeckBrowser,

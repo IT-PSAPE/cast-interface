@@ -17,6 +17,9 @@ export type ShortcutActionId =
   | 'pasteSelection'
   | 'undo'
   | 'redo'
+  | 'globalUndo'
+  | 'globalRedo'
+  | 'openCommandPalette'
   | 'setPlaylistBrowserMode'
   | 'setSlideBrowserMode'
   | 'takeSlide'
@@ -74,6 +77,33 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     key: 'z',
     modifiers: { meta: true, shift: false },
     accelerator: { mac: 'Cmd+Z', other: 'Ctrl+Z' },
+  },
+  {
+    id: 'globalRedo',
+    label: 'Redo (app)',
+    category: 'editing',
+    context: 'always',
+    key: 'z',
+    modifiers: { meta: true, shift: true },
+    accelerator: { mac: 'Cmd+Shift+Z', other: 'Ctrl+Shift+Z' },
+  },
+  {
+    id: 'globalUndo',
+    label: 'Undo (app)',
+    category: 'editing',
+    context: 'always',
+    key: 'z',
+    modifiers: { meta: true, shift: false },
+    accelerator: { mac: 'Cmd+Z', other: 'Ctrl+Z' },
+  },
+  {
+    id: 'openCommandPalette',
+    label: 'Open command palette',
+    category: 'navigation',
+    context: 'always',
+    key: 'k',
+    modifiers: { meta: true },
+    accelerator: { mac: 'Cmd+K', other: 'Ctrl+K' },
   },
   {
     id: 'setPlaylistBrowserMode',

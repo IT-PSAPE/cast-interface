@@ -4,7 +4,7 @@ import type {
   DeckBundleInspection,
 } from '@core/types';
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 
 interface BrokenReferenceReviewListProps {
   inspection: DeckBundleInspection;
@@ -58,9 +58,9 @@ function BrokenReferenceRow({
         </SegmentedControl>
 
         {action === 'replace' ? (
-          <Button variant="ghost" onClick={handleChooseReplacement}>
+          <ReacstButton variant="ghost" onClick={handleChooseReplacement}>
             {replacementPath ? 'Change File' : 'Choose File'}
-          </Button>
+          </ReacstButton>
         ) : null}
       </div>
 

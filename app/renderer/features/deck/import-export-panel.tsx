@@ -1,4 +1,4 @@
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';
 import { DeckBundleSelectionList } from './deck-bundle-selection-list';
 import { useDeckImportExport } from './use-deck-import-export';
@@ -36,11 +36,11 @@ export function ImportExportPanel() {
         <header className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-primary">Export Deck</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={actions.selectAllVisible} disabled={state.deckItems.length === 0}>Select Visible</Button>
-            <Button variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</Button>
-            <Button onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
+            <ReacstButton variant="ghost" onClick={actions.selectAllVisible} disabled={state.deckItems.length === 0}>Select Visible</ReacstButton>
+            <ReacstButton variant="ghost" onClick={actions.clearSelection} disabled={!hasSelection}>Clear</ReacstButton>
+            <ReacstButton onClick={handleExportClick} disabled={!hasSelection || state.exportInFlight}>
               {state.exportInFlight ? 'Exporting...' : `Export Selected${hasSelection ? ` (${state.selectedCount})` : ''}`}
-            </Button>
+            </ReacstButton>
           </div>
         </header>
         <div className="flex flex-col gap-3">
@@ -59,13 +59,13 @@ export function ImportExportPanel() {
         <header className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-primary">Import Bundle</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</Button>
-            <Button variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
+            <ReacstButton variant="ghost" onClick={handleImportClearClick} disabled={!hasInspection && !state.importPath}>Clear</ReacstButton>
+            <ReacstButton variant="ghost" onClick={handleImportChooseClick} disabled={state.importInFlight}>
               {state.importInFlight && !hasInspection ? 'Loading...' : 'Choose Bundle'}
-            </Button>
-            <Button onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
+            </ReacstButton>
+            <ReacstButton onClick={handleImportFinalizeClick} disabled={!canFinalizeImport}>
               {state.importInFlight && hasInspection ? 'Importing...' : 'Import'}
-            </Button>
+            </ReacstButton>
           </div>
         </header>
         {!hasInspection ? (

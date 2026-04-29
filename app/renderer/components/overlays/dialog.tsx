@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
-import { Button } from '@renderer/components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
 import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayBackdrop, OverlayClose, OverlayPortal, OverlayTrigger } from './overlay-primitives';
@@ -198,13 +198,13 @@ function Description({ children, className, ...props }: HTMLAttributes<HTMLParag
   );
 }
 
-function CloseButton({ className, label = 'Close', ...props }: Omit<ComponentProps<typeof Button.Icon>, 'children' | 'label'> & { label?: string }) {
+function CloseButton({ className, label = 'Close', ...props }: Omit<ComponentProps<typeof ReacstButton.Icon>, 'children' | 'label'> & { label?: string }) {
   const { actions } = useDialog();
 
   return (
-    <Button.Icon {...props} label={label} variant="ghost" onClick={actions.close} className={cn('shrink-0', className)}>
+    <ReacstButton.Icon {...props} label={label} variant="ghost" onClick={actions.close} className={cn('shrink-0', className)}>
       <X/>
-    </Button.Icon>
+    </ReacstButton.Icon>
   );
 }
 

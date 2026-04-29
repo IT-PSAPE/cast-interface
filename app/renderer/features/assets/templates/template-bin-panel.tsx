@@ -1,12 +1,11 @@
-import type { Id, Template } from '@core/types';
-import { Ellipsis } from 'lucide-react';
-import { Button } from '../../../components/controls/button';
+import { memo, useMemo } from 'react';
+import type { Template } from '@core/types';
+import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
 import { buildRenderScene } from '../../canvas/build-render-scene';
-import { SceneStage } from '../../canvas/scene-stage';
-import { BinPanelLayout } from '../../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useTemplateBin } from './use-template-bin';
 
@@ -17,29 +16,13 @@ interface TemplateBinPanelProps {
 
 export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
-  const { filteredTemplates, menu, menuItems, currentTemplateId, handleOpenTemplate } = useTemplateBin(filterText);
+  const { filteredTemplates, handleApplyTemplate } = useTemplateBin(filterText);
 
   return (
-    <BinPanelLayout
-      gridItemSize={gridItemSize}
-      mode={drawerViewMode}
-      menuState={menu.menuState}
-      menuItems={menuItems}
-      onCloseMenu={menu.close}
-    >
-      {filteredTemplates.map((template, index) => {
-        const shared = {
-          key: template.id,
-          template,
-          index,
-          isSelected: template.id === currentTemplateId,
-          onOpen: handleOpenTemplate,
-          onOpenMenu: menu.openFromButton,
-        };
-        return drawerViewMode === 'list'
-          ? <TemplateRow {...shared} />
-          : <TemplateTile {...shared} />;
-      })}
+    <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
+      {filteredTemplates.map((template, index) => (
+        <TemplateBinItem key={template.id} template={template} index={index} mode={drawerViewMode} onApply={handleApplyTemplate} />
+      ))}
     </BinPanelLayout>
   );
 }
@@ -47,63 +30,46 @@ export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelP
 interface TemplateItemProps {
   template: Template;
   index: number;
-  isSelected: boolean;
-  onOpen: (template: Template) => void;
-  onOpenMenu: (button: HTMLElement, data: Id) => void;
+  onApply: (template: Template) => void;
 }
 
-function TemplateRow({ template, index, isSelected, onOpen, onOpenMenu }: TemplateItemProps) {
-  function handleOpen() {
-    onOpen(template);
-  }
+function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: NonNullable<ReturnType<typeof useResourceDrawer>['drawerViewMode']> }) {
+  if (mode === 'list') return <TemplateRow {...props} />;
+  return <TemplateTile {...props} />;
+}
 
-  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onOpenMenu(e.currentTarget, template.id);
+function TemplateRowImpl({ template, index, onApply }: TemplateItemProps) {
+  function handleClick() {
+    onApply(template);
   }
 
   return (
-    <div className="group">
-      <SelectableRow.Root selected={isSelected} onClick={handleOpen} className="h-9">
-        <SelectableRow.Leading>
-          <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
-        </SelectableRow.Leading>
-        <SelectableRow.Label>{template.name}</SelectableRow.Label>
-        <SelectableRow.Trailing>
-          <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
-          <Button.Icon label="Template options" variant="ghost" onClick={handleMenuClick} className="opacity-0 group-hover:opacity-100">
-            <Ellipsis size={14} />
-          </Button.Icon>
-        </SelectableRow.Trailing>
-      </SelectableRow.Root>
-    </div>
+    <SelectableRow.Root selected={false} onClick={handleClick} className="h-9">
+      <SelectableRow.Leading>
+        <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{template.name}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
   );
 }
 
-function TemplateTile({ template, index, isSelected, onOpen, onOpenMenu }: TemplateItemProps) {
-  const scene = buildRenderScene(null, template.elements);
+function TemplateTileImpl({ template, index, onApply }: TemplateItemProps) {
+  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
 
-  function handleOpen() {
-    onOpen(template);
-  }
-
-  function handleMenuClick(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onOpenMenu(e.currentTarget, template.id);
+  function handleClick() {
+    onApply(template);
   }
 
   return (
-    <Thumbnail.Tile onClick={handleOpen} onDoubleClick={handleOpen} selected={isSelected}>
+    <Thumbnail.Tile onClick={handleClick}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
+          <LazySceneStage scene={scene} surface="list" className="absolute inset-0" />
         </SceneFrame>
       </Thumbnail.Body>
-      <Thumbnail.Overlay position="top-right" className="hidden group-hover:block">
-        <Button.Icon label="Template options" onClick={handleMenuClick} className="border-primary bg-tertiary/80">
-          <Ellipsis />
-        </Button.Icon>
-      </Thumbnail.Overlay>
       <Thumbnail.Caption>
         <div className="flex items-center gap-2">
           <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
@@ -113,3 +79,6 @@ function TemplateTile({ template, index, isSelected, onOpen, onOpenMenu }: Templ
     </Thumbnail.Tile>
   );
 }
+
+const TemplateRow = memo(TemplateRowImpl);
+const TemplateTile = memo(TemplateTileImpl);

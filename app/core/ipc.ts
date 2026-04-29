@@ -9,10 +9,13 @@ import type {
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
+  NdiFrameTelemetry,
   NdiOutputName,
   NdiOutputState,
   OverlayCreateInput,
   OverlayUpdateInput,
+  StageCreateInput,
+  StageUpdateInput,
   TemplateCreateInput,
   TemplateUpdateInput,
   SlideCreateInput,
@@ -27,6 +30,7 @@ export interface MainApi {
   getInlineWindowMenuItems: () => Promise<InlineWindowMenuItem[]>;
   popupInlineWindowMenu: (menuId: string, x: number, y: number) => Promise<void>;
   getSnapshot: () => Promise<AppSnapshot>;
+  restoreFromSnapshot: (snapshot: AppSnapshot) => Promise<AppSnapshot>;
   chooseDeckBundleExportPath: (suggestedName: string) => Promise<string | null>;
   chooseDeckBundleImportPath: () => Promise<string | null>;
   chooseImportReplacementMediaPath: () => Promise<string | null>;
@@ -75,6 +79,10 @@ export interface MainApi {
   detachTemplateFromDeckItem: (itemId: Id) => Promise<SnapshotPatch>;
   syncTemplateToLinkedDeckItems: (templateId: Id) => Promise<SnapshotPatch>;
   applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<SnapshotPatch>;
+  createStage: (input: StageCreateInput) => Promise<SnapshotPatch>;
+  updateStage: (input: StageUpdateInput) => Promise<SnapshotPatch>;
+  deleteStage: (stageId: Id) => Promise<SnapshotPatch>;
+  duplicateStage: (stageId: Id) => Promise<SnapshotPatch>;
   renameLibrary: (id: Id, name: string) => Promise<SnapshotPatch>;
   renamePlaylist: (id: Id, name: string) => Promise<SnapshotPatch>;
   renamePresentation: (id: Id, title: string) => Promise<SnapshotPatch>;
@@ -89,7 +97,13 @@ export interface MainApi {
   getNdiOutputConfigs: () => Promise<NdiOutputConfigMap>;
   updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) => Promise<NdiOutputConfigMap>;
   getNdiDiagnostics: () => Promise<NdiDiagnostics>;
-  sendNdiFrame: (buffer: ArrayBuffer, width: number, height: number) => void;
+  sendNdiFrame: (
+    name: NdiOutputName,
+    buffer: ArrayBuffer,
+    width: number,
+    height: number,
+    telemetry?: NdiFrameTelemetry,
+  ) => void;
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
   getAudioCoverArt: (src: string) => Promise<string | null>;
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
@@ -104,6 +118,7 @@ export const IPC = {
   getInlineWindowMenuItems: 'cast:getInlineWindowMenuItems',
   popupInlineWindowMenu: 'cast:popupInlineWindowMenu',
   getSnapshot: 'cast:getSnapshot',
+  restoreFromSnapshot: 'cast:restoreFromSnapshot',
   chooseDeckBundleExportPath: 'cast:chooseDeckBundleExportPath',
   chooseDeckBundleImportPath: 'cast:chooseDeckBundleImportPath',
   chooseImportReplacementMediaPath: 'cast:chooseImportReplacementMediaPath',
@@ -152,6 +167,10 @@ export const IPC = {
   detachTemplateFromDeckItem: 'cast:detachTemplateFromDeckItem',
   syncTemplateToLinkedDeckItems: 'cast:syncTemplateToLinkedDeckItems',
   applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
+  createStage: 'cast:createStage',
+  updateStage: 'cast:updateStage',
+  deleteStage: 'cast:deleteStage',
+  duplicateStage: 'cast:duplicateStage',
   renameLibrary: 'cast:renameLibrary',
   renamePlaylist: 'cast:renamePlaylist',
   renamePresentation: 'cast:renamePresentation',

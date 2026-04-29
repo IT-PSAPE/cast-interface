@@ -1,17 +1,23 @@
-import { NDI_OUTPUT_HEIGHT, NDI_OUTPUT_WIDTH } from '@core/ndi';
+import { performance } from 'node:perf_hooks';
+import { NDI_OUTPUT_HEIGHT, NDI_OUTPUT_ORDER, NDI_OUTPUT_WIDTH } from '@core/ndi';
 import type {
   NdiActiveSenderDiagnostics,
   NdiDiagnostics,
+  NdiFrameTelemetry,
   NdiOutputConfig,
   NdiOutputConfigMap,
   NdiOutputName,
   NdiOutputState,
+  NdiSenderPerformanceDiagnostics,
   NdiSourceStatus,
 } from '@core/types';
 import { defaultNdiModuleLoader, type NdiNativeModule } from './ndi-native-module';
 
 const HEARTBEAT_INTERVAL_MS = Math.round(1000 / 30);
 const HEARTBEAT_STALL_THRESHOLD_MS = HEARTBEAT_INTERVAL_MS * 2;
+const DIAGNOSTICS_EMIT_INTERVAL_MS = 250;
+const BYTES_PER_PIXEL = 4;
+const MAX_FRAME_BYTES = NDI_OUTPUT_WIDTH * NDI_OUTPUT_HEIGHT * BYTES_PER_PIXEL;
 
 type StateChangeCallback = (state: NdiOutputState) => void;
 type DiagnosticsChangeCallback = (diagnostics: NdiDiagnostics) => void;
@@ -22,22 +28,30 @@ interface NdiServiceOptions {
   moduleLoader?: () => NdiNativeModule;
 }
 
+interface SenderState {
+  diagnostics: NdiActiveSenderDiagnostics;
+  outputName: NdiOutputName;
+  lastFrame: Uint8Array | null;
+  lastFrameWidth: number;
+  lastFrameHeight: number;
+  lastFrameReceivedAt: number;
+}
+
 export class NdiService {
   private module: NdiNativeModule | null = null;
   private runtimeLoaded = false;
   private runtimePath: string | null = null;
-  private outputState: NdiOutputState = { audience: false };
+  private asyncVideoSend = false;
+  private outputState: NdiOutputState = { audience: false, stage: false };
   private outputConfigs: NdiOutputConfigMap;
   private onOutputConfigsChanged: (configs: NdiOutputConfigMap) => void;
   private moduleLoader: () => NdiNativeModule;
-  private activeSender: NdiActiveSenderDiagnostics | null = null;
+  private senders: Map<NdiOutputName, SenderState> = new Map();
   private sourceStatus: NdiSourceStatus = 'idle';
   private lastError: string | null = null;
-  private lastFrame: Uint8Array | null = null;
-  private lastFrameWidth = 0;
-  private lastFrameHeight = 0;
-  private lastFrameReceivedAt = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private diagnosticsTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastDiagnosticsEmitAt = 0;
   private destroyed = false;
 
   private stateChangeListeners: StateChangeCallback[] = [];
@@ -61,13 +75,15 @@ export class NdiService {
     this.outputState[name] = enabled;
 
     if (enabled) {
-      this.ensureSender(name);
+      this.rebuildActiveSenders();
       this.startHeartbeat();
     } else {
       this.destroySenderForOutput(name);
-      this.stopHeartbeat();
-      this.sourceStatus = 'idle';
-      this.lastFrame = null;
+      this.rebuildActiveSenders();
+      if (this.allOutputsDisabled()) {
+        this.stopHeartbeat();
+        this.sourceStatus = 'idle';
+      }
     }
 
     this.emitStateChange();
@@ -82,29 +98,55 @@ export class NdiService {
     this.onOutputConfigsChanged(this.outputConfigs);
 
     if (this.outputState[name]) {
-      this.destroySenderForOutput(name);
-      this.ensureSender(name);
+      this.rebuildActiveSenders();
     }
 
     this.emitDiagnosticsChange();
     return this.getOutputConfigs();
   }
 
-  receiveFrame(rgba: Uint8Array, width: number, height: number): void {
+  receiveFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number, telemetry?: NdiFrameTelemetry): void {
     if (this.destroyed) return;
+    if (!this.outputState[name]) return;
 
-    if (!this.lastFrame || this.lastFrame.length !== rgba.length) {
-      this.lastFrame = new Uint8Array(rgba.length);
-    }
-    this.lastFrame.set(rgba);
-    this.lastFrameWidth = width;
-    this.lastFrameHeight = height;
-    this.lastFrameReceivedAt = Date.now();
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
-    for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
-      if (!this.outputState[name]) continue;
-      this.sendFrame(name, rgba, width, height);
+    if (!this.isValidFramePayload(rgba, width, height)) {
+      sender.diagnostics.performance.framesRejected += 1;
+      this.lastError = `Rejected invalid NDI frame for ${name}`;
+      this.queueDiagnosticsEmit();
+      return;
     }
+
+    sender.diagnostics.performance.framesCaptured += 1;
+    sender.diagnostics.performance.bytesReceived += rgba.byteLength;
+    sender.diagnostics.performance.lastFrameBytes = rgba.byteLength;
+
+    if (telemetry) {
+      sender.diagnostics.performance.skippedCaptures += telemetry.skippedCaptures;
+      sender.diagnostics.performance.heartbeatCaptures += telemetry.heartbeatCaptures;
+      sender.diagnostics.performance.avgCaptureDurationMs = updateAverage(
+        sender.diagnostics.performance.avgCaptureDurationMs,
+        telemetry.captureDurationMs,
+        sender.diagnostics.performance.framesCaptured,
+      );
+      sender.diagnostics.performance.avgReadbackDurationMs = updateAverage(
+        sender.diagnostics.performance.avgReadbackDurationMs,
+        telemetry.readbackDurationMs,
+        sender.diagnostics.performance.framesCaptured,
+      );
+    }
+
+    sender.lastFrame = rgba;
+    sender.lastFrameWidth = width;
+    sender.lastFrameHeight = height;
+    sender.lastFrameReceivedAt = Date.now();
+    this.sourceStatus = 'live';
+    this.lastError = null;
+
+    this.sendFrame(name, rgba, width, height, false);
+    this.queueDiagnosticsEmit();
   }
 
   setSourceStatus(status: NdiSourceStatus): void {
@@ -114,12 +156,13 @@ export class NdiService {
   }
 
   getDiagnostics(): NdiDiagnostics {
+    const audienceSender = this.senders.get('audience');
     return {
       outputState: this.getOutputState(),
       outputConfig: { ...this.outputConfigs.audience },
       runtimeLoaded: this.runtimeLoaded,
       runtimePath: this.runtimePath,
-      activeSender: this.activeSender ? { ...this.activeSender } : null,
+      activeSender: audienceSender ? cloneSenderDiagnostics(audienceSender.diagnostics) : null,
       sourceStatus: this.sourceStatus,
       lastError: this.lastError,
     };
@@ -143,18 +186,23 @@ export class NdiService {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stopHeartbeat();
+    this.stopDiagnosticsTimer();
 
     try {
-      // destroySender internally sends a black frame, flushes, and waits
-      // for network delivery before tearing down the NDI sender.
       this.module?.destroySender();
     } catch (error) {
       console.error('[NdiService] Error during destroy:', error);
     }
 
-    this.activeSender = null;
-    this.lastFrame = null;
+    this.senders.clear();
     this.module = null;
+  }
+
+  private allOutputsDisabled(): boolean {
+    for (const name of NDI_OUTPUT_ORDER) {
+      if (this.outputState[name]) return false;
+    }
+    return true;
   }
 
   private loadModuleIfNeeded(): boolean {
@@ -165,6 +213,7 @@ export class NdiService {
       const info = this.module.getRuntimeInfo?.();
       this.runtimeLoaded = info?.loaded ?? true;
       this.runtimePath = info?.path ?? null;
+      this.asyncVideoSend = info?.asyncVideoSend ?? false;
       this.lastError = null;
       return true;
     } catch (error) {
@@ -172,59 +221,149 @@ export class NdiService {
       console.error('[NdiService] Failed to load native module:', message);
       this.lastError = message;
       this.runtimeLoaded = false;
+      this.asyncVideoSend = false;
       return false;
     }
   }
 
   private ensureSender(name: NdiOutputName): void {
     if (!this.loadModuleIfNeeded()) return;
+    if (this.senders.has(name)) return;
 
     const config = this.outputConfigs[name];
+    const senderName = this.resolveSenderName(name);
     const width = NDI_OUTPUT_WIDTH;
     const height = NDI_OUTPUT_HEIGHT;
 
     try {
       this.module!.initializeSender({
-        senderName: config.senderName,
+        senderName,
         width,
         height,
         withAlpha: config.withAlpha,
       });
-      this.activeSender = {
-        senderName: config.senderName,
-        width,
-        height,
-        withAlpha: config.withAlpha,
-      };
+      this.senders.set(name, {
+        diagnostics: {
+          senderName,
+          width,
+          height,
+          withAlpha: config.withAlpha,
+          asyncVideoSend: this.asyncVideoSend,
+          connectionCount: null,
+          performance: createEmptySenderPerformanceDiagnostics(),
+        },
+        outputName: name,
+        lastFrame: null,
+        lastFrameWidth: 0,
+        lastFrameHeight: 0,
+        lastFrameReceivedAt: 0,
+      });
       this.lastError = null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[NdiService] Failed to initialize sender:', message);
       this.lastError = message;
-      this.activeSender = null;
     }
   }
 
   private destroySenderForOutput(name: NdiOutputName): void {
-    if (!this.module || !this.activeSender) return;
+    if (!this.module) return;
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
     try {
-      this.module.destroySender(this.outputConfigs[name].senderName);
+      this.module.destroySender(sender.diagnostics.senderName);
     } catch (error) {
       console.error('[NdiService] Error destroying sender:', error);
     }
 
-    this.activeSender = null;
+    this.senders.delete(name);
   }
 
-  private sendFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number): void {
-    if (!this.module || !this.activeSender) return;
+  private rebuildActiveSenders(): void {
+    const enabledOutputs = NDI_OUTPUT_ORDER.filter((name) => this.outputState[name]);
+    const previousFrames = new Map(this.senders);
 
-    const config = this.outputConfigs[name];
-    if (this.activeSender.senderName !== config.senderName) return;
+    for (const name of [...this.senders.keys()]) {
+      this.destroySenderForOutput(name);
+    }
+
+    for (const name of enabledOutputs) {
+      this.ensureSender(name);
+      const restored = this.senders.get(name);
+      const previous = previousFrames.get(name);
+      if (!restored || !previous) continue;
+      restored.lastFrame = previous.lastFrame ? new Uint8Array(previous.lastFrame) : null;
+      restored.lastFrameWidth = previous.lastFrameWidth;
+      restored.lastFrameHeight = previous.lastFrameHeight;
+      restored.lastFrameReceivedAt = previous.lastFrameReceivedAt;
+      restored.diagnostics.performance = { ...previous.diagnostics.performance };
+      if (previous.lastFrame) {
+        restored.diagnostics.performance.cacheCopyBytes += previous.lastFrame.byteLength;
+      }
+    }
+  }
+
+  private resolveSenderName(name: NdiOutputName): string {
+    const requestedName = this.outputConfigs[name].senderName.trim();
+    let duplicateCount = 0;
+    for (const outputName of NDI_OUTPUT_ORDER) {
+      if (!this.outputState[outputName]) continue;
+      const candidate = this.outputConfigs[outputName].senderName.trim();
+      if (candidate !== requestedName) continue;
+      duplicateCount += 1;
+      if (outputName === name) {
+        break;
+      }
+    }
+
+    if (duplicateCount <= 1) {
+      return requestedName;
+    }
+
+    const suffix = name === 'audience' ? 'Audience' : 'Stage';
+    return `${requestedName} (${suffix})`;
+  }
+
+  private isValidFramePayload(rgba: Uint8Array, width: number, height: number): boolean {
+    if (!Number.isInteger(width) || !Number.isInteger(height)) {
+      return false;
+    }
+    if (width !== NDI_OUTPUT_WIDTH || height !== NDI_OUTPUT_HEIGHT) {
+      return false;
+    }
+
+    const expectedLength = width * height * BYTES_PER_PIXEL;
+    if (expectedLength <= 0 || expectedLength > MAX_FRAME_BYTES) {
+      return false;
+    }
+
+    return rgba.byteLength === expectedLength;
+  }
+
+  private sendFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number, replayed: boolean): void {
+    if (!this.module) return;
+    const sender = this.senders.get(name);
+    if (!sender) return;
 
     try {
-      this.module.sendRgbaFrame(config.senderName, rgba, width, height);
+      const connectionCount = this.module.getSenderConnections?.(sender.diagnostics.senderName, 0) ?? null;
+      sender.diagnostics.connectionCount = typeof connectionCount === 'number' && connectionCount >= 0 ? connectionCount : null;
+      if (sender.diagnostics.connectionCount === 0) {
+        sender.diagnostics.performance.framesSkippedNoConnections += 1;
+        return;
+      }
+      const startedAt = performance.now();
+      this.module.sendRgbaFrame(sender.diagnostics.senderName, rgba, width, height);
+      sender.diagnostics.performance.avgSendDurationMs = updateAverage(
+        sender.diagnostics.performance.avgSendDurationMs,
+        performance.now() - startedAt,
+        sender.diagnostics.performance.framesSent + 1,
+      );
+      sender.diagnostics.performance.framesSent += 1;
+      if (replayed) {
+        sender.diagnostics.performance.framesReplayed += 1;
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[NdiService] Frame send failed:', message);
@@ -238,13 +377,19 @@ export class NdiService {
     this.heartbeatTimer = setInterval(() => {
       if (this.destroyed) return;
       const now = Date.now();
+      let replayedFrame = false;
 
-      for (const name of Object.keys(this.outputState) as NdiOutputName[]) {
+      for (const [name, sender] of this.senders) {
         if (!this.outputState[name]) continue;
-        if (now - this.lastFrameReceivedAt <= HEARTBEAT_STALL_THRESHOLD_MS) continue;
-        if (this.lastFrame) {
-          this.sendFrame(name, this.lastFrame, this.lastFrameWidth, this.lastFrameHeight);
+        if (now - sender.lastFrameReceivedAt <= HEARTBEAT_STALL_THRESHOLD_MS) continue;
+        if (sender.lastFrame) {
+          this.sendFrame(name, sender.lastFrame, sender.lastFrameWidth, sender.lastFrameHeight, true);
+          replayedFrame = true;
         }
+      }
+
+      if (replayedFrame) {
+        this.queueDiagnosticsEmit();
       }
     }, HEARTBEAT_INTERVAL_MS);
   }
@@ -256,6 +401,13 @@ export class NdiService {
     }
   }
 
+  private stopDiagnosticsTimer(): void {
+    if (this.diagnosticsTimer) {
+      clearTimeout(this.diagnosticsTimer);
+      this.diagnosticsTimer = null;
+    }
+  }
+
   private emitStateChange(): void {
     const state = this.getOutputState();
     for (const listener of this.stateChangeListeners) {
@@ -264,9 +416,56 @@ export class NdiService {
   }
 
   private emitDiagnosticsChange(): void {
+    this.lastDiagnosticsEmitAt = Date.now();
+    this.stopDiagnosticsTimer();
     const diagnostics = this.getDiagnostics();
     for (const listener of this.diagnosticsChangeListeners) {
       listener(diagnostics);
     }
   }
+
+  private queueDiagnosticsEmit(): void {
+    const now = Date.now();
+    const elapsed = now - this.lastDiagnosticsEmitAt;
+    if (elapsed >= DIAGNOSTICS_EMIT_INTERVAL_MS) {
+      this.emitDiagnosticsChange();
+      return;
+    }
+    if (this.diagnosticsTimer) return;
+    this.diagnosticsTimer = setTimeout(() => {
+      this.diagnosticsTimer = null;
+      this.emitDiagnosticsChange();
+    }, DIAGNOSTICS_EMIT_INTERVAL_MS - elapsed);
+  }
+}
+
+function createEmptySenderPerformanceDiagnostics(): NdiSenderPerformanceDiagnostics {
+  return {
+    framesCaptured: 0,
+    framesSent: 0,
+    framesReplayed: 0,
+    framesRejected: 0,
+    framesSkippedNoConnections: 0,
+    skippedCaptures: 0,
+    heartbeatCaptures: 0,
+    bytesReceived: 0,
+    cacheCopyBytes: 0,
+    avgCaptureDurationMs: 0,
+    avgReadbackDurationMs: 0,
+    avgSendDurationMs: 0,
+    lastFrameBytes: 0,
+  };
+}
+
+function cloneSenderDiagnostics(diagnostics: NdiActiveSenderDiagnostics): NdiActiveSenderDiagnostics {
+  return {
+    ...diagnostics,
+    performance: { ...diagnostics.performance },
+  };
+}
+
+function updateAverage(current: number, sample: number, sampleCount: number): number {
+  if (!Number.isFinite(sample) || sample < 0) return current;
+  if (sampleCount <= 1) return sample;
+  return current + (sample - current) / sampleCount;
 }

@@ -1,4 +1,4 @@
-import { useCast, useNdi } from './contexts/app-context';
+import { useCast } from './contexts/app-context';
 import { AppProvider } from './contexts/app-context';
 import { AssetEditorProvider } from './contexts/asset-editor/asset-editor-context';
 import { CanvasProvider } from './contexts/canvas/canvas-context';
@@ -6,10 +6,15 @@ import { NavigationProvider } from './contexts/navigation-context';
 import { PlaybackProvider } from './contexts/playback/playback-context';
 import { SlideProvider } from './contexts/slide-context';
 import { WorkbenchProvider } from './contexts/workbench-context';
-import { NdiFrameCapture } from './features/playback/ndi-frame-capture';
+import { CommandPalette } from './features/command-palette/command-palette';
+import { CommandPaletteProvider } from './features/command-palette/command-palette-context';
+import { BundleDropImport } from './features/deck/bundle-drop-import';
+import { CreateDeckItemProvider } from './features/deck/create-deck-item';
+import { LyricEditorProvider } from './features/deck/lyric-editor';
+import { NdiOutputs } from './features/playback/ndi-outputs';
 import { ErrorBoundary } from './components/feedback/error-boundary';
 import { AppToolbar } from './features/workbench/app-toolbar';
-import { SplitPanel } from './features/workbench/split-panel';
+import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { StatusBar } from './features/workbench/status-bar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
 import { WorkbenchScreenRouter } from './workbench-screen-router';
@@ -23,12 +28,20 @@ export function App() {
             <PlaybackProvider>
               <SlideProvider>
                 <AssetEditorProvider>
-                  <CanvasProvider>
-                    <NdiFrameCapture />
-                    <SplitPanel>
-                      <AppLayoutContent />
-                    </SplitPanel>
-                  </CanvasProvider>
+                  <LyricEditorProvider>
+                    <CreateDeckItemProvider>
+                      <CanvasProvider>
+                        <CommandPaletteProvider>
+                          <NdiOutputs />
+                          <SplitPanel>
+                            <AppLayoutContent />
+                          </SplitPanel>
+                          <CommandPalette />
+                          <BundleDropImport />
+                        </CommandPaletteProvider>
+                      </CanvasProvider>
+                    </CreateDeckItemProvider>
+                  </LyricEditorProvider>
                 </AssetEditorProvider>
               </SlideProvider>
             </PlaybackProvider>

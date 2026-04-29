@@ -1,43 +1,44 @@
-import { createContext, useContext, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { ContextMenu, type ContextMenuItem } from '../../components/overlays/context-menu';
-import { ArrowDownUp, Grid2x2, List, Plus } from 'lucide-react';
-import { Button } from '../../components/controls/button';
+import { createContext, useContext, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { ArrowDown, ArrowUp, Ellipsis, Grid2x2, List } from 'lucide-react';
 import { SegmentedControl } from '../../components/controls/segmented-control';
 import { Tabs } from '../../components/display/tabs';
-import { DeckItemIcon, MediaAssetIcon } from '../../components/display/entity-icon';
-import { SelectableRow } from '../../components/display/selectable-row';
+import { Dropdown } from '../../components/form/dropdown';
 import { FileTrigger } from '../../components/form/file-trigger';
 import { GridSizeSlider } from '../../components/form/grid-size-slider';
-import { useCreateMenu } from '../../hooks/use-create-menu';
-import { useContextMenuState } from '../../hooks/use-context-menu-state';
-import { useElements } from '../../contexts/canvas/canvas-context';
-import { useNavigation } from '../../contexts/navigation-context';
-import { useResourceDrawer } from './resource-drawer-context';
-import { useCreateTemplateMenu } from '../../hooks/use-create-template-menu';
-import { useGridSize } from '../../hooks/use-grid-size';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
+import { useElements } from '../../contexts/canvas/canvas-context';
 import { useWorkbench } from '../../contexts/workbench-context';
+import { useCreateDeckItem } from '../deck/create-deck-item';
+import { useResourceDrawer } from './resource-drawer-context';
+import { useGridSize } from '../../hooks/use-grid-size';
 import type { DrawerTab, ResourceDrawerViewMode } from '../../types/ui';
-import { CreateLyricDialog } from '../deck/create-lyric-dialog';
-import { LyricEditorModal } from '../deck/lyric-editor-modal';
-import { useAudio } from '../../contexts/playback/playback-context';
-import { useAudioCoverArt } from '../../hooks/use-audio-cover-art';
+import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
+import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
 import {
-  compareByKey,
   useAudioBinSort,
   useDeckBinSort,
   useMediaBinSort,
   useTemplateBinSort,
   type BinSort,
-  type BinTabSortKey,
-  type DeckBinSortKey,
-  type SortDirection,
 } from './use-bin-sort';
-import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
 import { cn } from '@renderer/utils/cn';
-import { EmptyState } from '../../components/display/empty-state';
+
+const DECK_SORT_OPTIONS = [
+  { key: 'name', label: 'Name' },
+  { key: 'created', label: 'Date created' },
+  { key: 'modified', label: 'Date modified' },
+  { key: 'slides', label: 'Slide count' },
+] as const;
+
+const STANDARD_SORT_OPTIONS = [
+  { key: 'name', label: 'Name' },
+  { key: 'created', label: 'Date created' },
+  { key: 'modified', label: 'Date modified' },
+] as const;
+
+const TRIGGER_CLASS = 'cursor-pointer transition-colors p-1 rounded-sm bg-transparent text-tertiary hover:bg-quaternary hover:text-primary [&>svg]:size-4';
 
 const IMPORT_ACCEPT_BY_TAB = {
   media: 'image/*,video/*',
@@ -50,38 +51,30 @@ const IMPORT_TYPE_PREFIXES_BY_TAB = {
 } as const;
 
 interface ResourceDrawerContextValue {
-  actions: {
-    closeTemplateMenu: () => void;
-    handleCreateActionClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-    handleDragLeave: (event: React.DragEvent<HTMLElement>) => void;
-    handleDragOver: (event: React.DragEvent<HTMLElement>) => void;
-    handleDrop: (event: React.DragEvent<HTMLElement>) => void;
-    handleImport: (event: ChangeEvent<HTMLInputElement>) => void;
-    setDrawerTab: (tab: DrawerTab) => void;
-    setGridSize: (size: number) => void;
-  };
+  state: { drawerTab: DrawerTab };
   meta: {
-    footerClass: string;
     gridSize: number;
-    gridSizeMax: number;
     gridSizeMin: number;
+    gridSizeMax: number;
     gridSizeStep: number;
-    showCreateAction: boolean;
     showGridSizeControl: boolean;
     showImportAction: boolean;
     showModeControl: boolean;
   };
-  state: {
-    drawerTab: DrawerTab;
-    createMenuItems: ReturnType<typeof useCreateMenu>['menuItems'];
-    createMenuState: ReturnType<typeof useCreateMenu>['menuState'];
-    templateMenuItems: ReturnType<typeof useCreateTemplateMenu>['menuItems'];
-    templateMenuState: ReturnType<typeof useCreateTemplateMenu>['menuState'];
+  actions: {
+    setDrawerTab: (tab: DrawerTab) => void;
+    setGridSize: (size: number) => void;
+    handleImport: (event: ChangeEvent<HTMLInputElement>) => void;
   };
 }
 
 const ResourceDrawerContext = createContext<ResourceDrawerContextValue | null>(null);
-type ContentCreateAction = 'presentation' | 'lyric-edit' | 'lyric-empty';
+
+function useDrawer() {
+  const context = useContext(ResourceDrawerContext);
+  if (!context) throw new Error('ResourceDrawer parts must be used within ResourceDrawer.Root');
+  return context;
+}
 
 function isImportTab(tab: DrawerTab): tab is keyof typeof IMPORT_ACCEPT_BY_TAB {
   return tab === 'media' || tab === 'audio';
@@ -95,56 +88,19 @@ function hasImportableFiles(transfer: DataTransfer, tab: DrawerTab): boolean {
   ));
 }
 
-function useDrawer() {
-  const context = useContext(ResourceDrawerContext);
-  if (!context) throw new Error('ResourceDrawer components must be used within ResourceDrawerRoot');
-  return context;
+function isResourceDrawerViewMode(value: string): value is ResourceDrawerViewMode {
+  return value === 'grid' || value === 'list';
 }
+
+// ─── Root ─────────────────────────────────────────────────
+// Owns drag/drop, the drawer context, and Tabs.Root. Holds the outer footer
+// element so siblings (Header, Body) sit at one level below.
 
 function Root({ children }: { children: ReactNode }) {
   const { drawerTab, drawerViewMode, setDrawerTab } = useResourceDrawer();
   const { importMedia } = useElements();
-  const { createPresentation, createEmptyLyric } = useNavigation();
-  const { createTemplate } = useTemplateEditor();
-  const { actions: { setWorkbenchMode } } = useWorkbench();
   const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [activeCreateAction, setActiveCreateAction] = useState<ContentCreateAction | null>(null);
-  const [isCreateLyricDialogOpen, setIsCreateLyricDialogOpen] = useState(false);
-  const [isLyricEditorOpen, setIsLyricEditorOpen] = useState(false);
-  const {
-    menuItems: createMenuItems,
-    menuState: createMenuState,
-    openMenuFromButton: openCreateMenuFromButton,
-    closeMenu: closeCreateMenu,
-  } = useCreateMenu(
-    () => [
-      {
-        id: 'create-presentation',
-        label: 'Presentation',
-        icon: <DeckItemIcon entity="presentation" size={14} strokeWidth={1.75} />,
-        onSelect: () => { void handleCreatePresentation(); },
-      },
-      {
-        id: 'create-lyric',
-        label: 'Lyric',
-        icon: <DeckItemIcon entity="lyric" size={14} strokeWidth={1.75} />,
-        onSelect: handleOpenCreateLyricDialog,
-      },
-    ],
-    [createPresentation],
-  );
-  const {
-    menuItems: templateMenuItems,
-    menuState: templateMenuState,
-    openMenuFromButton: openTemplateMenuFromButton,
-    closeMenu: closeTemplateMenu,
-  } = useCreateTemplateMenu({
-    createTemplate: (kind) => {
-      createTemplate(kind);
-      setWorkbenchMode('template-editor');
-    },
-  });
 
   function handleImport(event: ChangeEvent<HTMLInputElement>) {
     if (!event.target.files || event.target.files.length === 0) return;
@@ -171,233 +127,68 @@ function Root({ children }: { children: ReactNode }) {
     void importMedia(event.dataTransfer.files);
   }
 
-  function handleCreateActionClick(event: React.MouseEvent<HTMLButtonElement>) {
-    if (drawerTab === 'templates') {
-      openTemplateMenuFromButton(event.currentTarget);
-      return;
-    }
-    openCreateMenuFromButton(event.currentTarget);
-  }
-
-  function handleCloseTemplateMenu() {
-    closeTemplateMenu();
-  }
-
-  function handleCreateMenuOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    closeCreateMenu();
-  }
-
-  function handleTemplateMenuOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    closeTemplateMenu();
-  }
-
-  function handleCloseCreateLyricDialog() {
-    if (activeCreateAction) return;
-    setIsCreateLyricDialogOpen(false);
-  }
-
-  function handleCloseLyricEditor() {
-    setIsLyricEditorOpen(false);
-  }
-
-  function handleOpenCreateLyricDialog() {
-    closeCreateMenu();
-    setIsCreateLyricDialogOpen(true);
-  }
-
-  async function handleCreatePresentation() {
-    setActiveCreateAction('presentation');
-
-    try {
-      await createPresentation();
-      setWorkbenchMode('deck-editor');
-    } finally {
-      setActiveCreateAction(null);
-    }
-  }
-
-  async function handleCreateEmptyLyricFromDialog() {
-    setActiveCreateAction('lyric-empty');
-
-    try {
-      await createEmptyLyric();
-      setIsCreateLyricDialogOpen(false);
-      setWorkbenchMode('deck-editor');
-    } finally {
-      setActiveCreateAction(null);
-    }
-  }
-
-  async function handleCreateEditableLyricFromDialog() {
-    setActiveCreateAction('lyric-edit');
-
-    try {
-      await createEmptyLyric();
-      setIsCreateLyricDialogOpen(false);
-      setIsLyricEditorOpen(true);
-    } finally {
-      setActiveCreateAction(null);
-    }
+  function handleTabChange(value: string) {
+    setDrawerTab(value as DrawerTab);
   }
 
   const value: ResourceDrawerContextValue = {
-    actions: {
-      closeTemplateMenu: handleCloseTemplateMenu,
-      handleCreateActionClick,
-      handleDragLeave,
-      handleDragOver,
-      handleDrop,
-      handleImport,
-      setDrawerTab,
-      setGridSize,
-    },
+    state: { drawerTab },
     meta: {
-      footerClass: [
-        'h-full border-t border-primary bg-primary grid min-h-0 grid-rows-[auto_1fr]',
-        isDragOver ? 'border-t-focus' : ''
-      ].join(' '),
       gridSize,
-      gridSizeMax,
       gridSizeMin,
+      gridSizeMax,
       gridSizeStep,
-      showCreateAction: drawerTab === 'deck' || drawerTab === 'templates',
       showGridSizeControl: drawerViewMode === 'grid' && drawerTab !== 'audio',
       showImportAction: drawerTab === 'media' || drawerTab === 'audio',
       showModeControl: drawerTab !== 'audio',
     },
-    state: {
-      drawerTab,
-      createMenuItems,
-      createMenuState,
-      templateMenuItems,
-      templateMenuState
-    }
+    actions: { setDrawerTab, setGridSize, handleImport },
   };
 
   return (
     <ResourceDrawerContext.Provider value={value}>
-      <footer
-        data-ui-region="resource-drawer"
-        className={`${value.meta.footerClass} overflow-hidden`}
-        onDragOver={value.actions.handleDragOver}
-        onDragLeave={value.actions.handleDragLeave}
-        onDrop={value.actions.handleDrop}
-      >
-        {children}
-        <ContextMenu.Root open={Boolean(value.state.createMenuState && value.state.drawerTab === 'deck')} position={value.state.createMenuState} onOpenChange={handleCreateMenuOpenChange}>
-          <ContextMenu.Portal>
-            <ContextMenu.Positioner>
-              <ContextMenu.Popup>
-                <ContextMenu.Items items={value.state.createMenuItems} />
-              </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-          </ContextMenu.Portal>
-        </ContextMenu.Root>
-        <ContextMenu.Root open={Boolean(value.state.templateMenuState && value.state.drawerTab === 'templates')} position={value.state.templateMenuState} onOpenChange={handleTemplateMenuOpenChange}>
-          <ContextMenu.Portal>
-            <ContextMenu.Positioner>
-              <ContextMenu.Popup>
-                <ContextMenu.Items items={value.state.templateMenuItems} />
-              </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-          </ContextMenu.Portal>
-        </ContextMenu.Root>
-        <CreateLyricDialog
-          isOpen={isCreateLyricDialogOpen}
-          isBusy={activeCreateAction !== null}
-          onClose={handleCloseCreateLyricDialog}
-          onCreateEmptyLyric={handleCreateEmptyLyricFromDialog}
-          onCreateEditableLyric={handleCreateEditableLyricFromDialog}
-        />
-        <LyricEditorModal isOpen={isLyricEditorOpen} onClose={handleCloseLyricEditor} />
-      </footer>
+      <Tabs.Root value={drawerTab} onValueChange={handleTabChange}>
+        <footer
+          data-ui-region="resource-drawer"
+          className={cn(
+            'grid h-full min-h-0 grid-rows-[auto_1fr] overflow-hidden border-t bg-primary',
+            isDragOver ? 'border-t-focus' : 'border-t-primary',
+          )}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {children}
+        </footer>
+      </Tabs.Root>
     </ResourceDrawerContext.Provider>
   );
 }
 
-function isResourceDrawerViewMode(value: string): value is ResourceDrawerViewMode {
-  return value === 'grid' || value === 'list';
+// ─── Header ───────────────────────────────────────────────
+// Single flex row: tab list on the left, toolbar controls on the right.
+
+function Header() {
+  return (
+    <div className="flex h-8 items-end border-b border-primary px-1">
+      <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5">
+        <Tabs.Trigger value="deck">Deck</Tabs.Trigger>
+        <Tabs.Trigger value="media">Media</Tabs.Trigger>
+        <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
+        <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
+      </Tabs.List>
+      <Toolbar />
+    </div>
+  );
 }
 
-function ResourceDrawerContent() {
+// ─── Toolbar ──────────────────────────────────────────────
+// Right-side controls: grid size, view mode, import file picker, more actions.
+
+function Toolbar() {
   const { actions, meta, state } = useDrawer();
   const { drawerViewMode, setDrawerViewMode } = useResourceDrawer();
-  const audio = useAudio();
-  const deckSort = useDeckBinSort();
-  const mediaSort = useMediaBinSort();
-  const audioSort = useAudioBinSort();
-  const templateSort = useTemplateBinSort();
-  const sortMenu = useContextMenuState<null>();
-
-  const sortedAudioAssets = useMemo(() => {
-    const direction = audioSort.sort.direction === 'asc' ? 1 : -1;
-    return [...audio.audioAssets].sort((a, b) => direction * compareByKey(a, b, audioSort.sort.key, (item) => item.name));
-  }, [audio.audioAssets, audioSort.sort]);
-
-  const sortMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const directionOptions = (sort: BinSort<string>, setSort: (next: BinSort<string>) => void): ContextMenuItem[] => [
-      { id: 'sort-separator', separator: true, label: '' },
-      {
-        id: 'sort-direction-asc',
-        label: 'Ascending',
-        selected: sort.direction === 'asc',
-        onSelect: () => setSort({ ...sort, direction: 'asc' as SortDirection }),
-      },
-      {
-        id: 'sort-direction-desc',
-        label: 'Descending',
-        selected: sort.direction === 'desc',
-        onSelect: () => setSort({ ...sort, direction: 'desc' as SortDirection }),
-      },
-    ];
-
-    const keyOption = <Key extends string>(
-      sort: BinSort<Key>,
-      setSort: (next: BinSort<Key>) => void,
-      id: Key,
-      label: string,
-    ): ContextMenuItem => ({
-      id: `sort-${id}`,
-      label,
-      selected: sort.key === id,
-      onSelect: () => setSort({ ...sort, key: id }),
-    });
-
-    if (state.drawerTab === 'deck') {
-      const { sort, setSort } = deckSort;
-      return [
-        keyOption<DeckBinSortKey>(sort, setSort, 'name', 'Name'),
-        keyOption<DeckBinSortKey>(sort, setSort, 'created', 'Date created'),
-        keyOption<DeckBinSortKey>(sort, setSort, 'modified', 'Date modified'),
-        keyOption<DeckBinSortKey>(sort, setSort, 'slides', 'Slide count'),
-        ...directionOptions(sort as BinSort<string>, setSort as (next: BinSort<string>) => void),
-      ];
-    }
-
-    const tabSort = (
-      state.drawerTab === 'media' ? mediaSort :
-      state.drawerTab === 'audio' ? audioSort :
-      templateSort
-    );
-
-    const { sort, setSort } = tabSort;
-    return [
-      keyOption<BinTabSortKey>(sort, setSort, 'name', 'Name'),
-      keyOption<BinTabSortKey>(sort, setSort, 'created', 'Date created'),
-      keyOption<BinTabSortKey>(sort, setSort, 'modified', 'Date modified'),
-      ...directionOptions(sort as BinSort<string>, setSort as (next: BinSort<string>) => void),
-    ];
-  }, [state.drawerTab, deckSort, mediaSort, audioSort, templateSort]);
-
-  function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
-    actions.handleImport(event);
-  }
-
-  function handleTabChange(value: string) {
-    actions.setDrawerTab(value as DrawerTab);
-  }
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   function handleViewModeChange(nextValue: string | string[]) {
     if (Array.isArray(nextValue)) return;
@@ -405,119 +196,173 @@ function ResourceDrawerContent() {
     setDrawerViewMode(nextValue);
   }
 
-  function handleOpenSortMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    sortMenu.openFromButton(event.currentTarget, null);
+  function handleImportClick() {
+    importInputRef.current?.click();
   }
 
-  function handleSortMenuOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    sortMenu.close();
+  function handleImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
+    actions.handleImport(event);
   }
-
-  const showSortControl = true;
 
   return (
-    <Tabs.Root value={state.drawerTab} onValueChange={handleTabChange}>
-      <div className="h-8 flex border-b border-primary px-1 items-end">
-        <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5" >
-          <Tabs.Trigger value="deck">Deck</Tabs.Trigger>
-          <Tabs.Trigger value="media">Media</Tabs.Trigger>
-          <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
-          <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
-        </Tabs.List>
-        <div className={cn('flex shrink-0 items-center gap-0.5 py-0.5')}>
-          {showSortControl ? (
-            <Button.Icon label="Sort" variant="ghost" onClick={handleOpenSortMenu}>
-              <ArrowDownUp />
-            </Button.Icon>
-          ) : null}
-          {meta.showGridSizeControl ? <GridSizeSlider value={meta.gridSize} min={meta.gridSizeMin} max={meta.gridSizeMax} step={meta.gridSizeStep} onChange={actions.setGridSize} /> : null}
-          {meta.showImportAction &&
-            <FileTrigger.Root accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media} multiple onSelect={handleImportSelect} className="relative inline-flex">
-              <Button.Icon label={state.drawerTab === 'audio' ? 'Import audio' : 'Import media'} variant="ghost"><Plus /></Button.Icon>
-            </FileTrigger.Root>
-          }
-          {meta.showCreateAction && <Button.Icon label="Create item" variant="ghost" onClick={actions.handleCreateActionClick}> <Plus /> </Button.Icon>}
-          {meta.showModeControl ? (
-            <SegmentedControl value={drawerViewMode} onValueChange={handleViewModeChange} aria-label="Resource drawer mode">
-              <SegmentedControl.Icon value="grid" title="Grid view" aria-label="Grid view">
-                <Grid2x2 size={14} strokeWidth={1.5} />
-              </SegmentedControl.Icon>
-              <SegmentedControl.Icon value="list" title="List view" aria-label="List view">
-                <List size={14} strokeWidth={1.5} />
-              </SegmentedControl.Icon>
-            </SegmentedControl>
-          ) : null}
-        </div>
-      </div>
-      <Tabs.Panels className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
-        <Tabs.Panel value="deck">
-          <DeckBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-        <Tabs.Panel value="media">
-          <MediaBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-        <Tabs.Panel value="audio">
-          <section className="h-full min-h-0 overflow-auto p-2">
-            <div className="flex min-h-full flex-col">
-              {sortedAudioAssets.length === 0 ? (
-                <EmptyState.Root>
-                  <EmptyState.Title>No audio files</EmptyState.Title>
-                  <EmptyState.Description>Import audio to build a reusable app-wide audio list.</EmptyState.Description>
-                </EmptyState.Root>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {sortedAudioAssets.map((asset) => (
-                    <AudioRow
-                      key={asset.id}
-                      asset={asset}
-                      isSelected={audio.currentAudioAssetId === asset.id}
-                      onSelect={() => audio.selectAudio(asset.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        </Tabs.Panel>
-        <Tabs.Panel value="templates">
-          <TemplateBinPanel filterText="" gridItemSize={meta.gridSize} />
-        </Tabs.Panel>
-      </Tabs.Panels>
-      <ContextMenu.Root open={Boolean(sortMenu.menuState)} position={sortMenu.menuState} onOpenChange={handleSortMenuOpenChange}>
-        <ContextMenu.Portal>
-          <ContextMenu.Positioner>
-            <ContextMenu.Popup>
-              <ContextMenu.Items items={sortMenuItems} />
-            </ContextMenu.Popup>
-          </ContextMenu.Positioner>
-        </ContextMenu.Portal>
-      </ContextMenu.Root>
-    </Tabs.Root>
+    <div className="flex shrink-0 items-center gap-0.5 py-0.5">
+      {meta.showGridSizeControl ? (
+        <GridSizeSlider
+          value={meta.gridSize}
+          min={meta.gridSizeMin}
+          max={meta.gridSizeMax}
+          step={meta.gridSizeStep}
+          onChange={actions.setGridSize}
+        />
+      ) : null}
+      {meta.showModeControl ? (
+        <SegmentedControl value={drawerViewMode} onValueChange={handleViewModeChange} aria-label="Resource drawer mode">
+          <SegmentedControl.Icon value="grid" title="Grid view" aria-label="Grid view">
+            <Grid2x2 size={14} strokeWidth={1.5} />
+          </SegmentedControl.Icon>
+          <SegmentedControl.Icon value="list" title="List view" aria-label="List view">
+            <List size={14} strokeWidth={1.5} />
+          </SegmentedControl.Icon>
+        </SegmentedControl>
+      ) : null}
+      <FileTrigger.Root
+        hidden
+        inputRef={importInputRef}
+        accept={state.drawerTab === 'audio' ? IMPORT_ACCEPT_BY_TAB.audio : IMPORT_ACCEPT_BY_TAB.media}
+        multiple
+        onSelect={handleImportSelect}
+      />
+      <MoreActionsMenu onImportClick={handleImportClick} />
+    </div>
   );
 }
 
-function AudioRow({ asset, isSelected, onSelect }: { asset: import('@core/types').MediaAsset; isSelected: boolean; onSelect: () => void }) {
-  const coverArt = useAudioCoverArt(asset.src);
+// ─── More-actions dropdown ────────────────────────────────
+// Per-tab content lives here so each tab's actions stay co-located.
+
+function MoreActionsMenu({ onImportClick }: { onImportClick: () => void }) {
+  const { state } = useDrawer();
+  const { open: openCreateDeckItem } = useCreateDeckItem();
+  const { createTemplate } = useTemplateEditor();
+  const { actions: { setWorkbenchMode } } = useWorkbench();
+  const audioSort = useAudioBinSort();
+  const deckSort = useDeckBinSort();
+  const mediaSort = useMediaBinSort();
+  const templateSort = useTemplateBinSort();
+
+  function handleCreateTemplate(kind: 'slides' | 'lyrics') {
+    createTemplate(kind);
+    setWorkbenchMode('template-editor');
+  }
 
   return (
-    <SelectableRow.Root selected={isSelected} onClick={onSelect} className="h-9">
-      <SelectableRow.Leading>
-        {coverArt ? (
-          <img src={coverArt} alt="" className="h-6 w-6 rounded object-cover" />
-        ) : (
-          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+    <Dropdown>
+      <Dropdown.Trigger aria-label="More actions" className={TRIGGER_CLASS}>
+        <Ellipsis />
+      </Dropdown.Trigger>
+      <Dropdown.Panel placement="bottom-end">
+        {state.drawerTab === 'deck' && (
+          <>
+            <Dropdown.Item onClick={() => openCreateDeckItem('presentation')}>New presentation</Dropdown.Item>
+            <Dropdown.Item onClick={() => openCreateDeckItem('lyric')}>New lyric</Dropdown.Item>
+            <Dropdown.Separator />
+            <SortMenuItems options={DECK_SORT_OPTIONS} sort={deckSort.sort} onChange={deckSort.setSort} />
+          </>
         )}
-      </SelectableRow.Leading>
-      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-    </SelectableRow.Root>
+        {state.drawerTab === 'media' && (
+          <>
+            <Dropdown.Item onClick={onImportClick}>Import media</Dropdown.Item>
+            <Dropdown.Separator />
+            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={mediaSort.sort} onChange={mediaSort.setSort} />
+          </>
+        )}
+        {state.drawerTab === 'audio' && (
+          <>
+            <Dropdown.Item onClick={onImportClick}>Import audio</Dropdown.Item>
+            <Dropdown.Separator />
+            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={audioSort.sort} onChange={audioSort.setSort} />
+          </>
+        )}
+        {state.drawerTab === 'templates' && (
+          <>
+            <Dropdown.Item onClick={() => handleCreateTemplate('slides')}>New slides template</Dropdown.Item>
+            <Dropdown.Item onClick={() => handleCreateTemplate('lyrics')}>New lyrics template</Dropdown.Item>
+            <Dropdown.Separator />
+            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={templateSort.sort} onChange={templateSort.setSort} />
+          </>
+        )}
+      </Dropdown.Panel>
+    </Dropdown>
   );
 }
 
-export function ResourceDrawer() {
+// ─── Body ─────────────────────────────────────────────────
+// Single scrollable container; the active tab decides which bin panel renders.
+
+function Body() {
+  const { state, meta } = useDrawer();
+  const { drawerTab } = state;
+  const gridItemSize = meta.gridSize;
+
   return (
-    <Root>
-      <ResourceDrawerContent />
-    </Root>
+    <div className="min-h-0 overflow-auto px-2 pb-2 pt-1.5">
+      {drawerTab === 'deck' && <DeckBinPanel filterText="" gridItemSize={gridItemSize} />}
+      {drawerTab === 'media' && <MediaBinPanel filterText="" gridItemSize={gridItemSize} />}
+      {drawerTab === 'audio' && <AudioBinPanel filterText="" gridItemSize={gridItemSize} />}
+      {drawerTab === 'templates' && <TemplateBinPanel filterText="" gridItemSize={gridItemSize} />}
+    </div>
   );
 }
+
+// ─── Sort menu items helper ───────────────────────────────
+
+interface SortMenuItemsProps<K extends string> {
+  options: ReadonlyArray<{ key: K; label: string }>;
+  sort: BinSort<K>;
+  onChange: (next: BinSort<K>) => void;
+}
+
+function SortMenuItems<K extends string>({ options, sort, onChange }: SortMenuItemsProps<K>) {
+  function handleSelect(key: K) {
+    if (sort.key === key) {
+      onChange({ key, direction: sort.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      onChange({ key, direction: sort.direction });
+    }
+  }
+
+  return (
+    <>
+      {options.map((option) => (
+        <SortMenuItem key={option.key} option={option} sort={sort} onSelect={handleSelect} />
+      ))}
+    </>
+  );
+}
+
+function SortMenuItem<K extends string>({
+  option,
+  sort,
+  onSelect,
+}: {
+  option: SortMenuItemsProps<K>['options'][number];
+  sort: BinSort<K>;
+  onSelect: (key: K) => void;
+}) {
+  const active = sort.key === option.key;
+
+  function handleClick() {
+    onSelect(option.key);
+  }
+
+  return (
+    <Dropdown.Item onClick={handleClick}>
+      <span className="flex-1">{option.label}</span>
+      {active ? (sort.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />) : null}
+    </Dropdown.Item>
+  );
+}
+
+// ─── Public export ────────────────────────────────────────
+
+export const ResourceDrawer = { Root, Header, Body };

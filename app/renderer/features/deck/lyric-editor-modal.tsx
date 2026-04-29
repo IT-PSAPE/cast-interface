@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Dialog } from '../../components/overlays/dialog';
 import DocEditor, { type Block } from '../../components/form/doc-editor';
 import { useNavigation } from '../../contexts/navigation-context';
@@ -48,8 +48,8 @@ export function LyricEditorModal({ isOpen, onClose }: LyricEditorModalProps) {
             </Dialog.Body>
             <Dialog.Footer>
               <div className="ml-auto flex items-center gap-2">
-                <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
-                <Button variant="take" onClick={handleSave} disabled={isSaving}>Save</Button>
+                <ReacstButton variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</ReacstButton>
+                <ReacstButton variant="take" onClick={handleSave} disabled={isSaving}>Save</ReacstButton>
               </div>
             </Dialog.Footer>
           </Dialog.Content>

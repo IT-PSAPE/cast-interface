@@ -1,7 +1,7 @@
-import { Button } from '../../components/controls/button';
+import { ReacstButton } from '@renderer/components/controls/button';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { Dialog } from '../../components/overlays/dialog';
-import { Panel } from '../../components/layout/panel';
 
 interface CreateLyricDialogProps {
   isBusy: boolean;
@@ -30,7 +30,7 @@ export function CreateLyricDialog({ isBusy, isOpen, onClose, onCreateEditableLyr
               <Dialog.CloseButton />
             </Dialog.Header>
             <Dialog.Body className="bg-primary/95 px-6 py-6">
-              <Panel as="section" className="justify-between rounded-lg border border-primary bg-tertiary/20 p-6">
+              <RecastPanel.Root className="justify-between rounded-lg border border-primary bg-tertiary/20 p-6">
                 <div className="flex flex-col gap-5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary bg-primary text-secondary">
                     <DeckItemIcon entity="lyric" size={22} strokeWidth={1.75} />
@@ -44,15 +44,15 @@ export function CreateLyricDialog({ isBusy, isOpen, onClose, onCreateEditableLyr
                 </div>
                 <div className="pt-6">
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="ghost" onClick={onCreateEmptyLyric} disabled={isBusy} className="px-3 py-2 text-sm">
+                    <ReacstButton variant="ghost" onClick={onCreateEmptyLyric} disabled={isBusy} className="px-3 py-2 text-sm">
                       Empty
-                    </Button>
-                    <Button variant="take" onClick={onCreateEditableLyric} disabled={isBusy} className="px-3 py-2 text-sm">
+                    </ReacstButton>
+                    <ReacstButton variant="take" onClick={onCreateEditableLyric} disabled={isBusy} className="px-3 py-2 text-sm">
                       Edit
-                    </Button>
+                    </ReacstButton>
                   </div>
                 </div>
-              </Panel>
+              </RecastPanel.Root>
             </Dialog.Body>
           </Dialog.Content>
         </Dialog.Positioner>

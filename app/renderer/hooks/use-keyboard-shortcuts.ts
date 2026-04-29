@@ -6,11 +6,41 @@ import { useCast } from '../contexts/app-context';
 import { useSlides } from '../contexts/slide-context';
 import { useElements } from '../contexts/canvas/canvas-context';
 import { useDeckBrowser } from '../features/deck/deck-browser-context';
+import { useCommandPalette } from '../features/command-palette/command-palette-context';
 import { useWorkbench } from '../contexts/workbench-context';
 import { matchesShortcut } from './use-keyboard-shortcuts-match';
 
+function isEditableTarget(target: HTMLElement | null): boolean {
+  if (!target) return false;
+  return target.tagName === 'INPUT'
+    || target.tagName === 'TEXTAREA'
+    || target.getAttribute('contenteditable') === 'true';
+}
+
+function isInteractiveTarget(target: HTMLElement | null): boolean {
+  if (!target) return false;
+  if (isEditableTarget(target)) return true;
+
+  const interactiveSelector = [
+    'button',
+    'a[href]',
+    'select',
+    '[role="button"]',
+    '[role="menuitem"]',
+    '[role="tab"]',
+    '[role="option"]',
+    '[role="listbox"]',
+    '[role="combobox"]',
+    '[role="dialog"]',
+    '[data-shortcuts-scope="ignore"]',
+  ].join(', ');
+
+  return target.closest(interactiveSelector) !== null;
+}
+
 export function useKeyboardShortcuts(): void {
-  const { setStatusText } = useCast();
+  const { setStatusText, undo: globalUndoAction, redo: globalRedoAction } = useCast();
+  const { open: openCommandPalette } = useCommandPalette();
   const { slides, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, deleteSlide, setCurrentSlideIndex } = useSlides();
   const { selectedElementId, clearSelection, deleteSelected, nudgeSelection, copySelection, pasteSelection, undo, redo } = useElements();
   const { setSlideBrowserMode, setPlaylistBrowserMode } = useDeckBrowser();
@@ -20,17 +50,16 @@ export function useKeyboardShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      const isEditable =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.getAttribute('contenteditable') === 'true';
-      if (isEditable) return;
+      if (isInteractiveTarget(target)) return;
 
       const handlers: Record<ShortcutActionId, (event: KeyboardEvent, payload?: string) => void> = {
         copySelection: () => copySelection(),
         pasteSelection: () => { void pasteSelection(); },
         undo: () => { void undo(); },
         redo: () => { void redo(); },
+        globalUndo: () => { void globalUndoAction(); },
+        globalRedo: () => { void globalRedoAction(); },
+        openCommandPalette: () => openCommandPalette(),
         setPlaylistBrowserMode: (_event, digit) => {
           const modes: PlaylistBrowserMode[] = ['current', 'tabs', 'continuous'];
           const next = modes[Number(digit) - 1];
@@ -86,5 +115,5 @@ export function useKeyboardShortcuts(): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, setCurrentSlideIndex, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo]);
+  }, [isEditSlideBrowser, slides.length, selectedElementId, currentSlide, currentSlideIndex, isOutputArmedOnCurrent, activateSlide, takeSlide, goNext, goPrev, setCurrentSlideIndex, clearSelection, deleteSelected, deleteSlide, setSlideBrowserMode, setPlaylistBrowserMode, setStatusText, nudgeSelection, copySelection, pasteSelection, undo, redo, globalUndoAction, globalRedoAction, openCommandPalette]);
 }

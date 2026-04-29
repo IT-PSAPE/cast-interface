@@ -1,23 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { GripHorizontal, Plus } from 'lucide-react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@renderer/utils/cn'
 import type { Block } from './doc-editor'
-import { Button } from '../controls/button'
+import { Label } from '../display/text'
 
 export type SortableBlockProps = {
+    index: number
     block: Block
     isSelected: boolean
-    isGroupDragging: boolean
     contentRef: (el: HTMLTextAreaElement | null) => void
     onUpdate: (content: string) => void
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
-    onGripClick: (event: React.MouseEvent) => void
-    onContextMenu: (event: React.MouseEvent) => void
-    onAddBelow: () => void
     onTextareaFocus: () => void
     onPaste: (before: string, segments: string[], after: string) => void
 }
@@ -25,7 +19,7 @@ export type SortableBlockProps = {
 function splitPastedSegments(text: string): string[] {
     return text
         .replace(/\r\n/g, '\n')
-        .split(/\n\s*\n/g)
+        .split('\n')
 }
 
 function resizeTextarea(element: HTMLTextAreaElement) {
@@ -33,9 +27,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onGripClick, onContextMenu, onAddBelow, onTextareaFocus, onPaste }: SortableBlockProps) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
-    const style = { transform: CSS.Transform.toString(transform), transition }
+export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onTextareaFocus, onPaste }: SortableBlockProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
         (el: HTMLTextAreaElement | null) => {
@@ -84,39 +76,25 @@ export function SortableBlock({ block, isSelected, isGroupDragging, contentRef, 
         onUpdate(e.currentTarget.value)
     }
 
-    const handleRowContextMenu = (e: React.MouseEvent) => {
-        if ((e.target as HTMLElement).tagName === 'TEXTAREA') return
-        onContextMenu(e)
-    }
-
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            onContextMenu={handleRowContextMenu}
-            className={cn( 'group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', isDragging || isGroupDragging ? 'opacity-25' : 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10', )}
-        >
-            <div className={cn('flex absolute -left-13  items-center gap-0.5 transition-opacity','opacity-0 group-hover:opacity-100',)}>
-                <Button.Icon variant='ghost' onMouseDown={e => e.preventDefault()} onClick={onAddBelow}>
-                    <Plus />
-                </Button.Icon>
-                <Button.Icon variant='ghost' onClick={onGripClick} {...listeners} {...attributes}>
-                    <GripHorizontal />
-                </Button.Icon>
+        <div className='flex w-full items-start gap-2'>
+            <span className='w-3 pt-1 text-quaternary'>
+                <Label.xs className="sm">{index + 1}</Label.xs>
+            </span>
+            <div className={cn('flex-1 group relative flex items-start rounded-md px-1 py-0.5 pt-1.25', 'hover:bg-tertiary', isSelected && '!bg-brand_solid/10')}>
+                <textarea
+                    ref={setContentRef}
+                    value={block.content}
+                    rows={1}
+                    spellCheck={false}
+                    className="doc-block flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
+                    placeholder="Type something..."
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                    onChange={handleChange}
+                    onFocus={onTextareaFocus}
+                />
             </div>
-
-            <textarea
-                ref={setContentRef}
-                value={block.content}
-                rows={1}
-                spellCheck={false}
-                className="doc-block min-h-[1.7em] flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
-                placeholder="Type something..."
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                onChange={handleChange}
-                onFocus={onTextareaFocus}
-            />
         </div>
     )
 }

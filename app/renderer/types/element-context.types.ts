@@ -1,0 +1,42 @@
+import type { Id, MediaAsset, SlideElement, ElementUpdateInput } from '@core/types';
+import type { ElementInspectorDraft } from './ui';
+
+export interface ElementContextValue {
+  selectedElementId: Id | null;
+  selectedElementIds: Id[];
+  primarySelectedElementId: Id | null;
+  selectedElement: SlideElement | null;
+  effectiveElements: SlideElement[];
+  baseElements: SlideElement[];
+  draftElements: Record<Id, Partial<SlideElement>>;
+  elementDraft: ElementInspectorDraft | null;
+  elementPayloadDraft: SlideElement['payload'] | null;
+  lockAspectRatio: boolean;
+  isCanvasInteracting: boolean;
+  selectElement: (id: Id | null) => void;
+  selectElements: (ids: Id[]) => void;
+  toggleElementSelection: (id: Id) => void;
+  clearSelection: () => void;
+  setDraftElements: React.Dispatch<React.SetStateAction<Record<Id, Partial<SlideElement>>>>;
+  setElementDraft: React.Dispatch<React.SetStateAction<ElementInspectorDraft | null>>;
+  setElementPayloadDraft: React.Dispatch<React.SetStateAction<SlideElement['payload'] | null>>;
+  setLockAspectRatio: React.Dispatch<React.SetStateAction<boolean>>;
+  setCanvasInteracting: React.Dispatch<React.SetStateAction<boolean>>;
+  commitElementUpdates: (updates: ElementUpdateInput[], withHistory?: boolean) => Promise<void>;
+  deleteSelected: () => Promise<void>;
+  toggleElementVisibility: (id: Id, visible: boolean) => Promise<void>;
+  toggleElementLock: (id: Id, locked: boolean) => Promise<void>;
+  nudgeSelection: (dx: number, dy: number) => Promise<void>;
+  copySelection: () => void;
+  pasteSelection: () => Promise<void>;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  createText: () => Promise<void>;
+  createShape: () => Promise<void>;
+  createFromMedia: (asset: MediaAsset, x: number, y: number) => Promise<void>;
+  createOverlay: () => Promise<void>;
+  toggleOverlay: (overlayId: Id, enabled: boolean) => Promise<void>;
+  importMedia: (files: FileList) => Promise<void>;
+  deleteMedia: (id: Id) => Promise<void>;
+  changeMediaSrc: (id: Id, file: File) => Promise<void>;
+}

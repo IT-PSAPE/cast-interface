@@ -20,6 +20,7 @@ function buildEmptySnapshot(): AppSnapshot {
     mediaAssets: [],
     overlays: [],
     templates: [],
+    stages: [],
   };
 }
 
@@ -37,7 +38,7 @@ function buildNdiDiagnostics(outputState: NdiOutputState, outputConfigs: NdiOutp
 
 async function installCastApiMock(page: Page): Promise<void> {
   const ndiOutputConfigs = createDefaultNdiOutputConfigs();
-  const ndiOutputState = { audience: false };
+  const ndiOutputState = { audience: false, stage: false };
   const payload: CastApiMockPayload = {
     snapshot: buildEmptySnapshot(),
     ndiDiagnostics: buildNdiDiagnostics(ndiOutputState, ndiOutputConfigs),
@@ -153,4 +154,31 @@ test('workbench renders current toolbar labels and panel toggles', async ({ page
   await expect(toolbar.getByRole('button', { name: 'Left' })).toBeVisible();
   await expect(toolbar.getByRole('button', { name: 'Right' })).toBeVisible();
   await expect(toolbar.getByRole('button', { name: 'Bottom' })).toHaveCount(0);
+});
+
+test('editor add menus only expose actions for their own editor type', async ({ page }) => {
+  await installCastApiMock(page);
+  await page.goto('/');
+  const applicationViews = page.getByLabel('Application views');
+
+  await applicationViews.getByRole('button', { name: 'Overlay' }).click();
+  await page.getByLabel('Add').click();
+  await expect(page.getByRole('menuitem', { name: 'New overlay' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /^New lyric$/ })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New presentation$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await applicationViews.getByRole('button', { name: 'Templates' }).click();
+  await page.getByLabel('Add').click();
+  await expect(page.getByRole('menuitem', { name: 'New presentation template' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'New lyric template' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /^New lyric$/ })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: /^New presentation$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await applicationViews.getByRole('button', { name: 'Stage' }).click();
+  await page.getByLabel('Add').click();
+  await expect(page.getByRole('menuitem', { name: 'New stage' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'New lyric' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'New presentation' })).toHaveCount(0);
 });

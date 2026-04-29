@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { clamp } from '../../utils/math';
 
 // ── Types ──────────────────────────────────────────────────
@@ -21,6 +22,10 @@ interface PopoverProps {
   offset?: number;
   className?: string;
   children: ReactNode;
+  // When true, only fall back along the main axis (e.g., bottom→top) and never
+  // to cross-axis sides. Dropdowns want this so the menu never appears beside
+  // its trigger — that's confusing for menu UX.
+  axisLock?: boolean;
 }
 
 interface ResolvedPosition {
@@ -39,16 +44,35 @@ function getOverlayRoot(): HTMLElement {
 
 // ── Component ──────────────────────────────────────────────
 
-export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 4, className = '', children }: PopoverProps) {
+export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 4, className = '', children, axisLock = false }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<ResolvedPosition | null>(null);
+
+  // Participate in the global overlay stack so nested popovers (e.g. a select
+  // opened inside a dialog) layer above whatever opened them. Without this the
+  // popover's wrapper has `z-index: auto` and gets painted behind any sibling
+  // overlay (like a Dialog) that has an explicit z-index.
+  // NB: depend on the stable `register`/`unregister` callbacks, not the whole
+  // `overlayStack` object — that object's reference changes every time the
+  // stack entries change, which would cause a register → state-change → ref-change
+  // → effect re-run → unregister → register loop.
+  const { overlayStack } = useWorkbench();
+  const { register, unregister } = overlayStack;
+  const popoverId = useId();
+  useEffect(() => {
+    if (!open) return undefined;
+    register(popoverId);
+    return () => unregister(popoverId);
+  }, [open, popoverId, register, unregister]);
+  const stackIndex = overlayStack.stack.indexOf(popoverId);
+  const zIndex = overlayStack.baseZIndex + Math.max(stackIndex, 0) * 10;
 
   // Compute position after content renders so we can measure it
   useLayoutEffect(() => {
     if (!open || !anchor || !contentRef.current) return;
-    const pos = resolvePosition(anchor, contentRef.current, placement, offset);
+    const pos = resolvePosition(anchor, contentRef.current, placement, offset, axisLock);
     setPosition(pos);
-  }, [open, anchor, placement, offset]);
+  }, [open, anchor, placement, offset, axisLock]);
 
   // Close on outside pointer
   useEffect(() => {
@@ -76,7 +100,7 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
     const content = contentRef.current;
     function reposition() {
       if (!anchor || !content) return;
-      const pos = resolvePosition(anchor, content, placement, offset);
+      const pos = resolvePosition(anchor, content, placement, offset, axisLock);
       setPosition(pos);
     }
     window.addEventListener('resize', reposition);
@@ -85,7 +109,7 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
-  }, [open, anchor, placement, offset]);
+  }, [open, anchor, placement, offset, axisLock]);
 
   if (!open) return null;
 
@@ -101,12 +125,13 @@ export function Popover({ anchor, open, onClose, placement = 'bottom', offset = 
         top: isPositioned ? position.top : -9999,
         left: isPositioned ? position.left : -9999,
         visibility: isPositioned ? 'visible' : 'hidden',
+        zIndex,
       }}
       data-popover-placement={isPositioned ? position.placement : undefined}
     >
       {children}
     </div>,
-    getOverlayRoot(),
+    overlayStack.rootElement ?? getOverlayRoot(),
   );
 }
 
@@ -129,6 +154,7 @@ function resolvePosition(
   content: HTMLElement,
   preferred: PopoverPlacement,
   offset: number,
+  axisLock: boolean,
 ): ResolvedPosition {
   const anchorRect = anchor.getBoundingClientRect();
   const contentRect = content.getBoundingClientRect();
@@ -136,7 +162,7 @@ function resolvePosition(
   const vh = window.innerHeight;
 
   // Try preferred placement first, then fallbacks
-  const fallbackOrder = getFallbackOrder(preferred);
+  const fallbackOrder = getFallbackOrder(preferred, axisLock);
 
   for (const candidate of fallbackOrder) {
     const pos = computePosition(anchorRect, contentRect, candidate, offset);
@@ -208,7 +234,7 @@ function fitsInViewport(
   );
 }
 
-function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
+function getFallbackOrder(preferred: PopoverPlacement, axisLock: boolean): PopoverPlacement[] {
   const { side, align } = parsePlacement(preferred);
 
   const oppositeSide: Record<PopoverSide, PopoverSide> = {
@@ -224,6 +250,13 @@ function getFallbackOrder(preferred: PopoverPlacement): PopoverPlacement[] {
     left: ['top', 'bottom'],
     right: ['top', 'bottom'],
   };
+
+  if (axisLock) {
+    return [
+      preferred,
+      buildPlacement(oppositeSide[side], align),
+    ];
+  }
 
   return [
     preferred,

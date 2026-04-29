@@ -1,11 +1,16 @@
-import { app, BrowserWindow, Menu, nativeImage, protocol, net, type BrowserWindowConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, nativeImage, protocol, type BrowserWindowConstructorOptions } from 'electron';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { CastRepository } from '@database/store';
 import { createApplicationMenu } from './application-menu';
 import { registerIpcHandlers } from './ipc';
 import { NdiService } from './ndi/ndi-service';
 import { NdiConfigStore } from './ndi/ndi-config-store';
+import {
+  createForbiddenResponse,
+  createNotFoundResponse,
+  fetchLocalFileResponse,
+  resolveTrustedCastMediaRequest,
+} from './security';
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'cast-media',
@@ -38,6 +43,7 @@ const ndiService = new NdiService({
     ndiConfigStore.save(configs);
   },
 });
+let isShuttingDown = false;
 
 function teardownNdi(reason: string, error?: unknown) {
   if (error !== undefined) {
@@ -50,12 +56,38 @@ function teardownNdi(reason: string, error?: unknown) {
   }
 }
 
+function quitAfterFatalMainProcessError(reason: string, error: unknown): void {
+  if (isShuttingDown) {
+    return;
+  }
+  isShuttingDown = true;
+  teardownNdi(reason, error);
+
+  const exit = () => {
+    try {
+      app.exit(1);
+    } catch (exitError) {
+      console.error('[Main process fatal exit failure]', exitError);
+      process.exitCode = 1;
+      process.exit(1);
+    }
+  };
+
+  if (app.isReady()) {
+    app.quit();
+    setTimeout(exit, 1500).unref();
+    return;
+  }
+
+  exit();
+}
+
 process.on('uncaughtException', (error) => {
-  teardownNdi('uncaughtException', error);
+  quitAfterFatalMainProcessError('uncaughtException', error);
 });
 
 process.on('unhandledRejection', (reason) => {
-  teardownNdi('unhandledRejection', reason);
+  quitAfterFatalMainProcessError('unhandledRejection', reason);
 });
 
 process.on('exit', () => {
@@ -82,7 +114,7 @@ function getAppIcon(): string {
   return path.join(resourcesPath, 'icon.png');
 }
 
-function createRendererWindowOptions(view: RendererView, width: number, height: number): BrowserWindowConstructorOptions {
+function createRendererWindowOptions(width: number, height: number): BrowserWindowConstructorOptions {
   return {
     title: APP_NAME,
     width,
@@ -136,7 +168,7 @@ function loadRendererView(window: BrowserWindow, view: RendererView): void {
 }
 
 function createMainWindow(): void {
-  const window = new BrowserWindow(createRendererWindowOptions(cliOptions.rendererView, 1680, 980));
+  const window = new BrowserWindow(createRendererWindowOptions(1680, 980));
   mainWindow = window;
   window.setTitle(APP_NAME);
   if (process.platform === 'win32') {
@@ -159,8 +191,15 @@ app.whenReady().then(() => {
   }
 
   protocol.handle('cast-media', (request) => {
-    const filePath = decodeURIComponent(request.url.slice('cast-media://'.length));
-    return net.fetch(pathToFileURL(filePath).toString());
+    const filePath = resolveTrustedCastMediaRequest(request);
+    if (!filePath) {
+      return createForbiddenResponse();
+    }
+
+    return fetchLocalFileResponse(filePath).catch((error: unknown) => {
+      console.error('[cast-media] Failed to fetch local media', error);
+      return createNotFoundResponse();
+    });
   });
 
   const iconPngPath = path.join(
@@ -190,11 +229,11 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  teardownNdi('window-all-closed');
   if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
+  isShuttingDown = true;
   teardownNdi('before-quit');
 });
 

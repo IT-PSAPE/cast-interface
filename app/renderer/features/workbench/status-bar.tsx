@@ -16,6 +16,9 @@ export function StatusBar() {
   const { isRunningOperation, operationText, statusText } = useCast();
   const { state: { diagnostics, outputState } } = useNdi();
   const audienceStateLabel = diagnostics?.sourceStatus === 'live' ? 'Audience live' : 'Audience idle';
+  // Stage doesn't drive the global `sourceStatus` field, so we surface a simpler
+  // on/off label until per-sender diagnostics land.
+  const stageStateLabel = outputState.stage ? 'Stage live' : 'Stage idle';
   const displayText = isRunningOperation ? operationText ?? 'Processing...' : statusText;
 
   return (
@@ -28,10 +31,14 @@ export function StatusBar() {
         {displayText}
       </span>
 
-      <div className="ml-auto flex items-center gap-2 text-tertiary">
+      <div className="ml-auto flex items-center gap-3 text-tertiary">
         <span className="flex items-center gap-1">
           <span className={indicatorStyles({ active: outputState.audience })} />
           {audienceStateLabel}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className={indicatorStyles({ active: outputState.stage })} />
+          {stageStateLabel}
         </span>
       </div>
     </div>
