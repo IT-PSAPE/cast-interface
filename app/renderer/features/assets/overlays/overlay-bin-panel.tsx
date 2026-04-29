@@ -8,7 +8,7 @@ import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
 import { buildRenderScene } from '../../canvas/build-render-scene';
 import { SceneStage } from '../../canvas/scene-stage';
-import { BinPanelLayout } from '../../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { filterByText } from '../../../utils/filter-by-text';
 
 interface OverlayBinPanelProps {

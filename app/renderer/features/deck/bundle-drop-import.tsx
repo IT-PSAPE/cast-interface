@@ -4,7 +4,7 @@ import type {
   DeckBundleBrokenReferenceDecision,
   DeckBundleInspection,
 } from '@core/types';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Dialog } from '@renderer/components/overlays/dialog';
 import { useCast } from '@renderer/contexts/app-context';
 import { BrokenReferenceReviewList } from './broken-reference-review-list';

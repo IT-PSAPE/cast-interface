@@ -88,7 +88,10 @@ interface AssetEditorContextValue {
 
 // ─── Context ────────────────────────────────────────────────────────
 
-const AssetEditorContext = createContext<AssetEditorContextValue | null>(null);
+const OverlayEditorContext = createContext<OverlayEditorValue | null>(null);
+const TemplateEditorContext = createContext<TemplateEditorValue | null>(null);
+const DeckEditorContext = createContext<DeckEditorValue | null>(null);
+const StageEditorContext = createContext<StageEditorValue | null>(null);
 
 // ─── Provider ───────────────────────────────────────────────────────
 
@@ -709,36 +712,51 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
 
   // ── Combined value ──
 
-  const value = useMemo<AssetEditorContextValue>(
-    () => ({ overlay: overlayValue, template: templateValue, deck: deckValue, stage: stageValue }),
-    [overlayValue, templateValue, deckValue, stageValue],
+  return (
+    <OverlayEditorContext.Provider value={overlayValue}>
+      <TemplateEditorContext.Provider value={templateValue}>
+        <DeckEditorContext.Provider value={deckValue}>
+          <StageEditorContext.Provider value={stageValue}>
+            {children}
+          </StageEditorContext.Provider>
+        </DeckEditorContext.Provider>
+      </TemplateEditorContext.Provider>
+    </OverlayEditorContext.Provider>
   );
-
-  return <AssetEditorContext.Provider value={value}>{children}</AssetEditorContext.Provider>;
 }
 
 // ─── Hooks ──────────────────────────────────────────────────────────
 
 export function useAssetEditor(): AssetEditorContextValue {
-  const ctx = useContext(AssetEditorContext);
-  if (!ctx) throw new Error('useAssetEditor must be used within AssetEditorProvider');
-  return ctx;
+  const overlay = useOverlayEditor();
+  const template = useTemplateEditor();
+  const deck = useDeckEditor();
+  const stage = useStageEditor();
+  return { overlay, template, deck, stage };
 }
 
 export function useOverlayEditor(): OverlayEditorValue {
-  return useAssetEditor().overlay;
+  const ctx = useContext(OverlayEditorContext);
+  if (!ctx) throw new Error('useOverlayEditor must be used within AssetEditorProvider');
+  return ctx;
 }
 
 export function useTemplateEditor(): TemplateEditorValue {
-  return useAssetEditor().template;
+  const ctx = useContext(TemplateEditorContext);
+  if (!ctx) throw new Error('useTemplateEditor must be used within AssetEditorProvider');
+  return ctx;
 }
 
 export function useDeckEditor(): DeckEditorValue {
-  return useAssetEditor().deck;
+  const ctx = useContext(DeckEditorContext);
+  if (!ctx) throw new Error('useDeckEditor must be used within AssetEditorProvider');
+  return ctx;
 }
 
 export function useStageEditor(): StageEditorValue {
-  return useAssetEditor().stage;
+  const ctx = useContext(StageEditorContext);
+  if (!ctx) throw new Error('useStageEditor must be used within AssetEditorProvider');
+  return ctx;
 }
 
 // ─── Utils ──────────────────────────────────────────────────────────

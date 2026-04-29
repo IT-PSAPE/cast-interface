@@ -1,5 +1,5 @@
-import { Children, createContext, isValidElement, useCallback, useContext, useEffect, useMemo, type ReactElement, type ReactNode } from 'react';
-import { ResizableSplitPane, ResizableSplitRoot, type ResizableSplitResizeEndEvent, type ResizableSplitResizeMoveEvent, type ResizableSplitResizeStartEvent } from '../../components/layout/resizable-split';
+import { Children, createContext, isValidElement, useCallback, useContext, useEffect, useMemo, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { ResizableSplitPane, ResizableSplitRoot, type ResizableSplitResizeEndEvent, type ResizableSplitResizeMoveEvent, type ResizableSplitResizeStartEvent } from '../resizable-split';
 import { useWorkbenchPanelLayout } from './use-workbench-panel-layout';
 import type { PaneId, SplitDefinition, SplitId, SplitPaneDefinition } from './workbench-panel-layout';
 
@@ -65,7 +65,7 @@ function Root({ children }: PanelRouteRootProps) {
   return <PanelRouteContext.Provider value={value}>{children}</PanelRouteContext.Provider>;
 }
 
-function Segment({ splitId, orientation, className = '', children }: PanelRouteSplitProps) {
+function Segment({ splitId, orientation, className = '', children, ...props }: PanelRouteSplitProps & HTMLAttributes<HTMLDivElement>) {
   const context = usePanelRoute();
   const panels = useMemo(() => collectPanels(children), [children]);
   const definition = useMemo(() => createSplitDefinition(splitId, orientation, panels), [orientation, panels, splitId]);
@@ -102,7 +102,7 @@ function Segment({ splitId, orientation, className = '', children }: PanelRouteS
 
   return (
     <ResizableSplitRoot orientation={orientation} onContainerResize={handleContainerResize} onResizeStart={handleResizeStart} onResize={handleResize} onResizeEnd={handleResizeEnd}>
-      <div className={className}>
+      <div {...props} className={className}>
         {resizablePanes}
       </div>
     </ResizableSplitRoot>

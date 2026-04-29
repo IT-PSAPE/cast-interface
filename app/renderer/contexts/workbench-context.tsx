@@ -77,7 +77,9 @@ type WorkbenchContextValue = {
   overlayStack: OverlayStackValue;
 };
 
-const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
+const WorkbenchStateContext = createContext<WorkbenchContextValue['state'] | null>(null);
+const WorkbenchActionsContext = createContext<WorkbenchContextValue['actions'] | null>(null);
+const WorkbenchOverlayStackContext = createContext<WorkbenchContextValue['overlayStack'] | null>(null);
 const WORKBENCH_MODE_STORAGE_KEY = 'recast.workbench-mode.v1';
 const DECK_BROWSER_STORAGE_KEY = 'recast.deck-browser-preferences.v1';
 const DRAWER_VIEW_MODES_STORAGE_KEY = 'recast.drawer-view-modes.v1';
@@ -278,19 +280,23 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     unregister: unregisterOverlay,
   }), [overlayRootElement, overlayStackEntries, registerOverlay, unregisterOverlay]);
 
-  const value = useMemo<WorkbenchContextValue>(() => ({
-    state,
-    actions,
-    overlayStack,
-  }), [actions, overlayStack, state]);
-
-  return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;
+  return (
+    <WorkbenchStateContext.Provider value={state}>
+      <WorkbenchActionsContext.Provider value={actions}>
+        <WorkbenchOverlayStackContext.Provider value={overlayStack}>
+          {children}
+        </WorkbenchOverlayStackContext.Provider>
+      </WorkbenchActionsContext.Provider>
+    </WorkbenchStateContext.Provider>
+  );
 }
 
 export function useWorkbench(): WorkbenchContextValue {
-  const context = useContext(WorkbenchContext);
-  if (!context) throw new Error('useWorkbench must be used within WorkbenchProvider');
-  return context;
+  const state = useContext(WorkbenchStateContext);
+  const actions = useContext(WorkbenchActionsContext);
+  const overlayStack = useContext(WorkbenchOverlayStackContext);
+  if (!state || !actions || !overlayStack) throw new Error('useWorkbench must be used within WorkbenchProvider');
+  return { state, actions, overlayStack };
 }
 
 function parseWorkbenchMode(raw: string): WorkbenchMode | null {

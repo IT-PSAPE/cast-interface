@@ -10,6 +10,10 @@ export type NdiRuntimeInfo = {
   path: string | null;
 };
 
+export type NdiAddonInfo = {
+  path: string | null;
+};
+
 export function initializeSender(config: NdiSenderConfig): void;
 
 export function sendBgraFrame(senderName: string, frame: Uint8Array, width: number, height: number, stride: number): void;
@@ -21,3 +25,5 @@ export function getSenderConnections(senderName: string, timeoutMs?: number): nu
 export function destroySender(senderName?: string): void;
 
 export function getRuntimeInfo(): NdiRuntimeInfo;
+
+export function getAddonInfo(): NdiAddonInfo;

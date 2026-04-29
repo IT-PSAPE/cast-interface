@@ -333,16 +333,33 @@ function SortMenuItems<K extends string>({ options, sort, onChange }: SortMenuIt
 
   return (
     <>
-      {options.map(({ key, label }) => {
-        const active = sort.key === key;
-        return (
-          <Dropdown.Item key={key} onClick={() => handleSelect(key)}>
-            <span className="flex-1">{label}</span>
-            {active ? (sort.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />) : null}
-          </Dropdown.Item>
-        );
-      })}
+      {options.map((option) => (
+        <SortMenuItem key={option.key} option={option} sort={sort} onSelect={handleSelect} />
+      ))}
     </>
+  );
+}
+
+function SortMenuItem<K extends string>({
+  option,
+  sort,
+  onSelect,
+}: {
+  option: SortMenuItemsProps<K>['options'][number];
+  sort: BinSort<K>;
+  onSelect: (key: K) => void;
+}) {
+  const active = sort.key === option.key;
+
+  function handleClick() {
+    onSelect(option.key);
+  }
+
+  return (
+    <Dropdown.Item onClick={handleClick}>
+      <span className="flex-1">{option.label}</span>
+      {active ? (sort.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />) : null}
+    </Dropdown.Item>
   );
 }
 

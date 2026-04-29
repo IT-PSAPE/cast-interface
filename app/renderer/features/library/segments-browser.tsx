@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
 import type { PlaylistTree } from '@core/types';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { ScrollArea } from '../../components/layout/scroll-area';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useLibraryBrowser } from './library-browser-context';
@@ -9,7 +9,7 @@ import { PlaylistSegmentGroup } from './playlist-segment-group';
 import { Label } from '@renderer/components/display/text';
 import { Accordion } from '@renderer/components/display/accordion';
 import { EmptyState } from '../../components/display/empty-state';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 
 type SegmentList = PlaylistTree['segments'];
 

@@ -12,6 +12,7 @@ export interface Playlist {
   id: Id;
   libraryId: Id;
   name: string;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }

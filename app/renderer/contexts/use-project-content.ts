@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { getSlideDeckItemId } from '@core/deck-items';
-import type { DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Stage, Template } from '@core/types';
+import type { AppSnapshot, DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Stage, Template } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
 import { useCast } from './app-context';
 
@@ -30,6 +30,8 @@ function stableArray<T extends { id: Id; updatedAt: string }>(prev: T[] | null, 
   }
   return prev;
 }
+
+const projectContentCache = new WeakMap<AppSnapshot, ProjectContent>();
 
 export function useProjectContent(): ProjectContent {
   const { snapshot } = useCast();
@@ -72,92 +74,79 @@ export function useProjectContent(): ProjectContent {
     return result;
   }, [snapshot]);
 
-  const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, templates, stages } = stableInputs;
+  return useMemo(() => {
+    const cacheKey = snapshot ?? null;
+    if (cacheKey) {
+      const cached = projectContentCache.get(cacheKey);
+      if (cached) return cached;
+    }
 
-  const deckItems = useMemo(() => {
-    return [...presentations, ...lyrics].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
-  }, [presentations, lyrics]);
+    const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, templates, stages } = stableInputs;
 
-  const deckItemsById = useMemo(() => {
-    const map = new Map<Id, DeckItem>();
-    for (const item of deckItems) map.set(item.id, item);
-    return map;
-  }, [deckItems]);
+    const deckItems = [...presentations, ...lyrics].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
 
-  const slidesByDeckItemId = useMemo(() => {
-    const map = new Map<Id, Slide[]>();
-    for (const item of deckItems) map.set(item.id, []);
+    const deckItemsById = new Map<Id, DeckItem>();
+    for (const item of deckItems) deckItemsById.set(item.id, item);
+
+    const slidesByDeckItemId = new Map<Id, Slide[]>();
+    for (const item of deckItems) slidesByDeckItemId.set(item.id, []);
     for (const slide of slides) {
       const itemId = getSlideDeckItemId(slide);
       if (!itemId) continue;
-      const existing = map.get(itemId) ?? [];
+      const existing = slidesByDeckItemId.get(itemId) ?? [];
       existing.push(slide);
-      map.set(itemId, existing);
+      slidesByDeckItemId.set(itemId, existing);
     }
-    map.forEach((contentSlides, itemId) => {
-      map.set(itemId, sortSlides(contentSlides));
+    slidesByDeckItemId.forEach((contentSlides, itemId) => {
+      slidesByDeckItemId.set(itemId, sortSlides(contentSlides));
     });
-    return map;
-  }, [deckItems, slides]);
 
-  const slideElementsBySlideId = useMemo(() => {
-    const map = new Map<Id, SlideElement[]>();
-    for (const slide of slides) map.set(slide.id, []);
+    const slideElementsBySlideId = new Map<Id, SlideElement[]>();
+    for (const slide of slides) slideElementsBySlideId.set(slide.id, []);
     for (const element of slideElements) {
-      const existing = map.get(element.slideId) ?? [];
+      const existing = slideElementsBySlideId.get(element.slideId) ?? [];
       existing.push(element);
-      map.set(element.slideId, existing);
+      slideElementsBySlideId.set(element.slideId, existing);
     }
-    map.forEach((elements, slideId) => {
-      map.set(slideId, sortElements(elements));
+    slideElementsBySlideId.forEach((elements, slideId) => {
+      slideElementsBySlideId.set(slideId, sortElements(elements));
     });
-    return map;
-  }, [slides, slideElements]);
 
-  const mediaAssetsById = useMemo(() => {
-    const map = new Map<Id, MediaAsset>();
-    for (const asset of mediaAssets) map.set(asset.id, asset);
-    return map;
-  }, [mediaAssets]);
+    const mediaAssetsById = new Map<Id, MediaAsset>();
+    for (const asset of mediaAssets) mediaAssetsById.set(asset.id, asset);
 
-  const overlaysById = useMemo(() => {
-    const map = new Map<Id, Overlay>();
-    for (const overlay of overlays) map.set(overlay.id, overlay);
-    return map;
-  }, [overlays]);
+    const overlaysById = new Map<Id, Overlay>();
+    for (const overlay of overlays) overlaysById.set(overlay.id, overlay);
 
-  const templatesById = useMemo(() => {
-    const map = new Map<Id, Template>();
-    for (const template of templates) map.set(template.id, template);
-    return map;
-  }, [templates]);
+    const templatesById = new Map<Id, Template>();
+    for (const template of templates) templatesById.set(template.id, template);
 
-  const stagesById = useMemo(() => {
-    const map = new Map<Id, Stage>();
-    for (const stage of stages) map.set(stage.id, stage);
-    return map;
-  }, [stages]);
+    const stagesById = new Map<Id, Stage>();
+    for (const stage of stages) stagesById.set(stage.id, stage);
 
-  return useMemo(() => ({
-    presentations,
-    lyrics,
-    deckItems,
-    slides,
-    slideElements,
-    mediaAssets,
-    overlays,
-    templates,
-    stages,
-    deckItemsById,
-    slidesByDeckItemId,
-    slideElementsBySlideId,
-    mediaAssetsById,
-    overlaysById,
-    templatesById,
-    stagesById,
-  }), [
-    presentations, lyrics, deckItems, slides, slideElements, mediaAssets, overlays, templates, stages,
-    deckItemsById, slidesByDeckItemId, slideElementsBySlideId,
-    mediaAssetsById, overlaysById, templatesById, stagesById,
-  ]);
+    const content = {
+      presentations,
+      lyrics,
+      deckItems,
+      slides,
+      slideElements,
+      mediaAssets,
+      overlays,
+      templates,
+      stages,
+      deckItemsById,
+      slidesByDeckItemId,
+      slideElementsBySlideId,
+      mediaAssetsById,
+      overlaysById,
+      templatesById,
+      stagesById,
+    } satisfies ProjectContent;
+
+    if (cacheKey) {
+      projectContentCache.set(cacheKey, content);
+    }
+
+    return content;
+  }, [snapshot, stableInputs]);
 }

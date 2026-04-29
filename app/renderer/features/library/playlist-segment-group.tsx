@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DeckItem, PlaylistEntry, PlaylistTree } from '@core/types';
-import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
+import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
 import { Accordion } from '../../components/display/accordion';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useLibraryBrowser } from './library-browser-context';
 import { getSegmentHeaderColors } from './segment-header-color';
-import { RecastPanel } from '@renderer/components 2.0/panel';
+import { RecastPanel } from '@renderer/components/layout/panel';
 import { hasDeckItemDragData, readDeckItemDragData } from '../../utils/deck-item-drag';
 
 interface PlaylistSegmentGroupProps {

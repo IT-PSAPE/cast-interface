@@ -6,7 +6,7 @@ import { MediaAssetIcon } from '../../../components/display/entity-icon';
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
-import { BinPanelLayout } from '../../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useMediaBin } from './use-media-bin';
 
@@ -21,17 +21,9 @@ export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) 
 
   return (
     <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
-      {mediaAssets.map((asset) => {
-        const shared = {
-          key: asset.id,
-          asset,
-          isActive: mediaLayerAssetId === asset.id,
-          onAssignLayer: handleApply,
-        };
-        return drawerViewMode === 'list'
-          ? <MediaRow {...shared} />
-          : <MediaTile {...shared} />;
-      })}
+      {mediaAssets.map((asset) => (
+        <MediaBinItem key={asset.id} asset={asset} isActive={mediaLayerAssetId === asset.id} mode={drawerViewMode} onAssignLayer={handleApply} />
+      ))}
     </BinPanelLayout>
   );
 }
@@ -42,27 +34,30 @@ interface MediaItemProps {
   onAssignLayer: (id: Id) => void;
 }
 
+function MediaBinItem({ mode, ...props }: MediaItemProps & { mode: NonNullable<ReturnType<typeof useResourceDrawer>['drawerViewMode']> }) {
+  if (mode === 'list') return <MediaRow {...props} />;
+  return <MediaTile {...props} />;
+}
+
 function MediaRow({ asset, isActive, onAssignLayer }: MediaItemProps) {
   function handleAssignLayer() {
     onAssignLayer(asset.id);
   }
 
   return (
-    <div>
-      <SelectableRow.Root
-        selected={isActive}
-        onClick={handleAssignLayer}
-        className="h-9"
-      >
-        <SelectableRow.Leading>
-          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-        </SelectableRow.Leading>
-        <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-        <SelectableRow.Trailing>
-          <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-        </SelectableRow.Trailing>
-      </SelectableRow.Root>
-    </div>
+    <SelectableRow.Root
+      selected={isActive}
+      onClick={handleAssignLayer}
+      className="h-9"
+    >
+      <SelectableRow.Leading>
+        <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+      </SelectableRow.Leading>
+      <SelectableRow.Label>{asset.name}</SelectableRow.Label>
+      <SelectableRow.Trailing>
+        <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
+      </SelectableRow.Trailing>
+    </SelectableRow.Root>
   );
 }
 
@@ -72,26 +67,22 @@ function MediaTile({ asset, isActive, onAssignLayer }: MediaItemProps) {
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <Thumbnail.Tile
-        onClick={handleAssignLayer}
-        selected={isActive}
-        className={cn(isActive ? 'ring-1 ring-brand-400/35' : '')}
-      >
-        <Thumbnail.Body>
-          <>
-            <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
-            <MediaThumbnail asset={asset} />
-          </>
-        </Thumbnail.Body>
-        <Thumbnail.Caption>
-          <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
-            <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
-            <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
-          </div>
-        </Thumbnail.Caption>
-      </Thumbnail.Tile>
-    </div>
+    <Thumbnail.Tile
+      onClick={handleAssignLayer}
+      selected={isActive}
+      className={cn(isActive ? 'ring-1 ring-brand-400/35' : '')}
+    >
+      <Thumbnail.Body>
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(var(--color-background-tertiary)_0%_25%,var(--color-background-quaternary)_0%_50%)] bg-[length:16px_16px]" />
+        <MediaThumbnail asset={asset} />
+      </Thumbnail.Body>
+      <Thumbnail.Caption>
+        <div className="flex min-w-0 items-center gap-1 text-sm text-secondary">
+          <MediaAssetIcon asset={asset} size={12} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+          <Paragraph.xs className="truncate">{asset.name}</Paragraph.xs>
+        </div>
+      </Thumbnail.Caption>
+    </Thumbnail.Tile>
   );
 }
 

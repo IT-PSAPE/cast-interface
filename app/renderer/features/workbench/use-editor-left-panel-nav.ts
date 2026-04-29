@@ -2,6 +2,27 @@ import { useEffect } from 'react';
 import type { Id } from '@core/types';
 import { useElements } from '../../contexts/canvas/canvas-context';
 
+function isReservedTarget(target: HTMLElement | null): boolean {
+  if (!target) return false;
+  const isEditable = target.tagName === 'INPUT'
+    || target.tagName === 'TEXTAREA'
+    || target.getAttribute('contenteditable') === 'true';
+  if (isEditable) return true;
+
+  return target.closest([
+    'button',
+    'a[href]',
+    'select',
+    '[role="button"]',
+    '[role="menuitem"]',
+    '[role="tab"]',
+    '[role="option"]',
+    '[role="listbox"]',
+    '[role="combobox"]',
+    '[data-shortcuts-scope="ignore"]',
+  ].join(', ')) !== null;
+}
+
 interface NavItem {
   id: Id;
 }
@@ -21,10 +42,7 @@ export function useEditorLeftPanelNav<T extends NavItem>({ items, currentId, act
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       if (selectedElementId) return;
       const target = event.target as HTMLElement | null;
-      const isEditable = target?.tagName === 'INPUT'
-        || target?.tagName === 'TEXTAREA'
-        || target?.getAttribute('contenteditable') === 'true';
-      if (isEditable) return;
+      if (isReservedTarget(target)) return;
       if (items.length === 0) return;
 
       const currentIndex = currentId ? items.findIndex((item) => item.id === currentId) : -1;

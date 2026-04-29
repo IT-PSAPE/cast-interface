@@ -12,6 +12,8 @@ import { defaultNdiModuleLoader, type NdiNativeModule } from './ndi-native-modul
 
 const HEARTBEAT_INTERVAL_MS = Math.round(1000 / 30);
 const HEARTBEAT_STALL_THRESHOLD_MS = HEARTBEAT_INTERVAL_MS * 2;
+const BYTES_PER_PIXEL = 4;
+const MAX_FRAME_BYTES = NDI_OUTPUT_WIDTH * NDI_OUTPUT_HEIGHT * BYTES_PER_PIXEL;
 
 type StateChangeCallback = (state: NdiOutputState) => void;
 type DiagnosticsChangeCallback = (diagnostics: NdiDiagnostics) => void;
@@ -24,6 +26,7 @@ interface NdiServiceOptions {
 
 interface SenderState {
   diagnostics: NdiActiveSenderDiagnostics;
+  outputName: NdiOutputName;
   lastFrame: Uint8Array | null;
   lastFrameWidth: number;
   lastFrameHeight: number;
@@ -66,10 +69,11 @@ export class NdiService {
     this.outputState[name] = enabled;
 
     if (enabled) {
-      this.ensureSender(name);
+      this.rebuildActiveSenders();
       this.startHeartbeat();
     } else {
       this.destroySenderForOutput(name);
+      this.rebuildActiveSenders();
       if (this.allOutputsDisabled()) {
         this.stopHeartbeat();
         this.sourceStatus = 'idle';
@@ -88,8 +92,7 @@ export class NdiService {
     this.onOutputConfigsChanged(this.outputConfigs);
 
     if (this.outputState[name]) {
-      this.destroySenderForOutput(name);
-      this.ensureSender(name);
+      this.rebuildActiveSenders();
     }
 
     this.emitDiagnosticsChange();
@@ -102,6 +105,11 @@ export class NdiService {
   receiveFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number): void {
     if (this.destroyed) return;
     if (!this.outputState[name]) return;
+    if (!this.isValidFramePayload(rgba, width, height)) {
+      this.lastError = `Rejected invalid NDI frame for ${name}`;
+      this.emitDiagnosticsChange();
+      return;
+    }
 
     const sender = this.senders.get(name);
     if (!sender) return;
@@ -200,23 +208,25 @@ export class NdiService {
     if (this.senders.has(name)) return;
 
     const config = this.outputConfigs[name];
+    const senderName = this.resolveSenderName(name);
     const width = NDI_OUTPUT_WIDTH;
     const height = NDI_OUTPUT_HEIGHT;
 
     try {
       this.module!.initializeSender({
-        senderName: config.senderName,
+        senderName,
         width,
         height,
         withAlpha: config.withAlpha,
       });
       this.senders.set(name, {
         diagnostics: {
-          senderName: config.senderName,
+          senderName,
           width,
           height,
           withAlpha: config.withAlpha,
         },
+        outputName: name,
         lastFrame: null,
         lastFrameWidth: 0,
         lastFrameHeight: 0,
@@ -242,6 +252,63 @@ export class NdiService {
     }
 
     this.senders.delete(name);
+  }
+
+  private rebuildActiveSenders(): void {
+    const enabledOutputs = NDI_OUTPUT_ORDER.filter((name) => this.outputState[name]);
+    const previousFrames = new Map(this.senders);
+
+    for (const name of [...this.senders.keys()]) {
+      this.destroySenderForOutput(name);
+    }
+
+    for (const name of enabledOutputs) {
+      this.ensureSender(name);
+      const restored = this.senders.get(name);
+      const previous = previousFrames.get(name);
+      if (!restored || !previous) continue;
+      restored.lastFrame = previous.lastFrame ? new Uint8Array(previous.lastFrame) : null;
+      restored.lastFrameWidth = previous.lastFrameWidth;
+      restored.lastFrameHeight = previous.lastFrameHeight;
+      restored.lastFrameReceivedAt = previous.lastFrameReceivedAt;
+    }
+  }
+
+  private resolveSenderName(name: NdiOutputName): string {
+    const requestedName = this.outputConfigs[name].senderName.trim();
+    let duplicateCount = 0;
+    for (const outputName of NDI_OUTPUT_ORDER) {
+      if (!this.outputState[outputName]) continue;
+      const candidate = this.outputConfigs[outputName].senderName.trim();
+      if (candidate !== requestedName) continue;
+      duplicateCount += 1;
+      if (outputName === name) {
+        break;
+      }
+    }
+
+    if (duplicateCount <= 1) {
+      return requestedName;
+    }
+
+    const suffix = name === 'audience' ? 'Audience' : 'Stage';
+    return `${requestedName} (${suffix})`;
+  }
+
+  private isValidFramePayload(rgba: Uint8Array, width: number, height: number): boolean {
+    if (!Number.isInteger(width) || !Number.isInteger(height)) {
+      return false;
+    }
+    if (width !== NDI_OUTPUT_WIDTH || height !== NDI_OUTPUT_HEIGHT) {
+      return false;
+    }
+
+    const expectedLength = width * height * BYTES_PER_PIXEL;
+    if (expectedLength <= 0 || expectedLength > MAX_FRAME_BYTES) {
+      return false;
+    }
+
+    return rgba.byteLength === expectedLength;
   }
 
   private sendFrame(name: NdiOutputName, rgba: Uint8Array, width: number, height: number): void {

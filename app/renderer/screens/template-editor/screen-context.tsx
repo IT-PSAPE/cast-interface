@@ -1,22 +1,18 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useProjectContent } from '../../contexts/use-project-content';
-import { getEditorHeaderActions } from '../../features/workbench/editor-header-actions';
 import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { createScreenContext } from '../../contexts/create-screen-context';
 
 interface TemplateEditorScreenContextValue {
-  meta: {
-    screenId: 'template-editor';
-    listTitle: 'Templates';
-    addActions: ReturnType<typeof getEditorHeaderActions>;
-  };
   state: {
     templates: ReturnType<typeof useTemplateEditor>['templates'];
     currentTemplateId: ReturnType<typeof useTemplateEditor>['currentTemplateId'];
     currentTemplate: ReturnType<typeof useTemplateEditor>['currentTemplate'];
     hasPendingChanges: boolean;
+    isPushingChanges: boolean;
     linkedItemCount: number;
     isSyncing: boolean;
   };
@@ -24,6 +20,7 @@ interface TemplateEditorScreenContextValue {
     selectTemplate: (id: string) => void;
     requestTemplateNameFocus: (id: string) => void;
     createTemplate: ReturnType<typeof useTemplateEditor>['createTemplate'];
+    saveChanges: () => Promise<void>;
     syncLinkedItems: () => Promise<void>;
   };
 }
@@ -36,14 +33,16 @@ export function TemplateEditorScreenProvider({ children }: { children: ReactNode
     currentTemplateId,
     currentTemplate,
     hasPendingChanges,
+    isPushingChanges,
     openTemplateEditor,
     requestNameFocus,
     syncLinkedDeckItems,
     createTemplate,
+    pushChanges,
   } = useTemplateEditor();
+  const { commitProgramScene } = useRenderScenes();
   const { deckItems } = useProjectContent();
   const [isSyncing, setIsSyncing] = useState(false);
-  const addActions = useMemo(() => getEditorHeaderActions('template-editor'), []);
 
   const linkedItemCount = currentTemplate
     ? deckItems.filter((item) => item.templateId === currentTemplate.id && isTemplateCompatibleWithDeckItem(currentTemplate, item.type)).length
@@ -65,17 +64,19 @@ export function TemplateEditorScreenProvider({ children }: { children: ReactNode
     }
   }
 
+  const handleSaveChanges = useCallback(async () => {
+    if (!hasPendingChanges) return;
+    await pushChanges();
+    commitProgramScene();
+  }, [commitProgramScene, hasPendingChanges, pushChanges]);
+
   const value = useMemo<TemplateEditorScreenContextValue>(() => ({
-    meta: {
-      screenId: 'template-editor',
-      listTitle: 'Templates',
-      addActions,
-    },
     state: {
       templates,
       currentTemplateId,
       currentTemplate,
       hasPendingChanges,
+      isPushingChanges,
       linkedItemCount,
       isSyncing,
     },
@@ -83,14 +84,16 @@ export function TemplateEditorScreenProvider({ children }: { children: ReactNode
       selectTemplate: openTemplateEditor,
       requestTemplateNameFocus: requestNameFocus,
       createTemplate,
+      saveChanges: handleSaveChanges,
       syncLinkedItems: handleSyncLinkedItems,
     },
   }), [
-    addActions,
     createTemplate,
     currentTemplate,
     currentTemplateId,
     hasPendingChanges,
+    handleSaveChanges,
+    isPushingChanges,
     isSyncing,
     linkedItemCount,
     openTemplateEditor,

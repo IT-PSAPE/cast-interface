@@ -38,7 +38,8 @@ interface CanvasContextValue {
 
 // ─── Context ────────────────────────────────────────────────────────
 
-const CanvasContext = createContext<CanvasContextValue | null>(null);
+const CanvasElementsContext = createContext<ElementContextValue | null>(null);
+const CanvasScenesContext = createContext<RenderSceneValue | null>(null);
 
 // ─── Exports for scene utilities ────────────────────────────────────
 
@@ -345,28 +346,33 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   // Combined value
   // ════════════════════════════════════════════════════════════════════
 
-  const value = useMemo<CanvasContextValue>(
-    () => ({ elements: elementsValue, scenes: scenesValue }),
-    [elementsValue, scenesValue],
+  return (
+    <CanvasElementsContext.Provider value={elementsValue}>
+      <CanvasScenesContext.Provider value={scenesValue}>
+        {children}
+      </CanvasScenesContext.Provider>
+    </CanvasElementsContext.Provider>
   );
-
-  return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }
 
 // ─── Hooks ──────────────────────────────────────────────────────────
 
 export function useCanvas(): CanvasContextValue {
-  const ctx = useContext(CanvasContext);
-  if (!ctx) throw new Error('useCanvas must be used within CanvasProvider');
-  return ctx;
+  const elements = useElements();
+  const scenes = useRenderScenes();
+  return { elements, scenes };
 }
 
 export function useElements(): ElementContextValue {
-  return useCanvas().elements;
+  const ctx = useContext(CanvasElementsContext);
+  if (!ctx) throw new Error('useElements must be used within CanvasProvider');
+  return ctx;
 }
 
 export function useRenderScenes(): RenderSceneValue {
-  return useCanvas().scenes;
+  const ctx = useContext(CanvasScenesContext);
+  if (!ctx) throw new Error('useRenderScenes must be used within CanvasProvider');
+  return ctx;
 }
 
 // ─── Element helpers ────────────────────────────────────────────────

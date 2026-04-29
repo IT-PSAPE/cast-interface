@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Id } from '@core/types';
 import { isTemplateCompatibleWithDeckItem } from '@core/templates';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { Dialog } from '../../components/overlays/dialog';
 import { FieldSelect } from '../../components/form/field';
 import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';

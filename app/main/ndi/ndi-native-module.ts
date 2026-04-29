@@ -15,6 +15,7 @@ export interface NdiNativeModule {
   sendRgbaFrame: (senderName: string, buffer: Uint8Array, width: number, height: number) => void;
   destroySender: (senderName?: string) => void;
   getRuntimeInfo?: () => NdiRuntimeInfo;
+  getAddonInfo?: () => { path: string | null };
 }
 
 export function defaultNdiModuleLoader(): NdiNativeModule {

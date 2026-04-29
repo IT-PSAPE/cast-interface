@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import type { DeckItemType, Id } from '@core/types';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useCreateDeckItem } from '../../features/deck/create-deck-item';
@@ -6,22 +6,11 @@ import { useNavigation } from '../../contexts/navigation-context';
 import { useDeckEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useProjectContent } from '../../contexts/use-project-content';
 import { useSlides } from '../../contexts/slide-context';
-import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
 import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { useSlideNotesPanel } from '../../features/deck/use-slide-notes-panel';
 import { createScreenContext } from '../../contexts/create-screen-context';
 
 interface DeckEditorScreenContextValue {
-  meta: {
-    screenId: 'deck-editor';
-    listTitle: 'Slides';
-    addActions: Array<{
-      id: 'new-lyric' | 'new-presentation' | 'new-slide';
-      label: string;
-      disabled?: boolean;
-      kind?: DeckItemType;
-    }>;
-  };
   state: {
     currentDeckItem: ReturnType<typeof useNavigation>['currentDeckItem'];
     currentDeckItemId: ReturnType<typeof useNavigation>['currentDeckItemId'];
@@ -31,7 +20,8 @@ interface DeckEditorScreenContextValue {
     currentSlideIndex: ReturnType<typeof useSlides>['currentSlideIndex'];
     liveSlideIndex: ReturnType<typeof useSlides>['liveSlideIndex'];
     effectiveElements: ReturnType<typeof useElements>['effectiveElements'];
-    inspectorState: ReturnType<typeof useInspectorPanelPushAction>['state'];
+    hasPendingChanges: boolean;
+    isPushingChanges: boolean;
     notesPanel: ReturnType<typeof useSlideNotesPanel>;
   };
   actions: {
@@ -42,7 +32,7 @@ interface DeckEditorScreenContextValue {
     duplicateSlide: ReturnType<typeof useSlides>['duplicateSlide'];
     deleteSlide: ReturnType<typeof useSlides>['deleteSlide'];
     moveSlide: ReturnType<typeof useSlides>['moveSlide'];
-    pushChanges: () => void;
+    saveChanges: () => Promise<void>;
     getSlideElements: ReturnType<typeof useDeckEditor>['getSlideElements'];
     getThumbnailScene: ReturnType<typeof useRenderScenes>['getThumbnailScene'];
   };
@@ -54,7 +44,7 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
   const { currentDeckItem, currentDeckItemId, browseDeckItem } = useNavigation();
   const { open: openCreateDeckItem } = useCreateDeckItem();
   const { effectiveElements } = useElements();
-  const { getSlideElements } = useDeckEditor();
+  const { getSlideElements, hasPendingChanges, isPushingChanges, pushChanges } = useDeckEditor();
   const {
     slides,
     currentSlide,
@@ -66,8 +56,7 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
     deleteSlide,
     moveSlide,
   } = useSlides();
-  const { getThumbnailScene } = useRenderScenes();
-  const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
+  const { getThumbnailScene, commitProgramScene } = useRenderScenes();
   const notesPanel = useSlideNotesPanel();
   const { deckItems } = useProjectContent();
 
@@ -77,18 +66,13 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
     activate: (_id, index) => setCurrentSlideIndex(index),
   });
 
-  const addActions = useMemo<DeckEditorScreenContextValue['meta']['addActions']>(() => ([
-    { id: 'new-lyric', label: 'New lyric', kind: 'lyric' },
-    { id: 'new-presentation', label: 'New presentation', kind: 'presentation' },
-    { id: 'new-slide', label: 'New slide', disabled: !currentDeckItem },
-  ]), [currentDeckItem]);
+  const handleSaveChanges = useCallback(async () => {
+    if (!hasPendingChanges) return;
+    await pushChanges();
+    commitProgramScene();
+  }, [commitProgramScene, hasPendingChanges, pushChanges]);
 
   const value = useMemo<DeckEditorScreenContextValue>(() => ({
-    meta: {
-      screenId: 'deck-editor',
-      listTitle: 'Slides',
-      addActions,
-    },
     state: {
       currentDeckItem,
       currentDeckItemId,
@@ -98,7 +82,8 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
       currentSlideIndex,
       liveSlideIndex,
       effectiveElements,
-      inspectorState,
+      hasPendingChanges,
+      isPushingChanges,
       notesPanel,
     },
     actions: {
@@ -109,12 +94,11 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
       duplicateSlide,
       deleteSlide,
       moveSlide,
-      pushChanges: handlePushChanges,
+      saveChanges: handleSaveChanges,
       getSlideElements,
       getThumbnailScene,
     },
   }), [
-    addActions,
     browseDeckItem,
     createSlide,
     currentDeckItem,
@@ -127,8 +111,9 @@ export function DeckEditorScreenProvider({ children }: { children: ReactNode }) 
     effectiveElements,
     getSlideElements,
     getThumbnailScene,
-    handlePushChanges,
-    inspectorState,
+    handleSaveChanges,
+    hasPendingChanges,
+    isPushingChanges,
     liveSlideIndex,
     moveSlide,
     notesPanel,

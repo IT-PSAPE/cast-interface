@@ -1,34 +1,34 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useStageEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useInspectorPanelPushAction } from '../../features/canvas/use-inspector-panel-push-action';
-import { getEditorHeaderActions } from '../../features/workbench/editor-header-actions';
+import { useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useEditorLeftPanelNav } from '../../features/workbench/use-editor-left-panel-nav';
 import { createScreenContext } from '../../contexts/create-screen-context';
 
 interface StageEditorScreenContextValue {
-  meta: {
-    screenId: 'stage-editor';
-    listTitle: 'Stages';
-    addActions: ReturnType<typeof getEditorHeaderActions>;
-  };
   state: {
     stages: ReturnType<typeof useStageEditor>['stages'];
     currentStageId: ReturnType<typeof useStageEditor>['currentStageId'];
-    inspectorState: ReturnType<typeof useInspectorPanelPushAction>['state'];
+    hasPendingChanges: boolean;
+    isPushingChanges: boolean;
   };
   actions: {
     selectStage: (id: string | null) => void;
     createStage: () => Promise<void>;
-    pushChanges: () => void;
+    saveChanges: () => Promise<void>;
   };
 }
 
 const [StageEditorScreenContextProvider, useStageEditorScreen] = createScreenContext<StageEditorScreenContextValue>('StageEditorScreenContext');
 
 export function StageEditorScreenProvider({ children }: { children: ReactNode }) {
-  const { stages, currentStageId, setCurrentStageId, createStage } = useStageEditor();
-  const { state: inspectorState, handlePushChanges } = useInspectorPanelPushAction();
-  const addActions = useMemo(() => getEditorHeaderActions('stage-editor'), []);
+  const { stages, currentStageId, setCurrentStageId, createStage, hasPendingChanges, isPushingChanges, pushChanges } = useStageEditor();
+  const { commitProgramScene } = useRenderScenes();
+
+  const handleSaveChanges = useCallback(async () => {
+    if (!hasPendingChanges) return;
+    await pushChanges();
+    commitProgramScene();
+  }, [commitProgramScene, hasPendingChanges, pushChanges]);
 
   useEditorLeftPanelNav({
     items: stages,
@@ -37,22 +37,18 @@ export function StageEditorScreenProvider({ children }: { children: ReactNode })
   });
 
   const value = useMemo<StageEditorScreenContextValue>(() => ({
-    meta: {
-      screenId: 'stage-editor',
-      listTitle: 'Stages',
-      addActions,
-    },
     state: {
       stages,
       currentStageId,
-      inspectorState,
+      hasPendingChanges,
+      isPushingChanges,
     },
     actions: {
       selectStage: setCurrentStageId,
       createStage,
-      pushChanges: handlePushChanges,
+      saveChanges: handleSaveChanges,
     },
-  }), [addActions, createStage, currentStageId, handlePushChanges, inspectorState, setCurrentStageId, stages]);
+  }), [createStage, currentStageId, handleSaveChanges, hasPendingChanges, isPushingChanges, setCurrentStageId, stages]);
 
   return <StageEditorScreenContextProvider value={value}>{children}</StageEditorScreenContextProvider>;
 }

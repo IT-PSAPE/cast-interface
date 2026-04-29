@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DeckItem, Id, Slide } from '@core/types';
-import { RenameField, type RenameFieldHandle } from '@renderer/components 2.0/rename-field';
+import { RenameField, type RenameFieldHandle } from '@renderer/components/form/rename-field';
 import { DeckItemIcon } from '../../components/display/entity-icon';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { SelectableRow } from '../../components/display/selectable-row';
@@ -9,7 +9,7 @@ import { useProjectContent } from '../../contexts/use-project-content';
 import { useResourceDrawer } from '../workbench/resource-drawer-context';
 import { buildThumbnailScene } from '../canvas/build-render-scene';
 import { SceneStage } from '../canvas/scene-stage';
-import { BinPanelLayout } from '../workbench/bin-panel-layout';
+import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useDeckBin } from './use-deck-bin';
 import { writeDeckItemDragData } from '../../utils/deck-item-drag';
 

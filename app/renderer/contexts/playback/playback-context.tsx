@@ -54,6 +54,7 @@ interface AudioValue {
   duration: number;
   isPlaying: boolean;
   loopEnabled: boolean;
+  armAudio: (assetId: Id) => void;
   clearAudio: () => void;
   pause: () => void;
   play: () => void;
@@ -80,6 +81,9 @@ interface PlaybackContextValue {
 
 const OVERLAY_PLAYBACK_INTERVAL_MS = 33;
 const PlaybackContext = createContext<PlaybackContextValue | null>(null);
+const PresentationLayersContext = createContext<LayersValue | null>(null);
+const AudioPlaybackContext = createContext<AudioValue | null>(null);
+const StagePlaybackContext = createContext<StageValue | null>(null);
 
 // ─── Provider ───────────────────────────────────────────────────────
 
@@ -239,158 +243,123 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   ]);
 
   // ── Audio playback ──
+  //
+  // State-as-source-of-truth model:
+  //  * `currentAudioAssetId` and `requestedPlay` declare the user's intent.
+  //  * Effects synchronize the <audio> element to match that intent.
+  //  * Audio events (timeupdate, durationchange, ended, error) update derived
+  //    state (`currentTime`, `duration`) and revoke `requestedPlay` only on
+  //    natural end / failure — never to mirror our own pause()/play() calls,
+  //    which is what caused the previous play/pause oscillation.
 
   const audioAssets = useMemo(() => mediaAssets.filter((asset) => asset.type === 'audio'), [mediaAssets]);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  if (!audioElementRef.current) {
-    const audio = document.createElement('audio');
-    audio.preload = 'metadata';
-    audioElementRef.current = audio;
-  }
-
   const [currentAudioAssetId, setCurrentAudioAssetId] = useState<Id | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [requestedPlay, setRequestedPlay] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const currentAudioAsset = useMemo(() => {
-    if (!currentAudioAssetId) return audioAssets[0] ?? null;
-    return audioAssets.find((asset) => asset.id === currentAudioAssetId) ?? audioAssets[0] ?? null;
+    if (!currentAudioAssetId) return null;
+    return audioAssets.find((asset) => asset.id === currentAudioAssetId) ?? null;
   }, [audioAssets, currentAudioAssetId]);
 
-  const syncAudioSource = useCallback((asset: MediaAsset | null, autoplay: boolean, resetPosition: boolean) => {
-    const audioEl = audioElementRef.current;
-    if (!audioEl) return;
+  const isPlaying = requestedPlay && currentAudioAsset !== null;
 
-    if (!asset) {
+  // Mount the <audio> element + listeners exactly once per provider lifecycle.
+  // Creating it inside the effect (rather than in the render body) keeps
+  // remount cleanup honest: the cleanup runs, the ref is nulled, and the next
+  // mount gets a fresh element instead of reusing one we already tore down.
+  useEffect(() => {
+    const audioEl = document.createElement('audio');
+    audioEl.preload = 'auto';
+    audioElementRef.current = audioEl;
+
+    function handleTimeUpdate() { setCurrentTime(audioEl.currentTime); }
+    function handleDurationChange() {
+      setDuration(Number.isFinite(audioEl.duration) ? audioEl.duration : 0);
+    }
+    function handleEnded() {
+      // Browser handles native looping when `audioEl.loop` is true, so we
+      // only see 'ended' for natural finishes.
+      setRequestedPlay(false);
+      setCurrentTime(0);
+    }
+    function handleError() {
+      console.error('[Audio] Element error:', audioEl.error);
+      setRequestedPlay(false);
+    }
+
+    audioEl.addEventListener('timeupdate', handleTimeUpdate);
+    audioEl.addEventListener('durationchange', handleDurationChange);
+    audioEl.addEventListener('ended', handleEnded);
+    audioEl.addEventListener('error', handleError);
+
+    return () => {
+      audioEl.removeEventListener('timeupdate', handleTimeUpdate);
+      audioEl.removeEventListener('durationchange', handleDurationChange);
+      audioEl.removeEventListener('ended', handleEnded);
+      audioEl.removeEventListener('error', handleError);
       audioEl.pause();
       audioEl.removeAttribute('src');
-      delete audioEl.dataset.assetId;
-      delete audioEl.dataset.assetSrc;
       audioEl.load();
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
-      return;
-    }
-
-    const sourceChanged = audioEl.dataset.assetId !== asset.id || audioEl.dataset.assetSrc !== asset.src;
-    if (sourceChanged) {
-      audioEl.pause();
-      audioEl.src = asset.src;
-      audioEl.dataset.assetId = asset.id;
-      audioEl.dataset.assetSrc = asset.src;
-      audioEl.load();
-      setCurrentTime(0);
-      setDuration(0);
-    }
-
-    if (resetPosition) {
-      audioEl.currentTime = 0;
-      setCurrentTime(0);
-    }
-
-    if (autoplay) {
-      void audioEl.play().catch(() => { setIsPlaying(false); });
-      return;
-    }
-
-    audioEl.pause();
-    setIsPlaying(false);
+      audioElementRef.current = null;
+    };
   }, []);
 
-  const resolveAudioById = useCallback((assetId: Id | null) => {
-    if (!assetId) return audioAssets[0] ?? null;
-    return audioAssets.find((asset) => asset.id === assetId) ?? audioAssets[0] ?? null;
-  }, [audioAssets]);
-
-  const selectAudio = useCallback((assetId: Id) => {
-    const nextAsset = resolveAudioById(assetId);
-    setCurrentAudioAssetId(nextAsset?.id ?? null);
-    syncAudioSource(nextAsset, isPlaying, true);
-  }, [isPlaying, resolveAudioById, syncAudioSource]);
-
-  const playAudio = useCallback(() => {
-    const nextAsset = currentAudioAsset ?? audioAssets[0] ?? null;
-    if (!nextAsset) return;
-    setCurrentAudioAssetId(nextAsset.id);
-    syncAudioSource(nextAsset, true, false);
-  }, [audioAssets, currentAudioAsset, syncAudioSource]);
-
-  const pauseAudio = useCallback(() => {
-    const audioEl = audioElementRef.current;
-    if (!audioEl) return;
-    audioEl.pause();
-    setIsPlaying(false);
-  }, []);
-
-  const playAdjacent = useCallback((direction: 1 | -1) => {
-    if (audioAssets.length === 0) return;
-    const currentIndex = currentAudioAsset ? audioAssets.findIndex((asset) => asset.id === currentAudioAsset.id) : -1;
-    const safeIndex = currentIndex < 0 ? 0 : currentIndex;
-    const nextIndex = (safeIndex + direction + audioAssets.length) % audioAssets.length;
-    const nextAsset = audioAssets[nextIndex] ?? null;
-    if (!nextAsset) return;
-    setCurrentAudioAssetId(nextAsset.id);
-    syncAudioSource(nextAsset, true, true);
-  }, [audioAssets, currentAudioAsset, syncAudioSource]);
-
-  const playPrevious = useCallback(() => { playAdjacent(-1); }, [playAdjacent]);
-  const playNext = useCallback(() => { playAdjacent(1); }, [playAdjacent]);
-
-  const togglePlayback = useCallback(() => {
-    if (isPlaying) { pauseAudio(); return; }
-    playAudio();
-  }, [isPlaying, pauseAudio, playAudio]);
-
-  const toggleLoop = useCallback(() => {
-    setLoopEnabled((current) => !current);
-  }, []);
-
-  const seekTo = useCallback((time: number) => {
-    const audioEl = audioElementRef.current;
-    if (!audioEl) return;
-    const nextTime = Number.isFinite(time) ? Math.min(Math.max(time, 0), Number.isFinite(audioEl.duration) ? audioEl.duration : time) : 0;
-    audioEl.currentTime = nextTime;
-    setCurrentTime(nextTime);
-  }, []);
-
-  const clearAudio = useCallback(() => {
-    const firstAsset = audioAssets[0] ?? null;
-    setCurrentAudioAssetId(firstAsset?.id ?? null);
-    syncAudioSource(firstAsset, false, true);
-  }, [audioAssets, syncAudioSource]);
-
-  // Audio element event listeners
+  // Sync the <audio> src to the armed asset. Keyed by the *id* (primitive) so
+  // a snapshot churn that produces a new asset object reference but the same
+  // id doesn't cause us to re-set src.
   useEffect(() => {
     const audioEl = audioElementRef.current;
     if (!audioEl) return;
 
-    function handleTimeUpdate() { setCurrentTime(audioEl!.currentTime); }
-    function handleLoadedMetadata() { setDuration(Number.isFinite(audioEl!.duration) ? audioEl!.duration : 0); }
-    function handlePlay() { setIsPlaying(true); }
-    function handlePause() { setIsPlaying(false); }
-    function handleEnded() { setIsPlaying(false); setCurrentTime(0); }
+    if (!currentAudioAssetId) {
+      if (audioEl.dataset.assetId) {
+        audioEl.pause();
+        audioEl.removeAttribute('src');
+        delete audioEl.dataset.assetId;
+        audioEl.load();
+        setCurrentTime(0);
+        setDuration(0);
+      }
+      return;
+    }
 
-    audioEl.addEventListener('timeupdate', handleTimeUpdate);
-    audioEl.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audioEl.addEventListener('play', handlePlay);
-    audioEl.addEventListener('pause', handlePause);
-    audioEl.addEventListener('ended', handleEnded);
+    const asset = audioAssets.find((a) => a.id === currentAudioAssetId);
+    if (!asset) return;
+    if (audioEl.dataset.assetId === asset.id) return;
 
-    return () => {
-      audioEl.removeEventListener('timeupdate', handleTimeUpdate);
-      audioEl.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audioEl.removeEventListener('play', handlePlay);
-      audioEl.removeEventListener('pause', handlePause);
-      audioEl.removeEventListener('ended', handleEnded);
+    audioEl.pause();
+    audioEl.src = asset.src;
+    audioEl.dataset.assetId = asset.id;
+    audioEl.currentTime = 0;
+    setCurrentTime(0);
+    setDuration(0);
+  }, [audioAssets, currentAudioAssetId]);
+
+  // Sync play/pause to the user's intent. Only ever calls play() or pause()
+  // when the element is in the opposite state, so it can't fight itself.
+  useEffect(() => {
+    const audioEl = audioElementRef.current;
+    if (!audioEl) return;
+    if (!currentAudioAssetId) return;
+
+    if (requestedPlay && audioEl.paused) {
+      void audioEl.play().catch((error: unknown) => {
+        // AbortError fires when a subsequent src change or pause() interrupts
+        // a play in progress. The user's intent isn't violated — the new state
+        // will run its own play() — so don't unilaterally clear requestedPlay.
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('[Audio] Play failed:', error);
+        setRequestedPlay(false);
+      });
+    } else if (!requestedPlay && !audioEl.paused) {
       audioEl.pause();
-      audioEl.removeAttribute('src');
-      audioEl.load();
-    };
-  }, []);
+    }
+  }, [requestedPlay, currentAudioAssetId]);
 
   useEffect(() => {
     const audioEl = audioElementRef.current;
@@ -398,22 +367,81 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     audioEl.loop = loopEnabled;
   }, [loopEnabled]);
 
+  // Cleanup-only: if the currently armed asset disappears from the project
+  // (deleted, filtered out, etc.), null out our state. The src-sync effect
+  // above will then tear the source off the element on the next render.
   useEffect(() => {
-    if (audioAssets.length === 0) {
-      syncAudioSource(null, false, true);
-      if (currentAudioAssetId !== null) setCurrentAudioAssetId(null);
-      return;
-    }
-    if (currentAudioAssetId && audioAssets.some((asset) => asset.id === currentAudioAssetId)) return;
-    const firstAsset = audioAssets[0];
-    setCurrentAudioAssetId(firstAsset.id);
-    syncAudioSource(firstAsset, false, true);
-  }, [audioAssets, currentAudioAssetId, syncAudioSource]);
+    if (!currentAudioAssetId) return;
+    if (audioAssets.some((asset) => asset.id === currentAudioAssetId)) return;
+    setCurrentAudioAssetId(null);
+    setRequestedPlay(false);
+  }, [audioAssets, currentAudioAssetId]);
 
-  useEffect(() => {
-    if (!currentAudioAsset) return;
-    syncAudioSource(currentAudioAsset, isPlaying, false);
-  }, [currentAudioAsset, isPlaying, syncAudioSource]);
+  // ── Public actions ─────────────────────────────────────────────
+  // Each action only updates state. The effects above translate intent into
+  // <audio> element calls, exactly once per state transition.
+
+  const armAudio = useCallback((assetId: Id) => {
+    const asset = audioAssets.find((a) => a.id === assetId);
+    if (!asset) return;
+    setCurrentAudioAssetId(asset.id);
+    setRequestedPlay(true);
+    setStatusText(`Audio: ${asset.name}`);
+  }, [audioAssets, setStatusText]);
+
+  const selectAudio = useCallback((assetId: Id) => {
+    const asset = audioAssets.find((a) => a.id === assetId);
+    if (!asset) return;
+    setCurrentAudioAssetId(asset.id);
+    // Intentionally does not change `requestedPlay` — switching tracks while
+    // playing keeps playing; while paused, stays paused.
+  }, [audioAssets]);
+
+  const playAudio = useCallback(() => {
+    if (!currentAudioAssetId) return;
+    setRequestedPlay(true);
+  }, [currentAudioAssetId]);
+
+  const pauseAudio = useCallback(() => {
+    setRequestedPlay(false);
+  }, []);
+
+  const togglePlayback = useCallback(() => {
+    if (!currentAudioAssetId) return;
+    setRequestedPlay((prev) => !prev);
+  }, [currentAudioAssetId]);
+
+  const playAdjacent = useCallback((direction: 1 | -1) => {
+    if (!currentAudioAssetId || audioAssets.length === 0) return;
+    const currentIndex = audioAssets.findIndex((asset) => asset.id === currentAudioAssetId);
+    if (currentIndex < 0) return;
+    const nextIndex = (currentIndex + direction + audioAssets.length) % audioAssets.length;
+    const nextAsset = audioAssets[nextIndex];
+    if (!nextAsset) return;
+    setCurrentAudioAssetId(nextAsset.id);
+    setRequestedPlay(true);
+  }, [audioAssets, currentAudioAssetId]);
+
+  const playPrevious = useCallback(() => { playAdjacent(-1); }, [playAdjacent]);
+  const playNext = useCallback(() => { playAdjacent(1); }, [playAdjacent]);
+
+  const toggleLoop = useCallback(() => {
+    setLoopEnabled((prev) => !prev);
+  }, []);
+
+  const seekTo = useCallback((time: number) => {
+    const audioEl = audioElementRef.current;
+    if (!audioEl) return;
+    const max = Number.isFinite(audioEl.duration) ? audioEl.duration : time;
+    const safe = Number.isFinite(time) ? Math.min(Math.max(time, 0), max) : 0;
+    audioEl.currentTime = safe;
+    setCurrentTime(safe);
+  }, []);
+
+  const clearAudio = useCallback(() => {
+    setCurrentAudioAssetId(null);
+    setRequestedPlay(false);
+  }, []);
 
   const audio = useMemo<AudioValue>(() => ({
     audioAssets,
@@ -423,6 +451,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     duration,
     isPlaying,
     loopEnabled,
+    armAudio,
     clearAudio,
     pause: pauseAudio,
     play: playAudio,
@@ -432,7 +461,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     selectAudio,
     toggleLoop,
     togglePlayback,
-  }), [audioAssets, clearAudio, currentAudioAsset, currentTime, duration, isPlaying, loopEnabled, pauseAudio, playAudio, playNext, playPrevious, seekTo, selectAudio, toggleLoop, togglePlayback]);
+  }), [armAudio, audioAssets, clearAudio, currentAudioAsset, currentTime, duration, isPlaying, loopEnabled, pauseAudio, playAudio, playNext, playPrevious, seekTo, selectAudio, toggleLoop, togglePlayback]);
 
   // ── Stage selection ──
 
@@ -447,7 +476,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<PlaybackContextValue>(() => ({ layers, audio, stage }), [layers, audio, stage]);
 
-  return <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>;
+  return (
+    <PresentationLayersContext.Provider value={layers}>
+      <AudioPlaybackContext.Provider value={audio}>
+        <StagePlaybackContext.Provider value={stage}>
+          <PlaybackContext.Provider value={value}>{children}</PlaybackContext.Provider>
+        </StagePlaybackContext.Provider>
+      </AudioPlaybackContext.Provider>
+    </PresentationLayersContext.Provider>
+  );
 }
 
 // ─── Hooks ──────────────────────────────────────────────────────────
@@ -459,15 +496,21 @@ export function usePlayback(): PlaybackContextValue {
 }
 
 export function usePresentationLayers(): LayersValue {
-  return usePlayback().layers;
+  const ctx = useContext(PresentationLayersContext);
+  if (!ctx) throw new Error('usePresentationLayers must be used within PlaybackProvider');
+  return ctx;
 }
 
 export function useAudio(): AudioValue {
-  return usePlayback().audio;
+  const ctx = useContext(AudioPlaybackContext);
+  if (!ctx) throw new Error('useAudio must be used within PlaybackProvider');
+  return ctx;
 }
 
 export function useStagePlayback(): StageValue {
-  return usePlayback().stage;
+  const ctx = useContext(StagePlaybackContext);
+  if (!ctx) throw new Error('useStagePlayback must be used within PlaybackProvider');
+  return ctx;
 }
 
 // ─── Utils ──────────────────────────────────────────────────────────

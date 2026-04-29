@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@renderer/utils/cn';
-import { ThumbnailGrid } from '../../components/layout/thumbnail-grid';
+import { ThumbnailGrid } from './thumbnail-grid';
 import type { ResourceDrawerViewMode } from '../../types/ui';
 
 interface BinPanelLayoutProps {

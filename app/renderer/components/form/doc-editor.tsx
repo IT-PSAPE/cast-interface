@@ -41,22 +41,6 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
 
     // ── Block operations ────────────────────────────────────────────
 
-    const addBlockAfter = useCallback((afterId: string, content = '') => {
-        const newId = uid()
-        setBlocks(prev => {
-            const idx = prev.findIndex(b => b.id === afterId)
-            const next = [...prev]
-            next.splice(idx + 1, 0, { id: newId, content })
-            return next
-        })
-        requestAnimationFrame(() => {
-            const el = contentRefs.current[newId]
-            if (!el) return
-            el.focus()
-            el.setSelectionRange(0, 0)
-        })
-    }, [])
-
     const deleteBlock = useCallback((id: string) => {
         const curr = blocksRef.current
         if (curr.length <= 1) return
@@ -246,7 +230,6 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
                         onSplit={(before, after) => splitBlock(block.id, before, after)}
                         onDelete={() => deleteBlock(block.id)}
                         onMergeWithPrev={text => mergeWithPrev(block.id, text)}
-                        onAddBelow={() => addBlockAfter(block.id)}
                         onTextareaFocus={handleTextareaFocus}
                         onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
                     />

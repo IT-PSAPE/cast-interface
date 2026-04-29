@@ -24,6 +24,13 @@ import type {
 import { getInlineWindowMenuItems, popupInlineWindowMenu } from './application-menu';
 import { readDeckBundleArchive, writeDeckBundleArchive } from './deck-bundle-archive';
 import { NdiService } from './ndi/ndi-service';
+import { assertTrustedIpcSender } from './security';
+
+const NDI_OUTPUT_NAMES = new Set<NdiOutputName>(['audience', 'stage']);
+
+function isSafeFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
 function safeHandle<Args extends unknown[], R>(
   channel: string,
@@ -31,6 +38,7 @@ function safeHandle<Args extends unknown[], R>(
 ): void {
   ipcMain.handle(channel, async (event, ...args: unknown[]) => {
     try {
+      assertTrustedIpcSender(event);
       return await handler(event, ...(args as Args));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -79,6 +87,9 @@ export const registerIpcHandlers = (
   safeHandle(IPC.popupInlineWindowMenu, async (event, menuId: string, x: number, y: number) => {
     const browserWindow = getDialogWindow(event);
     if (!browserWindow) return;
+    if (typeof menuId !== 'string' || !isSafeFiniteNumber(x) || !isSafeFiniteNumber(y)) {
+      throw new Error('Invalid inline menu payload');
+    }
     await popupInlineWindowMenu(menuId, browserWindow, x, y);
   });
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
@@ -223,15 +234,32 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deletePresentation, (_event, id: Id) => repo.deletePresentation(id));
   safeHandle(IPC.deleteLyric, (_event, id: Id) => repo.deleteLyric(id));
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
+    if (!NDI_OUTPUT_NAMES.has(name) || typeof enabled !== 'boolean') {
+      throw new Error('Invalid NDI output toggle payload');
+    }
     return ndiService.setOutputEnabled(name, enabled);
   });
   safeHandle(IPC.getNdiOutputState, () => ndiService.getOutputState());
   safeHandle(IPC.getNdiOutputConfigs, () => ndiService.getOutputConfigs());
   safeHandle(IPC.updateNdiOutputConfig, (_event, name: NdiOutputName, config: Partial<NdiOutputConfig>) => {
+    if (!NDI_OUTPUT_NAMES.has(name) || !config || typeof config !== 'object') {
+      throw new Error('Invalid NDI output config payload');
+    }
     return ndiService.updateOutputConfig(name, config);
   });
   safeHandle(IPC.getNdiDiagnostics, (): NdiDiagnostics => ndiService.getDiagnostics());
-  ipcMain.on(IPC.sendNdiFrame, (_event, name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
-    ndiService.receiveFrame(name, new Uint8Array(buffer), width, height);
+  ipcMain.on(IPC.sendNdiFrame, (event, name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number) => {
+    try {
+      assertTrustedIpcSender(event);
+      if (!NDI_OUTPUT_NAMES.has(name)) {
+        throw new Error(`Invalid NDI output name: ${String(name)}`);
+      }
+      if (!(buffer instanceof ArrayBuffer)) {
+        throw new Error('NDI frame payload must be an ArrayBuffer');
+      }
+      ndiService.receiveFrame(name, new Uint8Array(buffer), width, height);
+    } catch (error) {
+      console.error(`[IPC ${IPC.sendNdiFrame}]`, error);
+    }
   });
 };

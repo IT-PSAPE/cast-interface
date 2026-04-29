@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
-import { ReacstButton } from '@renderer/components 2.0/button';
+import { ReacstButton } from '@renderer/components/controls/button';
 import { cn } from '@renderer/utils/cn';
 import { useWorkbench } from '@renderer/contexts/workbench-context';
 import { OverlayBackdrop, OverlayClose, OverlayPortal, OverlayTrigger } from './overlay-primitives';

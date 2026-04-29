@@ -1,7 +1,7 @@
 import { applyVisualPayload, readVisualPayload, type VisualPayloadState } from '@core/element-payload';
 import { parseNumber } from '../../utils/slides';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
-import { alignElementDraft } from './align-element-draft';
+import { alignElementDraft } from '../canvas/align-element-draft';
 import type { ElementInspectorDraft } from '../../types/ui';
 
 interface ShapeInspectorState {
