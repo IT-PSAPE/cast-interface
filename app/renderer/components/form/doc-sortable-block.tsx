@@ -12,14 +12,16 @@ export type SortableBlockProps = {
     onSplit: (before: string, after: string) => void
     onDelete: () => void
     onMergeWithPrev: (text: string) => void
+    onPaste: (before: string, blocks: string[], after: string) => void
     onTextareaFocus: () => void
-    onPaste: (before: string, segments: string[], after: string) => void
 }
 
-function splitPastedSegments(text: string): string[] {
+function splitPastedLines(text: string): string[] {
     return text
-        .replace(/\r\n/g, '\n')
+        .replace(/\r\n?/g, '\n')
         .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
 }
 
 function resizeTextarea(element: HTMLTextAreaElement) {
@@ -27,7 +29,7 @@ function resizeTextarea(element: HTMLTextAreaElement) {
     element.style.height = `${element.scrollHeight}px`
 }
 
-export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onTextareaFocus, onPaste }: SortableBlockProps) {
+export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, onSplit, onDelete, onMergeWithPrev, onPaste, onTextareaFocus }: SortableBlockProps) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null)
     const setContentRef = useCallback(
         (el: HTMLTextAreaElement | null) => {
@@ -44,6 +46,30 @@ export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, 
     }, [block.content])
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'v') {
+            e.preventDefault()
+            e.stopPropagation()
+            const { selectionStart, selectionEnd, value } = e.currentTarget
+            void window.castApi.readClipboardText().then((text) => {
+                const blocks = splitPastedLines(text)
+                if (blocks.length <= 1) {
+                    const nextValue = `${value.slice(0, selectionStart)}${text}${value.slice(selectionEnd)}`
+                    onUpdate(nextValue)
+                    requestAnimationFrame(() => {
+                        const textarea = textareaRef.current
+                        if (!textarea) return
+                        const caret = selectionStart + text.length
+                        textarea.focus()
+                        textarea.setSelectionRange(caret, caret)
+                    })
+                    return
+                }
+
+                onPaste(value.slice(0, selectionStart), blocks, value.slice(selectionEnd))
+            })
+            return
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             const { selectionStart, selectionEnd, value } = e.currentTarget
@@ -61,17 +87,6 @@ export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, 
             onMergeWithPrev(e.currentTarget.value)
         }
     }
-
-    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-        const text = e.clipboardData.getData('text/plain')
-        const segments = splitPastedSegments(text)
-        if (segments.length <= 1) return
-
-        e.preventDefault()
-        const { selectionStart, selectionEnd, value } = e.currentTarget
-        onPaste(value.slice(0, selectionStart), segments, value.slice(selectionEnd))
-    }
-
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         onUpdate(e.currentTarget.value)
     }
@@ -89,8 +104,10 @@ export function SortableBlock({ index, block, isSelected, contentRef, onUpdate, 
                     spellCheck={false}
                     className="doc-block flex-1 resize-none overflow-hidden whitespace-pre-wrap bg-transparent px-0.5 py-px text-paragraph-sm text-primary outline-none placeholder:text-tertiary"
                     placeholder="Type something..."
+                    // Pasted newline-separated text must be split into separate
+                    // blocks here. The global editable shortcut fallback bypasses
+                    // native paste, so this editor owns Cmd/Ctrl+V explicitly.
                     onKeyDown={handleKeyDown}
-                    onPaste={handlePaste}
                     onChange={handleChange}
                     onFocus={onTextareaFocus}
                 />

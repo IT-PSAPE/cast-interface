@@ -9,6 +9,7 @@ import { useDeckBrowser } from '../features/deck/deck-browser-context';
 import { useCommandPalette } from '../features/command-palette/command-palette-context';
 import { useWorkbench } from '../contexts/workbench-context';
 import { matchesShortcut } from './use-keyboard-shortcuts-match';
+import { handleEditableTextShortcut } from '../utils/editable-text-shortcuts';
 
 function isEditableTarget(target: HTMLElement | null): boolean {
   if (!target) return false;
@@ -40,6 +41,13 @@ export function useKeyboardShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
+      if (isEditableTarget(target)) {
+        handleEditableTextShortcut(event, target, {
+          readText: () => window.castApi.readClipboardText(),
+          writeText: (text) => window.castApi.writeClipboardText(text),
+        });
+        return;
+      }
       if (isInteractiveTarget(target)) return;
 
       const handlers: Record<ShortcutActionId, (event: KeyboardEvent, payload?: string) => void> = {
