@@ -18,6 +18,7 @@ import { AppToolbar } from './features/workbench/app-toolbar';
 import { SplitPanel } from '@renderer/components/layout/panel-split/split-panel';
 import { StatusBar } from './features/workbench/status-bar';
 import { WindowsInlineMenuBar } from './features/workbench/windows-inline-menu-bar';
+import { useAppMenu } from './hooks/use-app-menu';
 import { WorkbenchScreenRouter } from './workbench-screen-router';
 
 export function App() {
@@ -57,11 +58,12 @@ export function App() {
 
 function AppLayoutContent() {
   const { snapshot } = useCast();
+  useAppMenu();
 
   if (!snapshot) {
     return (
       <div className="flex items-center justify-center h-full text-secondary">
-        Loading Recast App
+        Loading LumaCast App
       </div>
     );
   }

@@ -80,16 +80,16 @@ type WorkbenchContextValue = {
 const WorkbenchStateContext = createContext<WorkbenchContextValue['state'] | null>(null);
 const WorkbenchActionsContext = createContext<WorkbenchContextValue['actions'] | null>(null);
 const WorkbenchOverlayStackContext = createContext<WorkbenchContextValue['overlayStack'] | null>(null);
-const WORKBENCH_MODE_STORAGE_KEY = 'recast.workbench-mode.v1';
-const DECK_BROWSER_STORAGE_KEY = 'recast.deck-browser-preferences.v1';
-const DRAWER_VIEW_MODES_STORAGE_KEY = 'recast.drawer-view-modes.v1';
+const WORKBENCH_MODE_STORAGE_KEY = 'lumacast.workbench-mode.v1';
+const DECK_BROWSER_STORAGE_KEY = 'lumacast.deck-browser-preferences.v1';
+const DRAWER_VIEW_MODES_STORAGE_KEY = 'lumacast.drawer-view-modes.v1';
 const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', media: 'grid', templates: 'grid' };
-const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'recast.library-panel-view.v1';
-const EXPANDED_SEGMENTS_STORAGE_KEY = 'recast.library-panel-expanded-segments.v1';
-const OVERLAY_DEFAULTS_STORAGE_KEY = 'recast.overlay-defaults.v1';
-const PREVIEW_MODE_STORAGE_KEY = 'recast.preview-mode.v1';
-const PREVIEW_SINGLE_SURFACE_STORAGE_KEY = 'recast.preview-single-surface.v1';
-const PREVIEW_GRID_DENSITY_STORAGE_KEY = 'recast.preview-grid-density.v1';
+const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'lumacast.library-panel-view.v1';
+const EXPANDED_SEGMENTS_STORAGE_KEY = 'lumacast.library-panel-expanded-segments.v1';
+const OVERLAY_DEFAULTS_STORAGE_KEY = 'lumacast.overlay-defaults.v1';
+const PREVIEW_MODE_STORAGE_KEY = 'lumacast.preview-mode.v1';
+const PREVIEW_SINGLE_SURFACE_STORAGE_KEY = 'lumacast.preview-single-surface.v1';
+const PREVIEW_GRID_DENSITY_STORAGE_KEY = 'lumacast.preview-grid-density.v1';
 const VALID_MODES = new Set<WorkbenchMode>(['show', 'deck-editor', 'overlay-editor', 'template-editor', 'stage-editor', 'settings']);
 const DEFAULT_OVERLAY_DEFAULTS: OverlayDefaultsState = {
   animationKind: 'dissolve',
@@ -151,7 +151,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     min: deckBrowserGridSizeMin,
     max: deckBrowserGridSizeMax,
     step: deckBrowserGridSizeStep,
-  } = useGridSize('recast.grid-size.slide-browser', 6, 4, 8);
+  } = useGridSize('lumacast.grid-size.slide-browser', 6, 4, 8);
 
   // Overlay stack (modal/dialog portal)
   const [overlayRootElement] = useState<HTMLElement | null>(ensureOverlayRoot);

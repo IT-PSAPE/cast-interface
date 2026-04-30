@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import { IPC, NDI_EVENTS } from '@core/ipc';
+import { APP_MENU_EVENTS, IPC, NDI_EVENTS } from '@core/ipc';
 import type {
   AppSnapshot,
   DeckBundleBrokenReferenceDecision,
@@ -30,7 +30,12 @@ const api = {
   platform: process.platform,
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getInlineWindowMenuItems: () => ipcRenderer.invoke(IPC.getInlineWindowMenuItems) as Promise<import('@core/ipc').InlineWindowMenuItem[]>,
-  popupInlineWindowMenu: (menuId: string, x: number, y: number) => ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, x, y) as Promise<void>,
+  popupInlineWindowMenu: (menuId: string, bounds: import('@core/ipc').InlineWindowMenuBounds) =>
+    ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, bounds) as Promise<void>,
+  updateAppMenuState: (state: import('@core/ipc').AppMenuState) =>
+    ipcRenderer.invoke(IPC.updateAppMenuState, state) as Promise<void>,
+  checkForAppUpdates: (manual = false) =>
+    ipcRenderer.invoke(IPC.checkForAppUpdates, manual) as Promise<void>,
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
   restoreFromSnapshot: (snapshot: AppSnapshot) => ipcRenderer.invoke(IPC.restoreFromSnapshot, snapshot) as Promise<AppSnapshot>,
   chooseDeckBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseDeckBundleExportPath, suggestedName) as Promise<string | null>,
@@ -124,6 +129,11 @@ const api = {
     const handler = (_event: IpcRendererEvent, diagnostics: NdiDiagnostics) => callback(diagnostics);
     ipcRenderer.on(NDI_EVENTS.diagnosticsChanged, handler);
     return () => { ipcRenderer.removeListener(NDI_EVENTS.diagnosticsChanged, handler); };
+  },
+  onAppMenuCommand: (callback: (commandId: import('@core/ipc').AppMenuCommandId) => void) => {
+    const handler = (_event: IpcRendererEvent, commandId: import('@core/ipc').AppMenuCommandId) => callback(commandId);
+    ipcRenderer.on(APP_MENU_EVENTS.command, handler);
+    return () => { ipcRenderer.removeListener(APP_MENU_EVENTS.command, handler); };
   },
 };
 

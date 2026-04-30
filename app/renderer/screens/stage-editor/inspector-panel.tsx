@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ReacstButton } from '@renderer/components/controls/button';
-import { RecastPanel } from '@renderer/components/layout/panel';
+import { LumaCastPanel } from '@renderer/components/layout/panel';
 import { Tabs } from '@renderer/components/display/tabs';
 import { useElements } from '@renderer/contexts/canvas/canvas-context';
 import { useInspector } from '@renderer/features/inspector/inspector-context';
@@ -40,7 +40,7 @@ export function StageEditorInspectorPanel() {
   }
 
   return (
-    <RecastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
+    <LumaCastPanel.Root className="h-full border-l border-secondary" data-ui-region="inspector-panel">
       <Tabs.Root value={inspectorTab} onValueChange={handleTabChange}>
         <section className="flex flex-1 flex-col">
           <div className="border-b border-primary">
@@ -60,12 +60,12 @@ export function StageEditorInspectorPanel() {
         </section>
       </Tabs.Root>
       {state.hasPendingChanges && (
-        <RecastPanel.Footer className="p-3">
+        <LumaCastPanel.Footer className="p-3">
           <ReacstButton onClick={() => { void actions.saveChanges(); }} disabled={state.isPushingChanges} className="w-full">
             {state.isPushingChanges ? 'Pushing…' : 'Save Changes'}
           </ReacstButton>
-        </RecastPanel.Footer>
+        </LumaCastPanel.Footer>
       )}
-    </RecastPanel.Root>
+    </LumaCastPanel.Root>
   );
 }

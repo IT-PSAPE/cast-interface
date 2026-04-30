@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { CastRepository } from '@database/store';
-import { IPC, NDI_EVENTS, type InlineWindowMenuItem } from '@core/ipc';
+import { IPC, NDI_EVENTS, type AppMenuState, type InlineWindowMenuBounds, type InlineWindowMenuItem } from '@core/ipc';
 import type {
   AppSnapshot,
   DeckBundleBrokenReferenceDecision,
@@ -23,7 +23,8 @@ import type {
   SlideNotesUpdateInput,
   SlideOrderUpdateInput
 } from '@core/types';
-import { getInlineWindowMenuItems, popupInlineWindowMenu } from './application-menu';
+import { getInlineWindowMenuItems, popupInlineWindowMenu, updateApplicationMenu } from './application-menu';
+import type { AppUpdater } from './app-updater';
 import { readDeckBundleArchive, writeDeckBundleArchive } from './deck-bundle-archive';
 import { NdiService } from './ndi/ndi-service';
 import { assertTrustedIpcSender } from './security';
@@ -53,7 +54,8 @@ function safeHandle<Args extends unknown[], R>(
 export const registerIpcHandlers = (
   repo: CastRepository,
   ndiService: NdiService,
-  getMainWindow: () => BrowserWindow | null
+  getMainWindow: () => BrowserWindow | null,
+  appUpdater: AppUpdater,
 ): void => {
   function getDialogWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
     return BrowserWindow.fromWebContents(event.sender) ?? getMainWindow();
@@ -86,13 +88,27 @@ export const registerIpcHandlers = (
   });
 
   safeHandle(IPC.getInlineWindowMenuItems, (): InlineWindowMenuItem[] => getInlineWindowMenuItems());
-  safeHandle(IPC.popupInlineWindowMenu, async (event, menuId: string, x: number, y: number) => {
+  safeHandle(IPC.popupInlineWindowMenu, async (event, menuId: string, bounds: InlineWindowMenuBounds) => {
     const browserWindow = getDialogWindow(event);
     if (!browserWindow) return;
-    if (typeof menuId !== 'string' || !isSafeFiniteNumber(x) || !isSafeFiniteNumber(y)) {
+    if (
+      typeof menuId !== 'string'
+      || typeof bounds !== 'object'
+      || bounds === null
+      || !isSafeFiniteNumber(bounds.x)
+      || !isSafeFiniteNumber(bounds.y)
+    ) {
       throw new Error('Invalid inline menu payload');
     }
-    await popupInlineWindowMenu(menuId, browserWindow, x, y);
+    await popupInlineWindowMenu(menuId, browserWindow, bounds);
+  });
+  safeHandle(IPC.updateAppMenuState, (event, state: AppMenuState) => {
+    const browserWindow = getDialogWindow(event);
+    updateApplicationMenu(browserWindow, state);
+  });
+  safeHandle(IPC.checkForAppUpdates, async (event, manual = false) => {
+    const browserWindow = getDialogWindow(event);
+    await appUpdater.checkForUpdates(Boolean(manual), browserWindow);
   });
   safeHandle(IPC.getSnapshot, () => repo.getSnapshot());
   safeHandle(IPC.restoreFromSnapshot, (_event, snapshot: AppSnapshot) => repo.restoreFromSnapshot(snapshot));

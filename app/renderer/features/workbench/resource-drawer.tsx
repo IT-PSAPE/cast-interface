@@ -95,7 +95,7 @@ function isResourceDrawerViewMode(value: string): value is ResourceDrawerViewMod
 function Root({ children }: { children: ReactNode }) {
   const { drawerTab, drawerViewMode, setDrawerTab } = useResourceDrawer();
   const { importMedia } = useElements();
-  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('recast.grid-size.resource-drawer', 6, 4, 8);
+  const { gridSize, setGridSize, min: gridSizeMin, max: gridSizeMax, step: gridSizeStep } = useGridSize('lumacast.grid-size.resource-drawer', 6, 4, 8);
   const [isDragOver, setIsDragOver] = useState(false);
 
   function handleImport(event: ChangeEvent<HTMLInputElement>) {

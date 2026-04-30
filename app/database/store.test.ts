@@ -76,7 +76,7 @@ describe('CastRepository', () => {
 
   beforeEach(() => {
     vi.resetModules();
-    tempRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp-recast-store-test-'));
+    tempRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp-lumacast-store-test-'));
     currentUserDataPath = tempRoot;
   });
 

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Template } from '@core/types';
 import { Layers, Music, Plus, Presentation } from 'lucide-react';
 import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
-import { RecastPanel } from '@renderer/components/layout/panel';
+import { LumaCastPanel } from '@renderer/components/layout/panel';
 import { SceneFrame } from '../../components/display/scene-frame';
 import { Thumbnail } from '../../components/display/thumbnail';
 import { Dropdown } from '../../components/form/dropdown';
@@ -30,11 +30,11 @@ function TemplateEditorScreenContent() {
   return (
     <SplitPanel.Panel splitId="editor-main" orientation="horizontal" className="h-full" data-ui-region="editor-layout">
       <SplitPanel.Segment id="editor-left" defaultSize={280} minSize={140} collapsible>
-        <RecastPanel.Root className="h-full border-r border-secondary">
+        <LumaCastPanel.Root className="h-full border-r border-secondary">
           <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
             <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
-              <RecastPanel.Group>
-                <RecastPanel.GroupTitle>
+              <LumaCastPanel.Group>
+                <LumaCastPanel.GroupTitle>
                   <Label.sm className="mr-auto">Templates</Label.sm>
                   <Dropdown>
                     <Dropdown.Trigger
@@ -52,8 +52,8 @@ function TemplateEditorScreenContent() {
                       </Dropdown.Item>
                     </Dropdown.Panel>
                   </Dropdown>
-                </RecastPanel.GroupTitle>
-                <RecastPanel.Content>
+                </LumaCastPanel.GroupTitle>
+                <LumaCastPanel.Content>
                   {state.templates.length === 0 ? (
                     <EmptyState.Root>
                       <EmptyState.Title>No templates yet</EmptyState.Title>
@@ -73,21 +73,21 @@ function TemplateEditorScreenContent() {
                       </ScrollArea.Scrollbar>
                     </ScrollArea.Root>
                   )}
-                </RecastPanel.Content>
-              </RecastPanel.Group>
+                </LumaCastPanel.Content>
+              </LumaCastPanel.Group>
             </SplitPanel.Segment>
             <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
-              <RecastPanel.Group>
-                <RecastPanel.GroupTitle className="border-t">
+              <LumaCastPanel.Group>
+                <LumaCastPanel.GroupTitle className="border-t">
                   <Label.xs className="mr-auto">Layers</Label.xs>
-                </RecastPanel.GroupTitle>
-                <RecastPanel.Content className="overflow-y-auto p-2">
+                </LumaCastPanel.GroupTitle>
+                <LumaCastPanel.Content className="overflow-y-auto p-2">
                   <TemplateEditorLayersPanel />
-                </RecastPanel.Content>
-              </RecastPanel.Group>
+                </LumaCastPanel.Content>
+              </LumaCastPanel.Group>
             </SplitPanel.Segment>
           </SplitPanel.Panel>
-        </RecastPanel.Root>
+        </LumaCastPanel.Root>
       </SplitPanel.Segment>
       <SplitPanel.Segment id="editor-center" defaultSize={840} minSize={360}>
         <StagePanel />

@@ -29,7 +29,10 @@ export interface MainApi {
   platform: NodeJS.Platform;
   getPathForFile: (file: File) => string;
   getInlineWindowMenuItems: () => Promise<InlineWindowMenuItem[]>;
-  popupInlineWindowMenu: (menuId: string, x: number, y: number) => Promise<void>;
+  popupInlineWindowMenu: (menuId: string, bounds: InlineWindowMenuBounds) => Promise<void>;
+  updateAppMenuState: (state: AppMenuState) => Promise<void>;
+  checkForAppUpdates: (manual?: boolean) => Promise<void>;
+  onAppMenuCommand: (callback: (commandId: AppMenuCommandId) => void) => () => void;
   getSnapshot: () => Promise<AppSnapshot>;
   restoreFromSnapshot: (snapshot: AppSnapshot) => Promise<AppSnapshot>;
   chooseDeckBundleExportPath: (suggestedName: string) => Promise<string | null>;
@@ -115,9 +118,79 @@ export interface InlineWindowMenuItem {
   label: string;
 }
 
+export interface InlineWindowMenuBounds {
+  x: number;
+  y: number;
+}
+
+export type AppMenuCommandId =
+  | 'file.newPresentation'
+  | 'file.newLyric'
+  | 'file.newLibrary'
+  | 'file.newPlaylist'
+  | 'file.newSegment'
+  | 'file.newSlide'
+  | 'file.exportCurrentItem'
+  | 'file.exportWorkspace'
+  | 'app.openSettings'
+  | 'app.checkForUpdates'
+  | 'edit.undo'
+  | 'edit.redo'
+  | 'edit.cut'
+  | 'edit.copy'
+  | 'edit.paste'
+  | 'edit.duplicate'
+  | 'edit.delete'
+  | 'edit.clearSelection'
+  | 'view.openCommandPalette'
+  | 'view.mode.show'
+  | 'view.mode.deckEditor'
+  | 'view.mode.overlayEditor'
+  | 'view.mode.templateEditor'
+  | 'view.mode.stageEditor'
+  | 'view.mode.settings'
+  | 'view.slideBrowser.grid'
+  | 'view.slideBrowser.list'
+  | 'view.playlistBrowser.current'
+  | 'view.playlistBrowser.tabs'
+  | 'view.playlistBrowser.continuous'
+  | 'playback.takeSlide'
+  | 'playback.previousSlide'
+  | 'playback.nextSlide'
+  | 'playback.toggleAudienceOutput'
+  | 'playback.toggleStageOutput';
+
+export interface AppMenuState {
+  workbenchMode: 'show' | 'deck-editor' | 'overlay-editor' | 'template-editor' | 'stage-editor' | 'settings';
+  slideBrowserMode: 'grid' | 'list';
+  playlistBrowserMode: 'current' | 'tabs' | 'continuous';
+  hasCurrentLibrary: boolean;
+  hasCurrentPlaylist: boolean;
+  hasCurrentDeckItem: boolean;
+  hasCurrentSlide: boolean;
+  hasMultipleSlides: boolean;
+  hasEditableSelection: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  canCut: boolean;
+  canCopy: boolean;
+  canPaste: boolean;
+  canDuplicate: boolean;
+  canDelete: boolean;
+  canClearSelection: boolean;
+  canTakeSlide: boolean;
+  canGoToPreviousSlide: boolean;
+  canGoToNextSlide: boolean;
+  canExportWorkspace: boolean;
+  audienceOutputEnabled: boolean;
+  stageOutputEnabled: boolean;
+}
+
 export const IPC = {
   getInlineWindowMenuItems: 'cast:getInlineWindowMenuItems',
   popupInlineWindowMenu: 'cast:popupInlineWindowMenu',
+  updateAppMenuState: 'cast:updateAppMenuState',
+  checkForAppUpdates: 'cast:checkForAppUpdates',
   getSnapshot: 'cast:getSnapshot',
   restoreFromSnapshot: 'cast:restoreFromSnapshot',
   chooseDeckBundleExportPath: 'cast:chooseDeckBundleExportPath',
@@ -193,4 +266,8 @@ export const IPC = {
 export const NDI_EVENTS = {
   outputStateChanged: 'ndi:outputStateChanged',
   diagnosticsChanged: 'ndi:diagnosticsChanged',
+} as const;
+
+export const APP_MENU_EVENTS = {
+  command: 'app-menu:command',
 } as const;

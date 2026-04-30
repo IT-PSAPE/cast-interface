@@ -9,7 +9,7 @@ import { useNavigation } from '../../contexts/navigation-context';
 import { useSlides } from '../../contexts/slide-context';
 import { useLibraryBrowser } from './library-browser-context';
 import { getSegmentHeaderColors } from './segment-header-color';
-import { RecastPanel } from '@renderer/components/layout/panel';
+import { LumaCastPanel } from '@renderer/components/layout/panel';
 import { hasDeckItemDragData, readDeckItemDragData } from '../../utils/deck-item-drag';
 
 interface PlaylistSegmentGroupProps {
@@ -154,7 +154,7 @@ function SegmentEntryRowBody({
 
   return (
     <>
-      <RecastPanel.MenuItem
+      <LumaCastPanel.MenuItem
         {...triggerHandlers}
         ref={triggerRef}
         active={isSelected}
@@ -165,7 +165,7 @@ function SegmentEntryRowBody({
       >
         <DeckItemIcon entity={item} className="shrink-0" />
         <RenameField ref={renameRef} value={item.title} onValueChange={handleRename} className="label-xs" />
-      </RecastPanel.MenuItem>
+      </LumaCastPanel.MenuItem>
       <ContextMenu.Portal>
         <ContextMenu.Menu>
           <ContextMenu.Item disabled={isFirst} onSelect={() => { void movePlaylistEntryDirection(entry.id, 'up'); }}>Move up</ContextMenu.Item>
