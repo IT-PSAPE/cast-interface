@@ -28,6 +28,8 @@ import type { SnapshotPatch } from './snapshot-patch';
 export interface MainApi {
   platform: NodeJS.Platform;
   getPathForFile: (file: File) => string;
+  readClipboardText: () => Promise<string>;
+  writeClipboardText: (text: string) => Promise<void>;
   getInlineWindowMenuItems: () => Promise<InlineWindowMenuItem[]>;
   popupInlineWindowMenu: (menuId: string, x: number, y: number) => Promise<void>;
   getSnapshot: () => Promise<AppSnapshot>;
@@ -116,6 +118,8 @@ export interface InlineWindowMenuItem {
 }
 
 export const IPC = {
+  readClipboardText: 'cast:readClipboardText',
+  writeClipboardText: 'cast:writeClipboardText',
   getInlineWindowMenuItems: 'cast:getInlineWindowMenuItems',
   popupInlineWindowMenu: 'cast:popupInlineWindowMenu',
   getSnapshot: 'cast:getSnapshot',
