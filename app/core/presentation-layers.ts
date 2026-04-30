@@ -15,10 +15,17 @@ export const LAYER_PREVIEW_SLIDE: Slide = {
   updatedAt: '',
 };
 
-export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
+interface PlaybackLayerElementOptions {
+  id?: string;
+  zIndex?: number;
+}
+
+export function mediaAssetToLayerElement(asset: MediaAsset, options: PlaybackLayerElementOptions = {}): SlideElement {
+  const { id = '__layer_media', zIndex = 0 } = options;
+
   if (asset.type === 'audio') {
     return {
-      id: '__layer_media',
+      id,
       slideId: LAYER_PREVIEW_SLIDE.id,
       type: 'text',
       x: 0,
@@ -27,7 +34,7 @@ export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
       height: 180,
       rotation: 0,
       opacity: 1,
-      zIndex: 0,
+      zIndex,
       layer: 'media',
       payload: {
         text: `[AUDIO] ${asset.name}`,
@@ -47,7 +54,7 @@ export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
   const isVideo = asset.type === 'video' || asset.type === 'animation';
 
   return {
-    id: '__layer_media',
+    id,
     slideId: LAYER_PREVIEW_SLIDE.id,
     type: isVideo ? 'video' : 'image',
     x: 0,
@@ -56,7 +63,7 @@ export function mediaAssetToLayerElement(asset: MediaAsset): SlideElement {
     height: OUTPUT_FRAME_HEIGHT,
     rotation: 0,
     opacity: 1,
-    zIndex: 0,
+    zIndex,
     layer: 'media',
     payload: isVideo
       ? { src: asset.src, autoplay: true, loop: true, muted: true }

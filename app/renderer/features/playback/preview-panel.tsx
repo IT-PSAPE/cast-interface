@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronDown, AlignLeft, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, VolumeX, XCircle } from 'lucide-react';
+import { useRef, useState, type ChangeEvent } from 'react';
+import { ChevronDown, AlignLeft, Film, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, VolumeX, XCircle } from 'lucide-react';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { ReacstButton } from '@renderer/components/controls/button';
 import { RecastPanel } from '@renderer/components/layout/panel';
@@ -13,23 +13,21 @@ import { useNavigation } from '../../contexts/navigation-context';
 import { useOverlayEditor, useStageEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useAudio, usePresentationLayers, useStagePlayback } from '../../contexts/playback/playback-context';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
-import { useSlides } from '../../contexts/slide-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useGridSize } from '../../hooks/use-grid-size';
 import type { PreviewSurfaceKind } from '../../types/ui';
-import type { SlideElement, TextElementPayload } from '@core/types';
-import { BindingProvider, type BindingValue } from '../canvas/binding-context';
+import { BindingProvider } from '../canvas/binding-context';
 import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
 import { StageBinPanel } from '../assets/stages/stage-bin-panel';
 import { useProgramOutput } from './use-program-output';
-import { useStageScene } from './use-stage-scene';
+import { useStageBindingValue, useStageScene } from './use-stage-scene';
 import { SceneStage } from '../canvas/scene-stage';
 
 type BottomTab = 'overlays' | 'stage' | 'audio';
 
 export function PreviewPanel() {
-  const { clearLayer, clearAllLayers, mediaLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
+  const { clearLayer, clearAllLayers, mediaLayerAsset, videoLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
   const { currentOutputDeckItemId } = useNavigation();
   const audio = useAudio();
   const { importMedia } = useElements();
@@ -42,11 +40,13 @@ export function PreviewPanel() {
   const [bottomTab, setBottomTab] = useState<BottomTab>('overlays');
   const audioImportInputRef = useRef<HTMLInputElement>(null);
   const mediaActive = Boolean(mediaLayerAsset);
+  const videoActive = Boolean(videoLayerAsset);
   const contentActive = contentLayerVisible && Boolean(currentOutputDeckItemId);
   const overlayActive = activeOverlays.length > 0;
   const audioActive = audio.isPlaying || audio.currentTime > 0;
 
   function handleClearMedia() { clearLayer('media'); }
+  function handleClearVideo() { clearLayer('video'); }
   function handleClearContent() { clearLayer('content'); }
   function handleClearOverlay() { clearLayer('overlay'); }
   function handleClearAudio() { audio.clearAudio(); }
@@ -104,6 +104,9 @@ export function PreviewPanel() {
           </IconGroup.Item>
           <IconGroup.Item active={mediaActive} aria-label="Clear media layer" title="Clear media layer" onClick={handleClearMedia}>
             <Image className="size-4" />
+          </IconGroup.Item>
+          <IconGroup.Item active={videoActive} aria-label="Clear video layer" title="Clear video layer" onClick={handleClearVideo}>
+            <Film className="size-4" />
           </IconGroup.Item>
           <IconGroup.Item active={contentActive} aria-label="Clear content layer" title="Clear content layer" onClick={handleClearContent}>
             <AlignLeft className="size-4" />
@@ -308,32 +311,9 @@ function MonitorSurface({ showBadge }: { showBadge: boolean }) {
   );
 }
 
-function extractSlideText(elements: SlideElement[]): string {
-  const lines: string[] = [];
-  for (const element of elements) {
-    if (element.type !== 'text') continue;
-    const text = (element.payload as TextElementPayload).text ?? '';
-    if (text.trim().length > 0) lines.push(text);
-  }
-  return lines.join('\n');
-}
-
 function StageSurface({ showBadge }: { showBadge: boolean }) {
   const stageScene = useStageScene();
-  const { currentStageId } = useStagePlayback();
-  const { liveSlide, liveElements, nextLiveSlide, nextLiveElements } = useSlides();
-  const [armedAtMs, setArmedAtMs] = useState<number | null>(null);
-
-  useEffect(() => {
-    setArmedAtMs(currentStageId ? Date.now() : null);
-  }, [currentStageId]);
-
-  const bindingValue = useMemo<BindingValue>(() => ({
-    currentSlideText: liveSlide ? extractSlideText(liveElements) : null,
-    nextSlideText: nextLiveSlide ? extractSlideText(nextLiveElements) : null,
-    slideNotes: liveSlide ? liveSlide.notes : null,
-    armedAtMs,
-  }), [liveSlide, liveElements, nextLiveSlide, nextLiveElements, armedAtMs]);
+  const bindingValue = useStageBindingValue();
 
   // Mirrors the configured alpha for the stage NDI sender so the operator
   // sees exactly what the stage feed would look like over a transparent base.

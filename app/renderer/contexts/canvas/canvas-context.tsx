@@ -63,7 +63,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   const { currentSlide, liveSlide, liveElements, slideElementsById } = useSlides();
   const { slides: projectSlides, slideElementsBySlideId: projectSlideElementsBySlideId } = useProjectContent();
   const { getSlideElements, replaceSlideElements } = useDeckEditor();
-  const { mediaLayerAsset, activeOverlays, contentLayerVisible } = usePresentationRenderLayer();
+  const { mediaLayerAsset, videoLayerAsset, activeOverlays, contentLayerVisible } = usePresentationRenderLayer();
   const { state: { workbenchMode } } = useWorkbench();
   const activeEditorSource = useActiveEditorSource();
   const isDeckEdit = activeEditorSource.mode === 'deck-editor';
@@ -272,6 +272,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     return buildLayeredRenderScene({
       slide: liveSlide,
       contentElements: liveElements,
+      videoAsset: videoLayerAsset,
       mediaAsset: mediaLayerAsset,
       overlays: activeOverlays.map((overlay) => ({
         overlay: overlay.overlay,
@@ -280,7 +281,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
       })),
       includeContent: contentLayerVisible,
     });
-  }, [activeOverlays, contentLayerVisible, liveElements, liveSlide, mediaLayerAsset]);
+  }, [activeOverlays, contentLayerVisible, liveElements, liveSlide, mediaLayerAsset, videoLayerAsset]);
 
   const isEditing = workbenchMode !== 'show';
   const [frozenProgramScene, setFrozenProgramScene] = useState<RenderScene | null>(null);
