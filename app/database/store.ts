@@ -92,6 +92,30 @@ const parseJson = <T>(value: string): T => {
   }
 };
 
+// One-shot rename of a pre-rename Recast database (and its WAL/SHM/backups)
+// to the new LumaCast filename. Runs before the SQLite handle is opened so
+// existing user data carries over after the brand rename.
+function migrateLegacyRecastDatabase(userData: string, targetDbPath: string): void {
+  if (fs.existsSync(targetDbPath)) return;
+  const legacyDbPath = path.join(userData, 'recast.sqlite');
+  if (!fs.existsSync(legacyDbPath)) return;
+  try {
+    fs.renameSync(legacyDbPath, targetDbPath);
+    for (const suffix of ['-wal', '-shm']) {
+      const legacy = legacyDbPath + suffix;
+      if (fs.existsSync(legacy)) fs.renameSync(legacy, targetDbPath + suffix);
+    }
+    for (const entry of fs.readdirSync(userData)) {
+      const match = entry.match(/^recast\.bak-v(\d+)\.sqlite$/);
+      if (!match) continue;
+      fs.renameSync(path.join(userData, entry), path.join(userData, `lumacast.bak-v${match[1]}.sqlite`));
+    }
+    console.info('[DB] Migrated legacy recast.sqlite -> lumacast.sqlite');
+  } catch (error) {
+    console.error('[DB] Failed to migrate legacy recast database:', error);
+  }
+}
+
 function toDeckBundleTemplate(template: Template): DeckBundleTemplate {
   return {
     id: template.id,
@@ -230,7 +254,8 @@ export class CastRepository {
 
   constructor() {
     const userData = app.getPath('userData');
-    this.dbPath = path.join(userData, 'recast.sqlite');
+    this.dbPath = path.join(userData, 'lumacast.sqlite');
+    migrateLegacyRecastDatabase(userData, this.dbPath);
     this.db = new SqliteDatabase(this.dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
@@ -317,7 +342,7 @@ export class CastRepository {
   }
 
   private backupBeforeMigration(fromVersion: number): void {
-    const backupPath = path.join(path.dirname(this.dbPath), `recast.bak-v${fromVersion}.sqlite`);
+    const backupPath = path.join(path.dirname(this.dbPath), `lumacast.bak-v${fromVersion}.sqlite`);
     try {
       fs.rmSync(backupPath, { force: true });
       const escaped = backupPath.replace(/'/g, "''");
@@ -972,7 +997,7 @@ export class CastRepository {
         .run(slideId, presentationId, null, DEFAULT_W, DEFAULT_H, '', 0, now, now);
 
       const titlePayload = JSON.stringify({
-        text: 'Welcome to Recast',
+        text: 'Welcome to LumaCast',
         fontFamily: 'Helvetica',
         fontSize: 64,
         color: '#FFFFFF',

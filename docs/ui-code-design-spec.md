@@ -1,4 +1,4 @@
-# Recast UI Code Design Spec
+# LumaCast UI Code Design Spec
 
 Updated on 2026-03-08.
 Scope: `app/renderer` runtime structure, terminology, and screenshot coverage after the workbench, library-browser, slide-browser, and stage refactor.

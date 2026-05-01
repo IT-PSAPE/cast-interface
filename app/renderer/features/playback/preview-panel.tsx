@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import { ChevronDown, AlignLeft, Film, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, VolumeX, XCircle } from 'lucide-react';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { ReacstButton } from '@renderer/components/controls/button';
-import { RecastPanel } from '@renderer/components/layout/panel';
+import { LumaCastPanel } from '@renderer/components/layout/panel';
 import { Tabs } from '../../components/display/tabs';
 import { Dropdown } from '../../components/form/dropdown';
 import { FileTrigger } from '../../components/form/file-trigger';
@@ -35,8 +35,8 @@ export function PreviewPanel() {
   const { createStage } = useStageEditor();
   const { setCurrentStageId: setPlaybackStageId } = useStagePlayback();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const { gridSize: overlayGridSize, setGridSize: setOverlayGridSize, min: overlayGridMin, max: overlayGridMax } = useGridSize('recast.grid-size.overlay-bin', 3, 2, 4);
-  const { gridSize: stageGridSize, setGridSize: setStageGridSize, min: stageGridMin, max: stageGridMax } = useGridSize('recast.grid-size.stage-bin', 3, 2, 4);
+  const { gridSize: overlayGridSize, setGridSize: setOverlayGridSize, min: overlayGridMin, max: overlayGridMax } = useGridSize('lumacast.grid-size.overlay-bin', 3, 2, 4);
+  const { gridSize: stageGridSize, setGridSize: setStageGridSize, min: stageGridMin, max: stageGridMax } = useGridSize('lumacast.grid-size.stage-bin', 3, 2, 4);
   const [bottomTab, setBottomTab] = useState<BottomTab>('overlays');
   const audioImportInputRef = useRef<HTMLInputElement>(null);
   const mediaActive = Boolean(mediaLayerAsset);
@@ -94,8 +94,8 @@ export function PreviewPanel() {
   const handleActiveGridSizeChange = bottomTab === 'overlays' ? setOverlayGridSize : setStageGridSize;
 
   return (
-    <RecastPanel.Root className='h-full border-l border-secondary' >
-      <RecastPanel.Group>
+    <LumaCastPanel.Root className='h-full border-l border-secondary' >
+      <LumaCastPanel.Group>
         <PreviewModeHeader />
         <SurfacesArea />
         <IconGroup.Root fill className='rounded-none' >
@@ -118,10 +118,10 @@ export function PreviewPanel() {
             <VolumeX className="size-4" />
           </IconGroup.Item>
         </IconGroup.Root>
-      </RecastPanel.Group>
-      <RecastPanel.Group className='flex-1' >
+      </LumaCastPanel.Group>
+      <LumaCastPanel.Group className='flex-1' >
         <Tabs.Root value={bottomTab} onValueChange={handleTabChange}>
-          <RecastPanel.GroupTitle>
+          <LumaCastPanel.GroupTitle>
             <Tabs.List label="Bottom panel" className="mr-auto" tabsClassName="gap-2">
               <Tabs.Trigger value="overlays">Overlays</Tabs.Trigger>
               <Tabs.Trigger value="stage">Stage</Tabs.Trigger>
@@ -154,33 +154,33 @@ export function PreviewPanel() {
                 </ReacstButton.Icon>
               </>
             )}
-          </RecastPanel.GroupTitle>
+          </LumaCastPanel.GroupTitle>
           {bottomTab === 'audio' ? (
-            <RecastPanel.Content className='flex-1 min-h-0 overflow-y-auto'>
+            <LumaCastPanel.Content className='flex-1 min-h-0 overflow-y-auto'>
               <div className="w-full sticky top-0 z-10 bg-primary border-b border-secondary">
                 <AudioBackgroundControls />
               </div>
               <div className='w-full py-2 px-1'>
                 <AudioBinPanel filterText="" gridItemSize={1} />
               </div>
-            </RecastPanel.Content>
+            </LumaCastPanel.Content>
           ) : (
-            <RecastPanel.Content className='flex-1 py-2 px-1'>
+            <LumaCastPanel.Content className='flex-1 py-2 px-1'>
               {bottomTab === 'overlays' ? (
                 <OverlayBinPanel filterText="" gridItemSize={overlayGridSize} />
               ) : (
                 <StageBinPanel filterText="" gridItemSize={stageGridSize} />
               )}
-            </RecastPanel.Content>
+            </LumaCastPanel.Content>
           )}
           {showGridSlider ? (
-            <RecastPanel.GroupFooter>
+            <LumaCastPanel.GroupFooter>
               <GridSizeSlider value={activeGridSize} min={activeGridMin} max={activeGridMax} onChange={handleActiveGridSizeChange} />
-            </RecastPanel.GroupFooter>
+            </LumaCastPanel.GroupFooter>
           ) : null}
         </Tabs.Root>
-      </RecastPanel.Group>
-    </RecastPanel.Root>
+      </LumaCastPanel.Group>
+    </LumaCastPanel.Root>
   );
 }
 
@@ -212,7 +212,7 @@ function PreviewModeHeader() {
   }
 
   return (
-    <RecastPanel.GroupTitle>
+    <LumaCastPanel.GroupTitle>
       <ReacstButton.Icon
         variant="ghost"
         label={previewMode === 'single' ? 'Switch to all previews' : 'Switch to single preview'}
@@ -239,7 +239,7 @@ function PreviewModeHeader() {
           <GridSizeSlider value={previewGridDensity} min={1} max={2} onChange={handleDensityChange} />
         </span>
       )}
-    </RecastPanel.GroupTitle>
+    </LumaCastPanel.GroupTitle>
   );
 }
 
