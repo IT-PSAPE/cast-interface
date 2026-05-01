@@ -51,10 +51,13 @@ async function installCastApiMock(page: Page): Promise<void> {
   await page.addInitScript((mockPayload: CastApiMockPayload) => {
     const emptyPatch = { version: 1, upserts: {}, deletes: {} };
     const unsubscribe = () => {};
+    let clipboardText = '';
 
     window.castApi = {
       platform: 'darwin',
       getPathForFile: () => '',
+      readClipboardText: async () => clipboardText,
+      writeClipboardText: async (text: string) => { clipboardText = text; },
       getInlineWindowMenuItems: async () => [],
       popupInlineWindowMenu: async () => {},
       updateAppMenuState: async () => {},

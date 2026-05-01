@@ -40,7 +40,6 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
     >
       {filteredDeckItems.map((presentation) => {
         const shared = {
-          key: presentation.id,
           item: presentation,
           slides: slidesByDeckItemId.get(presentation.id) ?? [],
           isSelected: isDetachedDeckBrowser && currentDrawerDeckItemId === presentation.id,
@@ -49,8 +48,8 @@ export function DeckBinPanel({ filterText, gridItemSize }: DeckBinPanelProps) {
           onRename: handleRename,
         };
         return drawerViewMode === 'list'
-          ? <DeckItemRow {...shared} />
-          : <DeckItemTile {...shared} />;
+          ? <DeckItemRow key={presentation.id} {...shared} />
+          : <DeckItemTile key={presentation.id} {...shared} />;
       })}
     </BinPanelLayout>
   );

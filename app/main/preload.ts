@@ -29,6 +29,8 @@ import type {
 const api = {
   platform: process.platform,
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  readClipboardText: () => ipcRenderer.invoke(IPC.readClipboardText) as Promise<string>,
+  writeClipboardText: (text: string) => ipcRenderer.invoke(IPC.writeClipboardText, text) as Promise<void>,
   getInlineWindowMenuItems: () => ipcRenderer.invoke(IPC.getInlineWindowMenuItems) as Promise<import('@core/ipc').InlineWindowMenuItem[]>,
   popupInlineWindowMenu: (menuId: string, bounds: import('@core/ipc').InlineWindowMenuBounds) =>
     ipcRenderer.invoke(IPC.popupInlineWindowMenu, menuId, bounds) as Promise<void>,

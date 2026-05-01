@@ -90,12 +90,12 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
         })
     }, [])
 
-    const pasteIntoBlock = useCallback((blockId: string, before: string, segments: string[], after: string) => {
-        const firstLine = before + segments[0]
-        const middleLines = segments.slice(1, -1)
-        const lastLine = segments.length > 1 ? (segments[segments.length - 1] + after) : null
+    const pasteIntoBlock = useCallback((blockId: string, before: string, pastedBlocks: string[], after: string) => {
+        const firstLine = `${before}${pastedBlocks[0]}`
+        const middleLines = pastedBlocks.slice(1, -1)
+        const lastLine = pastedBlocks.length > 1 ? `${pastedBlocks[pastedBlocks.length - 1]}${after}` : null
 
-        const newBlocks: Block[] = middleLines.map(line => ({ id: uid(), content: line }))
+        const newBlocks: Block[] = middleLines.map((line) => ({ id: uid(), content: line }))
         const lastId = lastLine !== null ? uid() : null
         if (lastId !== null && lastLine !== null) {
             newBlocks.push({ id: lastId, content: lastLine })
@@ -230,8 +230,8 @@ export default function DocEditor({ initialBlocks, onChange }: DocEditorProps) {
                         onSplit={(before, after) => splitBlock(block.id, before, after)}
                         onDelete={() => deleteBlock(block.id)}
                         onMergeWithPrev={text => mergeWithPrev(block.id, text)}
+                        onPaste={(before, pastedBlocks, after) => pasteIntoBlock(block.id, before, pastedBlocks, after)}
                         onTextareaFocus={handleTextareaFocus}
-                        onPaste={(before, segments, after) => pasteIntoBlock(block.id, before, segments, after)}
                     />
                 ))}
             </div>

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, clipboard, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { CastRepository } from '@database/store';
 import { IPC, NDI_EVENTS, type AppMenuState, type InlineWindowMenuBounds, type InlineWindowMenuItem } from '@core/ipc';
 import type {
@@ -87,6 +87,13 @@ export const registerIpcHandlers = (
     getMainWindow()?.webContents.send(NDI_EVENTS.diagnosticsChanged, diagnostics);
   });
 
+  safeHandle(IPC.readClipboardText, () => clipboard.readText());
+  safeHandle(IPC.writeClipboardText, (_event, text: string) => {
+    if (typeof text !== 'string') {
+      throw new Error('Invalid clipboard payload');
+    }
+    clipboard.writeText(text);
+  });
   safeHandle(IPC.getInlineWindowMenuItems, (): InlineWindowMenuItem[] => getInlineWindowMenuItems());
   safeHandle(IPC.popupInlineWindowMenu, async (event, menuId: string, bounds: InlineWindowMenuBounds) => {
     const browserWindow = getDialogWindow(event);

@@ -21,12 +21,18 @@ interface MediaBinPanelProps {
 
 export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) {
   const { drawerViewMode } = useResourceDrawer();
-  const { mediaAssets, mediaLayerAssetId, handleApply } = useMediaBin(filterText);
+  const { mediaAssets, mediaLayerAssetId, videoLayerAssetId, handleApply } = useMediaBin(filterText);
 
   return (
     <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
       {mediaAssets.map((asset) => (
-        <MediaBinItem key={asset.id} asset={asset} isActive={mediaLayerAssetId === asset.id} mode={drawerViewMode} onAssignLayer={handleApply} />
+        <MediaBinItem
+          key={asset.id}
+          asset={asset}
+          isActive={mediaLayerAssetId === asset.id || videoLayerAssetId === asset.id}
+          mode={drawerViewMode}
+          onAssignLayer={handleApply}
+        />
       ))}
     </BinPanelLayout>
   );
