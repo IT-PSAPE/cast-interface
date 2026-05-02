@@ -5,14 +5,14 @@ import { Tabs } from '@renderer/components/display/tabs';
 import { useElements } from '@renderer/contexts/canvas/canvas-context';
 import { useInspector } from '@renderer/features/inspector/inspector-context';
 import { ShapeElementInspector } from '@renderer/features/inspector/shape-element-inspector';
-import { TemplateInspector } from '@renderer/features/inspector/template-inspector';
+import { ThemeInspector } from '@renderer/features/inspector/theme-inspector';
 import { TextElementInspector } from '@renderer/features/inspector/text-element-inspector';
 import { VideoElementInspector } from '@renderer/features/inspector/video-element-inspector';
 import type { InspectorTab } from '@renderer/types/ui';
-import { useTemplateEditorScreen } from './screen-context';
+import { useThemeEditorScreen } from './screen-context';
 
-export function TemplateEditorInspectorPanel() {
-  const { state, actions } = useTemplateEditorScreen();
+export function ThemeEditorInspectorPanel() {
+  const { state, actions } = useThemeEditorScreen();
   const { inspectorTab, setInspectorTab } = useInspector();
   const { selectedElement } = useElements();
   const hasSelection = Boolean(selectedElement);
@@ -22,7 +22,7 @@ export function TemplateEditorInspectorPanel() {
   useEffect(() => {
     if (!hasSelection) {
       if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'slide' || inspectorTab === 'presentation' || inspectorTab === 'video') {
-        setInspectorTab('template');
+        setInspectorTab('theme');
       }
       return;
     }
@@ -50,21 +50,21 @@ export function TemplateEditorInspectorPanel() {
         <section className="flex flex-1 flex-col">
           <div className="border-b border-primary">
             <Tabs.List label="Inspector">
-              {!hasSelection && <Tabs.Trigger value="template">Template</Tabs.Trigger>}
+              {!hasSelection && <Tabs.Trigger value="theme">Theme</Tabs.Trigger>}
               {hasSelection && <Tabs.Trigger value="shape">Shape</Tabs.Trigger>}
               {isTextSelected && <Tabs.Trigger value="text">Text</Tabs.Trigger>}
               {isVideoSelected && <Tabs.Trigger value="video">Video</Tabs.Trigger>}
             </Tabs.List>
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
-            {inspectorTab === 'template' && <TemplateInspector />}
+            {inspectorTab === 'theme' && <ThemeInspector />}
             {inspectorTab === 'shape' && <ShapeElementInspector />}
             {inspectorTab === 'text' && <TextElementInspector />}
             {inspectorTab === 'video' && <VideoElementInspector />}
           </div>
         </section>
       </Tabs.Root>
-      {state.currentTemplate && (
+      {state.currentTheme && (
         <LumaCastPanel.Footer className="p-3">
           <div className="flex flex-col gap-2">
             {state.hasPendingChanges && (
@@ -76,7 +76,7 @@ export function TemplateEditorInspectorPanel() {
               variant="ghost"
               onClick={() => { void actions.syncLinkedItems(); }}
               disabled={state.linkedItemCount === 0 || state.isSyncing || state.hasPendingChanges}
-              title={state.hasPendingChanges ? 'Push template changes first' : state.linkedItemCount === 0 ? 'No deck items use this template' : undefined}
+              title={state.hasPendingChanges ? 'Push theme changes first' : state.linkedItemCount === 0 ? 'No deck items use this theme' : undefined}
               className="w-full"
             >
               {state.isSyncing ? 'Syncing…' : `Sync ${state.linkedItemCount} linked ${state.linkedItemCount === 1 ? 'item' : 'items'}`}

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OverlayAnimation } from '@core/types';
-import type { DrawerTab, DrawerViewModeMap, InspectorTab, LibraryPanelView, PlaylistBrowserMode, PreviewGridDensity, PreviewMode, PreviewSurfaceKind, ResourceDrawerViewMode, SlideBrowserMode, WorkbenchMode } from '../types/ui';
+import type { DrawerTab, DrawerViewModeMap, InspectorTab, LibraryPanelView, PlaylistBrowserMode, ProgramGridDensity, ProgramMode, ProgramSurfaceKind, ResourceDrawerViewMode, SlideBrowserMode, WorkbenchMode } from '../types/ui';
 import { useGridSize } from '../hooks/use-grid-size';
 import { useLocalStorage } from '../hooks/use-local-storage';
 
@@ -53,9 +53,9 @@ type WorkbenchContextValue = {
     libraryPanelView: LibraryPanelView;
     overlayDefaults: OverlayDefaultsState;
     playlistBrowserMode: PlaylistBrowserMode;
-    previewMode: PreviewMode;
-    previewSingleSurface: PreviewSurfaceKind;
-    previewGridDensity: PreviewGridDensity;
+    programMode: ProgramMode;
+    programSingleSurface: ProgramSurfaceKind;
+    programGridDensity: ProgramGridDensity;
     slideBrowserMode: SlideBrowserMode;
     workbenchMode: WorkbenchMode;
   };
@@ -68,9 +68,9 @@ type WorkbenchContextValue = {
     setLibraryPanelView: (view: LibraryPanelView) => void;
     updateOverlayDefaults: (next: Partial<OverlayDefaultsState>) => void;
     setPlaylistBrowserMode: (mode: PlaylistBrowserMode) => void;
-    setPreviewMode: (mode: PreviewMode) => void;
-    setPreviewSingleSurface: (surface: PreviewSurfaceKind) => void;
-    setPreviewGridDensity: (density: PreviewGridDensity) => void;
+    setProgramMode: (mode: ProgramMode) => void;
+    setProgramSingleSurface: (surface: ProgramSurfaceKind) => void;
+    setProgramGridDensity: (density: ProgramGridDensity) => void;
     setSlideBrowserMode: (mode: SlideBrowserMode) => void;
     setWorkbenchMode: (mode: WorkbenchMode) => void;
   };
@@ -83,14 +83,14 @@ const WorkbenchOverlayStackContext = createContext<WorkbenchContextValue['overla
 const WORKBENCH_MODE_STORAGE_KEY = 'lumacast.workbench-mode.v1';
 const DECK_BROWSER_STORAGE_KEY = 'lumacast.deck-browser-preferences.v1';
 const DRAWER_VIEW_MODES_STORAGE_KEY = 'lumacast.drawer-view-modes.v1';
-const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', image: 'grid', templates: 'grid' };
+const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', image: 'grid', themes: 'grid' };
 const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'lumacast.library-panel-view.v1';
 const EXPANDED_SEGMENTS_STORAGE_KEY = 'lumacast.library-panel-expanded-segments.v1';
 const OVERLAY_DEFAULTS_STORAGE_KEY = 'lumacast.overlay-defaults.v1';
-const PREVIEW_MODE_STORAGE_KEY = 'lumacast.preview-mode.v1';
-const PREVIEW_SINGLE_SURFACE_STORAGE_KEY = 'lumacast.preview-single-surface.v1';
-const PREVIEW_GRID_DENSITY_STORAGE_KEY = 'lumacast.preview-grid-density.v1';
-const VALID_MODES = new Set<WorkbenchMode>(['show', 'deck-editor', 'overlay-editor', 'template-editor', 'stage-editor', 'settings']);
+const PROGRAM_MODE_STORAGE_KEY = 'lumacast.program-mode.v1';
+const PROGRAM_SINGLE_SURFACE_STORAGE_KEY = 'lumacast.program-single-surface.v1';
+const PROGRAM_GRID_DENSITY_STORAGE_KEY = 'lumacast.program-grid-density.v1';
+const VALID_MODES = new Set<WorkbenchMode>(['show', 'deck-editor', 'overlay-editor', 'theme-editor', 'stage-editor', 'settings']);
 const DEFAULT_OVERLAY_DEFAULTS: OverlayDefaultsState = {
   animationKind: 'dissolve',
   durationMs: 400,
@@ -130,20 +130,20 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     parseOverlayDefaults,
     JSON.stringify,
   );
-  const [previewMode, setPreviewMode] = useLocalStorage<PreviewMode>(
-    PREVIEW_MODE_STORAGE_KEY,
+  const [programMode, setProgramMode] = useLocalStorage<ProgramMode>(
+    PROGRAM_MODE_STORAGE_KEY,
     'single',
-    parsePreviewMode,
+    parseProgramMode,
   );
-  const [previewSingleSurface, setPreviewSingleSurface] = useLocalStorage<PreviewSurfaceKind>(
-    PREVIEW_SINGLE_SURFACE_STORAGE_KEY,
-    'preview',
-    parsePreviewSurfaceKind,
+  const [programSingleSurface, setProgramSingleSurface] = useLocalStorage<ProgramSurfaceKind>(
+    PROGRAM_SINGLE_SURFACE_STORAGE_KEY,
+    'program',
+    parseProgramSurfaceKind,
   );
-  const [previewGridDensity, setPreviewGridDensity] = useLocalStorage<PreviewGridDensity>(
-    PREVIEW_GRID_DENSITY_STORAGE_KEY,
+  const [programGridDensity, setProgramGridDensity] = useLocalStorage<ProgramGridDensity>(
+    PROGRAM_GRID_DENSITY_STORAGE_KEY,
     1,
-    parsePreviewGridDensity,
+    parseProgramGridDensity,
   );
   const {
     gridSize: deckBrowserGridItemSize,
@@ -219,9 +219,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     libraryPanelView,
     overlayDefaults,
     playlistBrowserMode: deckBrowserPreferences.playlistBrowserMode,
-    previewMode,
-    previewSingleSurface,
-    previewGridDensity,
+    programMode,
+    programSingleSurface,
+    programGridDensity,
     slideBrowserMode: deckBrowserPreferences.slideBrowserMode,
     workbenchMode,
   }), [
@@ -236,9 +236,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     inspectorTab,
     libraryPanelView,
     overlayDefaults,
-    previewMode,
-    previewSingleSurface,
-    previewGridDensity,
+    programMode,
+    programSingleSurface,
+    programGridDensity,
     workbenchMode,
   ]);
 
@@ -251,9 +251,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     setLibraryPanelView,
     updateOverlayDefaults,
     setPlaylistBrowserMode,
-    setPreviewMode,
-    setPreviewSingleSurface,
-    setPreviewGridDensity,
+    setProgramMode,
+    setProgramSingleSurface,
+    setProgramGridDensity,
     setSlideBrowserMode,
     setWorkbenchMode,
   }), [
@@ -265,9 +265,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     setLibraryPanelView,
     updateOverlayDefaults,
     setPlaylistBrowserMode,
-    setPreviewMode,
-    setPreviewSingleSurface,
-    setPreviewGridDensity,
+    setProgramMode,
+    setProgramSingleSurface,
+    setProgramGridDensity,
     setSlideBrowserMode,
     setWorkbenchMode,
   ]);
@@ -313,9 +313,9 @@ function parseDrawerViewModes(raw: string): DrawerViewModeMap | null {
     if (typeof parsed !== 'object' || parsed === null) return null;
     const deck = parsed.deck;
     const image = parsed.image;
-    const templates = parsed.templates;
-    if (!isValidViewMode(deck) || !isValidViewMode(image) || !isValidViewMode(templates)) return null;
-    return { deck, image, templates };
+    const themes = parsed.themes;
+    if (!isValidViewMode(deck) || !isValidViewMode(image) || !isValidViewMode(themes)) return null;
+    return { deck, image, themes };
   } catch {
     return null;
   }
@@ -390,15 +390,16 @@ function sanitizeDuration(value: unknown, fallback: number): number {
   return Math.max(0, Math.round(value));
 }
 
-function parsePreviewMode(raw: string): PreviewMode | null {
+function parseProgramMode(raw: string): ProgramMode | null {
   return raw === 'single' || raw === 'all' ? raw : null;
 }
 
-function parsePreviewSurfaceKind(raw: string): PreviewSurfaceKind | null {
-  return raw === 'preview' || raw === 'monitor' || raw === 'stage' ? raw : null;
+function parseProgramSurfaceKind(raw: string): ProgramSurfaceKind | null {
+  if (raw === 'preview') return 'program';
+  return raw === 'program' || raw === 'monitor' || raw === 'stage' ? raw : null;
 }
 
-function parsePreviewGridDensity(raw: string): PreviewGridDensity | null {
+function parseProgramGridDensity(raw: string): ProgramGridDensity | null {
   const parsed = Number(raw);
-  return parsed === 1 || parsed === 2 ? (parsed as PreviewGridDensity) : null;
+  return parsed === 1 || parsed === 2 ? (parsed as ProgramGridDensity) : null;
 }

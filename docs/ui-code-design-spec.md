@@ -315,11 +315,11 @@ States covered:
 
 - `media`
 - `presentations`
-- `templates`
+- `themes`
 
 ![Resource drawer media](./ui-spec-assets/features/resource-drawer-media.png)
 ![Resource drawer presentations](./ui-spec-assets/features/resource-drawer-presentations.png)
-![Resource drawer templates](./ui-spec-assets/features/resource-drawer-templates.png)
+![Resource drawer themes](./ui-spec-assets/features/resource-drawer-themes.png)
 
 ### Outputs
 

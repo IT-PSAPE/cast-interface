@@ -43,4 +43,30 @@ describe('useKVideo pool retention', () => {
     releaseRetainedVideo();
     expect(getLayerVideoElement(src, options)).toBeNull();
   });
+
+  it('reuses the same pooled video element when autoplay changes', () => {
+    const src = 'file:///transport-video.mp4';
+    const pausedOptions = { autoplay: false, loop: true, muted: false, playbackRate: 1 };
+    const playingOptions = { autoplay: true, loop: true, muted: false, playbackRate: 1 };
+    const { rerender } = renderHook(
+      ({ options }) => useKVideo(src, options),
+      { initialProps: { options: pausedOptions } },
+    );
+
+    const pausedElement = getLayerVideoElement(src, pausedOptions);
+    expect(pausedElement).toBeTruthy();
+    if (pausedElement) {
+      Object.defineProperty(pausedElement, 'currentTime', {
+        configurable: true,
+        writable: true,
+        value: 19.5,
+      });
+    }
+
+    rerender({ options: playingOptions });
+
+    const playingElement = getLayerVideoElement(src, playingOptions);
+    expect(playingElement).toBe(pausedElement);
+    expect(playingElement?.currentTime).toBe(19.5);
+  });
 });

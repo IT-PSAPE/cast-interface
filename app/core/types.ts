@@ -38,12 +38,12 @@ export interface PlaylistEntry {
 }
 
 export type DeckItemType = 'presentation' | 'lyric';
-export type TemplateKind = 'slides' | 'lyrics' | 'overlays';
+export type ThemeKind = 'slides' | 'lyrics' | 'overlays';
 
 interface DeckItemBase {
   id: Id;
   title: string;
-  templateId?: Id | null;
+  themeId?: Id | null;
   collectionId: Id;
   order: number;
   createdAt: string;
@@ -230,10 +230,10 @@ export interface Overlay {
   updatedAt: string;
 }
 
-export interface Template {
+export interface Theme {
   id: Id;
   name: string;
-  kind: TemplateKind;
+  kind: ThemeKind;
   width: number;
   height: number;
   elements: SlideElement[];
@@ -255,7 +255,7 @@ export interface Stage {
   updatedAt: string;
 }
 
-export type CollectionBinKind = 'deck' | 'image' | 'video' | 'audio' | 'template' | 'overlay' | 'stage';
+export type CollectionBinKind = 'deck' | 'image' | 'video' | 'audio' | 'theme' | 'overlay' | 'stage';
 
 export interface Collection {
   id: Id;
@@ -292,7 +292,7 @@ export type CollectionItemType =
   | 'presentation'
   | 'lyric'
   | 'media_asset'
-  | 'template'
+  | 'theme'
   | 'overlay'
   | 'stage';
 
@@ -302,10 +302,10 @@ export interface CollectionAssignmentInput {
   collectionId: Id;
 }
 
-export interface DeckBundleTemplate {
+export interface DeckBundleTheme {
   id: Id;
   name: string;
-  kind: TemplateKind;
+  kind: ThemeKind;
   width: number;
   height: number;
   order: number;
@@ -325,7 +325,7 @@ export interface DeckBundleItem {
   id: Id;
   type: DeckItemType;
   title: string;
-  templateId: Id | null;
+  themeId: Id | null;
   order: number;
   slides: DeckBundleSlide[];
 }
@@ -365,14 +365,14 @@ export interface DeckBundleManifest {
   version: 1;
   exportedAt: string;
   items: DeckBundleItem[];
-  templates: DeckBundleTemplate[];
+  themes: DeckBundleTheme[];
   mediaReferences: DeckBundleMediaReference[];
   overlays?: DeckBundleOverlay[];
   stages?: DeckBundleStage[];
 }
 
 export interface DeckBundleExportOptions {
-  includeAllTemplates?: boolean;
+  includeAllThemes?: boolean;
   includeOverlays?: boolean;
   includeStages?: boolean;
 }
@@ -382,13 +382,13 @@ export interface DeckBundleInspectionItem {
   title: string;
   type: DeckItemType;
   slideCount: number;
-  templateId: Id | null;
+  themeId: Id | null;
 }
 
-export interface DeckBundleInspectionTemplate {
+export interface DeckBundleInspectionTheme {
   id: Id;
   name: string;
-  kind: TemplateKind;
+  kind: ThemeKind;
 }
 
 export interface DeckBundleInspectionOverlay {
@@ -407,7 +407,7 @@ export interface BrokenDeckBundleReference {
   elementTypes: Array<'image' | 'video'>;
   occurrenceCount: number;
   itemTitles: string[];
-  templateNames: string[];
+  themeNames: string[];
   overlayNames: string[];
   stageNames: string[];
 }
@@ -415,12 +415,12 @@ export interface BrokenDeckBundleReference {
 export interface DeckBundleInspection {
   exportedAt: string;
   itemCount: number;
-  templateCount: number;
+  themeCount: number;
   mediaReferenceCount: number;
   overlayCount: number;
   stageCount: number;
   items: DeckBundleInspectionItem[];
-  templates: DeckBundleInspectionTemplate[];
+  themes: DeckBundleInspectionTheme[];
   overlays: DeckBundleInspectionOverlay[];
   stages: DeckBundleInspectionStage[];
   mediaReferences: DeckBundleMediaReference[];
@@ -460,7 +460,7 @@ export interface AppSnapshot {
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
-  templates: Template[];
+  themes: Theme[];
   stages: Stage[];
   collections: Collection[];
 }
@@ -593,19 +593,19 @@ export interface OverlayUpdateInput {
   animation?: OverlayAnimation;
 }
 
-export interface TemplateCreateInput {
+export interface ThemeCreateInput {
   name: string;
-  kind: TemplateKind;
+  kind: ThemeKind;
   width?: number;
   height?: number;
   elements?: SlideElement[];
   collectionId?: Id;
 }
 
-export interface TemplateUpdateInput {
+export interface ThemeUpdateInput {
   id: Id;
   name?: string;
-  kind?: TemplateKind;
+  kind?: ThemeKind;
   width?: number;
   height?: number;
   elements?: SlideElement[];

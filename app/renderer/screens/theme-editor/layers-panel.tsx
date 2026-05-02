@@ -7,7 +7,7 @@ import { useInspector } from '@renderer/features/inspector/inspector-context';
 import { LAYER_ORDER } from '@renderer/types/ui';
 import { compactText } from '@renderer/utils/slides';
 
-export function TemplateEditorLayersPanel() {
+export function ThemeEditorLayersPanel() {
   const { effectiveElements, selectedElementId, selectElement } = useElements();
   const { setInspectorTab } = useInspector();
 
@@ -22,7 +22,7 @@ export function TemplateEditorLayersPanel() {
   if (orderedElements.length === 0) {
     return (
       <EmptyState.Root data-ui-region="object-list-panel">
-        <EmptyState.Title>No objects in this template.</EmptyState.Title>
+        <EmptyState.Title>No objects in this theme.</EmptyState.Title>
       </EmptyState.Root>
     );
   }
@@ -30,13 +30,13 @@ export function TemplateEditorLayersPanel() {
   return (
     <div data-ui-region="object-list-panel" className="flex w-full flex-col gap-1.5">
       {orderedElements.map((element) => (
-        <TemplateLayerRow key={element.id} element={element} isSelected={element.id === selectedElementId} onSelect={selectElement} onSetInspectorTab={setInspectorTab} />
+        <ThemeLayerRow key={element.id} element={element} isSelected={element.id === selectedElementId} onSelect={selectElement} onSetInspectorTab={setInspectorTab} />
       ))}
     </div>
   );
 }
 
-function TemplateLayerRow({
+function ThemeLayerRow({
   element,
   isSelected,
   onSelect,

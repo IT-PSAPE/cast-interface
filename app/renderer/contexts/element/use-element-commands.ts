@@ -59,15 +59,15 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
       return;
     }
 
-    if (activeEditorSource.mode === 'template-editor') {
-      const currentTemplate = activeEditorSource.meta.template;
-      if (!currentTemplate) return;
-      if (currentTemplate.kind === 'lyrics' && activeEditorSource.elements.some((element) => element.type === 'text')) {
-        setStatusText('Lyric templates only support the existing lyric text element.');
+    if (activeEditorSource.mode === 'theme-editor') {
+      const currentTheme = activeEditorSource.meta.theme;
+      if (!currentTheme) return;
+      if (currentTheme.kind === 'lyrics' && activeEditorSource.elements.some((element) => element.type === 'text')) {
+        setStatusText('Lyric themes only support the existing lyric text element.');
         return;
       }
-      addToSource(newSlideTextElement(currentTemplate.id));
-      setStatusText('Added template text');
+      addToSource(newSlideTextElement(currentTheme.id));
+      setStatusText('Added theme text');
       return;
     }
 
@@ -120,11 +120,11 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
       return;
     }
 
-    if (activeEditorSource.mode === 'template-editor') {
-      const currentTemplate = activeEditorSource.meta.template;
-      if (!currentTemplate) return;
-      addToSource(newSlideShapeElement(currentTemplate.id));
-      setStatusText('Added template shape');
+    if (activeEditorSource.mode === 'theme-editor') {
+      const currentTheme = activeEditorSource.meta.theme;
+      if (!currentTheme) return;
+      addToSource(newSlideShapeElement(currentTheme.id));
+      setStatusText('Added theme shape');
       return;
     }
 
@@ -174,11 +174,11 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
       return;
     }
 
-    if (activeEditorSource.mode === 'template-editor') {
-      const currentTemplate = activeEditorSource.meta.template;
-      if (!currentTemplate) return;
-      addToSource(newSlideMediaElement(currentTemplate.id, asset, x, y));
-      setStatusText(`Added ${asset.type} template element`);
+    if (activeEditorSource.mode === 'theme-editor') {
+      const currentTheme = activeEditorSource.meta.theme;
+      if (!currentTheme) return;
+      addToSource(newSlideMediaElement(currentTheme.id, asset, x, y));
+      setStatusText(`Added ${asset.type} theme element`);
       return;
     }
 

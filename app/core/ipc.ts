@@ -22,8 +22,8 @@ import type {
   OverlayUpdateInput,
   StageCreateInput,
   StageUpdateInput,
-  TemplateCreateInput,
-  TemplateUpdateInput,
+  ThemeCreateInput,
+  ThemeUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideOrderUpdateInput
@@ -83,13 +83,13 @@ export interface MainApi {
   updateOverlay: (input: OverlayUpdateInput) => Promise<SnapshotPatch>;
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => Promise<SnapshotPatch>;
   deleteOverlay: (overlayId: Id) => Promise<SnapshotPatch>;
-  createTemplate: (input: TemplateCreateInput) => Promise<SnapshotPatch>;
-  updateTemplate: (input: TemplateUpdateInput) => Promise<SnapshotPatch>;
-  deleteTemplate: (templateId: Id) => Promise<SnapshotPatch>;
-  applyTemplateToDeckItem: (templateId: Id, itemId: Id) => Promise<SnapshotPatch>;
-  detachTemplateFromDeckItem: (itemId: Id) => Promise<SnapshotPatch>;
-  syncTemplateToLinkedDeckItems: (templateId: Id) => Promise<SnapshotPatch>;
-  applyTemplateToOverlay: (templateId: Id, overlayId: Id) => Promise<SnapshotPatch>;
+  createTheme: (input: ThemeCreateInput) => Promise<SnapshotPatch>;
+  updateTheme: (input: ThemeUpdateInput) => Promise<SnapshotPatch>;
+  deleteTheme: (themeId: Id) => Promise<SnapshotPatch>;
+  applyThemeToDeckItem: (themeId: Id, itemId: Id) => Promise<SnapshotPatch>;
+  detachThemeFromDeckItem: (itemId: Id) => Promise<SnapshotPatch>;
+  syncThemeToLinkedDeckItems: (themeId: Id) => Promise<SnapshotPatch>;
+  applyThemeToOverlay: (themeId: Id, overlayId: Id) => Promise<SnapshotPatch>;
   createStage: (input: StageCreateInput) => Promise<SnapshotPatch>;
   updateStage: (input: StageUpdateInput) => Promise<SnapshotPatch>;
   deleteStage: (stageId: Id) => Promise<SnapshotPatch>;
@@ -158,7 +158,7 @@ export type AppMenuCommandId =
   | 'view.mode.show'
   | 'view.mode.deckEditor'
   | 'view.mode.overlayEditor'
-  | 'view.mode.templateEditor'
+  | 'view.mode.themeEditor'
   | 'view.mode.stageEditor'
   | 'view.mode.settings'
   | 'view.slideBrowser.grid'
@@ -173,7 +173,7 @@ export type AppMenuCommandId =
   | 'playback.toggleStageOutput';
 
 export interface AppMenuState {
-  workbenchMode: 'show' | 'deck-editor' | 'overlay-editor' | 'template-editor' | 'stage-editor' | 'settings';
+  workbenchMode: 'show' | 'deck-editor' | 'overlay-editor' | 'theme-editor' | 'stage-editor' | 'settings';
   slideBrowserMode: 'grid' | 'list';
   playlistBrowserMode: 'current' | 'tabs' | 'continuous';
   hasCurrentLibrary: boolean;
@@ -248,13 +248,13 @@ export const IPC = {
   updateOverlay: 'cast:updateOverlay',
   setOverlayEnabled: 'cast:setOverlayEnabled',
   deleteOverlay: 'cast:deleteOverlay',
-  createTemplate: 'cast:createTemplate',
-  updateTemplate: 'cast:updateTemplate',
-  deleteTemplate: 'cast:deleteTemplate',
-  applyTemplateToDeckItem: 'cast:applyTemplateToDeckItem',
-  detachTemplateFromDeckItem: 'cast:detachTemplateFromDeckItem',
-  syncTemplateToLinkedDeckItems: 'cast:syncTemplateToLinkedDeckItems',
-  applyTemplateToOverlay: 'cast:applyTemplateToOverlay',
+  createTheme: 'cast:createTheme',
+  updateTheme: 'cast:updateTheme',
+  deleteTheme: 'cast:deleteTheme',
+  applyThemeToDeckItem: 'cast:applyThemeToDeckItem',
+  detachThemeFromDeckItem: 'cast:detachThemeFromDeckItem',
+  syncThemeToLinkedDeckItems: 'cast:syncThemeToLinkedDeckItems',
+  applyThemeToOverlay: 'cast:applyThemeToOverlay',
   createStage: 'cast:createStage',
   updateStage: 'cast:updateStage',
   deleteStage: 'cast:deleteStage',

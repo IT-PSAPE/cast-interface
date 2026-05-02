@@ -14,19 +14,19 @@ import { useOverlayEditor, useStageEditor } from '../../contexts/asset-editor/as
 import { useAudio, useVideo, usePresentationLayers, useStagePlayback } from '../../contexts/playback/playback-context';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import type { PreviewSurfaceKind } from '../../types/ui';
+import type { ProgramSurfaceKind } from '../../types/ui';
 import { BindingProvider } from '../canvas/binding-context';
 import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
 import { StageBinPanel } from '../assets/stages/stage-bin-panel';
 import { useProgramOutput } from './use-program-output';
-import { useStageBindingValue, useStageScene } from './use-stage-scene';
+import { useProgramBindingValue, useStageBindingValue, useStageScene } from './use-stage-scene';
 import { SceneStage } from '../canvas/scene-stage';
 
 type BottomTab = 'overlays' | 'stage' | 'video' | 'audio';
 
-export function PreviewPanel() {
+export function ProgramPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, videoLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
   const { currentOutputDeckItemId } = useNavigation();
   const audio = useAudio();
@@ -94,7 +94,7 @@ export function PreviewPanel() {
   return (
     <LumaCastPanel.Root className='h-full border-l border-secondary' >
       <LumaCastPanel.Group>
-        <PreviewModeHeader />
+        <ProgramModeHeader />
         <SurfacesArea />
         <IconGroup.Root fill className='rounded-none' >
           <IconGroup.Item aria-label="Clear all layers" title="Clear all layers" onClick={handleClearAll}>
@@ -200,46 +200,46 @@ export function PreviewPanel() {
   );
 }
 
-const SURFACE_LABELS: Record<PreviewSurfaceKind, string> = {
-  preview: 'Preview',
+const SURFACE_LABELS: Record<ProgramSurfaceKind, string> = {
+  program: 'Program',
   monitor: 'Monitor',
   stage: 'Stage',
 };
 
-const SURFACE_ORDER: PreviewSurfaceKind[] = ['preview', 'monitor', 'stage'];
+const SURFACE_ORDER: ProgramSurfaceKind[] = ['program', 'monitor', 'stage'];
 
-function PreviewModeHeader() {
+function ProgramModeHeader() {
   const {
-    state: { previewMode, previewSingleSurface, previewGridDensity },
-    actions: { setPreviewMode, setPreviewSingleSurface, setPreviewGridDensity },
+    state: { programMode, programSingleSurface, programGridDensity },
+    actions: { setProgramMode, setProgramSingleSurface, setProgramGridDensity },
   } = useWorkbench();
 
   function handleModeToggle() {
-    setPreviewMode(previewMode === 'single' ? 'all' : 'single');
+    setProgramMode(programMode === 'single' ? 'all' : 'single');
   }
 
-  function handleSurfacePick(surface: PreviewSurfaceKind) {
-    setPreviewSingleSurface(surface);
+  function handleSurfacePick(surface: ProgramSurfaceKind) {
+    setProgramSingleSurface(surface);
   }
 
   function handleDensityChange(next: number) {
     if (next !== 1 && next !== 2) return;
-    setPreviewGridDensity(next);
+    setProgramGridDensity(next);
   }
 
   return (
     <LumaCastPanel.GroupTitle>
       <ReacstButton.Icon
         variant="ghost"
-        label={previewMode === 'single' ? 'Switch to all previews' : 'Switch to single preview'}
+        label={programMode === 'single' ? 'Switch to all program views' : 'Switch to single program view'}
         onClick={handleModeToggle}
       >
-        {previewMode === 'single' ? <RectangleHorizontal /> : <LayoutGrid />}
+        {programMode === 'single' ? <RectangleHorizontal /> : <LayoutGrid />}
       </ReacstButton.Icon>
-      {previewMode === 'single' ? (
+      {programMode === 'single' ? (
         <Dropdown className="ml-auto">
           <Dropdown.Trigger className="flex min-w-0 items-center gap-1 rounded-sm bg-tertiary px-2 py-1 text-sm text-primary transition-colors hover:bg-quaternary">
-            <span className="truncate">{SURFACE_LABELS[previewSingleSurface]}</span>
+            <span className="truncate">{SURFACE_LABELS[programSingleSurface]}</span>
             <ChevronDown className="size-3.5 shrink-0 text-tertiary" />
           </Dropdown.Trigger>
           <Dropdown.Panel placement="bottom-end">
@@ -252,7 +252,7 @@ function PreviewModeHeader() {
         </Dropdown>
       ) : (
         <span className="ml-auto">
-          <GridSizeSlider value={previewGridDensity} min={1} max={2} onChange={handleDensityChange} />
+          <GridSizeSlider value={programGridDensity} min={1} max={2} onChange={handleDensityChange} />
         </span>
       )}
     </LumaCastPanel.GroupTitle>
@@ -261,21 +261,21 @@ function PreviewModeHeader() {
 
 function SurfacesArea() {
   const {
-    state: { previewMode, previewSingleSurface, previewGridDensity },
+    state: { programMode, programSingleSurface, programGridDensity },
   } = useWorkbench();
 
-  if (previewMode === 'single') {
+  if (programMode === 'single') {
     return (
       <div className="flex w-full justify-center">
-        <Surface kind={previewSingleSurface} showBadge={false} />
+        <Surface kind={programSingleSurface} showBadge={false} />
       </div>
     );
   }
 
   // All-mode grid: slider value IS the column count. 1 = stacked vertically,
   // 2 = two columns. Each cell is a 16:9 frame so rows auto-size to identical
-  // heights regardless of which surface (Preview/Monitor/Stage) lands in them.
-  const columnCount = previewGridDensity;
+  // heights regardless of which surface (Program/Monitor/Stage) lands in them.
+  const columnCount = programGridDensity;
   return (
     <div
       className="grid w-full gap-1"
@@ -288,31 +288,35 @@ function SurfacesArea() {
   );
 }
 
-function Surface({ kind, showBadge }: { kind: PreviewSurfaceKind; showBadge: boolean }) {
-  if (kind === 'preview') return <PreviewSurface showBadge={showBadge} />;
+function Surface({ kind, showBadge }: { kind: ProgramSurfaceKind; showBadge: boolean }) {
+  if (kind === 'program') return <ProgramSurface showBadge={showBadge} />;
   if (kind === 'monitor') return <MonitorSurface showBadge={showBadge} />;
   return <StageSurface showBadge={showBadge} />;
 }
 
-function PreviewSurface({ showBadge }: { showBadge: boolean }) {
+function ProgramSurface({ showBadge }: { showBadge: boolean }) {
   const { scene, background } = useProgramOutput();
+  const bindingValue = useProgramBindingValue();
   const checkerboard = background === 'transparent';
 
   return (
-    <SurfaceFrame label="Preview" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage
-        scene={scene}
-        surface="show"
-        className="h-full w-full"
-        fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
-        ndiCaptureSource="audience"
-      />
-    </SurfaceFrame>
+    <BindingProvider value={bindingValue}>
+      <SurfaceFrame label="Program" showLabel={showBadge} checkerboard={checkerboard}>
+        <SceneStage
+          scene={scene}
+          surface="show"
+          className="h-full w-full"
+          fixedViewport={{ width: NDI_OUTPUT_WIDTH, height: NDI_OUTPUT_HEIGHT }}
+          ndiCaptureSource="audience"
+        />
+      </SurfaceFrame>
+    </BindingProvider>
   );
 }
 
 function MonitorSurface({ showBadge }: { showBadge: boolean }) {
   const { showScene } = useRenderScenes();
+  const bindingValue = useProgramBindingValue();
   // Monitor mirrors what's about to go to the audience NDI feed, so its
   // transparent-background indicator follows the audience output's alpha
   // config. With alpha on, the checker shows through wherever the scene
@@ -321,9 +325,11 @@ function MonitorSurface({ showBadge }: { showBadge: boolean }) {
   const checkerboard = outputConfigs.audience.withAlpha;
 
   return (
-    <SurfaceFrame label="Monitor" showLabel={showBadge} checkerboard={checkerboard}>
-      <SceneStage scene={showScene} surface="monitor" className="h-full w-full" />
-    </SurfaceFrame>
+    <BindingProvider value={bindingValue}>
+      <SurfaceFrame label="Monitor" showLabel={showBadge} checkerboard={checkerboard}>
+        <SceneStage scene={showScene} surface="monitor" className="h-full w-full" />
+      </SurfaceFrame>
+    </BindingProvider>
   );
 }
 
@@ -356,11 +362,32 @@ function VideoBackgroundControls() {
   const armed = video.currentVideoAsset;
   const hasVideo = Boolean(armed);
   const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [draftTime, setDraftTime] = useState(0);
+  const resumeAfterScrubRef = useRef(false);
 
   function handleSeek(event: React.ChangeEvent<HTMLInputElement>) {
     const next = Number(event.target.value);
     if (!Number.isFinite(next)) return;
+    setDraftTime(next);
     video.seekTo(next);
+  }
+
+  function handleScrubStart() {
+    if (!hasVideo || safeDuration === 0) return;
+    resumeAfterScrubRef.current = video.isPlaying;
+    setDraftTime(Math.min(video.currentTime, safeDuration));
+    setIsScrubbing(true);
+    if (video.isPlaying) video.pause();
+  }
+
+  function handleScrubEnd() {
+    if (!isScrubbing) return;
+    setIsScrubbing(false);
+    if (resumeAfterScrubRef.current) {
+      video.play();
+    }
+    resumeAfterScrubRef.current = false;
   }
 
   return (
@@ -388,14 +415,19 @@ function VideoBackgroundControls() {
           min={0}
           max={safeDuration}
           step={0.1}
-          value={Math.min(video.currentTime, safeDuration)}
+          value={isScrubbing ? draftTime : Math.min(video.currentTime, safeDuration)}
           onChange={handleSeek}
+          onMouseDown={handleScrubStart}
+          onMouseUp={handleScrubEnd}
+          onTouchStart={handleScrubStart}
+          onTouchEnd={handleScrubEnd}
+          onBlur={handleScrubEnd}
           disabled={!hasVideo || safeDuration === 0}
           aria-label="Video scrubber"
           className="w-full accent-brand_solid disabled:opacity-40"
         />
         <div className="flex items-center justify-between text-[10px] tabular-nums text-tertiary">
-          <span>{formatPlaybackTime(video.currentTime)}</span>
+          <span>{formatPlaybackTime(isScrubbing ? draftTime : video.currentTime)}</span>
           <span>{formatPlaybackTime(safeDuration)}</span>
         </div>
       </div>
@@ -408,11 +440,32 @@ function AudioBackgroundControls() {
   const armed = audio.currentAudioAsset;
   const hasAudio = Boolean(armed);
   const safeDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [draftTime, setDraftTime] = useState(0);
+  const resumeAfterScrubRef = useRef(false);
 
   function handleSeek(event: React.ChangeEvent<HTMLInputElement>) {
     const next = Number(event.target.value);
     if (!Number.isFinite(next)) return;
+    setDraftTime(next);
     audio.seekTo(next);
+  }
+
+  function handleScrubStart() {
+    if (!hasAudio || safeDuration === 0) return;
+    resumeAfterScrubRef.current = audio.isPlaying;
+    setDraftTime(Math.min(audio.currentTime, safeDuration));
+    setIsScrubbing(true);
+    if (audio.isPlaying) audio.pause();
+  }
+
+  function handleScrubEnd() {
+    if (!isScrubbing) return;
+    setIsScrubbing(false);
+    if (resumeAfterScrubRef.current) {
+      audio.play();
+    }
+    resumeAfterScrubRef.current = false;
   }
 
   return (
@@ -440,14 +493,19 @@ function AudioBackgroundControls() {
           min={0}
           max={safeDuration}
           step={0.1}
-          value={Math.min(audio.currentTime, safeDuration)}
+          value={isScrubbing ? draftTime : Math.min(audio.currentTime, safeDuration)}
           onChange={handleSeek}
+          onMouseDown={handleScrubStart}
+          onMouseUp={handleScrubEnd}
+          onTouchStart={handleScrubStart}
+          onTouchEnd={handleScrubEnd}
+          onBlur={handleScrubEnd}
           disabled={!hasAudio || safeDuration === 0}
           aria-label="Audio scrubber"
           className="w-full accent-brand_solid disabled:opacity-40"
         />
         <div className="flex items-center justify-between text-[10px] tabular-nums text-tertiary">
-          <span>{formatPlaybackTime(audio.currentTime)}</span>
+          <span>{formatPlaybackTime(isScrubbing ? draftTime : audio.currentTime)}</span>
           <span>{formatPlaybackTime(safeDuration)}</span>
         </div>
       </div>

@@ -24,8 +24,8 @@ import type {
   OverlayUpdateInput,
   StageCreateInput,
   StageUpdateInput,
-  TemplateCreateInput,
-  TemplateUpdateInput,
+  ThemeCreateInput,
+  ThemeUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideOrderUpdateInput
@@ -93,17 +93,17 @@ const api = {
   updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
   setOverlayEnabled: (overlayId: Id, enabled: boolean) => ipcRenderer.invoke(IPC.setOverlayEnabled, overlayId, enabled),
   deleteOverlay: (overlayId: Id) => ipcRenderer.invoke(IPC.deleteOverlay, overlayId),
-  createTemplate: (input: TemplateCreateInput) => ipcRenderer.invoke(IPC.createTemplate, input),
-  updateTemplate: (input: TemplateUpdateInput) => ipcRenderer.invoke(IPC.updateTemplate, input),
-  deleteTemplate: (templateId: Id) => ipcRenderer.invoke(IPC.deleteTemplate, templateId),
-  applyTemplateToDeckItem: (templateId: Id, itemId: Id) =>
-    ipcRenderer.invoke(IPC.applyTemplateToDeckItem, templateId, itemId),
-  detachTemplateFromDeckItem: (itemId: Id) =>
-    ipcRenderer.invoke(IPC.detachTemplateFromDeckItem, itemId),
-  syncTemplateToLinkedDeckItems: (templateId: Id) =>
-    ipcRenderer.invoke(IPC.syncTemplateToLinkedDeckItems, templateId),
-  applyTemplateToOverlay: (templateId: Id, overlayId: Id) =>
-    ipcRenderer.invoke(IPC.applyTemplateToOverlay, templateId, overlayId),
+  createTheme: (input: ThemeCreateInput) => ipcRenderer.invoke(IPC.createTheme, input),
+  updateTheme: (input: ThemeUpdateInput) => ipcRenderer.invoke(IPC.updateTheme, input),
+  deleteTheme: (themeId: Id) => ipcRenderer.invoke(IPC.deleteTheme, themeId),
+  applyThemeToDeckItem: (themeId: Id, itemId: Id) =>
+    ipcRenderer.invoke(IPC.applyThemeToDeckItem, themeId, itemId),
+  detachThemeFromDeckItem: (itemId: Id) =>
+    ipcRenderer.invoke(IPC.detachThemeFromDeckItem, itemId),
+  syncThemeToLinkedDeckItems: (themeId: Id) =>
+    ipcRenderer.invoke(IPC.syncThemeToLinkedDeckItems, themeId),
+  applyThemeToOverlay: (themeId: Id, overlayId: Id) =>
+    ipcRenderer.invoke(IPC.applyThemeToOverlay, themeId, overlayId),
   createStage: (input: StageCreateInput) => ipcRenderer.invoke(IPC.createStage, input),
   updateStage: (input: StageUpdateInput) => ipcRenderer.invoke(IPC.updateStage, input),
   deleteStage: (stageId: Id) => ipcRenderer.invoke(IPC.deleteStage, stageId),

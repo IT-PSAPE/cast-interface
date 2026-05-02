@@ -201,7 +201,7 @@ export function SceneStage({ scene, surface = 'show', editable = false, classNam
     handleNodeDragMove,
   } = editor;
   // Konva renders Stage at its literal width/height in CSS pixels. When
-  // fixedViewport is set (preview/monitor/stage NDI surfaces) those dimensions
+  // fixedViewport is set (program/monitor/stage NDI surfaces) those dimensions
   // are 1920x1080 — far larger than the actual on-screen container — so we
   // visually scale the wrapper to fit. The canvas keeps its native resolution
   // for capture; only the display is scaled.

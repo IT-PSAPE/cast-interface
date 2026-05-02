@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { FieldInput } from '../../components/form/field';
 import { useCast } from '../../contexts/app-context';
-import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
+import { useThemeEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { Section } from './inspector-section';
 
-export function TemplateInspector() {
+export function ThemeInspector() {
   const { setStatusText } = useCast();
-  const { currentTemplate, renameTemplate, nameFocusRequest } = useTemplateEditor();
+  const { currentTheme, renameTheme, nameFocusRequest } = useThemeEditor();
   const [nameDraft, setNameDraft] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!currentTemplate) {
+    if (!currentTheme) {
       setNameDraft('');
       return;
     }
-    setNameDraft(currentTemplate.name);
-  }, [currentTemplate]);
+    setNameDraft(currentTheme.name);
+  }, [currentTheme]);
 
   useEffect(() => {
     if (!nameFocusRequest || !nameInputRef.current) return;
@@ -29,21 +29,21 @@ export function TemplateInspector() {
   }
 
   function handleNameBlur() {
-    if (!currentTemplate) return;
+    if (!currentTheme) return;
     const trimmed = nameDraft.trim();
-    if (!trimmed || trimmed === currentTemplate.name) return;
-    renameTemplate(currentTemplate.id, trimmed);
-    setStatusText('Template renamed');
+    if (!trimmed || trimmed === currentTheme.name) return;
+    renameTheme(currentTheme.id, trimmed);
+    setStatusText('Theme renamed');
   }
 
-  if (!currentTemplate) {
-    return <div className="text-sm text-tertiary">No template selected.</div>;
+  if (!currentTheme) {
+    return <div className="text-sm text-tertiary">No theme selected.</div>;
   }
 
   return (
     <Section.Root>
       <Section.Header>
-        <span>Template</span>
+        <span>Theme</span>
       </Section.Header>
       <Section.Body>
         <FieldInput

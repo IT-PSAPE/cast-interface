@@ -1,5 +1,6 @@
 import type { Id, Slide, SlideElement } from '@core/types';
 import type { VisualPayloadState } from '@core/element-payload';
+import type { BindingOverride } from './binding-context';
 
 export type SceneSurface = 'deck-editor' | 'show' | 'list' | 'monitor' | 'stage' | 'ndi-show' | 'ndi-stage';
 export type SceneSourcePolicy = 'draft' | 'persisted' | 'live';
@@ -15,6 +16,7 @@ export interface RenderNode {
   element: SlideElement;
   visual: VisualPayloadState;
   isVideo: boolean;
+  bindingOverride?: BindingOverride;
 }
 
 export interface RenderScene {

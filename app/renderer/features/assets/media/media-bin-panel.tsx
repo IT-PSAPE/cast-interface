@@ -11,7 +11,7 @@ import { Paragraph } from '@renderer/components/display/text';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
 import { useElements } from '../../../contexts/canvas/canvas-context';
 import { useCast } from '../../../contexts/app-context';
-import { usePresentationMediaLayer } from '../../../contexts/playback/playback-context';
+import { usePresentationMediaLayer, useVideo } from '../../../contexts/playback/playback-context';
 import { useWorkbench } from '../../../contexts/workbench-context';
 import { useGridSize } from '../../../hooks/use-grid-size';
 import { BinShell } from '../../workbench/bin-shell';
@@ -26,6 +26,7 @@ export function MediaBinPanel({ binKind }: MediaBinPanelProps) {
   const { mediaAssets, collections, searchValue, setSearchValue, viewMode, setViewMode, moveAssetToCollection } =
     useMediaTypeBin(binKind);
   const { mediaLayerAssetId, videoLayerAssetId, setMediaLayerAsset } = usePresentationMediaLayer();
+  const { armVideo } = useVideo();
   const gridStorageKey = `lumacast.grid-size.${binKind}-bin`;
   const { gridSize, setGridSize, min, max, step } = useGridSize(gridStorageKey, 3, 2, 4);
 
@@ -51,6 +52,7 @@ export function MediaBinPanel({ binKind }: MediaBinPanelProps) {
             isActive={mediaLayerAssetId === asset.id || videoLayerAssetId === asset.id}
             mode={viewMode}
             onAssignLayer={setMediaLayerAsset}
+            onArmVideo={armVideo}
             collectionsApi={collections}
             onMoveToCollection={moveAssetToCollection}
           />
@@ -64,6 +66,7 @@ interface MediaItemProps {
   asset: MediaAsset;
   isActive: boolean;
   onAssignLayer: (id: Id) => void;
+  onArmVideo: (id: Id) => void;
   collectionsApi: BinCollectionsApi;
   onMoveToCollection: (assetId: Id, collectionId: Id) => Promise<void>;
 }
@@ -144,16 +147,20 @@ function MediaRow(props: MediaItemProps) {
   );
 }
 
-function MediaRowBody({ asset, isActive, onAssignLayer, collectionsApi, onMoveToCollection }: MediaItemProps) {
+function MediaRowBody({ asset, isActive, onAssignLayer, onArmVideo, collectionsApi, onMoveToCollection }: MediaItemProps) {
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
   const {
-    state: { previewMode, previewSingleSurface },
-    actions: { setPreviewSingleSurface },
+    state: { programMode, programSingleSurface },
+    actions: { setProgramSingleSurface },
   } = useWorkbench();
 
   function handleAssignLayer() {
-    if ((asset.type === 'video' || asset.type === 'animation') && previewMode === 'single' && previewSingleSurface !== 'preview') {
-      setPreviewSingleSurface('preview');
+    if ((asset.type === 'video' || asset.type === 'animation') && programMode === 'single' && programSingleSurface !== 'program') {
+      setProgramSingleSurface('program');
+    }
+    if (asset.type === 'video' || asset.type === 'animation') {
+      onArmVideo(asset.id);
+      return;
     }
     onAssignLayer(asset.id);
   }
@@ -190,16 +197,20 @@ function MediaTile(props: MediaItemProps) {
   );
 }
 
-function MediaTileBody({ asset, isActive, onAssignLayer, collectionsApi, onMoveToCollection }: MediaItemProps) {
+function MediaTileBody({ asset, isActive, onAssignLayer, onArmVideo, collectionsApi, onMoveToCollection }: MediaItemProps) {
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
   const {
-    state: { previewMode, previewSingleSurface },
-    actions: { setPreviewSingleSurface },
+    state: { programMode, programSingleSurface },
+    actions: { setProgramSingleSurface },
   } = useWorkbench();
 
   function handleAssignLayer() {
-    if ((asset.type === 'video' || asset.type === 'animation') && previewMode === 'single' && previewSingleSurface !== 'preview') {
-      setPreviewSingleSurface('preview');
+    if ((asset.type === 'video' || asset.type === 'animation') && programMode === 'single' && programSingleSurface !== 'program') {
+      setProgramSingleSurface('program');
+    }
+    if (asset.type === 'video' || asset.type === 'animation') {
+      onArmVideo(asset.id);
+      return;
     }
     onAssignLayer(asset.id);
   }

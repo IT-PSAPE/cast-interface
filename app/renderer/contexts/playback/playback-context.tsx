@@ -27,6 +27,7 @@ export interface ActiveOverlayPlayback {
   opacityMultiplier: number;
   name: string;
   state: OverlayPlaybackState;
+  startedAt: number;
   remainingAutoClearMs: number | null;
   stackOrder: number;
 }
@@ -222,6 +223,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       opacityMultiplier: layer.opacityMultiplier,
       name: layer.overlay.name,
       state: layer.state,
+      startedAt: layer.startedAt,
       remainingAutoClearMs: layer.remainingAutoClearMs,
       stackOrder: layer.stackOrder,
     }));
@@ -610,13 +612,14 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoIsPlaying, setVideoIsPlaying] = useState(false);
   const [videoMuted, setVideoMuted] = useState(false);
+  const [videoRequestedPlay, setVideoRequestedPlay] = useState(false);
   const pendingVideoRestoreRef = useRef<{ time: number; shouldPlay: boolean } | null>(null);
   const videoLayerPlayback = useMemo(() => ({
-    autoplay: true,
+    autoplay: videoRequestedPlay,
     loop: true,
     muted: videoMuted,
     playbackRate: 1,
-  }), [videoMuted]);
+  }), [videoMuted, videoRequestedPlay]);
 
   // Keep the armed layer video alive even if the currently visible surface
   // changes and temporarily unmounts the SceneStage that was using it.
@@ -699,35 +702,45 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     };
   }, [layerVideoElement]);
 
+  useEffect(() => {
+    if (!layerVideoElement) return;
+    if (videoRequestedPlay) {
+      if (layerVideoElement.paused) {
+        void layerVideoElement.play().catch(() => undefined);
+      }
+      return;
+    }
+    if (!layerVideoElement.paused) {
+      layerVideoElement.pause();
+    }
+  }, [layerVideoElement, videoRequestedPlay]);
+
   const armVideo = useCallback((assetId: Id) => {
     const asset = videoAssets.find((a) => a.id === assetId);
     if (!asset) return;
     setVideoLayerAssetId(asset.id);
+    setVideoRequestedPlay(true);
     setStatusText(`Video layer: ${asset.name}`);
   }, [videoAssets, setStatusText]);
 
   const clearVideo = useCallback(() => {
     setVideoLayerAssetId(null);
+    setVideoRequestedPlay(false);
   }, []);
 
   const playVideo = useCallback(() => {
-    if (!layerVideoElement) return;
-    void layerVideoElement.play().catch(() => undefined);
-  }, [layerVideoElement]);
+    if (!videoLayerAsset) return;
+    setVideoRequestedPlay(true);
+  }, [videoLayerAsset]);
 
   const pauseVideo = useCallback(() => {
-    if (!layerVideoElement) return;
-    layerVideoElement.pause();
-  }, [layerVideoElement]);
+    setVideoRequestedPlay(false);
+  }, []);
 
   const toggleVideoPlayback = useCallback(() => {
-    if (!layerVideoElement) return;
-    if (layerVideoElement.paused) {
-      void layerVideoElement.play().catch(() => undefined);
-    } else {
-      layerVideoElement.pause();
-    }
-  }, [layerVideoElement]);
+    if (!videoLayerAsset) return;
+    setVideoRequestedPlay((prev) => !prev);
+  }, [videoLayerAsset]);
 
   const toggleVideoMuted = useCallback(() => {
     if (layerVideoElement) {
@@ -757,6 +770,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     const nextAsset = videoAssets[nextIndex];
     if (!nextAsset) return;
     setVideoLayerAssetId(nextAsset.id);
+    setVideoRequestedPlay(true);
     setStatusText(`Video layer: ${nextAsset.name}`);
   }, [videoAssets, videoLayerAssetId, setStatusText]);
 

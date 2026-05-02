@@ -1,6 +1,6 @@
 import { memo, useMemo, useRef } from 'react';
-import type { DeckItem, Overlay, Template } from '@core/types';
-import { isTemplateCompatibleWithDeckItem } from '@core/templates';
+import type { DeckItem, Overlay, Theme } from '@core/types';
+import { isThemeCompatibleWithDeckItem } from '@core/themes';
 import { LazySceneStage } from '@renderer/components/display/lazy-scene-stage';
 import { ContextMenu, useContextMenuTrigger } from '../../../components/overlays/context-menu';
 import { useConfirm } from '../../../components/overlays/confirm-dialog';
@@ -8,7 +8,7 @@ import { RenameField, type RenameFieldHandle } from '../../../components/form/re
 import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { SceneFrame } from '../../../components/display/scene-frame';
-import { useTemplateEditor } from '../../../contexts/asset-editor/asset-editor-context';
+import { useThemeEditor } from '../../../contexts/asset-editor/asset-editor-context';
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { buildRenderScene } from '../../canvas/build-render-scene';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
@@ -16,26 +16,26 @@ import { useGridSize } from '../../../hooks/use-grid-size';
 import type { ResourceDrawerViewMode } from '../../../types/ui';
 import { BinShell } from '../../workbench/bin-shell';
 import type { BinCollectionsApi } from '../../workbench/use-bin-collections';
-import { useTemplateBin } from './use-template-bin';
+import { useThemeBin } from './use-theme-bin';
 
-export function TemplateBinPanel() {
+export function ThemeBinPanel() {
   const {
-    filteredTemplates,
-    handleApplyTemplate,
+    filteredThemes,
+    handleApplyTheme,
     collections,
     searchValue,
     setSearchValue,
     viewMode,
     setViewMode,
-  } = useTemplateBin();
-  const { gridSize, setGridSize, min, max, step } = useGridSize('lumacast.grid-size.template-bin', 6, 4, 8);
+  } = useThemeBin();
+  const { gridSize, setGridSize, min, max, step } = useGridSize('lumacast.grid-size.theme-bin', 6, 4, 8);
 
   return (
     <BinShell
       collections={collections}
       searchValue={searchValue}
       onSearchChange={setSearchValue}
-      searchPlaceholder="Search templates…"
+      searchPlaceholder="Search themes…"
       viewMode={viewMode}
       onViewModeChange={setViewMode}
       gridSize={gridSize}
@@ -45,13 +45,13 @@ export function TemplateBinPanel() {
       onGridSizeChange={setGridSize}
     >
       <BinPanelLayout gridItemSize={gridSize} mode={viewMode}>
-        {filteredTemplates.map((template, index) => (
-          <TemplateBinItem
-            key={template.id}
-            template={template}
+        {filteredThemes.map((theme, index) => (
+          <ThemeBinItem
+            key={theme.id}
+            theme={theme}
             index={index}
             mode={viewMode}
-            onApply={handleApplyTemplate}
+            onApply={handleApplyTheme}
             collectionsApi={collections}
           />
         ))}
@@ -60,37 +60,37 @@ export function TemplateBinPanel() {
   );
 }
 
-interface TemplateItemProps {
-  template: Template;
+interface ThemeItemProps {
+  theme: Theme;
   index: number;
-  onApply: (template: Template) => void;
+  onApply: (theme: Theme) => void;
   collectionsApi: BinCollectionsApi;
 }
 
-function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: ResourceDrawerViewMode }) {
-  if (mode === 'list') return <TemplateRow {...props} />;
-  return <TemplateTile {...props} />;
+function ThemeBinItem({ mode, ...props }: ThemeItemProps & { mode: ResourceDrawerViewMode }) {
+  if (mode === 'list') return <ThemeRow {...props} />;
+  return <ThemeTile {...props} />;
 }
 
-function TemplateRowImpl(props: TemplateItemProps) {
+function ThemeRowImpl(props: ThemeItemProps) {
   return (
     <ContextMenu.Root>
-      <TemplateRowBody {...props} />
+      <ThemeRowBody {...props} />
     </ContextMenu.Root>
   );
 }
 
-function TemplateRowBody({ template, index, onApply, collectionsApi }: TemplateItemProps) {
-  const { renameTemplate } = useTemplateEditor();
+function ThemeRowBody({ theme, index, onApply, collectionsApi }: ThemeItemProps) {
+  const { renameTheme } = useThemeEditor();
   const renameRef = useRef<RenameFieldHandle>(null);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
   function handleClick() {
-    onApply(template);
+    onApply(theme);
   }
 
   function handleRename(next: string) {
-    renameTemplate(template.id, next);
+    renameTheme(theme.id, next);
   }
 
   return (
@@ -106,37 +106,37 @@ function TemplateRowBody({ template, index, onApply, collectionsApi }: TemplateI
           <span className="text-xs font-semibold tabular-nums text-tertiary">{index + 1}</span>
         </SelectableRow.Leading>
         <SelectableRow.Label>
-          <RenameField ref={renameRef} value={template.name} onValueChange={handleRename} className="label-xs" />
+          <RenameField ref={renameRef} value={theme.name} onValueChange={handleRename} className="label-xs" />
         </SelectableRow.Label>
         <SelectableRow.Trailing>
-          <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
+          <span className="text-xs uppercase tracking-wide text-tertiary">{theme.kind}</span>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
-      <TemplateContextMenuItems template={template} renameRef={renameRef} collectionsApi={collectionsApi} />
+      <ThemeContextMenuItems theme={theme} renameRef={renameRef} collectionsApi={collectionsApi} />
     </>
   );
 }
 
-function TemplateTileImpl(props: TemplateItemProps) {
+function ThemeTileImpl(props: ThemeItemProps) {
   return (
     <ContextMenu.Root>
-      <TemplateTileBody {...props} />
+      <ThemeTileBody {...props} />
     </ContextMenu.Root>
   );
 }
 
-function TemplateTileBody({ template, index, onApply, collectionsApi }: TemplateItemProps) {
-  const { renameTemplate } = useTemplateEditor();
-  const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
+function ThemeTileBody({ theme, index, onApply, collectionsApi }: ThemeItemProps) {
+  const { renameTheme } = useThemeEditor();
+  const scene = useMemo(() => buildRenderScene(null, theme.elements), [theme.elements]);
   const renameRef = useRef<RenameFieldHandle>(null);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
 
   function handleClick() {
-    onApply(template);
+    onApply(theme);
   }
 
   function handleRename(next: string) {
-    renameTemplate(template.id, next);
+    renameTheme(theme.id, next);
   }
 
   return (
@@ -151,52 +151,52 @@ function TemplateTileBody({ template, index, onApply, collectionsApi }: Template
           <Thumbnail.Caption>
             <div className="flex items-center gap-2">
               <span className="shrink-0 text-sm font-semibold tabular-nums text-secondary">{index + 1}</span>
-              <RenameField ref={renameRef} value={template.name} onValueChange={handleRename} className="label-xs" />
+              <RenameField ref={renameRef} value={theme.name} onValueChange={handleRename} className="label-xs" />
             </div>
           </Thumbnail.Caption>
         </Thumbnail.Tile>
       </div>
-      <TemplateContextMenuItems template={template} renameRef={renameRef} collectionsApi={collectionsApi} />
+      <ThemeContextMenuItems theme={theme} renameRef={renameRef} collectionsApi={collectionsApi} />
     </>
   );
 }
 
-function TemplateContextMenuItems({
-  template,
+function ThemeContextMenuItems({
+  theme,
   renameRef,
   collectionsApi,
 }: {
-  template: Template;
+  theme: Theme;
   renameRef: React.RefObject<RenameFieldHandle | null>;
   collectionsApi: BinCollectionsApi;
 }) {
-  const { applyTemplateToTarget, deleteTemplate } = useTemplateEditor();
+  const { applyThemeToTarget, deleteTheme } = useThemeEditor();
   const { presentations, lyrics, overlays } = useProjectContent();
   const confirm = useConfirm();
 
   const compatibleDeckItems = useMemo<DeckItem[]>(() => {
-    if (template.kind === 'overlays') return [];
+    if (theme.kind === 'overlays') return [];
     return [...presentations, ...lyrics].filter((item) =>
-      isTemplateCompatibleWithDeckItem(template, item.type),
+      isThemeCompatibleWithDeckItem(theme, item.type),
     );
-  }, [lyrics, presentations, template]);
+  }, [lyrics, presentations, theme]);
 
   const compatibleOverlays = useMemo<Overlay[]>(() => {
-    if (template.kind !== 'overlays') return [];
+    if (theme.kind !== 'overlays') return [];
     return overlays;
-  }, [overlays, template.kind]);
+  }, [overlays, theme.kind]);
 
   const hasTargets = compatibleDeckItems.length > 0 || compatibleOverlays.length > 0;
-  const targetLabel = template.kind === 'overlays' ? 'overlays' : template.kind === 'lyrics' ? 'lyrics' : 'presentations';
+  const targetLabel = theme.kind === 'overlays' ? 'overlays' : theme.kind === 'lyrics' ? 'lyrics' : 'presentations';
 
   async function handleDelete() {
     const ok = await confirm({
-      title: `Delete "${template.name}"?`,
-      description: 'Slides linked to this template will be detached.',
+      title: `Delete "${theme.name}"?`,
+      description: 'Slides linked to this theme will be detached.',
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (ok) deleteTemplate(template.id);
+    if (ok) deleteTheme(theme.id);
   }
 
   return (
@@ -211,7 +211,7 @@ function TemplateContextMenuItems({
               {compatibleDeckItems.map((item) => (
                 <ContextMenu.Item
                   key={item.id}
-                  onSelect={() => { void applyTemplateToTarget(template.id, { type: 'deck-item', itemId: item.id }); }}
+                  onSelect={() => { void applyThemeToTarget(theme.id, { type: 'deck-item', itemId: item.id }); }}
                 >
                   {item.title}
                 </ContextMenu.Item>
@@ -219,7 +219,7 @@ function TemplateContextMenuItems({
               {compatibleOverlays.map((overlay) => (
                 <ContextMenu.Item
                   key={overlay.id}
-                  onSelect={() => { void applyTemplateToTarget(template.id, { type: 'overlay', overlayId: overlay.id }); }}
+                  onSelect={() => { void applyThemeToTarget(theme.id, { type: 'overlay', overlayId: overlay.id }); }}
                 >
                   {overlay.name}
                 </ContextMenu.Item>
@@ -227,12 +227,12 @@ function TemplateContextMenuItems({
             </>
           )}
         </ContextMenu.Submenu>
-        {collectionsApi.collections.filter((c) => c.id !== template.collectionId).length > 0 ? (
+        {collectionsApi.collections.filter((c) => c.id !== theme.collectionId).length > 0 ? (
           <ContextMenu.Submenu label="Move to collection">
-            {collectionsApi.collections.filter((c) => c.id !== template.collectionId).map((collection) => (
+            {collectionsApi.collections.filter((c) => c.id !== theme.collectionId).map((collection) => (
               <ContextMenu.Item
                 key={collection.id}
-                onSelect={() => { void collectionsApi.assignItem('template', template.id, collection.id); }}
+                onSelect={() => { void collectionsApi.assignItem('theme', theme.id, collection.id); }}
               >
                 {collection.name}
               </ContextMenu.Item>
@@ -246,5 +246,5 @@ function TemplateContextMenuItems({
   );
 }
 
-const TemplateRow = memo(TemplateRowImpl);
-const TemplateTile = memo(TemplateTileImpl);
+const ThemeRow = memo(ThemeRowImpl);
+const ThemeTile = memo(ThemeTileImpl);

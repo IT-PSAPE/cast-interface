@@ -2,8 +2,8 @@ import type {
   DeckItemType,
   Id,
   SlideElement,
-  Template,
-  TemplateKind,
+  Theme,
+  ThemeKind,
   TextElementPayload,
 } from './types';
 import { cloneElement } from './clone';
@@ -14,40 +14,40 @@ function readTextValues(elements: SlideElement[]): string[] {
     .map((element) => (element.payload as TextElementPayload).text);
 }
 
-function applyTextValue(templateElement: SlideElement, textValues: string[]): SlideElement['payload'] {
-  if (templateElement.type === 'text' && textValues.length > 0) {
-    const templatePayload = templateElement.payload as TextElementPayload;
-    return { ...templatePayload, text: textValues.shift() ?? templatePayload.text };
+function applyTextValue(themeElement: SlideElement, textValues: string[]): SlideElement['payload'] {
+  if (themeElement.type === 'text' && textValues.length > 0) {
+    const themePayload = themeElement.payload as TextElementPayload;
+    return { ...themePayload, text: textValues.shift() ?? themePayload.text };
   }
-  return cloneElement(templateElement).payload;
+  return cloneElement(themeElement).payload;
 }
 
-export function isTemplateCompatibleWithDeckItem(template: Template, deckItemType: DeckItemType): boolean {
-  if (template.kind === 'slides') return deckItemType === 'presentation';
-  if (template.kind === 'lyrics') return deckItemType === 'lyric';
+export function isThemeCompatibleWithDeckItem(theme: Theme, deckItemType: DeckItemType): boolean {
+  if (theme.kind === 'slides') return deckItemType === 'presentation';
+  if (theme.kind === 'lyrics') return deckItemType === 'lyric';
   return false;
 }
 
-export function applyTemplateToElements(template: Template, contentElements: SlideElement[], slideId: Id): SlideElement[] {
+export function applyThemeToElements(theme: Theme, contentElements: SlideElement[], slideId: Id): SlideElement[] {
   const textValues = readTextValues(contentElements);
 
-  return template.elements.map((templateElement) => {
+  return theme.elements.map((themeElement) => {
     return {
-      ...cloneElement(templateElement),
-      id: `${slideId}:${templateElement.id}`,
+      ...cloneElement(themeElement),
+      id: `${slideId}:${themeElement.id}`,
       slideId,
-      payload: applyTextValue(templateElement, textValues),
-      createdAt: templateElement.createdAt,
-      updatedAt: templateElement.updatedAt,
+      payload: applyTextValue(themeElement, textValues),
+      createdAt: themeElement.createdAt,
+      updatedAt: themeElement.updatedAt,
     };
   });
 }
 
-export function syncTemplateToElements(template: Template, contentElements: SlideElement[], slideId: Id): SlideElement[] {
-  return applyTemplateToElements(template, contentElements, slideId);
+export function syncThemeToElements(theme: Theme, contentElements: SlideElement[], slideId: Id): SlideElement[] {
+  return applyThemeToElements(theme, contentElements, slideId);
 }
 
-export function createDefaultTemplateElements(kind: TemplateKind, ownerId: Id, now: string): SlideElement[] {
+export function createDefaultThemeElements(kind: ThemeKind, ownerId: Id, now: string): SlideElement[] {
   if (kind === 'lyrics') {
     return [{
       id: `${ownerId}-text`,

@@ -4,6 +4,7 @@ import { LumaCastPanel } from '@renderer/components/layout/panel';
 import { Tabs } from '@renderer/components/display/tabs';
 import { useElements } from '@renderer/contexts/canvas/canvas-context';
 import { useInspector } from '@renderer/features/inspector/inspector-context';
+import { BindingInspector } from '@renderer/features/inspector/binding-inspector';
 import { ShapeElementInspector } from '@renderer/features/inspector/shape-element-inspector';
 import { SlideInspector } from '@renderer/features/inspector/slide-inspector';
 import { TextElementInspector } from '@renderer/features/inspector/text-element-inspector';
@@ -21,14 +22,14 @@ export function OverlayEditorInspectorPanel() {
 
   useEffect(() => {
     if (!hasSelection) {
-      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'presentation' || inspectorTab === 'video') {
+      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'presentation' || inspectorTab === 'video' || inspectorTab === 'binding') {
         setInspectorTab('slide');
       }
       return;
     }
 
     if (isTextSelected) {
-      if (inspectorTab !== 'shape' && inspectorTab !== 'text') setInspectorTab('shape');
+      if (inspectorTab !== 'shape' && inspectorTab !== 'text' && inspectorTab !== 'binding') setInspectorTab('shape');
       return;
     }
 
@@ -53,6 +54,7 @@ export function OverlayEditorInspectorPanel() {
               {!hasSelection && <Tabs.Trigger value="slide">Overlay</Tabs.Trigger>}
               {hasSelection && <Tabs.Trigger value="shape">Shape</Tabs.Trigger>}
               {isTextSelected && <Tabs.Trigger value="text">Text</Tabs.Trigger>}
+              {isTextSelected && <Tabs.Trigger value="binding">Binding</Tabs.Trigger>}
               {isVideoSelected && <Tabs.Trigger value="video">Video</Tabs.Trigger>}
             </Tabs.List>
           </div>
@@ -60,6 +62,7 @@ export function OverlayEditorInspectorPanel() {
             {inspectorTab === 'slide' && <SlideInspector />}
             {inspectorTab === 'shape' && <ShapeElementInspector />}
             {inspectorTab === 'text' && <TextElementInspector />}
+            {inspectorTab === 'binding' && <BindingInspector />}
             {inspectorTab === 'video' && <VideoElementInspector />}
           </div>
         </section>

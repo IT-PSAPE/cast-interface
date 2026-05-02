@@ -88,8 +88,8 @@ export const useAudioBinSort = createBinSortHook<BinTabSortKey>({
   validKeys: ['name', 'created', 'modified'],
 });
 
-export const useTemplateBinSort = createBinSortHook<BinTabSortKey>({
-  storageKey: 'lumacast.template-bin-sort',
+export const useThemeBinSort = createBinSortHook<BinTabSortKey>({
+  storageKey: 'lumacast.theme-bin-sort',
   defaultSort: { key: 'modified', direction: 'desc' },
   validKeys: ['name', 'created', 'modified'],
 });

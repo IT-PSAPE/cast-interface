@@ -170,10 +170,10 @@ function buildViewMenu(browserWindow: BrowserWindow | null, state: AppMenuState)
       type: 'radio',
       checked: state.workbenchMode === 'overlay-editor',
     }),
-    createCommandItem(browserWindow, 'view.mode.templateEditor', {
-      label: 'Templates',
+    createCommandItem(browserWindow, 'view.mode.themeEditor', {
+      label: 'Themes',
       type: 'radio',
-      checked: state.workbenchMode === 'template-editor',
+      checked: state.workbenchMode === 'theme-editor',
     }),
     createCommandItem(browserWindow, 'view.mode.stageEditor', {
       label: 'Stage',
@@ -305,13 +305,13 @@ export function createApplicationMenu(
   browserWindow: BrowserWindow | null = null,
   state: AppMenuState = currentAppMenuState,
 ) {
-  const template: MenuItemConstructorOptions[] = [];
+  const theme: MenuItemConstructorOptions[] = [];
 
   if (process.platform === 'darwin') {
-    template.push({ role: 'appMenu' });
+    theme.push({ role: 'appMenu' });
   }
 
-  template.push(
+  theme.push(
     {
       id: 'file',
       label: 'File',
@@ -345,7 +345,7 @@ export function createApplicationMenu(
     },
   );
 
-  return Menu.buildFromTemplate(template);
+  return Menu.buildFromTemplate(theme);
 }
 
 export function updateApplicationMenu(browserWindow: BrowserWindow | null, state: AppMenuState): void {

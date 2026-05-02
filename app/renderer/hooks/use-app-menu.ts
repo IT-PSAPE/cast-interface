@@ -38,7 +38,7 @@ export function useAppMenu(): void {
   const isEditableTargetFocused = Boolean(getEditableTarget(document.activeElement as HTMLElement | null));
   const isEditWorkbench = workbench.state.workbenchMode === 'deck-editor'
     || workbench.state.workbenchMode === 'overlay-editor'
-    || workbench.state.workbenchMode === 'template-editor'
+    || workbench.state.workbenchMode === 'theme-editor'
     || workbench.state.workbenchMode === 'stage-editor';
   const hasElementSelection = elements.selectedElementIds.length > 0;
 
@@ -120,7 +120,7 @@ export function useAppMenu(): void {
     const result = await window.castApi.exportDeckBundle(
       deckItems.map((item) => item.id),
       filePath,
-      { includeAllTemplates: true, includeOverlays: true, includeStages: true },
+      { includeAllThemes: true, includeOverlays: true, includeStages: true },
     );
     cast.setStatusText(`Exported ${result.itemCount} item${result.itemCount === 1 ? '' : 's'} plus workspace assets.`);
   }, [cast, deckItems]);
@@ -214,8 +214,8 @@ export function useAppMenu(): void {
       case 'view.mode.overlayEditor':
         workbench.actions.setWorkbenchMode('overlay-editor');
         return;
-      case 'view.mode.templateEditor':
-        workbench.actions.setWorkbenchMode('template-editor');
+      case 'view.mode.themeEditor':
+        workbench.actions.setWorkbenchMode('theme-editor');
         return;
       case 'view.mode.stageEditor':
         workbench.actions.setWorkbenchMode('stage-editor');

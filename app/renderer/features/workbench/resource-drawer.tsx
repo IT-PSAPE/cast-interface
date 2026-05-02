@@ -3,19 +3,19 @@ import { ArrowDown, ArrowUp, Ellipsis } from 'lucide-react';
 import { Tabs } from '../../components/display/tabs';
 import { Dropdown } from '../../components/form/dropdown';
 import { FileTrigger } from '../../components/form/file-trigger';
-import { useTemplateEditor } from '../../contexts/asset-editor/asset-editor-context';
+import { useThemeEditor } from '../../contexts/asset-editor/asset-editor-context';
 import { useElements } from '../../contexts/canvas/canvas-context';
 import { useWorkbench } from '../../contexts/workbench-context';
 import { useCreateDeckItem } from '../deck/create-deck-item';
 import { useResourceDrawer } from './resource-drawer-context';
 import type { DrawerTab } from '../../types/ui';
 import { MediaBinPanel } from '../assets/media/media-bin-panel';
-import { TemplateBinPanel } from '../assets/templates/template-bin-panel';
+import { ThemeBinPanel } from '../assets/themes/theme-bin-panel';
 import { DeckBinPanel } from '../deck/deck-bin-panel';
 import {
   useDeckBinSort,
   useMediaBinSort,
-  useTemplateBinSort,
+  useThemeBinSort,
   type BinSort,
 } from './use-bin-sort';
 import { cn } from '@renderer/utils/cn';
@@ -149,7 +149,7 @@ function Header() {
       <Tabs.List label="Resource tabs" className="min-w-0 flex-1" tabsClassName="gap-0.5">
         <Tabs.Trigger value="deck">Deck</Tabs.Trigger>
         <Tabs.Trigger value="image">Images</Tabs.Trigger>
-        <Tabs.Trigger value="templates">Templates</Tabs.Trigger>
+        <Tabs.Trigger value="themes">Themes</Tabs.Trigger>
       </Tabs.List>
       <Toolbar />
     </div>
@@ -192,15 +192,15 @@ function Toolbar() {
 function MoreActionsMenu({ onImportClick }: { onImportClick: () => void }) {
   const { state } = useDrawer();
   const { open: openCreateDeckItem } = useCreateDeckItem();
-  const { createTemplate } = useTemplateEditor();
+  const { createTheme } = useThemeEditor();
   const { actions: { setWorkbenchMode } } = useWorkbench();
   const deckSort = useDeckBinSort();
   const mediaSort = useMediaBinSort();
-  const templateSort = useTemplateBinSort();
+  const themeSort = useThemeBinSort();
 
-  function handleCreateTemplate(kind: 'slides' | 'lyrics') {
-    createTemplate(kind);
-    setWorkbenchMode('template-editor');
+  function handleCreateTheme(kind: 'slides' | 'lyrics') {
+    createTheme(kind);
+    setWorkbenchMode('theme-editor');
   }
 
   return (
@@ -224,12 +224,12 @@ function MoreActionsMenu({ onImportClick }: { onImportClick: () => void }) {
             <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={mediaSort.sort} onChange={mediaSort.setSort} />
           </>
         )}
-        {state.drawerTab === 'templates' && (
+        {state.drawerTab === 'themes' && (
           <>
-            <Dropdown.Item onClick={() => handleCreateTemplate('slides')}>New slides template</Dropdown.Item>
-            <Dropdown.Item onClick={() => handleCreateTemplate('lyrics')}>New lyrics template</Dropdown.Item>
+            <Dropdown.Item onClick={() => handleCreateTheme('slides')}>New slides theme</Dropdown.Item>
+            <Dropdown.Item onClick={() => handleCreateTheme('lyrics')}>New lyrics theme</Dropdown.Item>
             <Dropdown.Separator />
-            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={templateSort.sort} onChange={templateSort.setSort} />
+            <SortMenuItems options={STANDARD_SORT_OPTIONS} sort={themeSort.sort} onChange={themeSort.setSort} />
           </>
         )}
       </Dropdown.Panel>
@@ -248,7 +248,7 @@ function Body() {
     <div className="flex min-h-0 flex-1">
       {drawerTab === 'deck' && <DeckBinPanel />}
       {drawerTab === 'image' && <MediaBinPanel binKind="image" />}
-      {drawerTab === 'templates' && <TemplateBinPanel />}
+      {drawerTab === 'themes' && <ThemeBinPanel />}
     </div>
   );
 }

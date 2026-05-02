@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { getSlideDeckItemId } from '@core/deck-items';
-import type { AppSnapshot, Collection, CollectionBinKind, DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Stage, Template } from '@core/types';
+import type { AppSnapshot, Collection, CollectionBinKind, DeckItem, Presentation, Id, Lyric, MediaAsset, Overlay, Slide, SlideElement, Stage, Theme } from '@core/types';
 import { sortElements, sortSlides } from '../utils/slides';
 import { useCast } from './app-context';
 
@@ -12,7 +12,7 @@ interface ProjectContent {
   slideElements: SlideElement[];
   mediaAssets: MediaAsset[];
   overlays: Overlay[];
-  templates: Template[];
+  themes: Theme[];
   stages: Stage[];
   collections: Collection[];
   deckItemsById: ReadonlyMap<Id, DeckItem>;
@@ -20,7 +20,7 @@ interface ProjectContent {
   slideElementsBySlideId: ReadonlyMap<Id, SlideElement[]>;
   mediaAssetsById: ReadonlyMap<Id, MediaAsset>;
   overlaysById: ReadonlyMap<Id, Overlay>;
-  templatesById: ReadonlyMap<Id, Template>;
+  themesById: ReadonlyMap<Id, Theme>;
   stagesById: ReadonlyMap<Id, Stage>;
   collectionsByBinKind: ReadonlyMap<CollectionBinKind, Collection[]>;
   collectionsById: ReadonlyMap<Id, Collection>;
@@ -46,7 +46,7 @@ export function useProjectContent(): ProjectContent {
     slideElements: SlideElement[];
     mediaAssets: MediaAsset[];
     overlays: Overlay[];
-    templates: Template[];
+    themes: Theme[];
     stages: Stage[];
     collections: Collection[];
   } | null>(null);
@@ -59,7 +59,7 @@ export function useProjectContent(): ProjectContent {
       slideElements: snapshot?.slideElements ?? [],
       mediaAssets: snapshot?.mediaAssets ?? [],
       overlays: snapshot?.overlays ?? [],
-      templates: snapshot?.templates ?? [],
+      themes: snapshot?.themes ?? [],
       stages: snapshot?.stages ?? [],
       collections: snapshot?.collections ?? [],
     };
@@ -72,7 +72,7 @@ export function useProjectContent(): ProjectContent {
       slideElements: stableArray(prev?.slideElements ?? null, raw.slideElements),
       mediaAssets: stableArray(prev?.mediaAssets ?? null, raw.mediaAssets),
       overlays: stableArray(prev?.overlays ?? null, raw.overlays),
-      templates: stableArray(prev?.templates ?? null, raw.templates),
+      themes: stableArray(prev?.themes ?? null, raw.themes),
       stages: stableArray(prev?.stages ?? null, raw.stages),
       collections: stableArray(prev?.collections ?? null, raw.collections),
     };
@@ -87,7 +87,7 @@ export function useProjectContent(): ProjectContent {
       if (cached) return cached;
     }
 
-    const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, templates, stages, collections } = stableInputs;
+    const { presentations, lyrics, slides, slideElements, mediaAssets, overlays, themes, stages, collections } = stableInputs;
 
     const deckItems = [...presentations, ...lyrics].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
 
@@ -124,8 +124,8 @@ export function useProjectContent(): ProjectContent {
     const overlaysById = new Map<Id, Overlay>();
     for (const overlay of overlays) overlaysById.set(overlay.id, overlay);
 
-    const templatesById = new Map<Id, Template>();
-    for (const template of templates) templatesById.set(template.id, template);
+    const themesById = new Map<Id, Theme>();
+    for (const theme of themes) themesById.set(theme.id, theme);
 
     const stagesById = new Map<Id, Stage>();
     for (const stage of stages) stagesById.set(stage.id, stage);
@@ -134,7 +134,7 @@ export function useProjectContent(): ProjectContent {
     for (const collection of collections) collectionsById.set(collection.id, collection);
 
     const collectionsByBinKind = new Map<CollectionBinKind, Collection[]>();
-    for (const bin of ['deck', 'image', 'video', 'audio', 'template', 'overlay', 'stage'] as const) {
+    for (const bin of ['deck', 'image', 'video', 'audio', 'theme', 'overlay', 'stage'] as const) {
       collectionsByBinKind.set(bin, []);
     }
     for (const collection of collections) {
@@ -153,7 +153,7 @@ export function useProjectContent(): ProjectContent {
       slideElements,
       mediaAssets,
       overlays,
-      templates,
+      themes,
       stages,
       collections,
       deckItemsById,
@@ -161,7 +161,7 @@ export function useProjectContent(): ProjectContent {
       slideElementsBySlideId,
       mediaAssetsById,
       overlaysById,
-      templatesById,
+      themesById,
       stagesById,
       collectionsByBinKind,
       collectionsById,

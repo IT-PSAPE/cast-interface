@@ -20,8 +20,11 @@ interface VideoPoolEntry {
 const videoPool = new Map<string, VideoPoolEntry>();
 const videoPoolListeners = new Set<() => void>();
 
-function getVideoPoolKey(src: string, { autoplay, loop, muted, playbackRate }: UseKVideoOptions): string {
-  return [src, autoplay ? '1' : '0', loop ? '1' : '0', muted ? '1' : '0', String(playbackRate)].join('|');
+// Pool identity must stay stable across transient transport state like
+// play/pause. If autoplay participates in the key, toggling playback swaps the
+// underlying <video> element and loses currentTime.
+function getVideoPoolKey(src: string, { loop, muted, playbackRate }: UseKVideoOptions): string {
+  return [src, loop ? '1' : '0', muted ? '1' : '0', String(playbackRate)].join('|');
 }
 
 function notifyVideoPoolListeners() {
@@ -36,7 +39,7 @@ export function subscribeToVideoPool(listener: () => void): () => void {
 }
 
 // Looks up the loaded HTMLVideoElement for the layer-video src using the same
-// playback options that were used to acquire/retain it.
+// stable rendering options that were used to acquire/retain it.
 export function getLayerVideoElement(src: string | null, options: UseKVideoOptions): HTMLVideoElement | null {
   if (!src) return null;
   const key = getVideoPoolKey(src, options);
@@ -182,7 +185,16 @@ export function useKVideo(src: string | null, { autoplay, loop, muted, playbackR
       }
       releaseVideoEntry(entry);
     };
-  }, [autoplay, loop, muted, playbackRate, src]);
+  }, [loop, muted, playbackRate, src]);
+
+  useEffect(() => {
+    const entry = activeEntryRef.current;
+    if (!entry) return;
+    entry.video.autoplay = autoplay;
+    if (entry.status === 'loaded' && autoplay) {
+      void entry.video.play().catch(() => undefined);
+    }
+  }, [autoplay]);
 
   useEffect(() => {
     return () => {

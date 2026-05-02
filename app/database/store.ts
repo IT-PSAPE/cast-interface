@@ -7,7 +7,7 @@ import {
   readElementMediaReference,
 } from '@core/deck-bundles';
 import { buildDeckItem } from '@core/deck-items';
-import { applyTemplateToElements, createDefaultTemplateElements, isTemplateCompatibleWithDeckItem, syncTemplateToElements } from '@core/templates';
+import { applyThemeToElements, createDefaultThemeElements, isThemeCompatibleWithDeckItem, syncThemeToElements } from '@core/themes';
 import { createId, nowIso } from '@core/utils';
 import { SqliteDatabase } from './sqlite';
 import type {
@@ -26,13 +26,13 @@ import type {
   DeckBundleInspection,
   DeckBundleInspectionOverlay,
   DeckBundleInspectionStage,
-  DeckBundleInspectionTemplate,
+  DeckBundleInspectionTheme,
   DeckBundleItem,
   DeckBundleManifest,
   DeckBundleOverlay,
   DeckBundleSlide,
   DeckBundleStage,
-  DeckBundleTemplate,
+  DeckBundleTheme,
   DeckItem,
   DeckItemType,
   Presentation,
@@ -60,33 +60,34 @@ import type {
   Stage,
   StageCreateInput,
   StageUpdateInput,
-  Template,
-  TemplateCreateInput,
-  TemplateKind,
-  TemplateUpdateInput,
+  Theme,
+  ThemeCreateInput,
+  ThemeKind,
+  ThemeUpdateInput,
 } from '@core/types';
 import { isBrokenMediaSource, toCastMediaSource } from './media-source-utils';
 import type { SnapshotPatch } from '@core/snapshot-patch';
 
 const DEFAULT_W = 1920;
 const DEFAULT_H = 1080;
-const TEMPLATES_SCHEMA_VERSION = 4;
+const THEMES_SCHEMA_VERSION = 4;
 const DECK_ITEMS_SCHEMA_VERSION = 6;
 const REORDER_SCHEMA_VERSION = 7;
 const STAGES_SCHEMA_VERSION = 8;
 const COLLECTIONS_SCHEMA_VERSION = 9;
-const LATEST_SCHEMA_VERSION = COLLECTIONS_SCHEMA_VERSION;
+const THEME_NAMING_SCHEMA_VERSION = 10;
+const LATEST_SCHEMA_VERSION = THEME_NAMING_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
 
-const COLLECTION_BIN_KINDS: readonly CollectionBinKind[] = ['deck', 'image', 'video', 'audio', 'template', 'overlay', 'stage'];
+const COLLECTION_BIN_KINDS: readonly CollectionBinKind[] = ['deck', 'image', 'video', 'audio', 'theme', 'overlay', 'stage'];
 
 const COLLECTION_TABLE_BY_BIN: Record<CollectionBinKind, string> = {
   deck: 'deck_collections',
   image: 'image_collections',
   video: 'video_collections',
   audio: 'audio_collections',
-  template: 'template_collections',
+  theme: 'theme_collections',
   overlay: 'overlay_collections',
   stage: 'stage_collections',
 };
@@ -97,7 +98,7 @@ const ITEM_TABLE_BY_TYPE: Record<CollectionItemType, string> = {
   presentation: 'presentations',
   lyric: 'lyrics',
   media_asset: 'media_assets',
-  template: 'templates',
+  theme: 'themes',
   overlay: 'overlays',
   stage: 'stages',
 };
@@ -109,7 +110,7 @@ function isItemTypeAllowedInBin(
   store: CastRepository,
 ): boolean {
   if (itemType === 'presentation' || itemType === 'lyric') return binKind === 'deck';
-  if (itemType === 'template') return binKind === 'template';
+  if (itemType === 'theme') return binKind === 'theme';
   if (itemType === 'overlay') return binKind === 'overlay';
   if (itemType === 'stage') return binKind === 'stage';
   if (itemType === 'media_asset') {
@@ -127,7 +128,7 @@ function buildPatchSpecForItemType(itemType: CollectionItemType, itemId: Id): {
   upsertPresentationIds?: Id[];
   upsertLyricIds?: Id[];
   upsertMediaAssetIds?: Id[];
-  upsertTemplateIds?: Id[];
+  upsertThemeIds?: Id[];
   upsertOverlayIds?: Id[];
   upsertStageIds?: Id[];
 } {
@@ -135,7 +136,7 @@ function buildPatchSpecForItemType(itemType: CollectionItemType, itemId: Id): {
     case 'presentation': return { upsertPresentationIds: [itemId] };
     case 'lyric': return { upsertLyricIds: [itemId] };
     case 'media_asset': return { upsertMediaAssetIds: [itemId] };
-    case 'template': return { upsertTemplateIds: [itemId] };
+    case 'theme': return { upsertThemeIds: [itemId] };
     case 'overlay': return { upsertOverlayIds: [itemId] };
     case 'stage': return { upsertStageIds: [itemId] };
   }
@@ -143,14 +144,14 @@ function buildPatchSpecForItemType(itemType: CollectionItemType, itemId: Id): {
 
 interface DeckOwnerRow {
   type: DeckItemType;
-  templateId: string | null;
+  themeId: string | null;
 }
 
 interface BrokenReferenceAccumulator {
   elementTypes: Set<'image' | 'video'>;
   occurrenceCount: number;
   itemTitles: Set<string>;
-  templateNames: Set<string>;
+  themeNames: Set<string>;
   overlayNames: Set<string>;
   stageNames: Set<string>;
 }
@@ -188,15 +189,15 @@ function migrateLegacyRecastDatabase(userData: string, targetDbPath: string): vo
   }
 }
 
-function toDeckBundleTemplate(template: Template): DeckBundleTemplate {
+function toDeckBundleTheme(theme: Theme): DeckBundleTheme {
   return {
-    id: template.id,
-    name: template.name,
-    kind: template.kind,
-    width: template.width,
-    height: template.height,
-    order: template.order,
-    elements: template.elements,
+    id: theme.id,
+    name: theme.name,
+    kind: theme.kind,
+    width: theme.width,
+    height: theme.height,
+    order: theme.order,
+    elements: theme.elements,
   };
 }
 
@@ -358,12 +359,12 @@ export class CastRepository {
       this.migrateLegacyProjectContentToGlobalScope();
     }
 
-    if (this.getUserVersion() < TEMPLATES_SCHEMA_VERSION) {
-      this.ensureTemplatesSchema();
+    if (this.getUserVersion() < THEMES_SCHEMA_VERSION) {
+      this.ensureThemesSchema();
     }
 
     if (this.getUserVersion() < 5) {
-      this.ensurePresentationTemplateSchema();
+      this.ensurePresentationThemeSchema();
       this.setUserVersion(5);
     }
 
@@ -385,6 +386,11 @@ export class CastRepository {
     if (this.getUserVersion() < COLLECTIONS_SCHEMA_VERSION) {
       this.ensureCollectionsSchema();
       this.setUserVersion(COLLECTIONS_SCHEMA_VERSION);
+    }
+
+    if (this.getUserVersion() < THEME_NAMING_SCHEMA_VERSION) {
+      this.migrateTemplateNamingToThemes();
+      this.setUserVersion(THEME_NAMING_SCHEMA_VERSION);
     }
   }
 
@@ -567,7 +573,7 @@ export class CastRepository {
         FOREIGN KEY(library_id) REFERENCES libraries(id)
       );
 
-      CREATE TABLE IF NOT EXISTS templates (
+      CREATE TABLE IF NOT EXISTS themes (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         kind TEXT NOT NULL,
@@ -598,7 +604,7 @@ export class CastRepository {
       CREATE INDEX IF NOT EXISTS idx_playlist_entries_segment_id ON playlist_entries(segment_id);
       CREATE INDEX IF NOT EXISTS idx_media_assets_library_id ON media_assets(library_id);
       CREATE INDEX IF NOT EXISTS idx_overlays_library_id ON overlays(library_id);
-      CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
+      CREATE INDEX IF NOT EXISTS idx_themes_order_index ON themes(order_index);
       CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index);
     `);
   }
@@ -616,7 +622,7 @@ export class CastRepository {
       CREATE TABLE IF NOT EXISTS presentations (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
-        template_id TEXT,
+        theme_id TEXT,
         collection_id TEXT,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -626,7 +632,7 @@ export class CastRepository {
       CREATE TABLE IF NOT EXISTS lyrics (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
-        template_id TEXT,
+        theme_id TEXT,
         collection_id TEXT,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -729,7 +735,7 @@ export class CastRepository {
         updated_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS templates (
+      CREATE TABLE IF NOT EXISTS themes (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         kind TEXT NOT NULL,
@@ -790,7 +796,7 @@ export class CastRepository {
         updated_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS template_collections (
+      CREATE TABLE IF NOT EXISTS theme_collections (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         order_index INTEGER NOT NULL DEFAULT 0,
@@ -839,19 +845,19 @@ export class CastRepository {
   private createGlobalContentIndexes(): void {
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_decks_order_index ON presentations(order_index);
-      CREATE INDEX IF NOT EXISTS idx_decks_template_id ON presentations(template_id);
+      CREATE INDEX IF NOT EXISTS idx_decks_theme_id ON presentations(theme_id);
       CREATE INDEX IF NOT EXISTS idx_lyrics_order_index ON lyrics(order_index);
-      CREATE INDEX IF NOT EXISTS idx_lyrics_template_id ON lyrics(template_id);
+      CREATE INDEX IF NOT EXISTS idx_lyrics_theme_id ON lyrics(theme_id);
       CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at);
       CREATE INDEX IF NOT EXISTS idx_overlays_created_at ON overlays(created_at);
-      CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index);
+      CREATE INDEX IF NOT EXISTS idx_themes_order_index ON themes(order_index);
       CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index);
     `);
   }
 
-  private ensureTemplatesSchema(): void {
+  private ensureThemesSchema(): void {
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS templates (
+      CREATE TABLE IF NOT EXISTS themes (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         kind TEXT NOT NULL,
@@ -863,7 +869,7 @@ export class CastRepository {
         updated_at TEXT NOT NULL
       );
     `);
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_templates_order_index ON templates(order_index)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_themes_order_index ON themes(order_index)');
   }
 
   private ensureStagesSchema(): void {
@@ -890,7 +896,7 @@ export class CastRepository {
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_lyrics_collection_id ON lyrics(collection_id);');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_media_assets_collection_id ON media_assets(collection_id);');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_overlays_collection_id ON overlays(collection_id);');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_templates_collection_id ON templates(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_themes_collection_id ON themes(collection_id);');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_stages_collection_id ON stages(collection_id);');
   }
 
@@ -909,7 +915,7 @@ export class CastRepository {
         `);
       }
 
-      const itemTablesNeedingColumn = ['presentations', 'lyrics', 'media_assets', 'templates', 'overlays', 'stages'];
+      const itemTablesNeedingColumn = ['presentations', 'lyrics', 'media_assets', 'themes', 'overlays', 'stages'];
       for (const table of itemTablesNeedingColumn) {
         if (this.hasTable(table) && !this.hasColumn(table, 'collection_id')) {
           this.db.exec(`ALTER TABLE ${table} ADD COLUMN collection_id TEXT;`);
@@ -919,6 +925,51 @@ export class CastRepository {
     tx();
     this.createCollectionsIndexes();
     this.seedDefaultCollections();
+  }
+
+  private migrateTemplateNamingToThemes(): void {
+    const previousForeignKeys = this.db.pragma('foreign_keys', { simple: true }) as number;
+    this.db.pragma('foreign_keys = OFF');
+
+    try {
+      const tx = this.db.transaction(() => {
+        this.renameTableIfNeeded('templates', 'themes');
+        this.renameTableIfNeeded('template_collections', 'theme_collections');
+        this.renameColumnIfNeeded('presentations', 'template_id', 'theme_id');
+        this.renameColumnIfNeeded('lyrics', 'template_id', 'theme_id');
+
+        if (this.hasTable('themes') && this.hasTable('theme_collections') && !this.hasColumn('themes', 'collection_id')) {
+          this.db.exec('ALTER TABLE themes ADD COLUMN collection_id TEXT;');
+        }
+
+        this.db.exec('DROP INDEX IF EXISTS idx_presentations_template_id;');
+        this.db.exec('DROP INDEX IF EXISTS idx_decks_template_id;');
+        this.db.exec('DROP INDEX IF EXISTS idx_lyrics_template_id;');
+        this.db.exec('DROP INDEX IF EXISTS idx_templates_order_index;');
+        this.db.exec('DROP INDEX IF EXISTS idx_templates_collection_id;');
+        this.db.exec('DROP INDEX IF EXISTS idx_template_collections_order_index;');
+      });
+
+      tx();
+    } finally {
+      this.db.pragma(`foreign_keys = ${previousForeignKeys ? 'ON' : 'OFF'}`);
+    }
+
+    this.createGlobalContentIndexes();
+    if (this.hasTable('theme_collections')) {
+      this.createCollectionsIndexes();
+      this.seedDefaultCollections();
+    }
+  }
+
+  private renameTableIfNeeded(from: string, to: string): void {
+    if (!this.hasTable(from) || this.hasTable(to)) return;
+    this.db.exec(`ALTER TABLE ${from} RENAME TO ${to};`);
+  }
+
+  private renameColumnIfNeeded(table: string, from: string, to: string): void {
+    if (!this.hasTable(table) || !this.hasColumn(table, from) || this.hasColumn(table, to)) return;
+    this.db.exec(`ALTER TABLE ${table} RENAME COLUMN ${from} TO ${to};`);
   }
 
   private getDefaultCollectionId(binKind: CollectionBinKind): Id {
@@ -987,8 +1038,8 @@ export class CastRepository {
         .prepare("UPDATE media_assets SET collection_id = ? WHERE collection_id IS NULL AND type = 'audio'")
         .run(defaultIds.audio);
       this.db
-        .prepare('UPDATE templates SET collection_id = ? WHERE collection_id IS NULL')
-        .run(defaultIds.template);
+        .prepare('UPDATE themes SET collection_id = ? WHERE collection_id IS NULL')
+        .run(defaultIds.theme);
       this.db
         .prepare('UPDATE overlays SET collection_id = ? WHERE collection_id IS NULL')
         .run(defaultIds.overlay);
@@ -1095,7 +1146,7 @@ export class CastRepository {
       upsertPresentationIds: movedIds.presentations,
       upsertLyricIds: movedIds.lyrics,
       upsertMediaAssetIds: movedIds.mediaAssets,
-      upsertTemplateIds: movedIds.templates,
+      upsertThemeIds: movedIds.themes,
       upsertOverlayIds: movedIds.overlays,
       upsertStageIds: movedIds.stages,
     });
@@ -1143,7 +1194,7 @@ export class CastRepository {
     presentations: Id[];
     lyrics: Id[];
     mediaAssets: Id[];
-    templates: Id[];
+    themes: Id[];
     overlays: Id[];
     stages: Id[];
   } {
@@ -1151,7 +1202,7 @@ export class CastRepository {
       presentations: [] as Id[],
       lyrics: [] as Id[],
       mediaAssets: [] as Id[],
-      templates: [] as Id[],
+      themes: [] as Id[],
       overlays: [] as Id[],
       stages: [] as Id[],
     };
@@ -1177,8 +1228,8 @@ export class CastRepository {
       case 'audio':
         reassign('media_assets', moved.mediaAssets);
         break;
-      case 'template':
-        reassign('templates', moved.templates);
+      case 'theme':
+        reassign('themes', moved.themes);
         break;
       case 'overlay':
         reassign('overlays', moved.overlays);
@@ -1191,12 +1242,12 @@ export class CastRepository {
     return moved;
   }
 
-  private ensurePresentationTemplateSchema(): void {
+  private ensurePresentationThemeSchema(): void {
     const presentationColumns = this.db.prepare('PRAGMA table_info(presentations)').all() as Array<{ name: string }>;
-    if (!presentationColumns.some((column) => column.name === 'template_id')) {
-      this.db.prepare('ALTER TABLE presentations ADD COLUMN template_id TEXT').run();
+    if (!presentationColumns.some((column) => column.name === 'theme_id')) {
+      this.db.prepare('ALTER TABLE presentations ADD COLUMN theme_id TEXT').run();
     }
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_presentations_template_id ON presentations(template_id)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_presentations_theme_id ON presentations(theme_id)');
   }
 
   private prepareLegacySchema(): void {
@@ -1218,7 +1269,7 @@ export class CastRepository {
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'canvas',
-            template_id TEXT,
+            theme_id TEXT,
             order_index INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -1253,7 +1304,7 @@ export class CastRepository {
         `);
 
         this.db.exec(`
-          INSERT INTO presentations_v3 (id, title, kind, template_id, order_index, created_at, updated_at)
+          INSERT INTO presentations_v3 (id, title, kind, theme_id, order_index, created_at, updated_at)
           SELECT
             p.id,
             p.title,
@@ -1321,7 +1372,7 @@ export class CastRepository {
           CREATE TABLE decks_v6 (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            template_id TEXT,
+            theme_id TEXT,
             order_index INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -1330,7 +1381,7 @@ export class CastRepository {
           CREATE TABLE lyrics_v6 (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            template_id TEXT,
+            theme_id TEXT,
             order_index INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -1360,14 +1411,14 @@ export class CastRepository {
         `);
 
         this.db.exec(`
-          INSERT INTO decks_v6 (id, title, template_id, order_index, created_at, updated_at)
-          SELECT id, title, template_id, order_index, created_at, updated_at
+          INSERT INTO decks_v6 (id, title, theme_id, order_index, created_at, updated_at)
+          SELECT id, title, theme_id, order_index, created_at, updated_at
           FROM presentations
           WHERE kind != 'lyrics'
           ORDER BY order_index ASC, created_at ASC, id ASC;
 
-          INSERT INTO lyrics_v6 (id, title, template_id, order_index, created_at, updated_at)
-          SELECT id, title, template_id, order_index, created_at, updated_at
+          INSERT INTO lyrics_v6 (id, title, theme_id, order_index, created_at, updated_at)
+          SELECT id, title, theme_id, order_index, created_at, updated_at
           FROM presentations
           WHERE kind = 'lyrics'
           ORDER BY order_index ASC, created_at ASC, id ASC;
@@ -1405,7 +1456,7 @@ export class CastRepository {
           DROP INDEX IF EXISTS idx_slides_presentation_id;
           DROP INDEX IF EXISTS idx_playlist_entries_presentation_id;
           DROP INDEX IF EXISTS idx_presentations_order_index;
-          DROP INDEX IF EXISTS idx_presentations_template_id;
+          DROP INDEX IF EXISTS idx_presentations_theme_id;
 
           DROP TABLE playlist_entries;
           DROP TABLE slides;
@@ -1445,7 +1496,7 @@ export class CastRepository {
 
       const deckCollectionId = this.getDefaultCollectionId('deck');
       this.db
-        .prepare('INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .prepare('INSERT INTO presentations (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .run(presentationId, 'Welcome Slides', null, deckCollectionId, 0, now, now);
 
       this.db
@@ -1703,7 +1754,7 @@ export class CastRepository {
       slideElements: this.getSlideElements(),
       mediaAssets: this.getMediaAssets(),
       overlays: this.getOverlays(),
-      templates: this.getTemplates(),
+      themes: this.getThemes(),
       stages: this.getStages(),
       collections: this.getCollections(),
     };
@@ -1727,7 +1778,7 @@ export class CastRepository {
         DELETE FROM lyrics;
         DELETE FROM media_assets;
         DELETE FROM overlays;
-        DELETE FROM templates;
+        DELETE FROM themes;
         DELETE FROM stages;
         DELETE FROM libraries;
       `);
@@ -1739,33 +1790,33 @@ export class CastRepository {
         insertLibrary.run(library.id, library.name, library.order, library.createdAt, library.updatedAt);
       }
 
-      const insertTemplate = this.db.prepare(
-        `INSERT INTO templates (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+      const insertTheme = this.db.prepare(
+        `INSERT INTO themes (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
-      for (const template of snapshot.templates) {
-        insertTemplate.run(
-          template.id,
-          template.name,
-          template.kind,
-          template.width,
-          template.height,
-          template.order,
-          JSON.stringify(template.elements),
-          template.collectionId,
-          template.createdAt,
-          template.updatedAt,
+      for (const theme of snapshot.themes) {
+        insertTheme.run(
+          theme.id,
+          theme.name,
+          theme.kind,
+          theme.width,
+          theme.height,
+          theme.order,
+          JSON.stringify(theme.elements),
+          theme.collectionId,
+          theme.createdAt,
+          theme.updatedAt,
         );
       }
 
       const insertPresentation = this.db.prepare(
-        'INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO presentations (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       for (const presentation of snapshot.presentations) {
         insertPresentation.run(
           presentation.id,
           presentation.title,
-          presentation.templateId ?? null,
+          presentation.themeId ?? null,
           presentation.collectionId,
           presentation.order,
           presentation.createdAt,
@@ -1774,13 +1825,13 @@ export class CastRepository {
       }
 
       const insertLyric = this.db.prepare(
-        'INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO lyrics (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       for (const lyric of snapshot.lyrics) {
         insertLyric.run(
           lyric.id,
           lyric.title,
-          lyric.templateId ?? null,
+          lyric.themeId ?? null,
           lyric.collectionId,
           lyric.order,
           lyric.createdAt,
@@ -1945,11 +1996,11 @@ export class CastRepository {
       .filter((item): item is DeckBundleItem => item !== null)
       .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
 
-    const templates = options.includeAllTemplates
-      ? this.getTemplates().map(toDeckBundleTemplate)
-      : Array.from(new Set(items.map((item) => item.templateId).filter((id): id is Id => Boolean(id))))
-          .map((templateId) => this.getDeckBundleTemplateById(templateId))
-          .filter((template): template is DeckBundleTemplate => template !== null)
+    const themes = options.includeAllThemes
+      ? this.getThemes().map(toDeckBundleTheme)
+      : Array.from(new Set(items.map((item) => item.themeId).filter((id): id is Id => Boolean(id))))
+          .map((themeId) => this.getDeckBundleThemeById(themeId))
+          .filter((theme): theme is DeckBundleTheme => theme !== null)
           .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
 
     const overlays = options.includeOverlays
@@ -1965,10 +2016,10 @@ export class CastRepository {
       version: 1,
       exportedAt: nowIso(),
       items,
-      templates,
+      themes,
       overlays,
       stages,
-      mediaReferences: collectDeckBundleMediaReferences(items, templates, overlays, stages),
+      mediaReferences: collectDeckBundleMediaReferences(items, themes, overlays, stages),
     };
   }
 
@@ -1979,7 +2030,7 @@ export class CastRepository {
     const stages = normalizedManifest.stages ?? [];
     const mediaReferences = collectDeckBundleMediaReferences(
       normalizedManifest.items,
-      normalizedManifest.templates,
+      normalizedManifest.themes,
       overlays,
       stages,
     );
@@ -1988,7 +2039,7 @@ export class CastRepository {
     return {
       exportedAt: normalizedManifest.exportedAt,
       itemCount: normalizedManifest.items.length,
-      templateCount: normalizedManifest.templates.length,
+      themeCount: normalizedManifest.themes.length,
       mediaReferenceCount: mediaReferences.length,
       overlayCount: overlays.length,
       stageCount: stages.length,
@@ -1998,14 +2049,14 @@ export class CastRepository {
           title: item.title,
           type: item.type,
           slideCount: item.slides.length,
-          templateId: item.templateId,
+          themeId: item.themeId,
         }))
         .sort((left, right) => left.title.localeCompare(right.title)),
-      templates: normalizedManifest.templates
-        .map((template): DeckBundleInspectionTemplate => ({
-          id: template.id,
-          name: template.name,
-          kind: template.kind,
+      themes: normalizedManifest.themes
+        .map((theme): DeckBundleInspectionTheme => ({
+          id: theme.id,
+          name: theme.name,
+          kind: theme.kind,
         }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       overlays: overlays
@@ -2038,21 +2089,21 @@ export class CastRepository {
     this.applyBrokenReferenceDecisions(workingManifest, decisionMap);
 
     const now = nowIso();
-    const nextTemplateOrder = this.getNextTemplateOrderIndex();
+    const nextThemeOrder = this.getNextThemeOrderIndex();
     const nextContentOrder = this.getMaxDeckOrder() + 1;
     const nextMediaAssetOrder = this.getNextMediaAssetOrderIndex();
     const normalizedReplacementSources = this.collectReplacementMediaSources(brokenReferences, decisionMap);
 
-    const insertTemplate = this.db.prepare(
-      `INSERT INTO templates
+    const insertTheme = this.db.prepare(
+      `INSERT INTO themes
         (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertPresentation = this.db.prepare(
-      'INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO presentations (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     const insertLyric = this.db.prepare(
-      'INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO lyrics (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     const insertSlide = this.db.prepare(
       'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -2077,32 +2128,32 @@ export class CastRepository {
 
     const nextStageOrder = (this.db.prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages').get() as { next_order: number }).next_order;
     const importDeckCollectionId = this.getDefaultCollectionId('deck');
-    const importTemplateCollectionId = this.getDefaultCollectionId('template');
+    const importThemeCollectionId = this.getDefaultCollectionId('theme');
     const importOverlayCollectionId = this.getDefaultCollectionId('overlay');
     const importStageCollectionId = this.getDefaultCollectionId('stage');
 
     const tx = this.db.transaction(() => {
-      const templateIdMap = new Map<Id, Id>();
+      const themeIdMap = new Map<Id, Id>();
       const replacementAssetKeys = new Set<string>();
 
-      workingManifest.templates
+      workingManifest.themes
         .slice()
         .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name))
-        .forEach((template, index) => {
-          const newTemplateId = createId();
-          templateIdMap.set(template.id, newTemplateId);
-          const nextElements = template.elements.map((element, elementIndex) =>
-            this.createImportedTemplateElement(element, newTemplateId, now, elementIndex)
+        .forEach((theme, index) => {
+          const newThemeId = createId();
+          themeIdMap.set(theme.id, newThemeId);
+          const nextElements = theme.elements.map((element, elementIndex) =>
+            this.createImportedThemeElement(element, newThemeId, now, elementIndex)
           );
-          insertTemplate.run(
-            newTemplateId,
-            template.name,
-            this.normalizeTemplateKind(template.kind),
-            template.width,
-            template.height,
-            nextTemplateOrder + index,
+          insertTheme.run(
+            newThemeId,
+            theme.name,
+            this.normalizeThemeKind(theme.kind),
+            theme.width,
+            theme.height,
+            nextThemeOrder + index,
             JSON.stringify(nextElements),
-            importTemplateCollectionId,
+            importThemeCollectionId,
             now,
             now,
           );
@@ -2130,21 +2181,21 @@ export class CastRepository {
         .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title))
         .forEach((item, itemIndex) => {
           const newItemId = createId();
-          const importedTemplateId = item.templateId ? templateIdMap.get(item.templateId) ?? null : null;
-          if (item.templateId && !importedTemplateId) {
-            throw new Error(`Missing imported template for ${item.title}`);
+          const importedThemeId = item.themeId ? themeIdMap.get(item.themeId) ?? null : null;
+          if (item.themeId && !importedThemeId) {
+            throw new Error(`Missing imported theme for ${item.title}`);
           }
-          if (importedTemplateId) {
-            const importedTemplate = workingManifest.templates.find((template) => template.id === item.templateId) ?? null;
-            if (!importedTemplate || !isTemplateCompatibleWithDeckItem(importedTemplate as Template, item.type)) {
-              throw new Error(`Template ${item.templateId} is incompatible with ${item.title}`);
+          if (importedThemeId) {
+            const importedTheme = workingManifest.themes.find((theme) => theme.id === item.themeId) ?? null;
+            if (!importedTheme || !isThemeCompatibleWithDeckItem(importedTheme as Theme, item.type)) {
+              throw new Error(`Theme ${item.themeId} is incompatible with ${item.title}`);
             }
           }
 
           if (item.type === 'presentation') {
-            insertPresentation.run(newItemId, item.title, importedTemplateId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
+            insertPresentation.run(newItemId, item.title, importedThemeId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
           } else {
-            insertLyric.run(newItemId, item.title, importedTemplateId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
+            insertLyric.run(newItemId, item.title, importedThemeId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
           }
 
           item.slides
@@ -2440,7 +2491,7 @@ export class CastRepository {
     const currentOrder = this.getMaxDeckOrder();
     const deckCollectionId = this.getDefaultCollectionId('deck');
     this.db
-      .prepare('INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .prepare('INSERT INTO presentations (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(presentationId, title, null, deckCollectionId, currentOrder + 1, now, now);
     return this.buildPatch({ upsertPresentationIds: [presentationId] });
   }
@@ -2451,29 +2502,29 @@ export class CastRepository {
     const currentOrder = this.getMaxDeckOrder();
     const deckCollectionId = this.getDefaultCollectionId('deck');
     this.db
-      .prepare('INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .prepare('INSERT INTO lyrics (id, title, theme_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(lyricId, title, null, deckCollectionId, currentOrder + 1, now, now);
     return this.buildPatch({ upsertLyricIds: [lyricId] });
   }
 
-  createTemplate(input: TemplateCreateInput): SnapshotPatch {
+  createTheme(input: ThemeCreateInput): SnapshotPatch {
     const now = nowIso();
-    const templateId = createId();
+    const themeId = createId();
     const currentOrder =
-      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM templates').get() as { maxOrder: number | null }).maxOrder ?? -1;
-    const elements = input.elements ? JSON.parse(JSON.stringify(input.elements)) as SlideElement[] : createDefaultTemplateElements(input.kind, templateId, now);
-    const collectionId = input.collectionId ?? this.getDefaultCollectionId('template');
+      (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM themes').get() as { maxOrder: number | null }).maxOrder ?? -1;
+    const elements = input.elements ? JSON.parse(JSON.stringify(input.elements)) as SlideElement[] : createDefaultThemeElements(input.kind, themeId, now);
+    const collectionId = input.collectionId ?? this.getDefaultCollectionId('theme');
 
     this.db
       .prepare(
-        `INSERT INTO templates
+        `INSERT INTO themes
           (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        templateId,
+        themeId,
         input.name,
-        this.normalizeTemplateKind(input.kind),
+        this.normalizeThemeKind(input.kind),
         input.width ?? DEFAULT_W,
         input.height ?? DEFAULT_H,
         currentOrder + 1,
@@ -2482,12 +2533,12 @@ export class CastRepository {
         now,
         now,
       );
-    return this.buildPatch({ upsertTemplateIds: [templateId] });
+    return this.buildPatch({ upsertThemeIds: [themeId] });
   }
 
-  updateTemplate(input: TemplateUpdateInput): SnapshotPatch {
+  updateTheme(input: ThemeUpdateInput): SnapshotPatch {
     const existing = this.db
-      .prepare('SELECT id, name, kind, width, height, elements_json FROM templates WHERE id = ?')
+      .prepare('SELECT id, name, kind, width, height, elements_json FROM themes WHERE id = ?')
       .get(input.id) as {
       id: string;
       name: string;
@@ -2501,53 +2552,53 @@ export class CastRepository {
 
     this.db
       .prepare(
-        `UPDATE templates
+        `UPDATE themes
          SET name = ?, kind = ?, width = ?, height = ?, elements_json = ?, updated_at = ?
          WHERE id = ?`
       )
       .run(
         input.name ?? existing.name,
-        this.normalizeTemplateKind(input.kind ?? existing.kind),
+        this.normalizeThemeKind(input.kind ?? existing.kind),
         input.width ?? existing.width,
         input.height ?? existing.height,
         JSON.stringify(input.elements ?? parseJson<SlideElement[]>(existing.elements_json)),
         nowIso(),
         input.id,
       );
-    return this.buildPatch({ upsertTemplateIds: [input.id] });
+    return this.buildPatch({ upsertThemeIds: [input.id] });
   }
 
-  deleteTemplate(templateId: Id): SnapshotPatch {
+  deleteTheme(themeId: Id): SnapshotPatch {
     const affectedPresentationIds = (this.db
-      .prepare('SELECT id FROM presentations WHERE template_id = ?')
-      .all(templateId) as Array<{ id: string }>)
+      .prepare('SELECT id FROM presentations WHERE theme_id = ?')
+      .all(themeId) as Array<{ id: string }>)
       .map((row) => row.id);
     const affectedLyricIds = (this.db
-      .prepare('SELECT id FROM lyrics WHERE template_id = ?')
-      .all(templateId) as Array<{ id: string }>)
+      .prepare('SELECT id FROM lyrics WHERE theme_id = ?')
+      .all(themeId) as Array<{ id: string }>)
       .map((row) => row.id);
     const tx = this.db.transaction(() => {
-      this.db.prepare('UPDATE presentations SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
-      this.db.prepare('UPDATE lyrics SET template_id = NULL, updated_at = ? WHERE template_id = ?').run(nowIso(), templateId);
-      this.db.prepare('DELETE FROM templates WHERE id = ?').run(templateId);
+      this.db.prepare('UPDATE presentations SET theme_id = NULL, updated_at = ? WHERE theme_id = ?').run(nowIso(), themeId);
+      this.db.prepare('UPDATE lyrics SET theme_id = NULL, updated_at = ? WHERE theme_id = ?').run(nowIso(), themeId);
+      this.db.prepare('DELETE FROM themes WHERE id = ?').run(themeId);
     });
     tx();
-    this.normalizeTemplateOrder();
-    const remainingTemplateIds = (this.db.prepare('SELECT id FROM templates ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
+    this.normalizeThemeOrder();
+    const remainingThemeIds = (this.db.prepare('SELECT id FROM themes ORDER BY order_index ASC').all() as Array<{ id: string }>).map((row) => row.id);
     return this.buildPatch({
       upsertPresentationIds: affectedPresentationIds,
       upsertLyricIds: affectedLyricIds,
-      upsertTemplateIds: remainingTemplateIds,
-      deletedTemplateIds: [templateId],
+      upsertThemeIds: remainingThemeIds,
+      deletedThemeIds: [themeId],
       replaceLibraryBundles: true,
     });
   }
 
-  applyTemplateToDeckItem(templateId: Id, itemId: Id): SnapshotPatch {
-    const template = this.getTemplateById(templateId);
-    if (!template) return this.buildPatch({});
+  applyThemeToDeckItem(themeId: Id, itemId: Id): SnapshotPatch {
+    const theme = this.getThemeById(themeId);
+    if (!theme) return this.buildPatch({});
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner || !isTemplateCompatibleWithDeckItem(template, owner.type)) {
+    if (!owner || !isThemeCompatibleWithDeckItem(theme, owner.type)) {
       return this.buildPatch({});
     }
 
@@ -2573,7 +2624,7 @@ export class CastRepository {
 
     const deletedElementIds: Id[] = [];
     const tx = this.db.transaction(() => {
-      this.db.prepare(`UPDATE ${ownerTable} SET template_id = ?, updated_at = ? WHERE id = ?`).run(templateId, nowIso(), itemId);
+      this.db.prepare(`UPDATE ${ownerTable} SET theme_id = ?, updated_at = ? WHERE id = ?`).run(themeId, nowIso(), itemId);
       for (const slide of slides) {
         const currentElements = (selectElements.all(slide.id) as Array<{
           id: string;
@@ -2606,7 +2657,7 @@ export class CastRepository {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         }));
-        const appliedElements = applyTemplateToElements(template, currentElements, slide.id);
+        const appliedElements = applyThemeToElements(theme, currentElements, slide.id);
         deletedElementIds.push(...currentElements.map((element) => element.id));
         deleteElements.run(slide.id);
         for (const element of appliedElements) {
@@ -2640,20 +2691,20 @@ export class CastRepository {
     });
   }
 
-  syncTemplateToLinkedDeckItems(templateId: Id): SnapshotPatch {
-    const template = this.getTemplateById(templateId);
-    if (!template) return this.buildPatch({});
+  syncThemeToLinkedDeckItems(themeId: Id): SnapshotPatch {
+    const theme = this.getThemeById(themeId);
+    if (!theme) return this.buildPatch({});
 
     const presentations = this.db
-      .prepare('SELECT id FROM presentations WHERE template_id = ?')
-      .all(templateId) as Array<{ id: string }>;
+      .prepare('SELECT id FROM presentations WHERE theme_id = ?')
+      .all(themeId) as Array<{ id: string }>;
     const lyrics = this.db
-      .prepare('SELECT id FROM lyrics WHERE template_id = ?')
-      .all(templateId) as Array<{ id: string }>;
+      .prepare('SELECT id FROM lyrics WHERE theme_id = ?')
+      .all(themeId) as Array<{ id: string }>;
 
     const linkedItems: Array<{ id: string; type: DeckItemType }> = [
-      ...(template.kind === 'slides' ? presentations.map((row) => ({ id: row.id, type: 'presentation' as DeckItemType })) : []),
-      ...(template.kind === 'lyrics' ? lyrics.map((row) => ({ id: row.id, type: 'lyric' as DeckItemType })) : []),
+      ...(theme.kind === 'slides' ? presentations.map((row) => ({ id: row.id, type: 'presentation' as DeckItemType })) : []),
+      ...(theme.kind === 'lyrics' ? lyrics.map((row) => ({ id: row.id, type: 'lyric' as DeckItemType })) : []),
     ];
 
     if (linkedItems.length === 0) return this.buildPatch({});
@@ -2711,7 +2762,7 @@ export class CastRepository {
             createdAt: row.created_at,
             updatedAt: row.updated_at,
           }));
-          const syncedElements = syncTemplateToElements(template, currentElements, slide.id);
+          const syncedElements = syncThemeToElements(theme, currentElements, slide.id);
           deletedElementIds.push(...currentElements.map((element) => element.id));
           deleteElements.run(slide.id);
           for (const element of syncedElements) {
@@ -2751,12 +2802,12 @@ export class CastRepository {
     });
   }
 
-  detachTemplateFromDeckItem(itemId: Id): SnapshotPatch {
+  detachThemeFromDeckItem(itemId: Id): SnapshotPatch {
     const owner = this.resolveDeckOwnerRow(itemId);
-    if (!owner || owner.templateId === null) return this.buildPatch({});
+    if (!owner || owner.themeId === null) return this.buildPatch({});
 
     const ownerTable = this.getDeckTableName(owner.type);
-    this.db.prepare(`UPDATE ${ownerTable} SET template_id = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), itemId);
+    this.db.prepare(`UPDATE ${ownerTable} SET theme_id = NULL, updated_at = ? WHERE id = ?`).run(nowIso(), itemId);
     return this.buildPatch({
       upsertPresentationIds: owner.type === 'presentation' ? [itemId] : undefined,
       upsertLyricIds: owner.type === 'lyric' ? [itemId] : undefined,
@@ -2764,9 +2815,9 @@ export class CastRepository {
     });
   }
 
-  applyTemplateToOverlay(templateId: Id, overlayId: Id): SnapshotPatch {
-    const template = this.getTemplateById(templateId);
-    if (!template || template.kind !== 'overlays') return this.buildPatch({});
+  applyThemeToOverlay(themeId: Id, overlayId: Id): SnapshotPatch {
+    const theme = this.getThemeById(themeId);
+    if (!theme || theme.kind !== 'overlays') return this.buildPatch({});
     const existing = this.db
       .prepare('SELECT elements_json FROM overlays WHERE id = ?')
       .get(overlayId) as { elements_json: string } | undefined;
@@ -2774,7 +2825,7 @@ export class CastRepository {
     if (!existing) return this.buildPatch({});
 
     const currentElements = parseJson<SlideElement[]>(existing.elements_json);
-    const appliedElements = applyTemplateToElements(template, currentElements, overlayId);
+    const appliedElements = applyThemeToElements(theme, currentElements, overlayId);
     const summary = summarizeOverlayElements(appliedElements);
     this.db
       .prepare(
@@ -2872,9 +2923,9 @@ export class CastRepository {
       (this.db.prepare(`SELECT MAX(order_index) AS maxOrder FROM slides WHERE ${ownerColumn} = ?`).get(owner.id) as {
         maxOrder: number | null;
       }).maxOrder ?? -1;
-    const assignedTemplate = owner.templateId ? this.getTemplateById(owner.templateId) : null;
-    const appliedTemplate = assignedTemplate && isTemplateCompatibleWithDeckItem(assignedTemplate, owner.type)
-      ? assignedTemplate
+    const assignedTheme = owner.themeId ? this.getThemeById(owner.themeId) : null;
+    const appliedTheme = assignedTheme && isThemeCompatibleWithDeckItem(assignedTheme, owner.type)
+      ? assignedTheme
       : null;
     const insertElement = this.db.prepare(
       `INSERT INTO slide_elements
@@ -2898,8 +2949,8 @@ export class CastRepository {
         now
       );
 
-    const initialElements = appliedTemplate
-      ? applyTemplateToElements(appliedTemplate, [], slideId)
+    const initialElements = appliedTheme
+      ? applyThemeToElements(appliedTheme, [], slideId)
       : owner.type === 'lyric'
         ? [{
           id: createId(),
@@ -3752,7 +3803,7 @@ export class CastRepository {
 
   // ─── Stages ───────────────────────────────────────────────────────
   // A Stage is a named container of SlideElement[] that maps to its own NDI
-  // sender. Schema mirrors templates (no kind, no template-application links).
+  // sender. Schema mirrors themes (no kind, no theme-application links).
 
   createStage(input: StageCreateInput): SnapshotPatch {
     const now = nowIso();
@@ -3904,7 +3955,7 @@ export class CastRepository {
     }
   }
 
-  private normalizeTemplateKind(kind: string | null | undefined): TemplateKind {
+  private normalizeThemeKind(kind: string | null | undefined): ThemeKind {
     if (kind === 'lyrics' || kind === 'overlays') return kind;
     return 'slides';
   }
@@ -3949,17 +4000,17 @@ export class CastRepository {
 
   private resolveDeckOwnerRow(id: Id): DeckOwnerRow | null {
     const deck = this.db
-      .prepare('SELECT template_id FROM presentations WHERE id = ?')
-      .get(id) as { template_id: string | null } | undefined;
+      .prepare('SELECT theme_id FROM presentations WHERE id = ?')
+      .get(id) as { theme_id: string | null } | undefined;
     if (deck) {
-      return { type: 'presentation', templateId: deck.template_id };
+      return { type: 'presentation', themeId: deck.theme_id };
     }
 
     const lyric = this.db
-      .prepare('SELECT template_id FROM lyrics WHERE id = ?')
-      .get(id) as { template_id: string | null } | undefined;
+      .prepare('SELECT theme_id FROM lyrics WHERE id = ?')
+      .get(id) as { theme_id: string | null } | undefined;
     if (lyric) {
-      return { type: 'lyric', templateId: lyric.template_id };
+      return { type: 'lyric', themeId: lyric.theme_id };
     }
 
     return null;
@@ -3984,8 +4035,8 @@ export class CastRepository {
 
     const tableName = this.getDeckTableName(owner.type);
     const row = this.db
-      .prepare(`SELECT id, title, template_id, order_index FROM ${tableName} WHERE id = ?`)
-      .get(itemId) as { id: string; title: string; template_id: string | null; order_index: number } | undefined;
+      .prepare(`SELECT id, title, theme_id, order_index FROM ${tableName} WHERE id = ?`)
+      .get(itemId) as { id: string; title: string; theme_id: string | null; order_index: number } | undefined;
 
     if (!row) return null;
 
@@ -4012,23 +4063,23 @@ export class CastRepository {
       id: row.id,
       type: owner.type,
       title: row.title,
-      templateId: row.template_id,
+      themeId: row.theme_id,
       order: row.order_index,
       slides: bundleSlides,
     };
   }
 
-  private getDeckBundleTemplateById(templateId: Id): DeckBundleTemplate | null {
+  private getDeckBundleThemeById(themeId: Id): DeckBundleTheme | null {
     const row = this.db
       .prepare(
         `SELECT id, name, kind, width, height, order_index, elements_json
-         FROM templates
+         FROM themes
          WHERE id = ?`
       )
-      .get(templateId) as {
+      .get(themeId) as {
       id: string;
       name: string;
-      kind: TemplateKind;
+      kind: ThemeKind;
       width: number;
       height: number;
       order_index: number;
@@ -4040,7 +4091,7 @@ export class CastRepository {
     return {
       id: row.id,
       name: row.name,
-      kind: this.normalizeTemplateKind(row.kind),
+      kind: this.normalizeThemeKind(row.kind),
       width: row.width,
       height: row.height,
       order: row.order_index,
@@ -4068,7 +4119,7 @@ export class CastRepository {
     upsertSlideElementIds?: Id[];
     upsertMediaAssetIds?: Id[];
     upsertOverlayIds?: Id[];
-    upsertTemplateIds?: Id[];
+    upsertThemeIds?: Id[];
     upsertStageIds?: Id[];
     upsertCollectionIds?: Id[];
     deletedLibraryIds?: Id[];
@@ -4078,7 +4129,7 @@ export class CastRepository {
     deletedSlideElementIds?: Id[];
     deletedMediaAssetIds?: Id[];
     deletedOverlayIds?: Id[];
-    deletedTemplateIds?: Id[];
+    deletedThemeIds?: Id[];
     deletedStageIds?: Id[];
     deletedCollectionIds?: Id[];
     replaceLibraryBundles?: boolean;
@@ -4109,8 +4160,8 @@ export class CastRepository {
     if (spec.upsertOverlayIds && spec.upsertOverlayIds.length > 0) {
       patch.upserts.overlays = this.getOverlaysByIds(spec.upsertOverlayIds);
     }
-    if (spec.upsertTemplateIds && spec.upsertTemplateIds.length > 0) {
-      patch.upserts.templates = this.getTemplatesByIds(spec.upsertTemplateIds);
+    if (spec.upsertThemeIds && spec.upsertThemeIds.length > 0) {
+      patch.upserts.themes = this.getThemesByIds(spec.upsertThemeIds);
     }
     if (spec.upsertStageIds && spec.upsertStageIds.length > 0) {
       patch.upserts.stages = this.getStagesByIds(spec.upsertStageIds);
@@ -4139,8 +4190,8 @@ export class CastRepository {
     if (spec.deletedOverlayIds && spec.deletedOverlayIds.length > 0) {
       patch.deletes.overlays = [...spec.deletedOverlayIds];
     }
-    if (spec.deletedTemplateIds && spec.deletedTemplateIds.length > 0) {
-      patch.deletes.templates = [...spec.deletedTemplateIds];
+    if (spec.deletedThemeIds && spec.deletedThemeIds.length > 0) {
+      patch.deletes.themes = [...spec.deletedThemeIds];
     }
     if (spec.deletedStageIds && spec.deletedStageIds.length > 0) {
       patch.deletes.stages = [...spec.deletedStageIds];
@@ -4193,7 +4244,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, title, template_id, collection_id, order_index, created_at, updated_at
+        `SELECT id, title, theme_id, collection_id, order_index, created_at, updated_at
          FROM presentations
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -4201,7 +4252,7 @@ export class CastRepository {
       .all(...ids) as Array<{
       id: string;
       title: string;
-      template_id: string | null;
+      theme_id: string | null;
       collection_id: string;
       order_index: number;
       created_at: string;
@@ -4211,7 +4262,7 @@ export class CastRepository {
       id: row.id,
       title: row.title,
       type: 'presentation',
-      templateId: row.template_id,
+      themeId: row.theme_id,
       collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
@@ -4224,7 +4275,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, title, template_id, collection_id, order_index, created_at, updated_at
+        `SELECT id, title, theme_id, collection_id, order_index, created_at, updated_at
          FROM lyrics
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -4232,7 +4283,7 @@ export class CastRepository {
       .all(...ids) as Array<{
       id: string;
       title: string;
-      template_id: string | null;
+      theme_id: string | null;
       collection_id: string;
       order_index: number;
       created_at: string;
@@ -4242,7 +4293,7 @@ export class CastRepository {
       id: row.id,
       title: row.title,
       type: 'lyric',
-      templateId: row.template_id,
+      themeId: row.theme_id,
       collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
@@ -4367,13 +4418,13 @@ export class CastRepository {
     }));
   }
 
-  private getTemplatesByIds(ids: Id[]): Template[] {
+  private getThemesByIds(ids: Id[]): Theme[] {
     if (ids.length === 0) return [];
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
         `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
-         FROM templates
+         FROM themes
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
       )
@@ -4392,7 +4443,7 @@ export class CastRepository {
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
-      kind: this.normalizeTemplateKind(row.kind),
+      kind: this.normalizeThemeKind(row.kind),
       width: row.width,
       height: row.height,
       order: row.order_index,
@@ -4510,17 +4561,17 @@ export class CastRepository {
       throw new Error('Unsupported bundle format.');
     }
 
-    if (!Array.isArray(manifest.items) || !Array.isArray(manifest.templates)) {
+    if (!Array.isArray(manifest.items) || !Array.isArray(manifest.themes)) {
       throw new Error('Invalid bundle manifest.');
     }
 
-    const templateIds = new Set<Id>();
-    for (const template of manifest.templates) {
-      if (!template?.id || !template.name) throw new Error('Invalid bundle template.');
-      if (template.kind !== 'slides' && template.kind !== 'lyrics' && template.kind !== 'overlays') {
-        throw new Error(`Unknown template kind: ${template.kind}`);
+    const themeIds = new Set<Id>();
+    for (const theme of manifest.themes) {
+      if (!theme?.id || !theme.name) throw new Error('Invalid bundle theme.');
+      if (theme.kind !== 'slides' && theme.kind !== 'lyrics' && theme.kind !== 'overlays') {
+        throw new Error(`Unknown theme kind: ${theme.kind}`);
       }
-      templateIds.add(template.id);
+      themeIds.add(theme.id);
     }
 
     for (const item of manifest.items) {
@@ -4528,13 +4579,13 @@ export class CastRepository {
       if (item.type !== 'presentation' && item.type !== 'lyric') {
         throw new Error(`Unknown content item type: ${item.type}`);
       }
-      if (item.templateId && !templateIds.has(item.templateId)) {
-        throw new Error(`Bundle item ${item.title} references a missing template.`);
+      if (item.themeId && !themeIds.has(item.themeId)) {
+        throw new Error(`Bundle item ${item.title} references a missing theme.`);
       }
-      if (item.templateId) {
-        const template = manifest.templates.find((entry) => entry.id === item.templateId) ?? null;
-        if (!template || !isTemplateCompatibleWithDeckItem(template as Template, item.type)) {
-          throw new Error(`Bundle item ${item.title} has an incompatible template.`);
+      if (item.themeId) {
+        const theme = manifest.themes.find((entry) => entry.id === item.themeId) ?? null;
+        if (!theme || !isThemeCompatibleWithDeckItem(theme as Theme, item.type)) {
+          throw new Error(`Bundle item ${item.title} has an incompatible theme.`);
         }
       }
       for (const slide of item.slides) {
@@ -4568,7 +4619,7 @@ export class CastRepository {
 
     function collect(
       elements: SlideElement[],
-      owner: { itemTitle?: string; templateName?: string; overlayName?: string; stageName?: string },
+      owner: { itemTitle?: string; themeName?: string; overlayName?: string; stageName?: string },
     ) {
       for (const element of elements) {
         const reference = readElementMediaReference(element);
@@ -4577,14 +4628,14 @@ export class CastRepository {
           elementTypes: new Set<'image' | 'video'>(),
           occurrenceCount: 0,
           itemTitles: new Set<string>(),
-          templateNames: new Set<string>(),
+          themeNames: new Set<string>(),
           overlayNames: new Set<string>(),
           stageNames: new Set<string>(),
         };
         current.elementTypes.add(reference.elementType);
         current.occurrenceCount += 1;
         if (owner.itemTitle) current.itemTitles.add(owner.itemTitle);
-        if (owner.templateName) current.templateNames.add(owner.templateName);
+        if (owner.themeName) current.themeNames.add(owner.themeName);
         if (owner.overlayName) current.overlayNames.add(owner.overlayName);
         if (owner.stageName) current.stageNames.add(owner.stageName);
         references.set(reference.source, current);
@@ -4597,8 +4648,8 @@ export class CastRepository {
       }
     }
 
-    for (const template of manifest.templates) {
-      collect(template.elements, { templateName: template.name });
+    for (const theme of manifest.themes) {
+      collect(theme.elements, { themeName: theme.name });
     }
 
     for (const overlay of manifest.overlays ?? []) {
@@ -4615,7 +4666,7 @@ export class CastRepository {
         elementTypes: Array.from(reference.elementTypes).sort(),
         occurrenceCount: reference.occurrenceCount,
         itemTitles: Array.from(reference.itemTitles).sort(),
-        templateNames: Array.from(reference.templateNames).sort(),
+        themeNames: Array.from(reference.themeNames).sort(),
         overlayNames: Array.from(reference.overlayNames).sort(),
         stageNames: Array.from(reference.stageNames).sort(),
       }))
@@ -4657,9 +4708,9 @@ export class CastRepository {
         elements: rewriteElements(slide.elements, decisionMap),
       })),
     }));
-    manifest.templates = manifest.templates.map((template) => ({
-      ...template,
-      elements: rewriteElements(template.elements, decisionMap),
+    manifest.themes = manifest.themes.map((theme) => ({
+      ...theme,
+      elements: rewriteElements(theme.elements, decisionMap),
     }));
     if (manifest.overlays) {
       manifest.overlays = manifest.overlays.map((overlay) => ({
@@ -4675,7 +4726,7 @@ export class CastRepository {
     }
     manifest.mediaReferences = collectDeckBundleMediaReferences(
       manifest.items,
-      manifest.templates,
+      manifest.themes,
       manifest.overlays ?? [],
       manifest.stages ?? [],
     );
@@ -4712,16 +4763,16 @@ export class CastRepository {
     return 'image';
   }
 
-  private createImportedTemplateElement(
+  private createImportedThemeElement(
     element: SlideElement,
-    templateId: Id,
+    themeId: Id,
     now: string,
     elementIndex: number,
   ): SlideElement {
     return {
       ...JSON.parse(JSON.stringify(element)) as SlideElement,
-      id: `${templateId}:template:${elementIndex}`,
-      slideId: templateId,
+      id: `${themeId}:theme:${elementIndex}`,
+      slideId: themeId,
       createdAt: now,
       updatedAt: now,
     };
@@ -4742,8 +4793,8 @@ export class CastRepository {
     };
   }
 
-  private getNextTemplateOrderIndex(): number {
-    const row = this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM templates').get() as { maxOrder: number | null };
+  private getNextThemeOrderIndex(): number {
+    const row = this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM themes').get() as { maxOrder: number | null };
     return (row.maxOrder ?? -1) + 1;
   }
 
@@ -4769,12 +4820,12 @@ export class CastRepository {
   private getPresentations(): Presentation[] {
     const rows = this.db
       .prepare(
-        'SELECT id, title, template_id, collection_id, order_index, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, theme_id, collection_id, order_index, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
       )
       .all() as Array<{
       id: string;
       title: string;
-      template_id: string | null;
+      theme_id: string | null;
       collection_id: string;
       order_index: number;
       created_at: string;
@@ -4785,7 +4836,7 @@ export class CastRepository {
       id: row.id,
       title: row.title,
       type: 'presentation',
-      templateId: row.template_id,
+      themeId: row.theme_id,
       collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
@@ -4796,12 +4847,12 @@ export class CastRepository {
   private getLyrics(): Lyric[] {
     const rows = this.db
       .prepare(
-        'SELECT id, title, template_id, collection_id, order_index, created_at, updated_at FROM lyrics ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, theme_id, collection_id, order_index, created_at, updated_at FROM lyrics ORDER BY order_index ASC, created_at ASC'
       )
       .all() as Array<{
       id: string;
       title: string;
-      template_id: string | null;
+      theme_id: string | null;
       collection_id: string;
       order_index: number;
       created_at: string;
@@ -4812,7 +4863,7 @@ export class CastRepository {
       id: row.id,
       title: row.title,
       type: 'lyric',
-      templateId: row.template_id,
+      themeId: row.theme_id,
       collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
@@ -5074,11 +5125,11 @@ export class CastRepository {
     }));
   }
 
-  private getTemplates(): Template[] {
+  private getThemes(): Theme[] {
     const rows = this.db
       .prepare(
         `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
-         FROM templates
+         FROM themes
          ORDER BY order_index ASC, created_at ASC`
       )
       .all() as Array<{
@@ -5097,7 +5148,7 @@ export class CastRepository {
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
-      kind: this.normalizeTemplateKind(row.kind),
+      kind: this.normalizeThemeKind(row.kind),
       width: row.width,
       height: row.height,
       order: row.order_index,
@@ -5175,14 +5226,14 @@ export class CastRepository {
     }));
   }
 
-  private getTemplateById(templateId: Id): Template | null {
+  private getThemeById(themeId: Id): Theme | null {
     const row = this.db
       .prepare(
         `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
-         FROM templates
+         FROM themes
          WHERE id = ?`
       )
-      .get(templateId) as {
+      .get(themeId) as {
         id: string;
         name: string;
         kind: string;
@@ -5198,7 +5249,7 @@ export class CastRepository {
     return {
       id: row.id,
       name: row.name,
-      kind: this.normalizeTemplateKind(row.kind),
+      kind: this.normalizeThemeKind(row.kind),
       width: row.width,
       height: row.height,
       order: row.order_index,
@@ -5237,16 +5288,16 @@ export class CastRepository {
     tx();
   }
 
-  private normalizeTemplateOrder(): void {
-    const templates = this.db
-      .prepare('SELECT id FROM templates ORDER BY order_index ASC, created_at ASC')
+  private normalizeThemeOrder(): void {
+    const themes = this.db
+      .prepare('SELECT id FROM themes ORDER BY order_index ASC, created_at ASC')
       .all() as Array<{ id: string }>;
-    const update = this.db.prepare('UPDATE templates SET order_index = ?, updated_at = ? WHERE id = ?');
+    const update = this.db.prepare('UPDATE themes SET order_index = ?, updated_at = ? WHERE id = ?');
     const now = nowIso();
 
     const tx = this.db.transaction(() => {
-      templates.forEach((template, index) => {
-        update.run(index, now, template.id);
+      themes.forEach((theme, index) => {
+        update.run(index, now, theme.id);
       });
     });
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { Overlay, Slide, Stage, Template } from '@core/types';
-import { useDeckEditor, useOverlayEditor, useStageEditor, useTemplateEditor } from '@renderer/contexts/asset-editor/asset-editor-context';
+import type { Overlay, Slide, Stage, Theme } from '@core/types';
+import { useDeckEditor, useOverlayEditor, useStageEditor, useThemeEditor } from '@renderer/contexts/asset-editor/asset-editor-context';
 import { useNavigation } from '@renderer/contexts/navigation-context';
 import { useSlides } from '@renderer/contexts/slide-context';
 import { useWorkbench } from '@renderer/contexts/workbench-context';
@@ -14,7 +14,7 @@ vi.mock('@renderer/contexts/asset-editor/asset-editor-context', () => ({
   useDeckEditor: vi.fn(),
   useOverlayEditor: vi.fn(),
   useStageEditor: vi.fn(),
-  useTemplateEditor: vi.fn(),
+  useThemeEditor: vi.fn(),
 }));
 
 const useNavigationMock = vi.mocked(useNavigation);
@@ -23,7 +23,7 @@ const useWorkbenchMock = vi.mocked(useWorkbench);
 const useDeckEditorMock = vi.mocked(useDeckEditor);
 const useOverlayEditorMock = vi.mocked(useOverlayEditor);
 const useStageEditorMock = vi.mocked(useStageEditor);
-const useTemplateEditorMock = vi.mocked(useTemplateEditor);
+const useThemeEditorMock = vi.mocked(useThemeEditor);
 
 function makeSlide(id: string): Slide {
   return {
@@ -39,16 +39,16 @@ function makeSlide(id: string): Slide {
   };
 }
 
-function makeTemplate(id: string, kind: Template['kind']): Template {
+function makeTheme(id: string, kind: Theme['kind']): Theme {
   return {
     id,
-    name: 'Template',
+    name: 'Theme',
     kind,
     width: 1920,
     height: 1080,
     order: 0,
     elements: [],
-    collectionId: 'template-default',
+    collectionId: 'theme-default',
     createdAt: '',
     updatedAt: '',
   };
@@ -117,9 +117,9 @@ describe('useActiveEditorSource', () => {
       currentOverlay: null,
       updateOverlayDraft: vi.fn(),
     } as never);
-    useTemplateEditorMock.mockReturnValue({
-      currentTemplate: null,
-      replaceTemplateElements: vi.fn(),
+    useThemeEditorMock.mockReturnValue({
+      currentTheme: null,
+      replaceThemeElements: vi.fn(),
     } as never);
     useStageEditorMock.mockReturnValue({
       currentStage: null,
@@ -178,22 +178,22 @@ describe('useActiveEditorSource', () => {
     expect(source.createCapabilities.text).toBe(false);
   });
 
-  it('resolves template editor metadata from the selected template', () => {
+  it('resolves theme editor metadata from the selected theme', () => {
     useWorkbenchMock.mockReturnValue({
-      state: { workbenchMode: 'template-editor' },
+      state: { workbenchMode: 'theme-editor' },
     } as never);
-    useTemplateEditorMock.mockReturnValue({
-      currentTemplate: makeTemplate('template-1', 'lyrics'),
-      replaceTemplateElements: vi.fn(),
+    useThemeEditorMock.mockReturnValue({
+      currentTheme: makeTheme('theme-1', 'lyrics'),
+      replaceThemeElements: vi.fn(),
     } as never);
 
     const { result } = renderHook(() => useActiveEditorSource());
 
     const source = result.current;
-    expect(source.mode).toBe('template-editor');
-    if (source.mode !== 'template-editor') throw new Error('Expected template editor source');
-    expect(source.meta.templateKind).toBe('lyrics');
-    expect(source.emptyStateLabel).toBe('No template selected.');
+    expect(source.mode).toBe('theme-editor');
+    if (source.mode !== 'theme-editor') throw new Error('Expected theme editor source');
+    expect(source.meta.themeKind).toBe('lyrics');
+    expect(source.emptyStateLabel).toBe('No theme selected.');
     expect(source.createCapabilities.text).toBe(false);
   });
 

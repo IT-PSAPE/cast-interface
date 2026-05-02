@@ -22,8 +22,8 @@ import type {
   OverlayUpdateInput,
   StageCreateInput,
   StageUpdateInput,
-  TemplateCreateInput,
-  TemplateUpdateInput,
+  ThemeCreateInput,
+  ThemeUpdateInput,
   SlideCreateInput,
   SlideNotesUpdateInput,
   SlideOrderUpdateInput
@@ -235,20 +235,20 @@ export const registerIpcHandlers = (
   safeHandle(IPC.updateOverlay, (_event, input: OverlayUpdateInput) => repo.updateOverlay(input));
   safeHandle(IPC.setOverlayEnabled, (_event, overlayId: Id, enabled: boolean) => repo.setOverlayEnabled(overlayId, enabled));
   safeHandle(IPC.deleteOverlay, (_event, overlayId: Id) => repo.deleteOverlay(overlayId));
-  safeHandle(IPC.createTemplate, (_event, input: TemplateCreateInput) => repo.createTemplate(input));
-  safeHandle(IPC.updateTemplate, (_event, input: TemplateUpdateInput) => repo.updateTemplate(input));
-  safeHandle(IPC.deleteTemplate, (_event, templateId: Id) => repo.deleteTemplate(templateId));
-  safeHandle(IPC.applyTemplateToDeckItem, (_event, templateId: Id, itemId: Id) =>
-    repo.applyTemplateToDeckItem(templateId, itemId)
+  safeHandle(IPC.createTheme, (_event, input: ThemeCreateInput) => repo.createTheme(input));
+  safeHandle(IPC.updateTheme, (_event, input: ThemeUpdateInput) => repo.updateTheme(input));
+  safeHandle(IPC.deleteTheme, (_event, themeId: Id) => repo.deleteTheme(themeId));
+  safeHandle(IPC.applyThemeToDeckItem, (_event, themeId: Id, itemId: Id) =>
+    repo.applyThemeToDeckItem(themeId, itemId)
   );
-  safeHandle(IPC.detachTemplateFromDeckItem, (_event, itemId: Id) =>
-    repo.detachTemplateFromDeckItem(itemId)
+  safeHandle(IPC.detachThemeFromDeckItem, (_event, itemId: Id) =>
+    repo.detachThemeFromDeckItem(itemId)
   );
-  safeHandle(IPC.syncTemplateToLinkedDeckItems, (_event, templateId: Id) =>
-    repo.syncTemplateToLinkedDeckItems(templateId)
+  safeHandle(IPC.syncThemeToLinkedDeckItems, (_event, themeId: Id) =>
+    repo.syncThemeToLinkedDeckItems(themeId)
   );
-  safeHandle(IPC.applyTemplateToOverlay, (_event, templateId: Id, overlayId: Id) =>
-    repo.applyTemplateToOverlay(templateId, overlayId)
+  safeHandle(IPC.applyThemeToOverlay, (_event, themeId: Id, overlayId: Id) =>
+    repo.applyThemeToOverlay(themeId, overlayId)
   );
   safeHandle(IPC.createStage, (_event, input: StageCreateInput) => repo.createStage(input));
   safeHandle(IPC.updateStage, (_event, input: StageUpdateInput) => repo.updateStage(input));

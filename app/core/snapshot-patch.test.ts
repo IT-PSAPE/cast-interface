@@ -33,7 +33,7 @@ function buildSnapshot(): AppSnapshot {
     slideElements: [],
     mediaAssets: [],
     overlays: [],
-    templates: [],
+    themes: [],
     stages: [],
     collections: [],
   };

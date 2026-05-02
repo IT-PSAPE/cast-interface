@@ -22,10 +22,10 @@ export function StageEditorInspectorPanel() {
 
   useEffect(() => {
     if (!hasSelection) {
-      // Mirror the template-editor pattern: when nothing is selected, fall
+      // Mirror the theme-editor pattern: when nothing is selected, fall
       // back to the stage-level tab (rename + meta) so the panel always has
       // something useful instead of an empty state.
-      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'binding' || inspectorTab === 'slide' || inspectorTab === 'presentation' || inspectorTab === 'template' || inspectorTab === 'video') {
+      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'binding' || inspectorTab === 'slide' || inspectorTab === 'presentation' || inspectorTab === 'theme' || inspectorTab === 'video') {
         setInspectorTab('stage');
       }
       return;
