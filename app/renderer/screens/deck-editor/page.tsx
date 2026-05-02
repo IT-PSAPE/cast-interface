@@ -41,7 +41,7 @@ function DeckEditorScreenContent() {
           <LumaCastPanel.Root className="h-full border-r border-secondary">
             <SplitPanel.Panel splitId={'slide-list-panel'} orientation="vertical" className="h-full">
               <SplitPanel.Segment id={'slide-list'} defaultSize={440} minSize={180}>
-                <LumaCastPanel.Group>
+                <LumaCastPanel.Group className="h-full min-h-0">
                   <LumaCastPanel.GroupTitle>
                     <DeckItemPicker />
                     <Dropdown>
@@ -94,7 +94,7 @@ function DeckEditorScreenContent() {
                 </LumaCastPanel.Group>
               </SplitPanel.Segment>
               <SplitPanel.Segment id={"slide-objects"} defaultSize={220} minSize={160}>
-                <LumaCastPanel.Group>
+                <LumaCastPanel.Group className="h-full min-h-0">
                   <LumaCastPanel.GroupTitle className="border-t">
                     <Label.xs className="mr-auto">Layers</Label.xs>
                   </LumaCastPanel.GroupTitle>

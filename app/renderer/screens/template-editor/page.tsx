@@ -33,7 +33,7 @@ function TemplateEditorScreenContent() {
         <LumaCastPanel.Root className="h-full border-r border-secondary">
           <SplitPanel.Panel splitId="template-list-panel" orientation="vertical" className="h-full">
             <SplitPanel.Segment id="template-list" defaultSize={440} minSize={180}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle>
                   <Label.sm className="mr-auto">Templates</Label.sm>
                   <Dropdown>
@@ -77,7 +77,7 @@ function TemplateEditorScreenContent() {
               </LumaCastPanel.Group>
             </SplitPanel.Segment>
             <SplitPanel.Segment id="template-objects" defaultSize={220} minSize={160}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle className="border-t">
                   <Label.xs className="mr-auto">Layers</Label.xs>
                 </LumaCastPanel.GroupTitle>

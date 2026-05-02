@@ -31,7 +31,7 @@ function StageEditorScreenContent() {
         <LumaCastPanel.Root className="h-full border-r border-secondary">
           <SplitPanel.Panel splitId="stage-list-panel" orientation="vertical" className="h-full">
             <SplitPanel.Segment id="stage-list" defaultSize={440} minSize={180}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle>
                   <Label.sm className="mr-auto">Stages</Label.sm>
                   <Dropdown>
@@ -72,7 +72,7 @@ function StageEditorScreenContent() {
               </LumaCastPanel.Group>
             </SplitPanel.Segment>
             <SplitPanel.Segment id="stage-objects" defaultSize={220} minSize={160}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle className="border-t">
                   <Label.xs className="mr-auto">Layers</Label.xs>
                 </LumaCastPanel.GroupTitle>

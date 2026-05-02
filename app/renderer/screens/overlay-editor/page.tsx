@@ -32,7 +32,7 @@ function OverlayEditorScreenContent() {
         <LumaCastPanel.Root className="h-full border-r border-secondary">
           <SplitPanel.Panel splitId="overlay-list-panel" orientation="vertical" className="h-full">
             <SplitPanel.Segment id="overlay-list" defaultSize={440} minSize={180}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle>
                   <Label.sm className="mr-auto">Overlays</Label.sm>
                   <Dropdown>
@@ -73,7 +73,7 @@ function OverlayEditorScreenContent() {
               </LumaCastPanel.Group>
             </SplitPanel.Segment>
             <SplitPanel.Segment id="overlay-objects" defaultSize={220} minSize={160}>
-              <LumaCastPanel.Group>
+              <LumaCastPanel.Group className="h-full min-h-0">
                 <LumaCastPanel.GroupTitle className="border-t">
                   <Label.xs className="mr-auto">Layers</Label.xs>
                 </LumaCastPanel.GroupTitle>
