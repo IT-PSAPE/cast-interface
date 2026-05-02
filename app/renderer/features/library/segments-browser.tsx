@@ -44,10 +44,12 @@ export function SegmentsBrowser() {
         <ScrollArea.Root>
           <ScrollArea.Viewport>
             <Accordion type='multiple' value={expandedSegmentIds} onValueChange={handleSegmentValueChange}>
-              {rawSegments.map((segment) => (
+              {rawSegments.map((segment, index) => (
                 <PlaylistSegmentGroup
                   key={segment.segment.id}
                   segment={segment}
+                  index={index}
+                  totalSegments={rawSegments.length}
                 />
               ))}
             </Accordion>

@@ -8,7 +8,12 @@ import type {
   ElementCreateInput,
   ElementUpdateInput,
   Id,
-  MediaAsset,
+  MediaAssetCreateInput,
+  CollectionAssignmentInput,
+  CollectionCreateInput,
+  CollectionDeleteInput,
+  CollectionRenameInput,
+  CollectionReorderInput,
   NdiDiagnostics,
   NdiFrameTelemetry,
   NdiOutputConfig,
@@ -207,7 +212,7 @@ export const registerIpcHandlers = (
   safeHandle(IPC.updateElementsBatch, (_event, inputs: ElementUpdateInput[]) => repo.updateElementsBatch(inputs));
   safeHandle(IPC.deleteElement, (_event, id: Id) => repo.deleteElement(id));
   safeHandle(IPC.deleteElementsBatch, (_event, ids: Id[]) => repo.deleteElementsBatch(ids));
-  safeHandle(IPC.createMediaAsset, (_event, asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) =>
+  safeHandle(IPC.createMediaAsset, (_event, asset: MediaAssetCreateInput) =>
     repo.createMediaAsset(asset)
   );
   safeHandle(IPC.deleteMediaAsset, (_event, id: Id) => repo.deleteMediaAsset(id));
@@ -258,6 +263,11 @@ export const registerIpcHandlers = (
   safeHandle(IPC.deletePlaylistSegment, (_event, id: Id) => repo.deletePlaylistSegment(id));
   safeHandle(IPC.deletePresentation, (_event, id: Id) => repo.deletePresentation(id));
   safeHandle(IPC.deleteLyric, (_event, id: Id) => repo.deleteLyric(id));
+  safeHandle(IPC.createCollection, (_event, input: CollectionCreateInput) => repo.createCollection(input));
+  safeHandle(IPC.renameCollection, (_event, input: CollectionRenameInput) => repo.renameCollection(input));
+  safeHandle(IPC.deleteCollection, (_event, input: CollectionDeleteInput) => repo.deleteCollection(input));
+  safeHandle(IPC.reorderCollections, (_event, input: CollectionReorderInput) => repo.reorderCollections(input));
+  safeHandle(IPC.setItemCollection, (_event, input: CollectionAssignmentInput) => repo.setItemCollection(input));
   safeHandle(IPC.setNdiOutputEnabled, (_event, name: NdiOutputName, enabled: boolean) => {
     if (!NDI_OUTPUT_NAMES.has(name) || typeof enabled !== 'boolean') {
       throw new Error('Invalid NDI output toggle payload');

@@ -23,6 +23,7 @@ function buildEmptySnapshot(): AppSnapshot {
     overlays: [],
     templates: [],
     stages: [],
+    collections: [],
   };
 }
 

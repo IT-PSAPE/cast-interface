@@ -200,7 +200,7 @@ app.whenReady().then(() => {
       return createForbiddenResponse();
     }
 
-    return fetchLocalFileResponse(filePath).catch((error: unknown) => {
+    return fetchLocalFileResponse(filePath, request).catch((error: unknown) => {
       console.error('[cast-media] Failed to fetch local media', error);
       return createNotFoundResponse();
     });

@@ -143,6 +143,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
       type: 'text',
       x: 0, y: 0, width: 1920, height: 1080, opacity: 1, zIndex: 0, enabled: true,
       payload: { text: '', fontFamily: 'Avenir Next', fontSize: 48, color: '#FFFFFF', alignment: 'left', weight: '700' },
+      collectionId: '',
       createdAt: now, updatedAt: now,
       ...getOverlayDefaults({
         animationKind: overlayDefaults.animationKind,
@@ -319,6 +320,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
       kind, width: 1920, height: 1080,
       order: (templates.at(-1)?.order ?? -1) + 1,
       elements: createDefaultTemplateElements(kind, id, now),
+      collectionId: '',
       createdAt: now, updatedAt: now,
     };
     templateStaged.setStagedItems((current) => [...(current ?? persistedTemplates), draft]);
@@ -512,6 +514,7 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
       height: 1080,
       order: (stages.at(-1)?.order ?? -1) + 1,
       elements: [],
+      collectionId: '',
       createdAt: now,
       updatedAt: now,
     };

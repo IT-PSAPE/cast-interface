@@ -12,30 +12,51 @@ import { useTemplateEditor } from '../../../contexts/asset-editor/asset-editor-c
 import { useProjectContent } from '../../../contexts/use-project-content';
 import { buildRenderScene } from '../../canvas/build-render-scene';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
-import { useResourceDrawer } from '../../workbench/resource-drawer-context';
+import { useGridSize } from '../../../hooks/use-grid-size';
+import type { ResourceDrawerViewMode } from '../../../types/ui';
+import { BinShell } from '../../workbench/bin-shell';
+import type { BinCollectionsApi } from '../../workbench/use-bin-collections';
 import { useTemplateBin } from './use-template-bin';
 
-interface TemplateBinPanelProps {
-  filterText: string;
-  gridItemSize: number;
-}
-
-export function TemplateBinPanel({ filterText, gridItemSize }: TemplateBinPanelProps) {
-  const { drawerViewMode } = useResourceDrawer();
-  const { filteredTemplates, handleApplyTemplate } = useTemplateBin(filterText);
+export function TemplateBinPanel() {
+  const {
+    filteredTemplates,
+    handleApplyTemplate,
+    collections,
+    searchValue,
+    setSearchValue,
+    viewMode,
+    setViewMode,
+  } = useTemplateBin();
+  const { gridSize, setGridSize, min, max, step } = useGridSize('lumacast.grid-size.template-bin', 6, 4, 8);
 
   return (
-    <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
-      {filteredTemplates.map((template, index) => (
-        <TemplateBinItem
-          key={template.id}
-          template={template}
-          index={index}
-          mode={drawerViewMode}
-          onApply={handleApplyTemplate}
-        />
-      ))}
-    </BinPanelLayout>
+    <BinShell
+      collections={collections}
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      searchPlaceholder="Search templates…"
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      gridSize={gridSize}
+      gridSizeMin={min}
+      gridSizeMax={max}
+      gridSizeStep={step}
+      onGridSizeChange={setGridSize}
+    >
+      <BinPanelLayout gridItemSize={gridSize} mode={viewMode}>
+        {filteredTemplates.map((template, index) => (
+          <TemplateBinItem
+            key={template.id}
+            template={template}
+            index={index}
+            mode={viewMode}
+            onApply={handleApplyTemplate}
+            collectionsApi={collections}
+          />
+        ))}
+      </BinPanelLayout>
+    </BinShell>
   );
 }
 
@@ -43,9 +64,10 @@ interface TemplateItemProps {
   template: Template;
   index: number;
   onApply: (template: Template) => void;
+  collectionsApi: BinCollectionsApi;
 }
 
-function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: NonNullable<ReturnType<typeof useResourceDrawer>['drawerViewMode']> }) {
+function TemplateBinItem({ mode, ...props }: TemplateItemProps & { mode: ResourceDrawerViewMode }) {
   if (mode === 'list') return <TemplateRow {...props} />;
   return <TemplateTile {...props} />;
 }
@@ -58,7 +80,7 @@ function TemplateRowImpl(props: TemplateItemProps) {
   );
 }
 
-function TemplateRowBody({ template, index, onApply }: TemplateItemProps) {
+function TemplateRowBody({ template, index, onApply, collectionsApi }: TemplateItemProps) {
   const { renameTemplate } = useTemplateEditor();
   const renameRef = useRef<RenameFieldHandle>(null);
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
@@ -90,7 +112,7 @@ function TemplateRowBody({ template, index, onApply }: TemplateItemProps) {
           <span className="text-xs uppercase tracking-wide text-tertiary">{template.kind}</span>
         </SelectableRow.Trailing>
       </SelectableRow.Root>
-      <TemplateContextMenuItems template={template} renameRef={renameRef} />
+      <TemplateContextMenuItems template={template} renameRef={renameRef} collectionsApi={collectionsApi} />
     </>
   );
 }
@@ -103,7 +125,7 @@ function TemplateTileImpl(props: TemplateItemProps) {
   );
 }
 
-function TemplateTileBody({ template, index, onApply }: TemplateItemProps) {
+function TemplateTileBody({ template, index, onApply, collectionsApi }: TemplateItemProps) {
   const { renameTemplate } = useTemplateEditor();
   const scene = useMemo(() => buildRenderScene(null, template.elements), [template.elements]);
   const renameRef = useRef<RenameFieldHandle>(null);
@@ -134,7 +156,7 @@ function TemplateTileBody({ template, index, onApply }: TemplateItemProps) {
           </Thumbnail.Caption>
         </Thumbnail.Tile>
       </div>
-      <TemplateContextMenuItems template={template} renameRef={renameRef} />
+      <TemplateContextMenuItems template={template} renameRef={renameRef} collectionsApi={collectionsApi} />
     </>
   );
 }
@@ -142,9 +164,11 @@ function TemplateTileBody({ template, index, onApply }: TemplateItemProps) {
 function TemplateContextMenuItems({
   template,
   renameRef,
+  collectionsApi,
 }: {
   template: Template;
   renameRef: React.RefObject<RenameFieldHandle | null>;
+  collectionsApi: BinCollectionsApi;
 }) {
   const { applyTemplateToTarget, deleteTemplate } = useTemplateEditor();
   const { presentations, lyrics, overlays } = useProjectContent();
@@ -203,6 +227,18 @@ function TemplateContextMenuItems({
             </>
           )}
         </ContextMenu.Submenu>
+        {collectionsApi.collections.filter((c) => c.id !== template.collectionId).length > 0 ? (
+          <ContextMenu.Submenu label="Move to collection">
+            {collectionsApi.collections.filter((c) => c.id !== template.collectionId).map((collection) => (
+              <ContextMenu.Item
+                key={collection.id}
+                onSelect={() => { void collectionsApi.assignItem('template', template.id, collection.id); }}
+              >
+                {collection.name}
+              </ContextMenu.Item>
+            ))}
+          </ContextMenu.Submenu>
+        ) : null}
         <ContextMenu.Separator />
         <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
       </ContextMenu.Menu>

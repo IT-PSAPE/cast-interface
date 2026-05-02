@@ -11,7 +11,8 @@ export interface EditorSourceFrame {
 export interface EditorCreateCapabilities {
   text: boolean;
   shape: boolean;
-  media: boolean;
+  image: boolean;
+  video: boolean;
 }
 
 interface EditorSourceBase<TMode extends WorkbenchMode, TMeta> {

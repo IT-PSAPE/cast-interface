@@ -22,6 +22,7 @@ function makeAsset(id: string, type: MediaAsset['type']): MediaAsset {
     name: id,
     type,
     src: `/${id}`,
+    collectionId: 'media-default',
     order: 0,
     createdAt: '',
     updatedAt: '',

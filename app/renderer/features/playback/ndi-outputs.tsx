@@ -24,14 +24,14 @@ export function NdiOutputs() {
       <NdiFrameCapture
         senderName="audience"
         scene={programScene}
-        surface="show"
+        surface="ndi-show"
         enabled={outputState.audience}
       />
       <BindingProvider value={stageBindingValue}>
         <NdiFrameCapture
           senderName="stage"
           scene={stageScene}
-          surface="stage"
+          surface="ndi-stage"
           enabled={outputState.stage}
         />
       </BindingProvider>

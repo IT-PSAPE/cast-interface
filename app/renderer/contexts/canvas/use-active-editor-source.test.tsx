@@ -48,6 +48,7 @@ function makeTemplate(id: string, kind: Template['kind']): Template {
     height: 1080,
     order: 0,
     elements: [],
+    collectionId: 'template-default',
     createdAt: '',
     updatedAt: '',
   };
@@ -61,6 +62,7 @@ function makeStage(id: string): Stage {
     height: 720,
     order: 0,
     elements: [],
+    collectionId: 'stage-default',
     createdAt: '',
     updatedAt: '',
   };
@@ -90,6 +92,7 @@ function makeOverlay(id: string): Overlay {
     },
     elements: [],
     animation: { kind: 'none', durationMs: 0, autoClearDurationMs: null },
+    collectionId: 'overlay-default',
     createdAt: '',
     updatedAt: '',
   };

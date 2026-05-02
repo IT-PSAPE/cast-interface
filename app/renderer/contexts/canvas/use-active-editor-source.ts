@@ -10,7 +10,8 @@ import type { ActiveEditorSource, EditorCreateCapabilities } from './editor-sour
 const NOOP_CREATE_CAPABILITIES: EditorCreateCapabilities = {
   text: false,
   shape: false,
-  media: false,
+  image: false,
+  video: false,
 };
 
 function noopReplaceElements(_elements: SlideElement[]) {}
@@ -42,7 +43,8 @@ export function useActiveEditorSource(): ActiveEditorSource {
         createCapabilities: {
           text: currentDeckItem?.type !== 'lyric',
           shape: true,
-          media: true,
+          image: true,
+          video: true,
         },
         meta: {
           slide: currentSlide,
@@ -75,7 +77,8 @@ export function useActiveEditorSource(): ActiveEditorSource {
         createCapabilities: {
           text: true,
           shape: true,
-          media: true,
+          image: true,
+          video: true,
         },
         meta: {
           overlay: currentOverlay,
@@ -99,7 +102,8 @@ export function useActiveEditorSource(): ActiveEditorSource {
         createCapabilities: {
           text: currentTemplate?.kind !== 'lyrics',
           shape: true,
-          media: true,
+          image: true,
+          video: true,
         },
         meta: {
           template: currentTemplate,
@@ -124,7 +128,8 @@ export function useActiveEditorSource(): ActiveEditorSource {
         createCapabilities: {
           text: true,
           shape: true,
-          media: true,
+          image: true,
+          video: true,
         },
         meta: {
           stage: currentStage,

@@ -9,32 +9,54 @@ import { SelectableRow } from '../../../components/display/selectable-row';
 import { Thumbnail } from '../../../components/display/thumbnail';
 import { Paragraph } from '@renderer/components/display/text';
 import { BinPanelLayout } from '@renderer/components/layout/collection-layout';
-import { useResourceDrawer } from '../../workbench/resource-drawer-context';
 import { useElements } from '../../../contexts/canvas/canvas-context';
 import { useCast } from '../../../contexts/app-context';
-import { useMediaBin } from './use-media-bin';
+import { usePresentationMediaLayer } from '../../../contexts/playback/playback-context';
+import { useWorkbench } from '../../../contexts/workbench-context';
+import { useGridSize } from '../../../hooks/use-grid-size';
+import { BinShell } from '../../workbench/bin-shell';
+import type { BinCollectionsApi } from '../../workbench/use-bin-collections';
+import { useMediaTypeBin, type MediaBinKind } from './use-media-type-bin';
 
 interface MediaBinPanelProps {
-  filterText: string;
-  gridItemSize: number;
+  binKind: MediaBinKind;
 }
 
-export function MediaBinPanel({ filterText, gridItemSize }: MediaBinPanelProps) {
-  const { drawerViewMode } = useResourceDrawer();
-  const { mediaAssets, mediaLayerAssetId, videoLayerAssetId, handleApply } = useMediaBin(filterText);
+export function MediaBinPanel({ binKind }: MediaBinPanelProps) {
+  const { mediaAssets, collections, searchValue, setSearchValue, viewMode, setViewMode, moveAssetToCollection } =
+    useMediaTypeBin(binKind);
+  const { mediaLayerAssetId, videoLayerAssetId, setMediaLayerAsset } = usePresentationMediaLayer();
+  const gridStorageKey = `lumacast.grid-size.${binKind}-bin`;
+  const { gridSize, setGridSize, min, max, step } = useGridSize(gridStorageKey, 3, 2, 4);
 
   return (
-    <BinPanelLayout gridItemSize={gridItemSize} mode={drawerViewMode}>
-      {mediaAssets.map((asset) => (
-        <MediaBinItem
-          key={asset.id}
-          asset={asset}
-          isActive={mediaLayerAssetId === asset.id || videoLayerAssetId === asset.id}
-          mode={drawerViewMode}
-          onAssignLayer={handleApply}
-        />
-      ))}
-    </BinPanelLayout>
+    <BinShell
+      collections={collections}
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      searchPlaceholder={`Search ${binKind}…`}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      gridSize={gridSize}
+      gridSizeMin={min}
+      gridSizeMax={max}
+      gridSizeStep={step}
+      onGridSizeChange={setGridSize}
+    >
+      <BinPanelLayout gridItemSize={gridSize} mode={viewMode}>
+        {mediaAssets.map((asset) => (
+          <MediaBinItem
+            key={asset.id}
+            asset={asset}
+            isActive={mediaLayerAssetId === asset.id || videoLayerAssetId === asset.id}
+            mode={viewMode}
+            onAssignLayer={setMediaLayerAsset}
+            collectionsApi={collections}
+            onMoveToCollection={moveAssetToCollection}
+          />
+        ))}
+      </BinPanelLayout>
+    </BinShell>
   );
 }
 
@@ -42,9 +64,11 @@ interface MediaItemProps {
   asset: MediaAsset;
   isActive: boolean;
   onAssignLayer: (id: Id) => void;
+  collectionsApi: BinCollectionsApi;
+  onMoveToCollection: (assetId: Id, collectionId: Id) => Promise<void>;
 }
 
-function MediaBinItem({ mode, ...props }: MediaItemProps & { mode: NonNullable<ReturnType<typeof useResourceDrawer>['drawerViewMode']> }) {
+function MediaBinItem({ mode, ...props }: MediaItemProps & { mode: 'grid' | 'list' }) {
   if (mode === 'list') return <MediaRow {...props} />;
   return <MediaTile {...props} />;
 }
@@ -77,12 +101,34 @@ function useMediaContextActions(asset: MediaAsset) {
   return { handleReplaceSource, handleDelete };
 }
 
-function MediaContextMenuItems({ asset }: { asset: MediaAsset }) {
+function MediaContextMenuItems({
+  asset,
+  collectionsApi,
+  onMoveToCollection,
+}: {
+  asset: MediaAsset;
+  collectionsApi: BinCollectionsApi;
+  onMoveToCollection: (assetId: Id, collectionId: Id) => Promise<void>;
+}) {
   const { handleReplaceSource, handleDelete } = useMediaContextActions(asset);
+  const otherCollections = collectionsApi.collections.filter((c) => c.id !== asset.collectionId);
   return (
     <ContextMenu.Portal>
       <ContextMenu.Menu>
         <ContextMenu.Item onSelect={() => { void handleReplaceSource(); }}>Replace source…</ContextMenu.Item>
+        <ContextMenu.Separator />
+        {otherCollections.length > 0 ? (
+          <ContextMenu.Submenu label="Move to collection">
+            {otherCollections.map((collection) => (
+              <ContextMenu.Item
+                key={collection.id}
+                onSelect={() => { void onMoveToCollection(asset.id, collection.id); }}
+              >
+                {collection.name}
+              </ContextMenu.Item>
+            ))}
+          </ContextMenu.Submenu>
+        ) : null}
         <ContextMenu.Separator />
         <ContextMenu.Item variant="destructive" onSelect={() => { void handleDelete(); }}>Delete</ContextMenu.Item>
       </ContextMenu.Menu>
@@ -98,10 +144,17 @@ function MediaRow(props: MediaItemProps) {
   );
 }
 
-function MediaRowBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
+function MediaRowBody({ asset, isActive, onAssignLayer, collectionsApi, onMoveToCollection }: MediaItemProps) {
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+  const {
+    state: { previewMode, previewSingleSurface },
+    actions: { setPreviewSingleSurface },
+  } = useWorkbench();
 
   function handleAssignLayer() {
+    if ((asset.type === 'video' || asset.type === 'animation') && previewMode === 'single' && previewSingleSurface !== 'preview') {
+      setPreviewSingleSurface('preview');
+    }
     onAssignLayer(asset.id);
   }
 
@@ -112,17 +165,19 @@ function MediaRowBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
         ref={triggerRef}
         selected={isActive}
         onClick={handleAssignLayer}
-        className="h-9"
+        className="h-12"
       >
         <SelectableRow.Leading>
-          <MediaAssetIcon asset={asset} size={14} strokeWidth={1.75} className="shrink-0 text-tertiary" />
+          <div className="relative h-10 w-10 overflow-hidden rounded bg-tertiary/40">
+            <MediaThumbnail asset={asset} />
+          </div>
         </SelectableRow.Leading>
-        <SelectableRow.Label>{asset.name}</SelectableRow.Label>
-        <SelectableRow.Trailing>
-          <span className="text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
-        </SelectableRow.Trailing>
+        <div className="flex min-w-0 flex-1 flex-col text-left">
+          <span className="truncate text-sm font-medium">{asset.name}</span>
+          <span className="truncate text-xs uppercase tracking-wide text-tertiary">{asset.type}</span>
+        </div>
       </SelectableRow.Root>
-      <MediaContextMenuItems asset={asset} />
+      <MediaContextMenuItems asset={asset} collectionsApi={collectionsApi} onMoveToCollection={onMoveToCollection} />
     </>
   );
 }
@@ -135,10 +190,17 @@ function MediaTile(props: MediaItemProps) {
   );
 }
 
-function MediaTileBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
+function MediaTileBody({ asset, isActive, onAssignLayer, collectionsApi, onMoveToCollection }: MediaItemProps) {
   const { ref: triggerRef, ...triggerHandlers } = useContextMenuTrigger();
+  const {
+    state: { previewMode, previewSingleSurface },
+    actions: { setPreviewSingleSurface },
+  } = useWorkbench();
 
   function handleAssignLayer() {
+    if ((asset.type === 'video' || asset.type === 'animation') && previewMode === 'single' && previewSingleSurface !== 'preview') {
+      setPreviewSingleSurface('preview');
+    }
     onAssignLayer(asset.id);
   }
 
@@ -162,7 +224,7 @@ function MediaTileBody({ asset, isActive, onAssignLayer }: MediaItemProps) {
           </Thumbnail.Caption>
         </Thumbnail.Tile>
       </div>
-      <MediaContextMenuItems asset={asset} />
+      <MediaContextMenuItems asset={asset} collectionsApi={collectionsApi} onMoveToCollection={onMoveToCollection} />
     </>
   );
 }
@@ -171,7 +233,6 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
   const isBroken = brokenSrc === asset.src;
 
-  // Reset the broken flag when the source changes (e.g. after Replace Source).
   if (brokenSrc !== null && brokenSrc !== asset.src) {
     setBrokenSrc(null);
   }

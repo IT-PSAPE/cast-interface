@@ -18,10 +18,16 @@ export const LAYER_PREVIEW_SLIDE: Slide = {
 interface PlaybackLayerElementOptions {
   id?: string;
   zIndex?: number;
+  videoPlayback?: {
+    autoplay?: boolean;
+    loop?: boolean;
+    muted?: boolean;
+    playbackRate?: number;
+  };
 }
 
 export function mediaAssetToLayerElement(asset: MediaAsset, options: PlaybackLayerElementOptions = {}): SlideElement {
-  const { id = '__layer_media', zIndex = 0 } = options;
+  const { id = '__layer_media', zIndex = 0, videoPlayback } = options;
 
   if (asset.type === 'audio') {
     return {
@@ -66,7 +72,13 @@ export function mediaAssetToLayerElement(asset: MediaAsset, options: PlaybackLay
     zIndex,
     layer: 'media',
     payload: isVideo
-      ? { src: asset.src, autoplay: true, loop: true, muted: true }
+      ? {
+        src: asset.src,
+        autoplay: videoPlayback?.autoplay ?? true,
+        loop: videoPlayback?.loop ?? true,
+        muted: videoPlayback?.muted ?? true,
+        playbackRate: videoPlayback?.playbackRate ?? 1,
+      }
       : { src: asset.src },
     createdAt: asset.createdAt,
     updatedAt: asset.updatedAt,

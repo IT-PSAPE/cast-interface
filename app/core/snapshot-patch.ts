@@ -1,4 +1,4 @@
-import type { AppSnapshot, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Stage, Template } from './types';
+import type { AppSnapshot, Collection, Id, LibraryPlaylistBundle, Library, Lyric, MediaAsset, Overlay, Presentation, Slide, SlideElement, Stage, Template } from './types';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -31,6 +31,7 @@ export interface SnapshotPatch {
     overlays?: Overlay[];
     templates?: Template[];
     stages?: Stage[];
+    collections?: Collection[];
     libraryBundles?: LibraryPlaylistBundle[];
   };
   deletes: {
@@ -43,6 +44,7 @@ export interface SnapshotPatch {
     overlays?: Id[];
     templates?: Id[];
     stages?: Id[];
+    collections?: Id[];
   };
 }
 
@@ -55,7 +57,8 @@ type SnapshotTableKey =
   | 'mediaAssets'
   | 'overlays'
   | 'templates'
-  | 'stages';
+  | 'stages'
+  | 'collections';
 
 type SnapshotTableRecordMap = {
   libraries: Library;
@@ -67,6 +70,7 @@ type SnapshotTableRecordMap = {
   overlays: Overlay;
   templates: Template;
   stages: Stage;
+  collections: Collection;
 };
 
 // ─── Utilities ──────────────────────────────────────────────────────
@@ -93,6 +97,7 @@ export function applyPatch(snapshot: AppSnapshot, patch: SnapshotPatch): AppSnap
     overlays: mergeTable(snapshot.overlays, patch.upserts.overlays, patch.deletes.overlays),
     templates: mergeTable(snapshot.templates, patch.upserts.templates, patch.deletes.templates),
     stages: mergeTable(snapshot.stages, patch.upserts.stages, patch.deletes.stages),
+    collections: mergeTable(snapshot.collections, patch.upserts.collections, patch.deletes.collections),
     libraryBundles: patch.upserts.libraryBundles ?? snapshot.libraryBundles,
   };
   return next;
@@ -116,6 +121,7 @@ export function invertPatch(snapshot: AppSnapshot, patch: SnapshotPatch): Snapsh
   invertTable(snapshot.overlays, patch.upserts.overlays, patch.deletes.overlays, inverse, 'overlays');
   invertTable(snapshot.templates, patch.upserts.templates, patch.deletes.templates, inverse, 'templates');
   invertTable(snapshot.stages, patch.upserts.stages, patch.deletes.stages, inverse, 'stages');
+  invertTable(snapshot.collections, patch.upserts.collections, patch.deletes.collections, inverse, 'collections');
 
   if (patch.upserts.libraryBundles) {
     inverse.upserts.libraryBundles = snapshot.libraryBundles;

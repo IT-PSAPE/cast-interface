@@ -44,6 +44,7 @@ interface DeckItemBase {
   id: Id;
   title: string;
   templateId?: Id | null;
+  collectionId: Id;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -164,6 +165,7 @@ export interface VideoElementPayload extends ElementVisualPayload {
   autoplay: boolean;
   loop: boolean;
   muted?: boolean;
+  playbackRate?: number;
 }
 
 export interface ShapeElementPayload extends ElementVisualPayload {
@@ -195,6 +197,7 @@ export interface MediaAsset {
   name: string;
   type: MediaAssetType;
   src: string;
+  collectionId: Id;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -222,6 +225,7 @@ export interface Overlay {
   payload: SlideElementPayload;
   elements: SlideElement[];
   animation: OverlayAnimation;
+  collectionId: Id;
   createdAt: string;
   updatedAt: string;
 }
@@ -233,6 +237,7 @@ export interface Template {
   width: number;
   height: number;
   elements: SlideElement[];
+  collectionId: Id;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -244,9 +249,57 @@ export interface Stage {
   width: number;
   height: number;
   elements: SlideElement[];
+  collectionId: Id;
   order: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CollectionBinKind = 'deck' | 'image' | 'video' | 'audio' | 'template' | 'overlay' | 'stage';
+
+export interface Collection {
+  id: Id;
+  binKind: CollectionBinKind;
+  name: string;
+  order: number;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CollectionCreateInput {
+  binKind: CollectionBinKind;
+  name: string;
+}
+
+export interface CollectionRenameInput {
+  binKind: CollectionBinKind;
+  id: Id;
+  name: string;
+}
+
+export interface CollectionDeleteInput {
+  binKind: CollectionBinKind;
+  id: Id;
+}
+
+export interface CollectionReorderInput {
+  binKind: CollectionBinKind;
+  ids: Id[];
+}
+
+export type CollectionItemType =
+  | 'presentation'
+  | 'lyric'
+  | 'media_asset'
+  | 'template'
+  | 'overlay'
+  | 'stage';
+
+export interface CollectionAssignmentInput {
+  itemType: CollectionItemType;
+  itemId: Id;
+  collectionId: Id;
 }
 
 export interface DeckBundleTemplate {
@@ -409,6 +462,7 @@ export interface AppSnapshot {
   overlays: Overlay[];
   templates: Template[];
   stages: Stage[];
+  collections: Collection[];
 }
 
 export interface PlaybackState {
@@ -529,6 +583,7 @@ export interface OverlayCreateInput {
   name: string;
   elements?: SlideElement[];
   animation?: OverlayAnimation;
+  collectionId?: Id;
 }
 
 export interface OverlayUpdateInput {
@@ -544,6 +599,7 @@ export interface TemplateCreateInput {
   width?: number;
   height?: number;
   elements?: SlideElement[];
+  collectionId?: Id;
 }
 
 export interface TemplateUpdateInput {
@@ -560,6 +616,7 @@ export interface StageCreateInput {
   width?: number;
   height?: number;
   elements?: SlideElement[];
+  collectionId?: Id;
 }
 
 export interface StageUpdateInput {
@@ -568,4 +625,11 @@ export interface StageUpdateInput {
   width?: number;
   height?: number;
   elements?: SlideElement[];
+}
+
+export interface MediaAssetCreateInput {
+  name: string;
+  type: MediaAssetType;
+  src: string;
+  collectionId?: Id;
 }

@@ -7,6 +7,7 @@ import { useInspector } from '@renderer/features/inspector/inspector-context';
 import { ShapeElementInspector } from '@renderer/features/inspector/shape-element-inspector';
 import { SlideInspector } from '@renderer/features/inspector/slide-inspector';
 import { TextElementInspector } from '@renderer/features/inspector/text-element-inspector';
+import { VideoElementInspector } from '@renderer/features/inspector/video-element-inspector';
 import type { InspectorTab } from '@renderer/types/ui';
 import { useOverlayEditorScreen } from './screen-context';
 
@@ -16,10 +17,11 @@ export function OverlayEditorInspectorPanel() {
   const { selectedElement } = useElements();
   const hasSelection = Boolean(selectedElement);
   const isTextSelected = selectedElement?.type === 'text';
+  const isVideoSelected = selectedElement?.type === 'video';
 
   useEffect(() => {
     if (!hasSelection) {
-      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'presentation') {
+      if (inspectorTab === 'shape' || inspectorTab === 'text' || inspectorTab === 'presentation' || inspectorTab === 'video') {
         setInspectorTab('slide');
       }
       return;
@@ -30,8 +32,13 @@ export function OverlayEditorInspectorPanel() {
       return;
     }
 
+    if (isVideoSelected) {
+      if (inspectorTab !== 'shape' && inspectorTab !== 'video') setInspectorTab('video');
+      return;
+    }
+
     if (inspectorTab !== 'shape') setInspectorTab('shape');
-  }, [hasSelection, inspectorTab, isTextSelected, setInspectorTab]);
+  }, [hasSelection, inspectorTab, isTextSelected, isVideoSelected, setInspectorTab]);
 
   function handleTabChange(value: string) {
     setInspectorTab(value as InspectorTab);
@@ -46,12 +53,14 @@ export function OverlayEditorInspectorPanel() {
               {!hasSelection && <Tabs.Trigger value="slide">Overlay</Tabs.Trigger>}
               {hasSelection && <Tabs.Trigger value="shape">Shape</Tabs.Trigger>}
               {isTextSelected && <Tabs.Trigger value="text">Text</Tabs.Trigger>}
+              {isVideoSelected && <Tabs.Trigger value="video">Video</Tabs.Trigger>}
             </Tabs.List>
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
             {inspectorTab === 'slide' && <SlideInspector />}
             {inspectorTab === 'shape' && <ShapeElementInspector />}
             {inspectorTab === 'text' && <TextElementInspector />}
+            {inspectorTab === 'video' && <VideoElementInspector />}
           </div>
         </section>
       </Tabs.Root>

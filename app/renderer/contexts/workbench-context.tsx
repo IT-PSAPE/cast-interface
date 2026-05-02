@@ -83,7 +83,7 @@ const WorkbenchOverlayStackContext = createContext<WorkbenchContextValue['overla
 const WORKBENCH_MODE_STORAGE_KEY = 'lumacast.workbench-mode.v1';
 const DECK_BROWSER_STORAGE_KEY = 'lumacast.deck-browser-preferences.v1';
 const DRAWER_VIEW_MODES_STORAGE_KEY = 'lumacast.drawer-view-modes.v1';
-const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', media: 'grid', templates: 'grid' };
+const DEFAULT_DRAWER_VIEW_MODES: DrawerViewModeMap = { deck: 'grid', image: 'grid', templates: 'grid' };
 const LIBRARY_PANEL_VIEW_STORAGE_KEY = 'lumacast.library-panel-view.v1';
 const EXPANDED_SEGMENTS_STORAGE_KEY = 'lumacast.library-panel-expanded-segments.v1';
 const OVERLAY_DEFAULTS_STORAGE_KEY = 'lumacast.overlay-defaults.v1';
@@ -312,10 +312,10 @@ function parseDrawerViewModes(raw: string): DrawerViewModeMap | null {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (typeof parsed !== 'object' || parsed === null) return null;
     const deck = parsed.deck;
-    const media = parsed.media;
+    const image = parsed.image;
     const templates = parsed.templates;
-    if (!isValidViewMode(deck) || !isValidViewMode(media) || !isValidViewMode(templates)) return null;
-    return { deck, media, templates };
+    if (!isValidViewMode(deck) || !isValidViewMode(image) || !isValidViewMode(templates)) return null;
+    return { deck, image, templates };
   } catch {
     return null;
   }

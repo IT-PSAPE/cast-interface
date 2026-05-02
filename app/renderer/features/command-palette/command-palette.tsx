@@ -163,9 +163,13 @@ export function CommandPalette() {
         subtitle: `Media · ${asset.type}`,
         icon: <MediaAssetIcon asset={asset} size={16} />,
         onSelect: () => {
-          // Open the media bin and set this asset as the active media layer.
-          // Behaves like clicking the asset in the resource drawer.
-          workbenchActions.setDrawerTab('media');
+          // Behaves like clicking the asset in its bin: arms the relevant
+          // layer. Image assets live in the resource drawer; video assets
+          // live in the right-panel video tab and route through their layer
+          // automatically via setMediaLayerAsset.
+          if (asset.type !== 'video' && asset.type !== 'animation') {
+            workbenchActions.setDrawerTab('image');
+          }
           setMediaLayerAsset(asset.id);
         },
       }));

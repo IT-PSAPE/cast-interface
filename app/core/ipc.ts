@@ -6,7 +6,12 @@ import type {
   ElementCreateInput,
   ElementUpdateInput,
   Id,
-  MediaAsset,
+  MediaAssetCreateInput,
+  CollectionAssignmentInput,
+  CollectionCreateInput,
+  CollectionDeleteInput,
+  CollectionRenameInput,
+  CollectionReorderInput,
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
@@ -71,7 +76,7 @@ export interface MainApi {
   updateElementsBatch: (inputs: ElementUpdateInput[]) => Promise<SnapshotPatch>;
   deleteElement: (id: Id) => Promise<SnapshotPatch>;
   deleteElementsBatch: (ids: Id[]) => Promise<SnapshotPatch>;
-  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) => Promise<SnapshotPatch>;
+  createMediaAsset: (asset: MediaAssetCreateInput) => Promise<SnapshotPatch>;
   deleteMediaAsset: (id: Id) => Promise<SnapshotPatch>;
   updateMediaAssetSrc: (id: Id, src: string) => Promise<SnapshotPatch>;
   createOverlay: (overlay: OverlayCreateInput) => Promise<SnapshotPatch>;
@@ -113,6 +118,11 @@ export interface MainApi {
   onNdiOutputStateChanged: (callback: (state: NdiOutputState) => void) => () => void;
   getAudioCoverArt: (src: string) => Promise<string | null>;
   onNdiDiagnosticsChanged: (callback: (diagnostics: NdiDiagnostics) => void) => () => void;
+  createCollection: (input: CollectionCreateInput) => Promise<SnapshotPatch>;
+  renameCollection: (input: CollectionRenameInput) => Promise<SnapshotPatch>;
+  deleteCollection: (input: CollectionDeleteInput) => Promise<SnapshotPatch>;
+  reorderCollections: (input: CollectionReorderInput) => Promise<SnapshotPatch>;
+  setItemCollection: (input: CollectionAssignmentInput) => Promise<SnapshotPatch>;
 }
 
 export interface InlineWindowMenuItem {
@@ -265,6 +275,11 @@ export const IPC = {
   updateNdiOutputConfig: 'ndi:updateOutputConfig',
   getNdiDiagnostics: 'ndi:getDiagnostics',
   sendNdiFrame: 'ndi:sendFrame',
+  createCollection: 'cast:createCollection',
+  renameCollection: 'cast:renameCollection',
+  deleteCollection: 'cast:deleteCollection',
+  reorderCollections: 'cast:reorderCollections',
+  setItemCollection: 'cast:setItemCollection',
 } as const;
 
 export const NDI_EVENTS = {

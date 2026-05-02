@@ -57,7 +57,7 @@ export function App() {
 }
 
 function AppLayoutContent() {
-  const { snapshot } = useCast();
+  const { snapshot, isLoadingSnapshot, snapshotLoadError, retrySnapshotLoad } = useCast();
   useAppMenu();
 
   if (isLoadingSnapshot) {
@@ -72,7 +72,7 @@ function AppLayoutContent() {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="flex max-w-xl flex-col gap-3 rounded-lg border border-secondary bg-secondary/30 p-5 text-left">
-          <div className="text-base font-semibold text-primary">Recast could not load its project data.</div>
+          <div className="text-base font-semibold text-primary">LumaCast could not load its project data.</div>
           <div className="text-sm text-secondary">
             {snapshotLoadError ?? 'Unknown startup error.'}
           </div>

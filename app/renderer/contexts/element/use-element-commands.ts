@@ -167,7 +167,7 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
       const width = asset.type === 'image' ? 640 : 960;
       const height = asset.type === 'image' ? 360 : 540;
       const payload = asset.type === 'video' || asset.type === 'animation'
-        ? { src: asset.src, autoplay: true, loop: true, muted: true }
+        ? { src: asset.src, autoplay: true, loop: true, muted: false, playbackRate: 1 }
         : { src: asset.src };
       addToSource(newOverlayElement(currentOverlay.id, elementType, x, y, width, height, nextOverlayZIndex(currentOverlay.elements, 10), payload));
       setStatusText(`Added ${asset.type} overlay`);
@@ -203,7 +203,7 @@ export function useElementCommands({ activeEditorSource, currentDeckItem, mutate
     if (asset.type === 'image') {
       input = { slideId: currentSlideId, type: 'image', x, y, width: 640, height: 360, zIndex: 10, layer: 'media', payload: { src: asset.src } };
     } else if (asset.type === 'video' || asset.type === 'animation') {
-      input = { slideId: currentSlideId, type: 'video', x, y, width: 960, height: 540, zIndex: 10, layer: 'media', payload: { src: asset.src, autoplay: true, loop: true, muted: true } };
+      input = { slideId: currentSlideId, type: 'video', x, y, width: 960, height: 540, zIndex: 10, layer: 'media', payload: { src: asset.src, autoplay: true, loop: true, muted: false, playbackRate: 1 } };
     } else {
       input = {
         slideId: currentSlideId,

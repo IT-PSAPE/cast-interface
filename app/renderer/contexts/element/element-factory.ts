@@ -113,7 +113,7 @@ export function newSlideMediaElement(slideId: Id, asset: MediaAsset, x: number, 
       opacity: 1,
       zIndex: 10,
       layer: 'media' as const,
-      payload: { src: asset.src, autoplay: true, loop: true, muted: true },
+      payload: { src: asset.src, autoplay: true, loop: true, muted: false, playbackRate: 1 },
       createdAt: timestamp,
       updatedAt: timestamp,
     };

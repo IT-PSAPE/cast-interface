@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { ChevronDown, AlignLeft, Film, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, VolumeX, XCircle } from 'lucide-react';
+import { ChevronDown, AlignLeft, Film, Image, Layers, Layers2, LayoutGrid, Pause, Play, Plus, RectangleHorizontal, SkipBack, SkipForward, Upload, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { NDI_OUTPUT_WIDTH, NDI_OUTPUT_HEIGHT } from '@core/ndi';
 import { ReacstButton } from '@renderer/components/controls/button';
 import { LumaCastPanel } from '@renderer/components/layout/panel';
@@ -11,20 +11,20 @@ import { IconGroup } from '@renderer/components/icon-group';
 import { useNdi } from '../../contexts/app-context';
 import { useNavigation } from '../../contexts/navigation-context';
 import { useOverlayEditor, useStageEditor } from '../../contexts/asset-editor/asset-editor-context';
-import { useAudio, usePresentationLayers, useStagePlayback } from '../../contexts/playback/playback-context';
+import { useAudio, useVideo, usePresentationLayers, useStagePlayback } from '../../contexts/playback/playback-context';
 import { useElements, useRenderScenes } from '../../contexts/canvas/canvas-context';
 import { useWorkbench } from '../../contexts/workbench-context';
-import { useGridSize } from '../../hooks/use-grid-size';
 import type { PreviewSurfaceKind } from '../../types/ui';
 import { BindingProvider } from '../canvas/binding-context';
 import { AudioBinPanel } from '../assets/audio/audio-bin-panel';
+import { MediaBinPanel } from '../assets/media/media-bin-panel';
 import { OverlayBinPanel } from '../assets/overlays/overlay-bin-panel';
 import { StageBinPanel } from '../assets/stages/stage-bin-panel';
 import { useProgramOutput } from './use-program-output';
 import { useStageBindingValue, useStageScene } from './use-stage-scene';
 import { SceneStage } from '../canvas/scene-stage';
 
-type BottomTab = 'overlays' | 'stage' | 'audio';
+type BottomTab = 'overlays' | 'stage' | 'video' | 'audio';
 
 export function PreviewPanel() {
   const { clearLayer, clearAllLayers, mediaLayerAsset, videoLayerAsset, contentLayerVisible, activeOverlays, overlayMode, setOverlayMode } = usePresentationLayers();
@@ -35,10 +35,9 @@ export function PreviewPanel() {
   const { createStage } = useStageEditor();
   const { setCurrentStageId: setPlaybackStageId } = useStagePlayback();
   const { actions: { setWorkbenchMode } } = useWorkbench();
-  const { gridSize: overlayGridSize, setGridSize: setOverlayGridSize, min: overlayGridMin, max: overlayGridMax } = useGridSize('lumacast.grid-size.overlay-bin', 3, 2, 4);
-  const { gridSize: stageGridSize, setGridSize: setStageGridSize, min: stageGridMin, max: stageGridMax } = useGridSize('lumacast.grid-size.stage-bin', 3, 2, 4);
   const [bottomTab, setBottomTab] = useState<BottomTab>('overlays');
   const audioImportInputRef = useRef<HTMLInputElement>(null);
+  const videoImportInputRef = useRef<HTMLInputElement>(null);
   const mediaActive = Boolean(mediaLayerAsset);
   const videoActive = Boolean(videoLayerAsset);
   const contentActive = contentLayerVisible && Boolean(currentOutputDeckItemId);
@@ -73,25 +72,24 @@ export function PreviewPanel() {
   }
 
   function handleTabChange(value: string) {
-    if (value === 'overlays' || value === 'stage' || value === 'audio') setBottomTab(value);
+    if (value === 'overlays' || value === 'stage' || value === 'video' || value === 'audio') setBottomTab(value);
   }
 
   function handleAudioImportClick() {
     audioImportInputRef.current?.click();
   }
 
-  function handleAudioImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
+  function handleVideoImportClick() {
+    videoImportInputRef.current?.click();
+  }
+
+  function handleMediaImportSelect(_files: FileList, event: ChangeEvent<HTMLInputElement>) {
     if (!event.target.files || event.target.files.length === 0) return;
     void importMedia(event.target.files);
     event.target.value = '';
   }
 
   const overlayModeLabel = overlayMode === 'single' ? 'Single overlay mode — click to allow multiple' : 'Multiple overlay mode — click for single';
-  const showGridSlider = bottomTab !== 'audio';
-  const activeGridSize = bottomTab === 'overlays' ? overlayGridSize : stageGridSize;
-  const activeGridMin = bottomTab === 'overlays' ? overlayGridMin : stageGridMin;
-  const activeGridMax = bottomTab === 'overlays' ? overlayGridMax : stageGridMax;
-  const handleActiveGridSizeChange = bottomTab === 'overlays' ? setOverlayGridSize : setStageGridSize;
 
   return (
     <LumaCastPanel.Root className='h-full border-l border-secondary' >
@@ -119,12 +117,13 @@ export function PreviewPanel() {
           </IconGroup.Item>
         </IconGroup.Root>
       </LumaCastPanel.Group>
-      <LumaCastPanel.Group className='flex-1' >
+      <LumaCastPanel.Group className='flex-1 min-h-0' >
         <Tabs.Root value={bottomTab} onValueChange={handleTabChange}>
           <LumaCastPanel.GroupTitle>
             <Tabs.List label="Bottom panel" className="mr-auto" tabsClassName="gap-2">
               <Tabs.Trigger value="overlays">Overlays</Tabs.Trigger>
               <Tabs.Trigger value="stage">Stage</Tabs.Trigger>
+              <Tabs.Trigger value="video">Video</Tabs.Trigger>
               <Tabs.Trigger value="audio">Audio</Tabs.Trigger>
             </Tabs.List>
             {bottomTab === 'overlays' ? (
@@ -140,6 +139,19 @@ export function PreviewPanel() {
               <ReacstButton.Icon label="Add stage" onClick={handleCreateStage}>
                 <Plus />
               </ReacstButton.Icon>
+            ) : bottomTab === 'video' ? (
+              <>
+                <FileTrigger.Root
+                  hidden
+                  inputRef={videoImportInputRef}
+                  accept="video/*"
+                  multiple
+                  onSelect={handleMediaImportSelect}
+                />
+                <ReacstButton.Icon label="Import video" onClick={handleVideoImportClick}>
+                  <Upload />
+                </ReacstButton.Icon>
+              </>
             ) : (
               <>
                 <FileTrigger.Root
@@ -147,7 +159,7 @@ export function PreviewPanel() {
                   inputRef={audioImportInputRef}
                   accept="audio/*"
                   multiple
-                  onSelect={handleAudioImportSelect}
+                  onSelect={handleMediaImportSelect}
                 />
                 <ReacstButton.Icon label="Import audio" onClick={handleAudioImportClick}>
                   <Upload />
@@ -156,28 +168,32 @@ export function PreviewPanel() {
             )}
           </LumaCastPanel.GroupTitle>
           {bottomTab === 'audio' ? (
-            <LumaCastPanel.Content className='flex-1 min-h-0 overflow-y-auto'>
-              <div className="w-full sticky top-0 z-10 bg-primary border-b border-secondary">
+            <LumaCastPanel.Content className='flex flex-col flex-1 min-h-0'>
+              <div className="w-full bg-primary border-b border-secondary px-1">
                 <AudioBackgroundControls />
               </div>
-              <div className='w-full py-2 px-1'>
-                <AudioBinPanel filterText="" gridItemSize={1} />
+              <div className='flex flex-1 min-h-0 w-full'>
+                <AudioBinPanel />
+              </div>
+            </LumaCastPanel.Content>
+          ) : bottomTab === 'video' ? (
+            <LumaCastPanel.Content className='flex flex-col flex-1 min-h-0'>
+              <div className="w-full bg-primary border-b border-secondary px-1">
+                <VideoBackgroundControls />
+              </div>
+              <div className='flex flex-1 min-h-0 w-full'>
+                <MediaBinPanel binKind="video" />
               </div>
             </LumaCastPanel.Content>
           ) : (
-            <LumaCastPanel.Content className='flex-1 py-2 px-1'>
+            <LumaCastPanel.Content className='flex-1 min-h-0 py-2 px-1'>
               {bottomTab === 'overlays' ? (
-                <OverlayBinPanel filterText="" gridItemSize={overlayGridSize} />
+                <OverlayBinPanel />
               ) : (
-                <StageBinPanel filterText="" gridItemSize={stageGridSize} />
+                <StageBinPanel />
               )}
             </LumaCastPanel.Content>
           )}
-          {showGridSlider ? (
-            <LumaCastPanel.GroupFooter>
-              <GridSizeSlider value={activeGridSize} min={activeGridMin} max={activeGridMax} onChange={handleActiveGridSizeChange} />
-            </LumaCastPanel.GroupFooter>
-          ) : null}
         </Tabs.Root>
       </LumaCastPanel.Group>
     </LumaCastPanel.Root>
@@ -335,6 +351,58 @@ function StageSurface({ showBadge }: { showBadge: boolean }) {
   );
 }
 
+function VideoBackgroundControls() {
+  const video = useVideo();
+  const armed = video.currentVideoAsset;
+  const hasVideo = Boolean(armed);
+  const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+
+  function handleSeek(event: React.ChangeEvent<HTMLInputElement>) {
+    const next = Number(event.target.value);
+    if (!Number.isFinite(next)) return;
+    video.seekTo(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md bg-secondary/40 p-2 mt-2">
+      <div className="flex min-w-0 items-center gap-1">
+        <ReacstButton.Icon variant="ghost" label="Previous video" disabled={!hasVideo} onClick={video.playPrevious}>
+          <SkipBack />
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label={video.isPlaying ? 'Pause' : 'Play'} disabled={!hasVideo} onClick={video.togglePlayback}>
+          {video.isPlaying ? <Pause /> : <Play />}
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label={video.muted ? 'Unmute video' : 'Mute video'} disabled={!hasVideo} onClick={video.toggleMuted}>
+          {video.muted ? <VolumeX /> : <Volume2 />}
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label="Next video" disabled={!hasVideo} onClick={video.playNext}>
+          <SkipForward />
+        </ReacstButton.Icon>
+        <span className={`min-w-0 flex-1 truncate pl-2 text-xs ${hasVideo ? 'text-secondary' : 'text-tertiary'}`}>
+          {armed?.name ?? 'No video armed'}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <input
+          type="range"
+          min={0}
+          max={safeDuration}
+          step={0.1}
+          value={Math.min(video.currentTime, safeDuration)}
+          onChange={handleSeek}
+          disabled={!hasVideo || safeDuration === 0}
+          aria-label="Video scrubber"
+          className="w-full accent-brand_solid disabled:opacity-40"
+        />
+        <div className="flex items-center justify-between text-[10px] tabular-nums text-tertiary">
+          <span>{formatPlaybackTime(video.currentTime)}</span>
+          <span>{formatPlaybackTime(safeDuration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AudioBackgroundControls() {
   const audio = useAudio();
   const armed = audio.currentAudioAsset;
@@ -355,6 +423,9 @@ function AudioBackgroundControls() {
         </ReacstButton.Icon>
         <ReacstButton.Icon variant="ghost" label={audio.isPlaying ? 'Pause' : 'Play'} disabled={!hasAudio} onClick={audio.togglePlayback}>
           {audio.isPlaying ? <Pause /> : <Play />}
+        </ReacstButton.Icon>
+        <ReacstButton.Icon variant="ghost" label={audio.muted ? 'Unmute audio' : 'Mute audio'} disabled={!hasAudio} onClick={audio.toggleMuted}>
+          {audio.muted ? <VolumeX /> : <Volume2 />}
         </ReacstButton.Icon>
         <ReacstButton.Icon variant="ghost" label="Next track" disabled={!hasAudio} onClick={audio.playNext}>
           <SkipForward />

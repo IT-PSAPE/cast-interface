@@ -5,18 +5,20 @@ interface DeckItemInput {
   title: string;
   type: DeckItemType;
   templateId?: string | null;
+  collectionId: string;
   order: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export function buildDeckItem({ id, title, type, templateId = null, order, createdAt, updatedAt }: DeckItemInput): DeckItem {
+export function buildDeckItem({ id, title, type, templateId = null, collectionId, order, createdAt, updatedAt }: DeckItemInput): DeckItem {
   if (type === 'lyric') {
     return {
       id,
       title,
       type,
       templateId,
+      collectionId,
       order,
       createdAt,
       updatedAt,
@@ -28,6 +30,7 @@ export function buildDeckItem({ id, title, type, templateId = null, order, creat
     title,
     type,
     templateId,
+    collectionId,
     order,
     createdAt,
     updatedAt,

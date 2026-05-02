@@ -8,7 +8,12 @@ import type {
   ElementCreateInput,
   ElementUpdateInput,
   Id,
-  MediaAsset,
+  MediaAssetCreateInput,
+  CollectionAssignmentInput,
+  CollectionCreateInput,
+  CollectionDeleteInput,
+  CollectionRenameInput,
+  CollectionReorderInput,
   NdiDiagnostics,
   NdiOutputConfig,
   NdiOutputConfigMap,
@@ -80,7 +85,7 @@ const api = {
   updateElementsBatch: (inputs: ElementUpdateInput[]) => ipcRenderer.invoke(IPC.updateElementsBatch, inputs),
   deleteElement: (id: Id) => ipcRenderer.invoke(IPC.deleteElement, id),
   deleteElementsBatch: (ids: Id[]) => ipcRenderer.invoke(IPC.deleteElementsBatch, ids),
-  createMediaAsset: (asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
+  createMediaAsset: (asset: MediaAssetCreateInput) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
   deleteMediaAsset: (id: Id) => ipcRenderer.invoke(IPC.deleteMediaAsset, id),
   updateMediaAssetSrc: (id: Id, src: string) => ipcRenderer.invoke(IPC.updateMediaAssetSrc, id, src),
   getAudioCoverArt: (src: string) => ipcRenderer.invoke(IPC.getAudioCoverArt, src) as Promise<string | null>,
@@ -132,6 +137,11 @@ const api = {
     ipcRenderer.on(NDI_EVENTS.diagnosticsChanged, handler);
     return () => { ipcRenderer.removeListener(NDI_EVENTS.diagnosticsChanged, handler); };
   },
+  createCollection: (input: CollectionCreateInput) => ipcRenderer.invoke(IPC.createCollection, input),
+  renameCollection: (input: CollectionRenameInput) => ipcRenderer.invoke(IPC.renameCollection, input),
+  deleteCollection: (input: CollectionDeleteInput) => ipcRenderer.invoke(IPC.deleteCollection, input),
+  reorderCollections: (input: CollectionReorderInput) => ipcRenderer.invoke(IPC.reorderCollections, input),
+  setItemCollection: (input: CollectionAssignmentInput) => ipcRenderer.invoke(IPC.setItemCollection, input),
   onAppMenuCommand: (callback: (commandId: import('@core/ipc').AppMenuCommandId) => void) => {
     const handler = (_event: IpcRendererEvent, commandId: import('@core/ipc').AppMenuCommandId) => callback(commandId);
     ipcRenderer.on(APP_MENU_EVENTS.command, handler);

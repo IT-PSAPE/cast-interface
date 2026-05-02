@@ -51,6 +51,12 @@ interface LayeredSceneInput {
   slide: Slide | null;
   contentElements: SlideElement[];
   videoAsset: MediaAsset | null;
+  videoPlayback?: {
+    autoplay?: boolean;
+    loop?: boolean;
+    muted?: boolean;
+    playbackRate?: number;
+  };
   mediaAsset: MediaAsset | null;
   overlays: Array<{
     overlay: Overlay;
@@ -63,9 +69,21 @@ interface LayeredSceneInput {
 const OVERLAY_LAYER_Z_INDEX_OFFSET = 10000;
 const OVERLAY_STACK_Z_INDEX_OFFSET = 1000;
 
-export function buildLayeredRenderScene({ slide, contentElements, videoAsset, mediaAsset, overlays, includeContent }: LayeredSceneInput): RenderScene {
+export function buildLayeredRenderScene({
+  slide,
+  contentElements,
+  videoAsset,
+  videoPlayback,
+  mediaAsset,
+  overlays,
+  includeContent,
+}: LayeredSceneInput): RenderScene {
   const merged: SlideElement[] = [];
-  if (videoAsset) merged.push(mediaAssetToLayerElement(videoAsset, { id: '__layer_video', zIndex: -1 }));
+  if (videoAsset) merged.push(mediaAssetToLayerElement(videoAsset, {
+    id: '__layer_video',
+    zIndex: -1,
+    videoPlayback,
+  }));
   if (mediaAsset) merged.push(mediaAssetToLayerElement(mediaAsset));
   if (includeContent) merged.push(...contentElements.map(toPresentationLayerElement));
 

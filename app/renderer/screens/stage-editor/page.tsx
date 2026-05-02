@@ -114,7 +114,7 @@ function StageListItem({
     <ActiveStageTile isActive={isActive} onClick={handleSelect} selected={isActive}>
       <Thumbnail.Body>
         <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0" checkerboard>
-          <SceneStage scene={scene} surface="stage" className="absolute inset-0 pointer-events-none" />
+          <SceneStage scene={scene} surface="list" className="absolute inset-0 pointer-events-none" />
         </SceneFrame>
       </Thumbnail.Body>
       <Thumbnail.Caption>

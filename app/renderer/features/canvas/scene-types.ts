@@ -1,7 +1,7 @@
 import type { Id, Slide, SlideElement } from '@core/types';
 import type { VisualPayloadState } from '@core/element-payload';
 
-export type SceneSurface = 'deck-editor' | 'show' | 'list' | 'monitor' | 'stage';
+export type SceneSurface = 'deck-editor' | 'show' | 'list' | 'monitor' | 'stage' | 'ndi-show' | 'ndi-stage';
 export type SceneSourcePolicy = 'draft' | 'persisted' | 'live';
 
 export type ResolvedMediaState =

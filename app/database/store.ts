@@ -13,6 +13,14 @@ import { SqliteDatabase } from './sqlite';
 import type {
   AppSnapshot,
   BrokenDeckBundleReference,
+  Collection,
+  CollectionAssignmentInput,
+  CollectionBinKind,
+  CollectionCreateInput,
+  CollectionDeleteInput,
+  CollectionItemType,
+  CollectionRenameInput,
+  CollectionReorderInput,
   DeckBundleBrokenReferenceDecision,
   DeckBundleExportOptions,
   DeckBundleInspection,
@@ -35,6 +43,7 @@ import type {
   LibraryPlaylistBundle,
   Lyric,
   MediaAsset,
+  MediaAssetCreateInput,
   Overlay,
   OverlayCreateInput,
   OverlayUpdateInput,
@@ -65,9 +74,72 @@ const TEMPLATES_SCHEMA_VERSION = 4;
 const DECK_ITEMS_SCHEMA_VERSION = 6;
 const REORDER_SCHEMA_VERSION = 7;
 const STAGES_SCHEMA_VERSION = 8;
-const LATEST_SCHEMA_VERSION = STAGES_SCHEMA_VERSION;
+const COLLECTIONS_SCHEMA_VERSION = 9;
+const LATEST_SCHEMA_VERSION = COLLECTIONS_SCHEMA_VERSION;
 const GLOBAL_SCHEMA_VERSION = 3;
 const LEGACY_SCHEMA_VERSION = 2;
+
+const COLLECTION_BIN_KINDS: readonly CollectionBinKind[] = ['deck', 'image', 'video', 'audio', 'template', 'overlay', 'stage'];
+
+const COLLECTION_TABLE_BY_BIN: Record<CollectionBinKind, string> = {
+  deck: 'deck_collections',
+  image: 'image_collections',
+  video: 'video_collections',
+  audio: 'audio_collections',
+  template: 'template_collections',
+  overlay: 'overlay_collections',
+  stage: 'stage_collections',
+};
+
+const DEFAULT_COLLECTION_NAME = 'Default Collection';
+
+const ITEM_TABLE_BY_TYPE: Record<CollectionItemType, string> = {
+  presentation: 'presentations',
+  lyric: 'lyrics',
+  media_asset: 'media_assets',
+  template: 'templates',
+  overlay: 'overlays',
+  stage: 'stages',
+};
+
+function isItemTypeAllowedInBin(
+  itemType: CollectionItemType,
+  binKind: CollectionBinKind,
+  itemId: Id,
+  store: CastRepository,
+): boolean {
+  if (itemType === 'presentation' || itemType === 'lyric') return binKind === 'deck';
+  if (itemType === 'template') return binKind === 'template';
+  if (itemType === 'overlay') return binKind === 'overlay';
+  if (itemType === 'stage') return binKind === 'stage';
+  if (itemType === 'media_asset') {
+    if (binKind !== 'image' && binKind !== 'video' && binKind !== 'audio') return false;
+    const assetType = store.peekMediaAssetType(itemId);
+    if (!assetType) return false;
+    if (binKind === 'audio') return assetType === 'audio';
+    if (binKind === 'image') return assetType === 'image';
+    if (binKind === 'video') return assetType === 'video' || assetType === 'animation';
+  }
+  return false;
+}
+
+function buildPatchSpecForItemType(itemType: CollectionItemType, itemId: Id): {
+  upsertPresentationIds?: Id[];
+  upsertLyricIds?: Id[];
+  upsertMediaAssetIds?: Id[];
+  upsertTemplateIds?: Id[];
+  upsertOverlayIds?: Id[];
+  upsertStageIds?: Id[];
+} {
+  switch (itemType) {
+    case 'presentation': return { upsertPresentationIds: [itemId] };
+    case 'lyric': return { upsertLyricIds: [itemId] };
+    case 'media_asset': return { upsertMediaAssetIds: [itemId] };
+    case 'template': return { upsertTemplateIds: [itemId] };
+    case 'overlay': return { upsertOverlayIds: [itemId] };
+    case 'stage': return { upsertStageIds: [itemId] };
+  }
+}
 
 interface DeckOwnerRow {
   type: DeckItemType;
@@ -274,6 +346,7 @@ export class CastRepository {
       if (!this.hasTable('libraries')) {
         this.createGlobalSchema();
         this.setUserVersion(LATEST_SCHEMA_VERSION);
+        this.seedDefaultCollections();
         return;
       }
 
@@ -307,6 +380,11 @@ export class CastRepository {
     if (this.getUserVersion() < STAGES_SCHEMA_VERSION) {
       this.ensureStagesSchema();
       this.setUserVersion(STAGES_SCHEMA_VERSION);
+    }
+
+    if (this.getUserVersion() < COLLECTIONS_SCHEMA_VERSION) {
+      this.ensureCollectionsSchema();
+      this.setUserVersion(COLLECTIONS_SCHEMA_VERSION);
     }
   }
 
@@ -539,6 +617,7 @@ export class CastRepository {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         template_id TEXT,
+        collection_id TEXT,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -548,6 +627,7 @@ export class CastRepository {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         template_id TEXT,
+        collection_id TEXT,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -624,6 +704,7 @@ export class CastRepository {
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         src TEXT NOT NULL,
+        collection_id TEXT,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -643,6 +724,7 @@ export class CastRepository {
         payload_json TEXT NOT NULL,
         elements_json TEXT NOT NULL DEFAULT '[]',
         animation_json TEXT NOT NULL,
+        collection_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -655,6 +737,7 @@ export class CastRepository {
         height INTEGER NOT NULL,
         order_index INTEGER NOT NULL DEFAULT 0,
         elements_json TEXT NOT NULL DEFAULT '[]',
+        collection_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -666,6 +749,70 @@ export class CastRepository {
         height INTEGER NOT NULL,
         order_index INTEGER NOT NULL DEFAULT 0,
         elements_json TEXT NOT NULL DEFAULT '[]',
+        collection_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS deck_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS image_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS video_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS audio_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS template_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS overlay_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS stage_collections (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -673,6 +820,7 @@ export class CastRepository {
 
     this.createCommonIndexes();
     this.createGlobalContentIndexes();
+    this.createCollectionsIndexes();
   }
 
   private createCommonIndexes(): void {
@@ -732,6 +880,315 @@ export class CastRepository {
       );
     `);
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_stages_order_index ON stages(order_index)');
+  }
+
+  private createCollectionsIndexes(): void {
+    for (const table of Object.values(COLLECTION_TABLE_BY_BIN)) {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_${table}_order_index ON ${table}(order_index);`);
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_presentations_collection_id ON presentations(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_lyrics_collection_id ON lyrics(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_media_assets_collection_id ON media_assets(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_overlays_collection_id ON overlays(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_templates_collection_id ON templates(collection_id);');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_stages_collection_id ON stages(collection_id);');
+  }
+
+  private ensureCollectionsSchema(): void {
+    const tx = this.db.transaction(() => {
+      for (const table of Object.values(COLLECTION_TABLE_BY_BIN)) {
+        this.db.exec(`
+          CREATE TABLE IF NOT EXISTS ${table} (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            order_index INTEGER NOT NULL DEFAULT 0,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+        `);
+      }
+
+      const itemTablesNeedingColumn = ['presentations', 'lyrics', 'media_assets', 'templates', 'overlays', 'stages'];
+      for (const table of itemTablesNeedingColumn) {
+        if (this.hasTable(table) && !this.hasColumn(table, 'collection_id')) {
+          this.db.exec(`ALTER TABLE ${table} ADD COLUMN collection_id TEXT;`);
+        }
+      }
+    });
+    tx();
+    this.createCollectionsIndexes();
+    this.seedDefaultCollections();
+  }
+
+  private getDefaultCollectionId(binKind: CollectionBinKind): Id {
+    const table = COLLECTION_TABLE_BY_BIN[binKind];
+    const row = this.db
+      .prepare(`SELECT id FROM ${table} WHERE is_default = 1 ORDER BY created_at ASC LIMIT 1`)
+      .get() as { id: string } | undefined;
+    if (!row) {
+      // Defensive: seed if somehow missing (e.g. deleted by hand). Idempotent.
+      this.seedDefaultCollections();
+      const retry = this.db
+        .prepare(`SELECT id FROM ${table} WHERE is_default = 1 ORDER BY created_at ASC LIMIT 1`)
+        .get() as { id: string } | undefined;
+      if (!retry) throw new Error(`Default collection missing for bin: ${binKind}`);
+      return retry.id;
+    }
+    return row.id;
+  }
+
+  private getMediaAssetDefaultCollectionId(type: MediaAsset['type']): Id {
+    if (type === 'audio') return this.getDefaultCollectionId('audio');
+    if (type === 'video' || type === 'animation') return this.getDefaultCollectionId('video');
+    return this.getDefaultCollectionId('image');
+  }
+
+  private seedDefaultCollections(): void {
+    const tx = this.db.transaction(() => {
+      const now = nowIso();
+      const defaultIds: Record<CollectionBinKind, string> = {} as Record<CollectionBinKind, string>;
+
+      for (const bin of COLLECTION_BIN_KINDS) {
+        const table = COLLECTION_TABLE_BY_BIN[bin];
+        const existing = this.db
+          .prepare(`SELECT id FROM ${table} WHERE is_default = 1 LIMIT 1`)
+          .get() as { id: string } | undefined;
+
+        if (existing) {
+          defaultIds[bin] = existing.id;
+          continue;
+        }
+
+        const id = createId();
+        this.db
+          .prepare(
+            `INSERT INTO ${table} (id, name, order_index, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .run(id, DEFAULT_COLLECTION_NAME, 0, 1, now, now);
+        defaultIds[bin] = id;
+      }
+
+      this.db
+        .prepare('UPDATE presentations SET collection_id = ? WHERE collection_id IS NULL')
+        .run(defaultIds.deck);
+      if (this.hasTable('lyrics')) {
+        this.db
+          .prepare('UPDATE lyrics SET collection_id = ? WHERE collection_id IS NULL')
+          .run(defaultIds.deck);
+      }
+      this.db
+        .prepare("UPDATE media_assets SET collection_id = ? WHERE collection_id IS NULL AND type = 'image'")
+        .run(defaultIds.image);
+      this.db
+        .prepare("UPDATE media_assets SET collection_id = ? WHERE collection_id IS NULL AND type = 'video'")
+        .run(defaultIds.video);
+      this.db
+        .prepare("UPDATE media_assets SET collection_id = ? WHERE collection_id IS NULL AND type = 'audio'")
+        .run(defaultIds.audio);
+      this.db
+        .prepare('UPDATE templates SET collection_id = ? WHERE collection_id IS NULL')
+        .run(defaultIds.template);
+      this.db
+        .prepare('UPDATE overlays SET collection_id = ? WHERE collection_id IS NULL')
+        .run(defaultIds.overlay);
+      this.db
+        .prepare('UPDATE stages SET collection_id = ? WHERE collection_id IS NULL')
+        .run(defaultIds.stage);
+    });
+    tx();
+  }
+
+  peekMediaAssetType(itemId: Id): MediaAsset['type'] | null {
+    const row = this.db.prepare('SELECT type FROM media_assets WHERE id = ?').get(itemId) as { type: MediaAsset['type'] } | undefined;
+    return row?.type ?? null;
+  }
+
+  private getCollectionBinKindByCollectionId(collectionId: Id): CollectionBinKind | null {
+    for (const bin of COLLECTION_BIN_KINDS) {
+      const table = COLLECTION_TABLE_BY_BIN[bin];
+      const row = this.db.prepare(`SELECT id FROM ${table} WHERE id = ?`).get(collectionId) as { id: string } | undefined;
+      if (row) return bin;
+    }
+    return null;
+  }
+
+  private getCollections(): Collection[] {
+    const out: Collection[] = [];
+    for (const bin of COLLECTION_BIN_KINDS) {
+      const table = COLLECTION_TABLE_BY_BIN[bin];
+      const rows = this.db
+        .prepare(`SELECT id, name, order_index, is_default, created_at, updated_at FROM ${table} ORDER BY order_index ASC, created_at ASC`)
+        .all() as Array<{
+        id: string;
+        name: string;
+        order_index: number;
+        is_default: number;
+        created_at: string;
+        updated_at: string;
+      }>;
+      for (const row of rows) {
+        out.push({
+          id: row.id,
+          binKind: bin,
+          name: row.name,
+          order: row.order_index,
+          isDefault: row.is_default === 1,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        });
+      }
+    }
+    return out;
+  }
+
+  private getCollectionsByIds(ids: Id[]): Collection[] {
+    if (ids.length === 0) return [];
+    const idSet = new Set(ids);
+    return this.getCollections().filter((collection) => idSet.has(collection.id));
+  }
+
+  createCollection(input: CollectionCreateInput): SnapshotPatch {
+    const table = COLLECTION_TABLE_BY_BIN[input.binKind];
+    const now = nowIso();
+    const id = createId();
+    const nextOrder =
+      ((this.db.prepare(`SELECT MAX(order_index) AS maxOrder FROM ${table}`).get() as { maxOrder: number | null }).maxOrder ?? -1) + 1;
+    this.db
+      .prepare(`INSERT INTO ${table} (id, name, order_index, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(id, input.name, nextOrder, 0, now, now);
+    return this.buildPatch({ upsertCollectionIds: [id] });
+  }
+
+  renameCollection(input: CollectionRenameInput): SnapshotPatch {
+    const table = COLLECTION_TABLE_BY_BIN[input.binKind];
+    const existing = this.db.prepare(`SELECT id, is_default FROM ${table} WHERE id = ?`).get(input.id) as
+      | { id: string; is_default: number }
+      | undefined;
+    if (!existing) return this.buildPatch({});
+    if (existing.is_default === 1) {
+      throw new Error('Default collection cannot be renamed');
+    }
+    this.db
+      .prepare(`UPDATE ${table} SET name = ?, updated_at = ? WHERE id = ?`)
+      .run(input.name, nowIso(), input.id);
+    return this.buildPatch({ upsertCollectionIds: [input.id] });
+  }
+
+  deleteCollection(input: CollectionDeleteInput): SnapshotPatch {
+    const table = COLLECTION_TABLE_BY_BIN[input.binKind];
+    const existing = this.db.prepare(`SELECT id, is_default FROM ${table} WHERE id = ?`).get(input.id) as
+      | { id: string; is_default: number }
+      | undefined;
+    if (!existing) return this.buildPatch({});
+    if (existing.is_default === 1) {
+      throw new Error('Default collection cannot be deleted');
+    }
+
+    const defaultId = this.getDefaultCollectionId(input.binKind);
+    const movedIds = this.reassignItemsForCollection(input.binKind, input.id, defaultId);
+
+    this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(input.id);
+
+    return this.buildPatch({
+      deletedCollectionIds: [input.id],
+      upsertPresentationIds: movedIds.presentations,
+      upsertLyricIds: movedIds.lyrics,
+      upsertMediaAssetIds: movedIds.mediaAssets,
+      upsertTemplateIds: movedIds.templates,
+      upsertOverlayIds: movedIds.overlays,
+      upsertStageIds: movedIds.stages,
+    });
+  }
+
+  reorderCollections(input: CollectionReorderInput): SnapshotPatch {
+    const table = COLLECTION_TABLE_BY_BIN[input.binKind];
+    const now = nowIso();
+    const tx = this.db.transaction(() => {
+      input.ids.forEach((id, index) => {
+        this.db.prepare(`UPDATE ${table} SET order_index = ?, updated_at = ? WHERE id = ?`).run(index, now, id);
+      });
+    });
+    tx();
+    return this.buildPatch({ upsertCollectionIds: input.ids });
+  }
+
+  setItemCollection(input: CollectionAssignmentInput): SnapshotPatch {
+    const itemTable = ITEM_TABLE_BY_TYPE[input.itemType];
+    const exists = this.db.prepare(`SELECT id FROM ${itemTable} WHERE id = ?`).get(input.itemId) as
+      | { id: string }
+      | undefined;
+    if (!exists) return this.buildPatch({});
+
+    const targetBin = this.getCollectionBinKindByCollectionId(input.collectionId);
+    if (!targetBin) {
+      throw new Error(`Unknown target collection: ${input.collectionId}`);
+    }
+    if (!isItemTypeAllowedInBin(input.itemType, targetBin, input.itemId, this)) {
+      throw new Error(`Item type ${input.itemType} cannot be moved into bin ${targetBin}`);
+    }
+
+    this.db
+      .prepare(`UPDATE ${itemTable} SET collection_id = ?, updated_at = ? WHERE id = ?`)
+      .run(input.collectionId, nowIso(), input.itemId);
+
+    return this.buildPatch(buildPatchSpecForItemType(input.itemType, input.itemId));
+  }
+
+  private reassignItemsForCollection(
+    binKind: CollectionBinKind,
+    fromCollectionId: Id,
+    toCollectionId: Id,
+  ): {
+    presentations: Id[];
+    lyrics: Id[];
+    mediaAssets: Id[];
+    templates: Id[];
+    overlays: Id[];
+    stages: Id[];
+  } {
+    const moved = {
+      presentations: [] as Id[],
+      lyrics: [] as Id[],
+      mediaAssets: [] as Id[],
+      templates: [] as Id[],
+      overlays: [] as Id[],
+      stages: [] as Id[],
+    };
+    const now = nowIso();
+
+    const reassign = (table: string, bucket: Id[]) => {
+      const rows = this.db.prepare(`SELECT id FROM ${table} WHERE collection_id = ?`).all(fromCollectionId) as Array<{ id: string }>;
+      for (const row of rows) {
+        bucket.push(row.id);
+      }
+      this.db
+        .prepare(`UPDATE ${table} SET collection_id = ?, updated_at = ? WHERE collection_id = ?`)
+        .run(toCollectionId, now, fromCollectionId);
+    };
+
+    switch (binKind) {
+      case 'deck':
+        reassign('presentations', moved.presentations);
+        reassign('lyrics', moved.lyrics);
+        break;
+      case 'image':
+      case 'video':
+      case 'audio':
+        reassign('media_assets', moved.mediaAssets);
+        break;
+      case 'template':
+        reassign('templates', moved.templates);
+        break;
+      case 'overlay':
+        reassign('overlays', moved.overlays);
+        break;
+      case 'stage':
+        reassign('stages', moved.stages);
+        break;
+    }
+
+    return moved;
   }
 
   private ensurePresentationTemplateSchema(): void {
@@ -986,9 +1443,10 @@ export class CastRepository {
         .prepare('INSERT INTO libraries (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)')
         .run(libraryId, 'Church Library', now, now);
 
+      const deckCollectionId = this.getDefaultCollectionId('deck');
       this.db
-        .prepare('INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(presentationId, 'Welcome Slides', null, 0, now, now);
+        .prepare('INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(presentationId, 'Welcome Slides', null, deckCollectionId, 0, now, now);
 
       this.db
         .prepare(
@@ -1042,10 +1500,11 @@ export class CastRepository {
         )
         .run(createId(), segmentId, presentationId, null, 0, now, now);
 
+      const overlayCollectionId = this.getDefaultCollectionId('overlay');
       this.db
         .prepare(
-          `INSERT INTO overlays (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO overlays (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           createId(),
@@ -1092,6 +1551,7 @@ export class CastRepository {
             },
           ]),
           JSON.stringify({ kind: 'pulse', durationMs: 2000 }),
+          overlayCollectionId,
           now,
           now
         );
@@ -1245,6 +1705,7 @@ export class CastRepository {
       overlays: this.getOverlays(),
       templates: this.getTemplates(),
       stages: this.getStages(),
+      collections: this.getCollections(),
     };
   }
 
@@ -1279,8 +1740,8 @@ export class CastRepository {
       }
 
       const insertTemplate = this.db.prepare(
-        `INSERT INTO templates (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO templates (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       for (const template of snapshot.templates) {
         insertTemplate.run(
@@ -1291,19 +1752,21 @@ export class CastRepository {
           template.height,
           template.order,
           JSON.stringify(template.elements),
+          template.collectionId,
           template.createdAt,
           template.updatedAt,
         );
       }
 
       const insertPresentation = this.db.prepare(
-        'INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       for (const presentation of snapshot.presentations) {
         insertPresentation.run(
           presentation.id,
           presentation.title,
           presentation.templateId ?? null,
+          presentation.collectionId,
           presentation.order,
           presentation.createdAt,
           presentation.updatedAt,
@@ -1311,13 +1774,14 @@ export class CastRepository {
       }
 
       const insertLyric = this.db.prepare(
-        'INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       );
       for (const lyric of snapshot.lyrics) {
         insertLyric.run(
           lyric.id,
           lyric.title,
           lyric.templateId ?? null,
+          lyric.collectionId,
           lyric.order,
           lyric.createdAt,
           lyric.updatedAt,
@@ -1410,7 +1874,7 @@ export class CastRepository {
       }
 
       const insertMediaAsset = this.db.prepare(
-        'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO media_assets (id, name, type, src, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       );
       for (const asset of snapshot.mediaAssets) {
         insertMediaAsset.run(
@@ -1418,6 +1882,7 @@ export class CastRepository {
           asset.name,
           asset.type,
           asset.src,
+          asset.collectionId,
           asset.order,
           asset.createdAt,
           asset.updatedAt,
@@ -1426,8 +1891,8 @@ export class CastRepository {
 
       const insertOverlay = this.db.prepare(
         `INSERT INTO overlays
-          (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       for (const overlay of snapshot.overlays) {
         insertOverlay.run(
@@ -1444,14 +1909,15 @@ export class CastRepository {
           JSON.stringify(overlay.payload),
           JSON.stringify(overlay.elements),
           JSON.stringify(overlay.animation),
+          overlay.collectionId,
           overlay.createdAt,
           overlay.updatedAt,
         );
       }
 
       const insertStage = this.db.prepare(
-        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       for (const stage of snapshot.stages) {
         insertStage.run(
@@ -1461,6 +1927,7 @@ export class CastRepository {
           stage.height,
           stage.order,
           JSON.stringify(stage.elements),
+          stage.collectionId,
           stage.createdAt,
           stage.updatedAt,
         );
@@ -1578,14 +2045,14 @@ export class CastRepository {
 
     const insertTemplate = this.db.prepare(
       `INSERT INTO templates
-        (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertPresentation = this.db.prepare(
-      'INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     const insertLyric = this.db.prepare(
-      'INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     const insertSlide = this.db.prepare(
       'INSERT INTO slides (id, presentation_id, lyric_id, width, height, notes, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -1596,19 +2063,23 @@ export class CastRepository {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertMediaAsset = this.db.prepare(
-      'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO media_assets (id, name, type, src, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
     const insertOverlay = this.db.prepare(
       `INSERT INTO overlays
-       (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertStage = this.db.prepare(
-      `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO stages (id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
 
     const nextStageOrder = (this.db.prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages').get() as { next_order: number }).next_order;
+    const importDeckCollectionId = this.getDefaultCollectionId('deck');
+    const importTemplateCollectionId = this.getDefaultCollectionId('template');
+    const importOverlayCollectionId = this.getDefaultCollectionId('overlay');
+    const importStageCollectionId = this.getDefaultCollectionId('stage');
 
     const tx = this.db.transaction(() => {
       const templateIdMap = new Map<Id, Id>();
@@ -1631,6 +2102,7 @@ export class CastRepository {
             template.height,
             nextTemplateOrder + index,
             JSON.stringify(nextElements),
+            importTemplateCollectionId,
             now,
             now,
           );
@@ -1646,6 +2118,7 @@ export class CastRepository {
           path.basename(replacementSource.rawPath),
           assetType,
           replacementSource.src,
+          this.getMediaAssetDefaultCollectionId(assetType),
           nextMediaAssetOrder + replacementIndex,
           now,
           now,
@@ -1669,9 +2142,9 @@ export class CastRepository {
           }
 
           if (item.type === 'presentation') {
-            insertPresentation.run(newItemId, item.title, importedTemplateId, nextContentOrder + itemIndex, now, now);
+            insertPresentation.run(newItemId, item.title, importedTemplateId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
           } else {
-            insertLyric.run(newItemId, item.title, importedTemplateId, nextContentOrder + itemIndex, now, now);
+            insertLyric.run(newItemId, item.title, importedTemplateId, importDeckCollectionId, nextContentOrder + itemIndex, now, now);
           }
 
           item.slides
@@ -1729,6 +2202,7 @@ export class CastRepository {
           JSON.stringify(summary.payload),
           JSON.stringify(overlay.elements),
           JSON.stringify(normalizeOverlayAnimation(overlay.animation)),
+          importOverlayCollectionId,
           now,
           now,
         );
@@ -1742,6 +2216,7 @@ export class CastRepository {
           stage.height,
           nextStageOrder + stageIndex,
           JSON.stringify(stage.elements),
+          importStageCollectionId,
           now,
           now,
         );
@@ -1963,9 +2438,10 @@ export class CastRepository {
     const now = nowIso();
     const presentationId = createId();
     const currentOrder = this.getMaxDeckOrder();
+    const deckCollectionId = this.getDefaultCollectionId('deck');
     this.db
-      .prepare('INSERT INTO presentations (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(presentationId, title, null, currentOrder + 1, now, now);
+      .prepare('INSERT INTO presentations (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(presentationId, title, null, deckCollectionId, currentOrder + 1, now, now);
     return this.buildPatch({ upsertPresentationIds: [presentationId] });
   }
 
@@ -1973,9 +2449,10 @@ export class CastRepository {
     const now = nowIso();
     const lyricId = createId();
     const currentOrder = this.getMaxDeckOrder();
+    const deckCollectionId = this.getDefaultCollectionId('deck');
     this.db
-      .prepare('INSERT INTO lyrics (id, title, template_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(lyricId, title, null, currentOrder + 1, now, now);
+      .prepare('INSERT INTO lyrics (id, title, template_id, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(lyricId, title, null, deckCollectionId, currentOrder + 1, now, now);
     return this.buildPatch({ upsertLyricIds: [lyricId] });
   }
 
@@ -1985,12 +2462,13 @@ export class CastRepository {
     const currentOrder =
       (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM templates').get() as { maxOrder: number | null }).maxOrder ?? -1;
     const elements = input.elements ? JSON.parse(JSON.stringify(input.elements)) as SlideElement[] : createDefaultTemplateElements(input.kind, templateId, now);
+    const collectionId = input.collectionId ?? this.getDefaultCollectionId('template');
 
     this.db
       .prepare(
         `INSERT INTO templates
-          (id, name, kind, width, height, order_index, elements_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         templateId,
@@ -2000,6 +2478,7 @@ export class CastRepository {
         input.height ?? DEFAULT_H,
         currentOrder + 1,
         JSON.stringify(elements),
+        collectionId,
         now,
         now,
       );
@@ -2970,7 +3449,7 @@ export class CastRepository {
     return this.buildPatch({ deletedSlideElementIds: [...ids] });
   }
 
-  createMediaAsset(asset: Omit<MediaAsset, 'id' | 'order' | 'createdAt' | 'updatedAt'>): SnapshotPatch {
+  createMediaAsset(asset: MediaAssetCreateInput): SnapshotPatch {
     this.assertMediaSource(asset.src);
     const now = nowIso();
     const assetId = createId();
@@ -2978,11 +3457,12 @@ export class CastRepository {
       (this.db.prepare('SELECT MAX(order_index) AS maxOrder FROM media_assets').get() as {
         maxOrder: number | null;
       }).maxOrder ?? -1;
+    const collectionId = asset.collectionId ?? this.getMediaAssetDefaultCollectionId(asset.type);
     this.db
       .prepare(
-        'INSERT INTO media_assets (id, name, type, src, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO media_assets (id, name, type, src, collection_id, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
-      .run(assetId, asset.name, asset.type, asset.src, currentOrder + 1, now, now);
+      .run(assetId, asset.name, asset.type, asset.src, collectionId, currentOrder + 1, now, now);
     return this.buildPatch({ upsertMediaAssetIds: [assetId] });
   }
 
@@ -3002,11 +3482,12 @@ export class CastRepository {
     const overlayId = createId();
     const elements = input.elements ?? [];
     const summary = summarizeOverlayElements(elements);
+    const collectionId = input.collectionId ?? this.getDefaultCollectionId('overlay');
     this.db
       .prepare(
         `INSERT INTO overlays
-         (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         overlayId,
@@ -3022,6 +3503,7 @@ export class CastRepository {
         JSON.stringify(summary.payload),
         JSON.stringify(elements),
         JSON.stringify(normalizeOverlayAnimation(input.animation ?? { kind: 'none', durationMs: 0, autoClearDurationMs: null })),
+        collectionId,
         now,
         now
       );
@@ -3281,11 +3763,12 @@ export class CastRepository {
     const nextOrderRow = this.db
       .prepare('SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order FROM stages')
       .get() as { next_order: number };
+    const collectionId = input.collectionId ?? this.getDefaultCollectionId('stage');
 
     this.db
       .prepare(
-        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         stageId,
@@ -3294,6 +3777,7 @@ export class CastRepository {
         height,
         nextOrderRow.next_order,
         JSON.stringify(elements),
+        collectionId,
         now,
         now,
       );
@@ -3344,9 +3828,9 @@ export class CastRepository {
 
   duplicateStage(stageId: Id): SnapshotPatch {
     const existing = this.db
-      .prepare('SELECT id, name, width, height, elements_json FROM stages WHERE id = ?')
+      .prepare('SELECT id, name, width, height, elements_json, collection_id FROM stages WHERE id = ?')
       .get(stageId) as
-      | { id: string; name: string; width: number; height: number; elements_json: string }
+      | { id: string; name: string; width: number; height: number; elements_json: string; collection_id: string }
       | undefined;
 
     if (!existing) return this.buildPatch({});
@@ -3359,8 +3843,8 @@ export class CastRepository {
 
     this.db
       .prepare(
-        `INSERT INTO stages (id, name, width, height, order_index, elements_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO stages (id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         newId,
@@ -3369,6 +3853,7 @@ export class CastRepository {
         existing.height,
         nextOrderRow.next_order,
         existing.elements_json,
+        existing.collection_id,
         now,
         now,
       );
@@ -3585,6 +4070,7 @@ export class CastRepository {
     upsertOverlayIds?: Id[];
     upsertTemplateIds?: Id[];
     upsertStageIds?: Id[];
+    upsertCollectionIds?: Id[];
     deletedLibraryIds?: Id[];
     deletedPresentationIds?: Id[];
     deletedLyricIds?: Id[];
@@ -3594,6 +4080,7 @@ export class CastRepository {
     deletedOverlayIds?: Id[];
     deletedTemplateIds?: Id[];
     deletedStageIds?: Id[];
+    deletedCollectionIds?: Id[];
     replaceLibraryBundles?: boolean;
   }): SnapshotPatch {
     const patch: SnapshotPatch = {
@@ -3628,6 +4115,9 @@ export class CastRepository {
     if (spec.upsertStageIds && spec.upsertStageIds.length > 0) {
       patch.upserts.stages = this.getStagesByIds(spec.upsertStageIds);
     }
+    if (spec.upsertCollectionIds && spec.upsertCollectionIds.length > 0) {
+      patch.upserts.collections = this.getCollectionsByIds(spec.upsertCollectionIds);
+    }
     if (spec.deletedLibraryIds && spec.deletedLibraryIds.length > 0) {
       patch.deletes.libraries = [...spec.deletedLibraryIds];
     }
@@ -3654,6 +4144,9 @@ export class CastRepository {
     }
     if (spec.deletedStageIds && spec.deletedStageIds.length > 0) {
       patch.deletes.stages = [...spec.deletedStageIds];
+    }
+    if (spec.deletedCollectionIds && spec.deletedCollectionIds.length > 0) {
+      patch.deletes.collections = [...spec.deletedCollectionIds];
     }
     if (spec.replaceLibraryBundles) {
       patch.upserts.libraryBundles = this.buildLibraryBundles();
@@ -3700,7 +4193,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, title, template_id, order_index, created_at, updated_at
+        `SELECT id, title, template_id, collection_id, order_index, created_at, updated_at
          FROM presentations
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -3709,6 +4202,7 @@ export class CastRepository {
       id: string;
       title: string;
       template_id: string | null;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -3718,6 +4212,7 @@ export class CastRepository {
       title: row.title,
       type: 'presentation',
       templateId: row.template_id,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -3729,7 +4224,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, title, template_id, order_index, created_at, updated_at
+        `SELECT id, title, template_id, collection_id, order_index, created_at, updated_at
          FROM lyrics
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -3738,6 +4233,7 @@ export class CastRepository {
       id: string;
       title: string;
       template_id: string | null;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -3747,6 +4243,7 @@ export class CastRepository {
       title: row.title,
       type: 'lyric',
       templateId: row.template_id,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -3795,7 +4292,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, type, src, order_index, created_at, updated_at
+        `SELECT id, name, type, src, collection_id, order_index, created_at, updated_at
          FROM media_assets
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC, id ASC`
@@ -3805,6 +4302,7 @@ export class CastRepository {
       name: string;
       type: MediaAsset['type'];
       src: string;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -3814,6 +4312,7 @@ export class CastRepository {
       name: row.name,
       type: row.type,
       src: row.src,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -3825,7 +4324,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
+        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at
          FROM overlays
          WHERE id IN (${placeholders})
          ORDER BY created_at ASC, id ASC`
@@ -3844,6 +4343,7 @@ export class CastRepository {
       payload_json: string;
       elements_json: string;
       animation_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -3861,6 +4361,7 @@ export class CastRepository {
       payload: parseJson(row.payload_json),
       elements: parseJson<SlideElement[]>(row.elements_json),
       animation: normalizeOverlayAnimation(parseJson(row.animation_json)),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -3871,7 +4372,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+        `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
          FROM templates
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -3884,6 +4385,7 @@ export class CastRepository {
       height: number;
       order_index: number;
       elements_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -3895,6 +4397,7 @@ export class CastRepository {
       height: row.height,
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -4266,12 +4769,13 @@ export class CastRepository {
   private getPresentations(): Presentation[] {
     const rows = this.db
       .prepare(
-        'SELECT id, title, template_id, order_index, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, template_id, collection_id, order_index, created_at, updated_at FROM presentations ORDER BY order_index ASC, created_at ASC'
       )
       .all() as Array<{
       id: string;
       title: string;
       template_id: string | null;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -4282,6 +4786,7 @@ export class CastRepository {
       title: row.title,
       type: 'presentation',
       templateId: row.template_id,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -4291,12 +4796,13 @@ export class CastRepository {
   private getLyrics(): Lyric[] {
     const rows = this.db
       .prepare(
-        'SELECT id, title, template_id, order_index, created_at, updated_at FROM lyrics ORDER BY order_index ASC, created_at ASC'
+        'SELECT id, title, template_id, collection_id, order_index, created_at, updated_at FROM lyrics ORDER BY order_index ASC, created_at ASC'
       )
       .all() as Array<{
       id: string;
       title: string;
       template_id: string | null;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -4307,6 +4813,7 @@ export class CastRepository {
       title: row.title,
       type: 'lyric',
       templateId: row.template_id,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -4496,13 +5003,14 @@ export class CastRepository {
   private getMediaAssets(): MediaAsset[] {
     const rows = this.db
       .prepare(
-        'SELECT id, name, type, src, order_index, created_at, updated_at FROM media_assets ORDER BY order_index ASC, created_at ASC, id ASC'
+        'SELECT id, name, type, src, collection_id, order_index, created_at, updated_at FROM media_assets ORDER BY order_index ASC, created_at ASC, id ASC'
       )
       .all() as Array<{
       id: string;
       name: string;
       type: MediaAsset['type'];
       src: string;
+      collection_id: string;
       order_index: number;
       created_at: string;
       updated_at: string;
@@ -4513,6 +5021,7 @@ export class CastRepository {
       name: row.name,
       type: row.type,
       src: row.src,
+      collectionId: row.collection_id,
       order: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -4522,7 +5031,7 @@ export class CastRepository {
   private getOverlays(): Overlay[] {
     const rows = this.db
       .prepare(
-        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, created_at, updated_at
+        `SELECT id, name, type, x, y, width, height, opacity, z_index, enabled, payload_json, elements_json, animation_json, collection_id, created_at, updated_at
          FROM overlays
          ORDER BY created_at ASC, id ASC`
       )
@@ -4540,6 +5049,7 @@ export class CastRepository {
       payload_json: string;
       elements_json: string;
       animation_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -4558,6 +5068,7 @@ export class CastRepository {
       payload: parseJson(row.payload_json),
       elements: parseJson<SlideElement[]>(row.elements_json),
       animation: normalizeOverlayAnimation(parseJson(row.animation_json)),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));
@@ -4566,7 +5077,7 @@ export class CastRepository {
   private getTemplates(): Template[] {
     const rows = this.db
       .prepare(
-        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+        `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
          FROM templates
          ORDER BY order_index ASC, created_at ASC`
       )
@@ -4578,6 +5089,7 @@ export class CastRepository {
       height: number;
       order_index: number;
       elements_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -4590,6 +5102,7 @@ export class CastRepository {
       height: row.height,
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -4598,7 +5111,7 @@ export class CastRepository {
   private getStages(): Stage[] {
     const rows = this.db
       .prepare(
-        `SELECT id, name, width, height, order_index, elements_json, created_at, updated_at
+        `SELECT id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at
          FROM stages
          ORDER BY order_index ASC, created_at ASC`
       )
@@ -4609,6 +5122,7 @@ export class CastRepository {
       height: number;
       order_index: number;
       elements_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -4620,6 +5134,7 @@ export class CastRepository {
       height: row.height,
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -4630,7 +5145,7 @@ export class CastRepository {
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.db
       .prepare(
-        `SELECT id, name, width, height, order_index, elements_json, created_at, updated_at
+        `SELECT id, name, width, height, order_index, elements_json, collection_id, created_at, updated_at
          FROM stages
          WHERE id IN (${placeholders})
          ORDER BY order_index ASC, created_at ASC`
@@ -4642,6 +5157,7 @@ export class CastRepository {
       height: number;
       order_index: number;
       elements_json: string;
+      collection_id: string;
       created_at: string;
       updated_at: string;
     }>;
@@ -4653,6 +5169,7 @@ export class CastRepository {
       height: row.height,
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -4661,7 +5178,7 @@ export class CastRepository {
   private getTemplateById(templateId: Id): Template | null {
     const row = this.db
       .prepare(
-        `SELECT id, name, kind, width, height, order_index, elements_json, created_at, updated_at
+        `SELECT id, name, kind, width, height, order_index, elements_json, collection_id, created_at, updated_at
          FROM templates
          WHERE id = ?`
       )
@@ -4673,6 +5190,7 @@ export class CastRepository {
         height: number;
         order_index: number;
         elements_json: string;
+        collection_id: string;
         created_at: string;
         updated_at: string;
       } | undefined;
@@ -4685,6 +5203,7 @@ export class CastRepository {
       height: row.height,
       order: row.order_index,
       elements: parseJson<SlideElement[]>(row.elements_json),
+      collectionId: row.collection_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
