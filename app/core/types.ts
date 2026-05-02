@@ -60,10 +60,17 @@ export interface Lyric extends DeckItemBase {
 
 export type DeckItem = Presentation | Lyric;
 
+export type SlideKind = 'presentation' | 'lyric' | 'theme' | 'overlay' | 'stage';
+
 export interface Slide {
   id: Id;
+  // Exactly one of the parent FKs is set; the rest are null.
   presentationId: Id | null;
   lyricId: Id | null;
+  themeId: Id | null;
+  overlayId: Id | null;
+  stageId: Id | null;
+  kind: SlideKind;
   width: number;
   height: number;
   notes: string;
@@ -190,7 +197,7 @@ export interface SlideElement extends SlideElementBase {
   payload: SlideElementPayload;
 }
 
-export type MediaAssetType = 'image' | 'video' | 'audio' | 'animation';
+export type MediaAssetType = 'image' | 'video' | 'audio';
 
 export interface MediaAsset {
   id: Id;
@@ -213,16 +220,9 @@ export interface OverlayAnimation {
 
 export interface Overlay {
   id: Id;
+  slideId: Id;
   name: string;
-  type: OverlayType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  opacity: number;
-  zIndex: number;
   enabled: boolean;
-  payload: SlideElementPayload;
   elements: SlideElement[];
   animation: OverlayAnimation;
   collectionId: Id;
@@ -232,6 +232,7 @@ export interface Overlay {
 
 export interface Theme {
   id: Id;
+  slideId: Id;
   name: string;
   kind: ThemeKind;
   width: number;
@@ -245,6 +246,7 @@ export interface Theme {
 
 export interface Stage {
   id: Id;
+  slideId: Id;
   name: string;
   width: number;
   height: number;

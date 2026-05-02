@@ -31,13 +31,13 @@ const EMPTY_LABELS: Record<MediaPickerAssetKind, string> = {
 
 function isAssetAllowed(kind: MediaPickerAssetKind, asset: MediaAsset): boolean {
   if (kind === 'image') return asset.type === 'image';
-  return asset.type === 'video' || asset.type === 'animation';
+  return asset.type === 'video';
 }
 
 function buildAcceptedFileList(files: Iterable<File>, kind: MediaPickerAssetKind): FileList | null {
   const accepted = Array.from(files).filter((file) => {
     const type = typeFromFile(file);
-    return kind === 'image' ? type === 'image' : type === 'video' || type === 'animation';
+    return kind === 'image' ? type === 'image' : type === 'video';
   });
   if (accepted.length === 0 || typeof DataTransfer === 'undefined') return null;
   const transfer = new DataTransfer();
@@ -52,7 +52,7 @@ function expectedAssetSources(files: Iterable<File>, kind: MediaPickerAssetKind)
   for (const file of files) {
     const type = typeFromFile(file);
     if (kind === 'image' && type !== 'image') continue;
-    if (kind === 'video' && type !== 'video' && type !== 'animation') continue;
+    if (kind === 'video' && type !== 'video') continue;
     const filePath = window.castApi.getPathForFile(file);
     if (!filePath) continue;
     sources.add(castMediaSrc(filePath));
@@ -64,7 +64,7 @@ function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   if (asset.type === 'image') {
     return <img src={asset.src} alt={asset.name} loading="lazy" draggable={false} className="block h-full w-full object-cover" />;
   }
-  if (asset.type === 'video' || asset.type === 'animation') {
+  if (asset.type === 'video') {
     return <video src={asset.src} muted playsInline preload="metadata" className="block h-full w-full object-cover" />;
   }
   return <span className="text-sm font-bold uppercase tracking-wider text-tertiary">{asset.type}</span>;

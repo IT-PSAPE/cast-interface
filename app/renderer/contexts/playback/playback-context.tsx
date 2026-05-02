@@ -234,7 +234,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const setMediaLayerAsset = useCallback((assetId: Id) => {
     const asset = mediaAssetsById.get(assetId);
     if (!asset) return;
-    if (asset.type === 'video' || asset.type === 'animation') {
+    if (asset.type === 'video') {
       setVideoLayerAssetId(asset.id);
       setStatusText(`Video layer: ${asset.name}`);
       return;
@@ -604,7 +604,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   // and drive play/pause/seek directly on the looked-up element.
 
   const videoAssets = useMemo(
-    () => mediaAssets.filter((asset) => asset.type === 'video' || asset.type === 'animation'),
+    () => mediaAssets.filter((asset) => asset.type === 'video'),
     [mediaAssets],
   );
   const [layerVideoElement, setLayerVideoElement] = useState<HTMLVideoElement | null>(null);

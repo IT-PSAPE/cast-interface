@@ -235,17 +235,32 @@ describe('CastRepository', () => {
     db.exec('DROP INDEX IF EXISTS idx_decks_theme_id;');
     db.exec('DROP INDEX IF EXISTS idx_lyrics_theme_id;');
     db.exec('DROP INDEX IF EXISTS idx_theme_collections_order_index;');
-    db.exec('ALTER TABLE themes RENAME TO templates;');
+    db.pragma('foreign_keys = OFF');
+    db.exec('DROP TABLE IF EXISTS themes;');
     db.exec('ALTER TABLE theme_collections RENAME TO template_collections;');
     db.exec('ALTER TABLE presentations RENAME COLUMN theme_id TO template_id;');
     db.exec('ALTER TABLE lyrics RENAME COLUMN theme_id TO template_id;');
-    db.pragma('foreign_keys = OFF');
     db.exec('DELETE FROM presentations;');
     db.exec('DELETE FROM playlist_entries;');
     db.exec('DELETE FROM slides;');
     db.exec('DELETE FROM slide_elements;');
-    db.exec('DELETE FROM templates;');
-    db.pragma('foreign_keys = ON');
+    // Recreate `templates` in its pre-v11 form (elements_json column, no
+    // slide_id) so this fixture mirrors the v9 schema. The v10 + v11
+    // migrations will rename it to themes and add slide_id on next open.
+    db.exec(`
+      CREATE TABLE templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        elements_json TEXT NOT NULL DEFAULT '[]',
+        collection_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
     const deckCollectionId = (db.prepare('SELECT id FROM deck_collections WHERE is_default = 1 LIMIT 1').get() as { id: string }).id;
     const themeCollectionId = (db.prepare('SELECT id FROM template_collections WHERE is_default = 1 LIMIT 1').get() as { id: string }).id;
     db.prepare(
@@ -261,6 +276,7 @@ describe('CastRepository', () => {
     db.exec('CREATE INDEX idx_presentations_template_id ON presentations(template_id);');
     db.exec('CREATE INDEX idx_lyrics_template_id ON lyrics(template_id);');
     db.exec('CREATE INDEX idx_template_collections_order_index ON template_collections(order_index);');
+    db.pragma('foreign_keys = ON');
     db.pragma('user_version = 9');
     db.close();
 

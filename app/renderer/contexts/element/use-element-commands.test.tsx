@@ -24,7 +24,7 @@ function makeStageSource(replaceElements: ReturnType<typeof vi.fn>): ActiveEdito
     emptyStateLabel: 'No stage selected.',
     editable: true,
     createCapabilities: { text: true, shape: true, image: true, video: true },
-    meta: { stage: { id: 'stage-1', name: 'Stage', width: 1920, height: 1080, order: 0, elements: [], collectionId: 'stage-default', createdAt: '', updatedAt: '' } },
+    meta: { stage: { id: 'stage-1', slideId: 'stage-1:slide', name: 'Stage', width: 1920, height: 1080, order: 0, elements: [], collectionId: 'stage-default', createdAt: '', updatedAt: '' } },
   };
 }
 

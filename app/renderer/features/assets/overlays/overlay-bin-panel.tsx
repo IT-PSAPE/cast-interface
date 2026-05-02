@@ -33,7 +33,7 @@ export function OverlayBinPanel() {
   );
 
   const overlays = useMemo(
-    () => filterByText(filteredByCollection, searchValue, (overlay: Overlay) => [overlay.name, overlay.type]),
+    () => filterByText(filteredByCollection, searchValue, (overlay: Overlay) => [overlay.name]),
     [filteredByCollection, searchValue],
   );
 

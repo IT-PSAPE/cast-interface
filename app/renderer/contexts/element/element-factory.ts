@@ -100,7 +100,7 @@ export function newSlideMediaElement(slideId: Id, asset: MediaAsset, x: number, 
       updatedAt: timestamp,
     };
   }
-  if (asset.type === 'video' || asset.type === 'animation') {
+  if (asset.type === 'video') {
     return {
       id: createId(),
       slideId,

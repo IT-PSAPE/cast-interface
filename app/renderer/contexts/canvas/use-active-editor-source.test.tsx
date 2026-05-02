@@ -30,6 +30,10 @@ function makeSlide(id: string): Slide {
     id,
     presentationId: 'presentation-1',
     lyricId: null,
+    themeId: null,
+    overlayId: null,
+    stageId: null,
+    kind: 'presentation',
     width: 1920,
     height: 1080,
     notes: '',
@@ -42,6 +46,7 @@ function makeSlide(id: string): Slide {
 function makeTheme(id: string, kind: Theme['kind']): Theme {
   return {
     id,
+    slideId: `${id}-slide`,
     name: 'Theme',
     kind,
     width: 1920,
@@ -57,6 +62,7 @@ function makeTheme(id: string, kind: Theme['kind']): Theme {
 function makeStage(id: string): Stage {
   return {
     id,
+    slideId: `${id}-slide`,
     name: 'Stage',
     width: 1280,
     height: 720,
@@ -71,25 +77,9 @@ function makeStage(id: string): Stage {
 function makeOverlay(id: string): Overlay {
   return {
     id,
+    slideId: `${id}-slide`,
     name: 'Overlay',
-    type: 'text',
-    x: 0,
-    y: 0,
-    width: 800,
-    height: 120,
-    opacity: 1,
-    zIndex: 0,
     enabled: true,
-    payload: {
-      text: 'Overlay',
-      fontFamily: 'Avenir Next',
-      fontSize: 72,
-      color: '#FFFFFF',
-      alignment: 'center',
-      verticalAlign: 'middle',
-      lineHeight: 1.2,
-      weight: '700',
-    },
     elements: [],
     animation: { kind: 'none', durationMs: 0, autoClearDurationMs: null },
     collectionId: 'overlay-default',

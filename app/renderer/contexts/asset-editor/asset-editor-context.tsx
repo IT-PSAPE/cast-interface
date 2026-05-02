@@ -138,11 +138,11 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
 
   const createOverlayAction = useCallback(async () => {
     const now = new Date().toISOString();
+    const overlayId = createId();
     const draft: Overlay = {
-      id: createId(),
-      type: 'text',
-      x: 0, y: 0, width: 1920, height: 1080, opacity: 1, zIndex: 0, enabled: true,
-      payload: { text: '', fontFamily: 'Avenir Next', fontSize: 48, color: '#FFFFFF', alignment: 'left', weight: '700' },
+      id: overlayId,
+      slideId: `${overlayId}:slide`,
+      enabled: true,
       collectionId: '',
       createdAt: now, updatedAt: now,
       ...getOverlayDefaults({
@@ -314,12 +314,14 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
   const createTheme = useCallback((kind: ThemeKind) => {
     const now = new Date().toISOString();
     const id = createId();
+    const slideId = `${id}:slide`;
     const draft: Theme = {
       id,
+      slideId,
       name: kind === 'lyrics' ? 'New Lyric Theme' : kind === 'overlays' ? 'New Overlay Theme' : 'New Slide Theme',
       kind, width: 1920, height: 1080,
       order: (themes.at(-1)?.order ?? -1) + 1,
-      elements: createDefaultThemeElements(kind, id, now),
+      elements: createDefaultThemeElements(kind, slideId, now),
       collectionId: '',
       createdAt: now, updatedAt: now,
     };
@@ -507,8 +509,10 @@ export function AssetEditorProvider({ children }: { children: ReactNode }) {
 
   const createStageAction = useCallback(async () => {
     const now = new Date().toISOString();
+    const stageId = createId();
     const draft: Stage = {
-      id: createId(),
+      id: stageId,
+      slideId: `${stageId}:slide`,
       name: 'New Stage',
       width: 1920,
       height: 1080,

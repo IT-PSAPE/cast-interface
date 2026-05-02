@@ -155,10 +155,10 @@ function MediaRowBody({ asset, isActive, onAssignLayer, onArmVideo, collectionsA
   } = useWorkbench();
 
   function handleAssignLayer() {
-    if ((asset.type === 'video' || asset.type === 'animation') && programMode === 'single' && programSingleSurface !== 'program') {
+    if ((asset.type === 'video') && programMode === 'single' && programSingleSurface !== 'program') {
       setProgramSingleSurface('program');
     }
-    if (asset.type === 'video' || asset.type === 'animation') {
+    if (asset.type === 'video') {
       onArmVideo(asset.id);
       return;
     }
@@ -205,10 +205,10 @@ function MediaTileBody({ asset, isActive, onAssignLayer, onArmVideo, collections
   } = useWorkbench();
 
   function handleAssignLayer() {
-    if ((asset.type === 'video' || asset.type === 'animation') && programMode === 'single' && programSingleSurface !== 'program') {
+    if ((asset.type === 'video') && programMode === 'single' && programSingleSurface !== 'program') {
       setProgramSingleSurface('program');
     }
-    if (asset.type === 'video' || asset.type === 'animation') {
+    if (asset.type === 'video') {
       onArmVideo(asset.id);
       return;
     }

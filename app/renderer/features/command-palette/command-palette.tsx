@@ -167,7 +167,7 @@ export function CommandPalette() {
           // Behaves like clicking the asset in its bin: arms the relevant
           // layer. Image assets live in the resource drawer; video assets
           // should arm the video transport and begin playback immediately.
-          if (asset.type === 'video' || asset.type === 'animation') {
+          if (asset.type === 'video') {
             video.armVideo(asset.id);
             return;
           }

@@ -10,7 +10,7 @@ export type MediaBinKind = Extract<CollectionBinKind, 'image' | 'video' | 'audio
 
 const TYPE_FILTERS: Record<MediaBinKind, (asset: MediaAsset) => boolean> = {
   image: (asset) => asset.type === 'image',
-  video: (asset) => asset.type === 'video' || asset.type === 'animation',
+  video: (asset) => asset.type === 'video',
   audio: (asset) => asset.type === 'audio',
 };
 
