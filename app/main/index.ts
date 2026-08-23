@@ -8,6 +8,7 @@ import { registerIpcHandlers } from './ipc';
 import { initializeLogger, getLogFilePath } from './logger';
 import { NdiServiceProxy } from './ndi/ndi-service-proxy';
 import { NoopNdiService, NdiConfigStore, type NdiServiceLike } from '@lumacast/engine';
+import { resolveAppIdentity } from './app-identity';
 import {
   createForbiddenResponse,
   createNotFoundResponse,
@@ -30,8 +31,7 @@ interface CliOptions {
 
 type RendererView = CliOptions['rendererView'];
 
-const APP_NAME = 'LumaCast';
-const APP_ID = 'com.lumacast.app';
+const { name: APP_NAME, id: APP_ID } = resolveAppIdentity(import.meta.env);
 const cliOptions = resolveCliOptions(process.argv);
 app.setName(APP_NAME);
 if (cliOptions.userDataDir) {
