@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import { APP_MENU_EVENTS, IPC, NDI_EVENTS, type ItemCreateInput, type ItemCreateResult, type ItemDuplicateInput, type ItemDuplicateResult, type MainApi, type ProjectRestoreResult } from '@lumacast/protocol';
+import { APP_MENU_EVENTS, IPC, MEDIA_DERIVATIVE_EVENTS, MEDIA_LIBRARY_EVENTS, NDI_EVENTS, NDI_FRAME_TRANSPORT_PORT_CHANNEL, PERSISTENCE_CHANNELS, PERSISTENCE_EVENTS, isNdiFrameTransportPortAnnouncement, type ItemCreateInput, type ItemCreateResult, type ItemDuplicateInput, type ItemDuplicateResult, type MainApi, type ProjectRestoreResult } from '@lumacast/protocol';
 import type { SnapshotPatch } from '@lumacast/protocol';
 import type { Id } from '@lumacast/kernel';
 import type { ItemRef, ItemType, ThemeOwnerType } from '@lumacast/composition';
@@ -42,6 +42,19 @@ import type {
 } from '@lumacast/protocol';
 import type { ProjectBackup } from '@lumacast/protocol';
 
+ipcRenderer.on(NDI_FRAME_TRANSPORT_PORT_CHANNEL, (event, announcement: unknown) => {
+  const [port] = event.ports;
+  if (!port || event.ports.length !== 1 || !isNdiFrameTransportPortAnnouncement(announcement)) {
+    for (const candidate of event.ports) candidate.close();
+    return;
+  }
+  // MessagePort is intentionally handed to the main world outside
+  // contextBridge: contextBridge would clone calls crossing isolated worlds.
+  // The renderer validates source, origin and the typed announcement before
+  // transferring this port into its readback worker.
+  window.postMessage(announcement, '*', [port]);
+});
+
 const api = {
   platform: process.platform,
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
@@ -55,6 +68,7 @@ const api = {
   checkForAppUpdates: (manual = false) =>
     ipcRenderer.invoke(IPC.checkForAppUpdates, manual) as Promise<void>,
   getSnapshot: () => ipcRenderer.invoke(IPC.getSnapshot),
+  applySnapshotPatch: (patch: SnapshotPatch) => ipcRenderer.invoke(IPC.applySnapshotPatch, patch) as Promise<void>,
   restoreFromSnapshot: (snapshot: AppSnapshot) => ipcRenderer.invoke(IPC.restoreFromSnapshot, snapshot) as Promise<AppSnapshot>,
   chooseBundleExportPath: (suggestedName: string) => ipcRenderer.invoke(IPC.chooseBundleExportPath, suggestedName) as Promise<string | null>,
   chooseBundleImportPath: () => ipcRenderer.invoke(IPC.chooseBundleImportPath) as Promise<string | null>,
@@ -111,6 +125,10 @@ const api = {
   createMediaAsset: (asset: MediaAssetCreateInput) => ipcRenderer.invoke(IPC.createMediaAsset, asset),
   deleteMediaAsset: (id: Id) => ipcRenderer.invoke(IPC.deleteMediaAsset, id),
   updateMediaAssetSrc: (id: Id, src: string) => ipcRenderer.invoke(IPC.updateMediaAssetSrc, id, src),
+  reclaimMediaLibrary: () => ipcRenderer.invoke(IPC.reclaimMediaLibrary),
+  ensureMediaDerivative: (assetId: Id) => ipcRenderer.invoke(IPC.ensureMediaDerivative, assetId),
+  uploadMediaDerivativeFallback: (assetId: Id, generationToken: string, sourceFingerprint: string, bytes: Uint8Array) =>
+    ipcRenderer.invoke(IPC.uploadMediaDerivativeFallback, assetId, generationToken, sourceFingerprint, bytes),
   getAudioCoverArt: (src: string) => ipcRenderer.invoke(IPC.getAudioCoverArt, src) as Promise<string | null>,
   createOverlay: (overlay: OverlayCreateInput) => ipcRenderer.invoke(IPC.createOverlay, overlay),
   updateOverlay: (input: OverlayUpdateInput) => ipcRenderer.invoke(IPC.updateOverlay, input),
@@ -153,6 +171,9 @@ const api = {
   updateNdiOutputConfig: (name: NdiOutputName, config: Partial<NdiOutputConfig>) =>
     ipcRenderer.invoke(IPC.updateNdiOutputConfig, name, config) as Promise<NdiOutputConfigMap>,
   getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
+  requestNdiFrameTransport: (name: NdiOutputName) => {
+    ipcRenderer.send(IPC.requestNdiFrameTransport, { name });
+  },
   sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number, telemetry?: NdiFrameTelemetry) => {
     // Use ordinary IPC cloning for frame delivery. Electron's renderer
     // transfer-list path rejects ArrayBuffer here, which prevents frames from
@@ -184,10 +205,10 @@ const api = {
     ipcRenderer.on(NDI_EVENTS.diagnosticsChanged, handler);
     return () => { ipcRenderer.removeListener(NDI_EVENTS.diagnosticsChanged, handler); };
   },
-  onNdiFrameAck: (callback: (name: NdiOutputName) => void) => {
-    const handler = (_event: IpcRendererEvent, name: NdiOutputName) => callback(name);
-    ipcRenderer.on(NDI_EVENTS.frameAck, handler);
-    return () => { ipcRenderer.removeListener(NDI_EVENTS.frameAck, handler); };
+  onNdiFrameReleased: (callback: (release: import('@lumacast/protocol').NdiFrameRelease) => void) => {
+    const handler = (_event: IpcRendererEvent, release: import('@lumacast/protocol').NdiFrameRelease) => callback(release);
+    ipcRenderer.on(NDI_EVENTS.frameReleased, handler);
+    return () => { ipcRenderer.removeListener(NDI_EVENTS.frameReleased, handler); };
   },
   restoreProjectBackup: (backup: ProjectBackup) =>
     ipcRenderer.invoke(IPC.restoreProjectBackup, backup) as Promise<ProjectRestoreResult>,
@@ -195,6 +216,22 @@ const api = {
     const handler = (_event: IpcRendererEvent, commandId: import('@lumacast/commands').AppMenuCommandId) => callback(commandId);
     ipcRenderer.on(APP_MENU_EVENTS.command, handler);
     return () => { ipcRenderer.removeListener(APP_MENU_EVENTS.command, handler); };
+  },
+  onMediaDerivativeProgress: (callback: (progress: import('@lumacast/protocol').MediaDerivativeProgress) => void) => {
+    const handler = (_event: IpcRendererEvent, progress: import('@lumacast/protocol').MediaDerivativeProgress) => callback(progress);
+    ipcRenderer.on(MEDIA_DERIVATIVE_EVENTS.progress, handler);
+    return () => { ipcRenderer.removeListener(MEDIA_DERIVATIVE_EVENTS.progress, handler); };
+  },
+  onMediaLibraryProgress: (callback: (progress: import('@lumacast/protocol').MediaLibraryProgress) => void) => {
+    const handler = (_event: IpcRendererEvent, progress: import('@lumacast/protocol').MediaLibraryProgress) => callback(progress);
+    ipcRenderer.on(MEDIA_LIBRARY_EVENTS.progress, handler);
+    return () => { ipcRenderer.removeListener(MEDIA_LIBRARY_EVENTS.progress, handler); };
+  },
+  onPersistenceProgress: (callback: (progress: import('@lumacast/protocol').PersistenceProgress) => void) => {
+    const handler = (_event: IpcRendererEvent, progress: import('@lumacast/protocol').PersistenceProgress) => callback(progress);
+    ipcRenderer.on(PERSISTENCE_EVENTS.progress, handler);
+    ipcRenderer.send(PERSISTENCE_CHANNELS.subscribe);
+    return () => { ipcRenderer.removeListener(PERSISTENCE_EVENTS.progress, handler); };
   },
   obsListLogSessions: () => ipcRenderer.invoke(IPC.obsListLogSessions) as Promise<LogSessionSummary[]>,
   obsReadLogSession: (filePath: string, offset: number, limit: number) =>

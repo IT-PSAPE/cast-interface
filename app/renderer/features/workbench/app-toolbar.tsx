@@ -8,6 +8,7 @@ import { cv } from '@renderer/utils/cv';
 import { useWorkbenchPanelToggles } from './use-workbench-panel-toggles';
 import { useNdi } from '@renderer/contexts/app-context';
 import { useCommandPalette } from '../command-palette/command-palette-context';
+import { OverflowViewMenu } from './overflow-view-menu';
 
 const isMac = window.castApi.platform === 'darwin';
 
@@ -79,9 +80,7 @@ export function AppToolbar() {
           <SegmentedControl.Label value="show">Show</SegmentedControl.Label>
           <SegmentedControl.Label value="item-editor">Edit</SegmentedControl.Label>
           <SegmentedControl.Label value="theme-editor">Themes</SegmentedControl.Label>
-          <SegmentedControl.Label value="overlay-editor">Overlay</SegmentedControl.Label>
-          <SegmentedControl.Label value="stage-editor">Stage</SegmentedControl.Label>
-          <SegmentedControl.Label value="macro-editor">Macros</SegmentedControl.Label>
+          <OverflowViewMenu value={workbenchMode} onSelect={handleWorkbenchModeChange} />
         </SegmentedControl>
       </div>
 

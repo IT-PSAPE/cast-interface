@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { Id } from '@lumacast/kernel';
 import type { EditorThemeSource } from '@lumacast/canvas';
 import type { ItemRef, Lyric, Overlay, Presentation, Talk } from '@lumacast/composition';
@@ -7,6 +7,8 @@ import { ItemInspector } from './features/inspector/item-inspector';
 import { useThemeBin } from './features/assets/themes/use-theme-bin';
 import { ThemeBinPanel } from './features/assets/themes/theme-bin-panel';
 import { WorkbenchProvider } from './contexts/workbench-context';
+import { BinControlsProvider } from '@renderer/components/controls/bin-controls';
+import type { ResourceDrawerViewMode } from './types/ui';
 
 // Covers #219 item-model refactor decision D2: talk themes are their own
 // family (`talkThemes`), not a member of a shared `Theme.kind` union — every
@@ -22,6 +24,21 @@ const mocks = vi.hoisted(() => ({
   project: { value: null as unknown },
   themeEditor: { value: null as unknown },
   confirm: { fn: null as unknown },
+}));
+
+const virtualizerMocks = vi.hoisted(() => ({
+  virtualItems: Array.from({ length: 8 }, (_, index) => ({ index, key: `row-${index}`, start: index * 40 })),
+  measureElement: vi.fn(),
+  scrollToIndex: vi.fn(),
+}));
+
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: vi.fn(() => ({
+    getVirtualItems: () => virtualizerMocks.virtualItems,
+    getTotalSize: () => 320,
+    measureElement: virtualizerMocks.measureElement,
+    scrollToIndex: virtualizerMocks.scrollToIndex,
+  })),
 }));
 
 // ThemeBinPanel's grid view mounts a live scene preview per tile via
@@ -85,6 +102,35 @@ function makeOverlay(id: Id, name: string): Overlay {
   return { id, slideId: `${id}:slide`, name, enabled: true, order: 0, elements: [], animation: { kind: 'none', durationMs: 0 }, createdAt: now, updatedAt: now };
 }
 
+// Search text, view mode and grid size moved out of the bin panels and onto
+// whichever host renders the tab row, so exercising a bin means supplying that
+// host state — including asking for list mode directly instead of clicking a
+// view toggle the panel no longer owns.
+function BinHost({ children, viewMode = 'grid' }: { children: React.ReactNode; viewMode?: ResourceDrawerViewMode }) {
+  return (
+    <WorkbenchProvider>
+      <BinControlsProvider
+        searchValue=""
+        onSearchChange={vi.fn()}
+        searchPlaceholder="Search themes…"
+        viewMode={viewMode}
+        onViewModeChange={vi.fn()}
+        grid={{ value: 6, min: 4, max: 8, step: 1, onChange: vi.fn() }}
+      >
+        {children}
+      </BinControlsProvider>
+    </WorkbenchProvider>
+  );
+}
+
+// A theme's family is now expressed purely by which array it lives in — there
+// is no active-family selector left to consult.
+function themesByType(family: ThemeFamily, themes: EditorThemeSource[]) {
+  return { presentation: [], lyric: [], talk: [], overlay: [], [family]: themes };
+}
+
+type ThemeFamily = 'presentation' | 'lyric' | 'talk' | 'overlay';
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -93,18 +139,22 @@ afterEach(() => {
 // ─── use-theme-bin.ts: click-to-apply gating ──────────────────────────
 
 describe('useThemeBin (per-family click-to-apply gating)', () => {
-  function setup(currentItemRef: ItemRef | null, themeType: 'presentation' | 'lyric' | 'talk' | 'overlay', applyThemeToTarget = vi.fn().mockResolvedValue(undefined)) {
+  function setup(currentItemRef: ItemRef | null, family: ThemeFamily, theme: EditorThemeSource, applyThemeToTarget = vi.fn().mockResolvedValue(undefined)) {
     mocks.navigation.value = { currentItemRef };
-    mocks.themeEditor.value = { themeType, setThemeType: vi.fn(), themes: [], applyThemeToTarget };
+    mocks.themeEditor.value = { themesByType: themesByType(family, [theme]), applyThemeToTarget };
     return applyThemeToTarget;
+  }
+
+  function renderThemeBinHook() {
+    return renderHook(() => useThemeBin(), { wrapper: ({ children }) => <BinHost>{children}</BinHost> });
   }
 
   it('applies a talk theme to the current talk when the talk family is active', async () => {
     const talk: ItemRef = { type: 'talk', id: 't1' };
     const theme = makeTheme('theme-1', 'Talk Theme');
-    const applyThemeToTarget = setup(talk, 'talk');
+    const applyThemeToTarget = setup(talk, 'talk', theme);
 
-    const { result } = renderHook(() => useThemeBin());
+    const { result } = renderThemeBinHook();
     await act(async () => {
       await result.current.handleApplyTheme(theme);
     });
@@ -115,9 +165,9 @@ describe('useThemeBin (per-family click-to-apply gating)', () => {
   it('never applies a lyric-family theme to the current talk — no cross-family matrix left to consult', async () => {
     const talk: ItemRef = { type: 'talk', id: 't1' };
     const theme = makeTheme('theme-2', 'Lyric Theme');
-    const applyThemeToTarget = setup(talk, 'lyric');
+    const applyThemeToTarget = setup(talk, 'lyric', theme);
 
-    const { result } = renderHook(() => useThemeBin());
+    const { result } = renderThemeBinHook();
     await act(async () => {
       await result.current.handleApplyTheme(theme);
     });
@@ -127,9 +177,9 @@ describe('useThemeBin (per-family click-to-apply gating)', () => {
 
   it('does nothing without a current item', async () => {
     const theme = makeTheme('theme-3', 'Talk Theme');
-    const applyThemeToTarget = setup(null, 'talk');
+    const applyThemeToTarget = setup(null, 'talk', theme);
 
-    const { result } = renderHook(() => useThemeBin());
+    const { result } = renderThemeBinHook();
     await act(async () => {
       await result.current.handleApplyTheme(theme);
     });
@@ -142,7 +192,7 @@ describe('useThemeBin (per-family click-to-apply gating)', () => {
 
 describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', () => {
   function renderPanel(options: {
-    themeType: 'presentation' | 'lyric' | 'talk' | 'overlay';
+    themeType: ThemeFamily;
     theme: EditorThemeSource;
     presentations?: Presentation[];
     lyrics?: Lyric[];
@@ -152,12 +202,11 @@ describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', 
     mocks.cast.value = { setStatusText: vi.fn() };
     mocks.navigation.value = { currentItemRef: null };
     mocks.themeEditor.value = {
-      themeType: options.themeType,
-      setThemeType: vi.fn(),
-      themes: [options.theme],
+      themesByType: themesByType(options.themeType, [options.theme]),
       applyThemeToTarget: vi.fn().mockResolvedValue(undefined),
       renameTheme: vi.fn(),
       deleteTheme: vi.fn(),
+      createTheme: vi.fn(),
     };
     mocks.project.value = {
       presentations: options.presentations ?? [],
@@ -167,19 +216,18 @@ describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', 
     };
     mocks.confirm.fn = vi.fn().mockResolvedValue(true);
 
+    // The grid view's tiles render a live scene preview; list mode keeps this
+    // test on the row + context menu, not scene rendering.
     render(
-      <WorkbenchProvider>
+      <BinHost viewMode="list">
         <ThemeBinPanel />
-      </WorkbenchProvider>,
+      </BinHost>,
     );
 
-    // The grid view's tiles render a live scene preview; switch to list view
-    // so this test exercises only the row + context menu, not scene rendering.
-    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
     fireEvent.contextMenu(screen.getByDisplayValue(options.theme.name));
   }
 
-  it('offers only talks as apply targets for the talk theme family, excluding presentations and lyrics', () => {
+  it('offers only talks as apply targets for the talk theme family, excluding presentations and lyrics', async () => {
     const theme = makeTheme('theme-1', 'Talk Theme');
     renderPanel({
       themeType: 'talk',
@@ -189,7 +237,8 @@ describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', 
       talks: [makeTalk('t1', 'My Talk')],
     });
 
-    act(() => { fireEvent.click(screen.getByRole('menuitem', { name: 'Apply to' })); });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply to' }));
+    await waitFor(() => expect(screen.getAllByRole('menu')).toHaveLength(2));
     const menus = screen.getAllByRole('menu');
     const submenu = menus[menus.length - 1];
 
@@ -198,7 +247,7 @@ describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', 
     expect(within(submenu).queryByRole('menuitem', { name: 'My Lyric' })).toBeNull();
   });
 
-  it('offers only overlays as apply targets for the overlay theme family, never items', () => {
+  it('offers only overlays as apply targets for the overlay theme family, never items', async () => {
     const theme = makeTheme('theme-2', 'Overlay Theme');
     renderPanel({
       themeType: 'overlay',
@@ -208,7 +257,8 @@ describe('ThemeBinPanel "Apply to" targets (per-family, no capability matrix)', 
       overlays: [makeOverlay('o1', 'Lower Third')],
     });
 
-    act(() => { fireEvent.click(screen.getByRole('menuitem', { name: 'Apply to' })); });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply to' }));
+    await waitFor(() => expect(screen.getAllByRole('menu')).toHaveLength(2));
     const menus = screen.getAllByRole('menu');
     const submenu = menus[menus.length - 1];
 

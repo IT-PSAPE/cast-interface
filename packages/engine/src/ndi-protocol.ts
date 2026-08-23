@@ -1,4 +1,12 @@
-import type { NdiDiagnostics, NdiFrameTelemetry, NdiOutputConfig, NdiOutputConfigMap, NdiOutputName, NdiOutputState } from '@lumacast/protocol';
+import type {
+  NdiDiagnostics,
+  NdiFrameRelease,
+  NdiFrameTelemetry,
+  NdiOutputConfig,
+  NdiOutputConfigMap,
+  NdiOutputName,
+  NdiOutputState,
+} from '@lumacast/protocol';
 
 export interface BlackoutFlushOptions {
   // Optional sender to flush; omit to flush every active sender.
@@ -13,6 +21,7 @@ export interface BlackoutFlushOptions {
 // Sent from main process to the NDI utility process.
 export type NdiHostCommand =
   | { type: 'init'; outputConfigs: NdiOutputConfigMap }
+  | { type: 'attachFramePort'; name: NdiOutputName }
   | { type: 'setOutputEnabled'; name: NdiOutputName; enabled: boolean }
   | { type: 'updateOutputConfig'; name: NdiOutputName; config: Partial<NdiOutputConfig> }
   | {
@@ -45,7 +54,9 @@ export type NdiHostEvent =
     }
   | { type: 'outputConfigsChanged'; outputConfigs: NdiOutputConfigMap }
   | { type: 'outputStateChanged'; outputState: NdiOutputState }
-  | { type: 'diagnosticsChanged'; diagnostics: NdiDiagnostics };
+  | { type: 'diagnosticsChanged'; diagnostics: NdiDiagnostics }
+  | { type: 'frameReleased'; release: NdiFrameRelease }
+  | { type: 'teardownComplete' };
 
 export interface NdiServiceLike {
   getOutputState(): NdiOutputState;
@@ -69,6 +80,7 @@ export interface NdiServiceLike {
   ): void;
   onOutputStateChanged(callback: (state: NdiOutputState) => void): () => void;
   onDiagnosticsChanged(callback: (diagnostics: NdiDiagnostics) => void): () => void;
+  onFrameReleased(callback: (release: NdiFrameRelease) => void): () => void;
   flushBlackoutAndDestroy(target?: NdiOutputName, options?: BlackoutFlushOptions): void;
   destroy(): void;
 }

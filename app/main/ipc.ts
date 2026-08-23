@@ -1,14 +1,17 @@
-import { BrowserWindow, clipboard, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
-import { CastRepository } from '@lumacast/persistence-sqlite';
-import { validateProjectBackup } from '@lumacast/protocol';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, type IpcMainInvokeEvent, type MessagePortMain } from 'electron';
+import { MEDIA_DERIVATIVE_EVENTS, MEDIA_LIBRARY_EVENTS, PERSISTENCE_CHANNELS, PERSISTENCE_EVENTS, validateProjectBackupAsync } from '@lumacast/protocol';
 import {
   IPC,
   NDI_EVENTS,
   NDI_FRAME_CHANNEL_NAMES,
+  NDI_FRAME_TRANSPORT_PORT_CHANNEL,
+  NDI_FRAME_TRANSPORT_VERSION,
+  NDI_FRAME_TRANSPORT_WINDOW_MESSAGE,
   type InlineWindowMenuBounds,
   type InlineWindowMenuItem,
   type ItemCreateInput,
   type ItemDuplicateInput,
+  type PersistenceProgress,
   type RpcOperations,
 } from '@lumacast/protocol';
 import type { AppMenuState } from '@lumacast/commands';
@@ -46,6 +49,7 @@ import {
   RPC_MOVE_DIRECTIONS,
   expectRpcPrimitiveArgs,
   decodeAppSnapshotShape,
+  decodeSnapshotPatchShape,
   decodeCueCreateInput,
   decodeCueUpdateInput,
   decodeBundleBrokenReferenceDecision,
@@ -58,6 +62,7 @@ import {
   decodeMacroCreateInput,
   decodeMacroUpdateInput,
   decodeMediaAssetCreateInput,
+  sanitizeNdiFrameTelemetry,
   decodeNdiOutputConfigInput,
   decodeNdiOutputName,
   decodeOverlayCreateInput,
@@ -91,12 +96,23 @@ import {
   resolveManagedMediaArgs,
   revokeAllManagedMedia,
 } from './media-capability';
+import {
+  MediaDerivativeService,
+  fitWithinBounds,
+  validateEncodedImageForNativeDecode,
+  MAX_TRUSTED_EMBEDDED_IMAGE_BYTES,
+  MAX_EMBEDDED_IMAGE_OUTPUT_BYTES,
+} from './media-derivatives';
+import { MediaLibraryService } from './media-library';
 import type { NdiServiceLike } from '@lumacast/engine';
 import { sampleSystemMetrics } from '@lumacast/engine';
 import { assertTrustedIpcSender } from './security';
+import type { PersistenceServiceLike } from './persistence/persistence-service-proxy';
 
-// `sendNdiFrame`/`sendNdiAudio` (the two ipcMain.on frame channels near the
-// bottom of this file) are the only consumers of this set; their inline
+const SNAPSHOT_HEARTBEAT_INTERVAL_MS = 5_000;
+
+// The three ipcMain.on frame channels near the bottom of this file are the
+// only consumers of this set; their inline
 // validation is deliberately left untouched by issue #150 (frame transport
 // is out of scope), so this stays exactly as it was rather than being
 // folded into the codec-based `decodeNdiOutputName` used by the RPC
@@ -113,6 +129,85 @@ const THEME_OWNER_TYPES = ['presentation', 'lyric', 'talk', 'overlay'] as const 
 
 function childContext(context: CodecContext, field: string): CodecContext {
   return { ...context, path: context.path ? `${context.path}.${field}` : field };
+}
+
+interface MediaDerivativePatchReconcilePlan {
+  invalidateIds: string[];
+  scheduleIds: string[];
+}
+
+async function buildMediaDerivativePatchReconcilePlan(
+  repo: PersistenceServiceLike,
+  patch: import('@lumacast/protocol').SnapshotPatch,
+): Promise<MediaDerivativePatchReconcilePlan> {
+  const upserts = patch.upserts.mediaAssets ?? [];
+  const deletedIds = new Set(patch.deletes.mediaAssets ?? []);
+  if (upserts.length === 0 && deletedIds.size === 0) {
+    return { invalidateIds: [], scheduleIds: [] };
+  }
+
+  const currentById = new Map<string, Awaited<ReturnType<PersistenceServiceLike['getMediaAsset']>>>();
+  for (const asset of upserts) {
+    if (currentById.has(asset.id)) continue;
+    currentById.set(asset.id, await repo.getMediaAsset(asset.id));
+  }
+
+  const invalidateIds = new Set<string>(deletedIds);
+  const scheduleIds = new Set<string>();
+  for (const asset of upserts) {
+    const current = currentById.get(asset.id);
+    if (!current) {
+      scheduleIds.add(asset.id);
+      continue;
+    }
+    if (current.src !== asset.src) {
+      invalidateIds.add(asset.id);
+      scheduleIds.add(asset.id);
+    }
+  }
+
+  return {
+    invalidateIds: [...invalidateIds],
+    scheduleIds: [...scheduleIds],
+  };
+}
+
+function executeMediaDerivativePatchReconcilePlan(
+  plan: MediaDerivativePatchReconcilePlan,
+  mediaDerivatives: MediaDerivativeService,
+): void {
+  mediaDerivatives.invalidateMany(plan.invalidateIds);
+  mediaDerivatives.scheduleBatch(plan.scheduleIds);
+}
+
+function reconcileMediaDerivativeSnapshotChange(
+  previous: AppSnapshot,
+  next: AppSnapshot,
+  mediaDerivatives: MediaDerivativeService,
+): void {
+  const previousById = new Map(previous.mediaAssets.map((asset) => [asset.id, asset]));
+  const nextById = new Map(next.mediaAssets.map((asset) => [asset.id, asset]));
+  const ids = new Set<string>([...previousById.keys(), ...nextById.keys()]);
+  const invalidateIds = new Set<string>();
+  const scheduleIds = new Set<string>();
+  for (const id of ids) {
+    const before = previousById.get(id);
+    const after = nextById.get(id);
+    if (!after) {
+      invalidateIds.add(id);
+      continue;
+    }
+    if (!before) {
+      scheduleIds.add(id);
+      continue;
+    }
+    if (before.src !== after.src) {
+      invalidateIds.add(id);
+      scheduleIds.add(id);
+    }
+  }
+  mediaDerivatives.invalidateMany([...invalidateIds]);
+  mediaDerivatives.scheduleBatch([...scheduleIds]);
 }
 
 // #219 item-model refactor: `ItemRef` (decision D1's typed `{ type, id }`
@@ -189,11 +284,11 @@ const NDI_FRAME_CHANNEL_NAME_SET = new Set<string>(NDI_FRAME_CHANNEL_NAMES);
 /**
  * Registers every operation in `handlers` through `safeHandle`, driven by the
  * `IPC` map rather than a hand-maintained sequence of `safeHandle(IPC.x, ...)`
- * calls. Iterating `IPC` (skipping the two frame channels) rather than
+ * calls. Iterating `IPC` (skipping the three frame/control channels) rather than
  * `Object.keys(handlers)` means a rogue registration under a channel string
  * absent from `IPC` is structurally impossible from inside this function.
  * Frame channels are excluded by construction — `NDI_FRAME_CHANNEL_NAME_SET`
- * is checked before dispatch — so `sendNdiFrame`/`sendNdiAudio` can never
+ * is checked before dispatch — so the NDI frame/control channels can never
  * reach this path; they are registered directly via `ipcMain.on` below,
  * exactly as before.
  *
@@ -224,7 +319,10 @@ const SELF_RESOLVING_MEDIA_OPERATIONS: ReadonlySet<RpcChannelName> = new Set<Rpc
 // out. Wrapping here rather than per handler means no operation can be added
 // that accidentally hands the renderer a filesystem path, and no repository
 // method has to know that managed ids exist at all.
-function registerRpcHandlers(handlers: RpcHandlerMap): void {
+function registerRpcHandlers(
+  handlers: RpcHandlerMap,
+  transformResult: (result: unknown) => unknown = (result) => result,
+): void {
   for (const key of Object.keys(IPC) as (keyof typeof IPC)[]) {
     if (NDI_FRAME_CHANNEL_NAME_SET.has(key)) continue;
     const operation = key as RpcChannelName;
@@ -234,17 +332,58 @@ function registerRpcHandlers(handlers: RpcHandlerMap): void {
     safeHandle(IPC[key], async (event: IpcMainInvokeEvent, ...args: unknown[]) => {
       const resolvedArgs = resolvesOwnMedia ? args : resolveManagedMediaArgs(args);
       const result = await handler(event, ...(resolvedArgs as never[]));
-      return maskManagedMediaResult(result);
+      return maskManagedMediaResult(transformResult(result));
     });
   }
 }
 
 export const registerIpcHandlers = (
-  repo: CastRepository,
+  repo: PersistenceServiceLike,
   ndiService: NdiServiceLike,
   getMainWindow: () => BrowserWindow | null,
   appUpdater: AppUpdater,
+  options: {
+    onPersistenceProgress?: (progress: PersistenceProgress) => void;
+    getLatestPersistenceProgress?: () => PersistenceProgress | null;
+    createNdiFrameTransport?: (name: NdiOutputName) => MessagePortMain | null;
+  } = {},
 ): void => {
+  const mediaDerivatives = new MediaDerivativeService(repo, app.getPath('userData'));
+  const mediaLibrary = new MediaLibraryService(app.getPath('userData'));
+
+  function reportPersistenceProgress(progress: PersistenceProgress): void {
+    try {
+      options.onPersistenceProgress?.(progress);
+    } catch {
+      // Progress is observational and cannot alter validation or restore.
+    }
+  }
+
+  async function getSnapshotWithHeartbeat(): Promise<AppSnapshot> {
+    const heartbeat: PersistenceProgress = {
+      operation: 'getSnapshot',
+      phase: 'running',
+      completed: 0,
+      total: 1,
+    };
+    reportPersistenceProgress(heartbeat);
+    const interval = setInterval(() => {
+      reportPersistenceProgress(heartbeat);
+    }, SNAPSHOT_HEARTBEAT_INTERVAL_MS);
+    try {
+      const snapshot = await repo.getSnapshot();
+      reportPersistenceProgress({
+        operation: 'getSnapshot',
+        phase: 'complete',
+        completed: 1,
+        total: 1,
+      });
+      return snapshot;
+    } finally {
+      clearInterval(interval);
+    }
+  }
+
   function getDialogWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
     return BrowserWindow.fromWebContents(event.sender) ?? getMainWindow();
   }
@@ -257,6 +396,12 @@ export const registerIpcHandlers = (
   function ensureBundleExtension(filePath: string): string {
     return filePath.endsWith('.cst') ? filePath : `${filePath}.cst`;
   }
+
+  ndiService.onFrameReleased((release) => {
+    const window = getMainWindow();
+    if (!window || window.isDestroyed()) return;
+    window.webContents.send(NDI_EVENTS.frameReleased, release);
+  });
 
   function showSaveDialogForEvent(event: IpcMainInvokeEvent, options: Electron.SaveDialogOptions) {
     const browserWindow = getDialogWindow(event);
@@ -273,6 +418,58 @@ export const registerIpcHandlers = (
   });
   ndiService.onDiagnosticsChanged((diagnostics) => {
     getMainWindow()?.webContents.send(NDI_EVENTS.diagnosticsChanged, diagnostics);
+  });
+  mediaDerivatives.onProgress((progress) => {
+    const window = getMainWindow();
+    if (!window || window.isDestroyed()) return;
+    window.webContents.send(
+      MEDIA_DERIVATIVE_EVENTS.progress,
+      maskManagedMediaResult(mediaDerivatives.attachToResult(progress)),
+    );
+  });
+  // `registerIpcHandlers` is never handed a process-wide "is the app
+  // quitting" flag (app/main/index.ts's `isShuttingDown` is local to that
+  // module) — the main window being gone is an equally good signal that the
+  // background adoption pass below should stop: there is no renderer left to
+  // report progress to, and no reason to keep copying bytes past that point.
+  function isMainWindowGone(): boolean {
+    const window = getMainWindow();
+    return !window || window.isDestroyed();
+  }
+
+  let mediaLibraryAdoptionStarted = false;
+
+  ipcMain.on(PERSISTENCE_CHANNELS.subscribe, (event) => {
+    try {
+      assertTrustedIpcSender(event);
+      const latest = options.getLatestPersistenceProgress?.();
+      if (latest && !event.sender.isDestroyed()) {
+        event.sender.send(PERSISTENCE_EVENTS.progress, latest);
+      }
+
+      // Triggered from here, not at registration: this channel fires when
+      // the renderer mounts its subscription, which is exactly when a window
+      // exists to send patches to and a snapshot is being kept in sync to
+      // receive them. Guarded to run at most once per process — a second
+      // window subscribing (or a second subscribe call) must not restart it.
+      if (!mediaLibraryAdoptionStarted) {
+        mediaLibraryAdoptionStarted = true;
+        void mediaLibrary.adoptExistingAssets(repo, {
+          onProgress: (progress) => {
+            const window = getMainWindow();
+            if (!window || window.isDestroyed()) return;
+            window.webContents.send(MEDIA_LIBRARY_EVENTS.progress, maskManagedMediaResult(progress));
+          },
+          isCancelled: isMainWindowGone,
+        }).catch((error) => {
+          // A failed adoption pass must never take down the app; the assets
+          // it would have adopted simply stay on their original paths.
+          console.error('[MediaLibrary] Background adoption pass failed', error);
+        });
+      }
+    } catch (error) {
+      console.error(`[IPC ${PERSISTENCE_CHANNELS.subscribe}]`, error);
+    }
   });
 
   // Every non-frame operation is authored here, once, as a single object
@@ -309,9 +506,20 @@ export const registerIpcHandlers = (
       const browserWindow = getDialogWindow(event);
       await appUpdater.checkForUpdates(Boolean(manual), browserWindow);
     },
-    getSnapshot: () => repo.getSnapshot(),
-    restoreFromSnapshot: (_event, snapshot: AppSnapshot) =>
-      repo.restoreFromSnapshot(decodeAppSnapshotShape(snapshot, rpcContext('restoreFromSnapshot'))),
+    getSnapshot: () => getSnapshotWithHeartbeat(),
+    applySnapshotPatch: async (_event, patch: import('@lumacast/protocol').SnapshotPatch) => {
+      const decoded = decodeSnapshotPatchShape(patch, rpcContext('applySnapshotPatch'));
+      const reconcilePlan = await buildMediaDerivativePatchReconcilePlan(repo, decoded);
+      await repo.applyPatch(decoded);
+      executeMediaDerivativePatchReconcilePlan(reconcilePlan, mediaDerivatives);
+    },
+    restoreFromSnapshot: async (_event, snapshot: AppSnapshot) => {
+      const decoded = decodeAppSnapshotShape(snapshot, rpcContext('restoreFromSnapshot'));
+      const previous = await repo.getSnapshot();
+      const restored = await repo.restoreFromSnapshot(decoded);
+      reconcileMediaDerivativeSnapshotChange(previous, restored, mediaDerivatives);
+      return restored;
+    },
     chooseBundleExportPath: async (event, suggestedName: string) => {
       expectRpcPrimitiveArgs([suggestedName], [{ name: 'suggestedName', kind: 'string' }], rpcContext('chooseBundleExportPath'));
       const result = await showSaveDialogForEvent(event, {
@@ -352,7 +560,7 @@ export const registerIpcHandlers = (
       const validatedOptions = options === undefined
         ? undefined
         : decodeBundleExportOptions(options, rpcContext('exportBundle', 'options'));
-      const bundle = repo.exportBundle(itemIds, validatedOptions);
+      const bundle = await repo.exportBundle(itemIds, validatedOptions);
       const normalizedPath = ensureBundleExtension(filePath);
       await writeDeckBundleArchive(normalizedPath, bundle);
       return { filePath: normalizedPath, itemCount: bundle.items.length };
@@ -371,8 +579,17 @@ export const registerIpcHandlers = (
       const validatedDecisions = decisions.map((decision, index) =>
         decodeBundleBrokenReferenceDecision(decision, rpcContext('finalizeImportBundle', `decisions[${index}]`))
       );
+      // A relink points at a file outside the app just as an import does, so
+      // the replacement is copied into the library before it is persisted.
+      const adoptedDecisions = await Promise.all(validatedDecisions.map(async (decision) => (
+        decision.action === 'replace' && decision.replacementPath
+          ? { ...decision, replacementPath: await mediaLibrary.adopt(decision.replacementPath) }
+          : decision
+      )));
       const bundle = await readDeckBundleArchive(filePath);
-      return repo.finalizeImportBundle(bundle, validatedDecisions);
+      const snapshot = await repo.finalizeImportBundle(bundle, adoptedDecisions);
+      mediaDerivatives.scheduleBatch(snapshot.mediaAssets.map((asset) => asset.id));
+      return snapshot;
     },
     listCues: () => repo.listCues(),
     createCue: (_event, input: CueCreateInput) =>
@@ -566,19 +783,52 @@ export const registerIpcHandlers = (
       expectRpcPrimitiveArgs([ids], [{ name: 'ids', kind: 'stringArray' }], rpcContext('deleteElementsBatch'));
       return repo.deleteElementsBatch(ids);
     },
-    createMediaAsset: (_event, asset: MediaAssetCreateInput) =>
-      repo.createMediaAsset(decodeMediaAssetCreateInput(asset, rpcContext('createMediaAsset'))),
-    deleteMediaAsset: (_event, id: Id) => {
-      expectRpcPrimitiveArgs([id], [{ name: 'id', kind: 'string' }], rpcContext('deleteMediaAsset'));
-      return repo.deleteMediaAsset(id);
+    createMediaAsset: async (_event, asset: MediaAssetCreateInput) => {
+      const input = decodeMediaAssetCreateInput(asset, rpcContext('createMediaAsset'));
+      // The file the user picked is copied into the library first, so what gets
+      // persisted is a reference to our copy and the project stops depending on
+      // a path only they can keep alive.
+      const patch = await repo.createMediaAsset({ ...input, src: await mediaLibrary.adopt(input.src) });
+      const assetId = patch.upserts.mediaAssets?.[0]?.id;
+      if (assetId) mediaDerivatives.schedule(assetId);
+      return patch;
     },
-    updateMediaAssetSrc: (_event, id: Id, src: string) => {
+    deleteMediaAsset: async (_event, id: Id) => {
+      expectRpcPrimitiveArgs([id], [{ name: 'id', kind: 'string' }], rpcContext('deleteMediaAsset'));
+      const patch = await repo.deleteMediaAsset(id);
+      mediaDerivatives.invalidate(id);
+      return patch;
+    },
+    updateMediaAssetSrc: async (_event, id: Id, src: string) => {
       expectRpcPrimitiveArgs(
         [id, src],
         [{ name: 'id', kind: 'string' }, { name: 'src', kind: 'string' }],
         rpcContext('updateMediaAssetSrc'),
       );
-      return repo.updateMediaAssetSrc(id, src);
+      const patch = await repo.updateMediaAssetSrc(id, await mediaLibrary.adopt(src));
+      mediaDerivatives.invalidate(id);
+      mediaDerivatives.schedule(id);
+      return patch;
+    },
+    reclaimMediaLibrary: () => mediaLibrary.reclaim(repo),
+    ensureMediaDerivative: (_event, assetId: Id) => {
+      expectRpcPrimitiveArgs([assetId], [{ name: 'assetId', kind: 'string' }], rpcContext('ensureMediaDerivative'));
+      return mediaDerivatives.ensure(assetId);
+    },
+    uploadMediaDerivativeFallback: (_event, assetId: Id, generationToken: string, sourceFingerprint: string, bytes: Uint8Array) => {
+      expectRpcPrimitiveArgs(
+        [assetId, generationToken, sourceFingerprint],
+        [
+          { name: 'assetId', kind: 'string' },
+          { name: 'generationToken', kind: 'string' },
+          { name: 'sourceFingerprint', kind: 'string' },
+        ],
+        rpcContext('uploadMediaDerivativeFallback'),
+      );
+      if (!(bytes instanceof Uint8Array)) {
+        throw new CodecError(rpcContext('uploadMediaDerivativeFallback', 'bytes'), `must be a Uint8Array, got ${typeof bytes}`);
+      }
+      return mediaDerivatives.uploadFallback(assetId, generationToken, sourceFingerprint, bytes);
     },
     // `src` is a managed media id (issue #159), resolved here with an explicit
     // declared use: cover art is only ever read off a grant issued for audio.
@@ -595,7 +845,13 @@ export const registerIpcHandlers = (
         const metadata = await parseFile(filePath);
         const picture = metadata.common.picture?.[0];
         if (!picture) return null;
-        return `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
+        const encoded = validateEncodedImageForNativeDecode(picture.data, MAX_TRUSTED_EMBEDDED_IMAGE_BYTES);
+        const image = nativeImage.createFromBuffer(Buffer.from(picture.data));
+        if (image.isEmpty()) return null;
+        const targetSize = fitWithinBounds(encoded.width, encoded.height, 64, 64);
+        const output = image.resize({ ...targetSize, quality: 'good' }).toPNG();
+        if (output.byteLength > MAX_EMBEDDED_IMAGE_OUTPUT_BYTES) return null;
+        return `data:image/png;base64,${output.toString('base64')}`;
       } catch {
         return null;
       }
@@ -760,14 +1016,29 @@ export const registerIpcHandlers = (
     // `ProjectBackupValidationError` is re-wrapped as a `CodecError` so its
     // message carries the same `[boundary/operation]` shape as every other
     // RPC failure.
-    restoreProjectBackup: (_event, backup: ProjectBackup) => {
+    restoreProjectBackup: async (_event, backup: ProjectBackup) => {
       try {
-        validateProjectBackup(backup);
+        reportPersistenceProgress({
+          operation: 'restoreProjectBackup',
+          phase: 'validation',
+          completed: 0,
+          total: 0,
+        });
+        await validateProjectBackupAsync(backup, {
+          onProgress: ({ validatedRows, totalRows }) => {
+            reportPersistenceProgress({
+              operation: 'restoreProjectBackup',
+              phase: 'validation',
+              completed: validatedRows,
+              total: totalRows,
+            });
+          },
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new CodecError(rpcContext('restoreProjectBackup'), message);
       }
-      const result = repo.restoreProjectBackup(backup);
+      const result = await repo.restoreProjectBackup(backup);
       // Recovery swaps the entire database out from under the renderer, so
       // every managed-media capability minted from the pre-recovery project
       // stops resolving here (issue #159). The result this returns is masked
@@ -815,7 +1086,40 @@ export const registerIpcHandlers = (
     },
     obsGetSystemMetrics: () => sampleSystemMetrics(),
   };
-  registerRpcHandlers(rpcHandlers);
+  registerRpcHandlers(rpcHandlers, (result) => mediaDerivatives.attachToResult(result));
+
+  ipcMain.on(IPC.requestNdiFrameTransport, (event, payload: unknown) => {
+    let port: MessagePortMain | null = null;
+    try {
+      assertTrustedIpcSender(event);
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('NDI frame transport request must be an object');
+      }
+      const name = (payload as { name?: unknown }).name;
+      if (typeof name !== 'string' || !NDI_OUTPUT_NAMES.has(name as NdiOutputName)) {
+        throw new Error(`Invalid NDI output name: ${String(name)}`);
+      }
+      const senderFrame = event.senderFrame;
+      if (!senderFrame) {
+        throw new Error('NDI frame transport request has no sender frame');
+      }
+      port = options.createNdiFrameTransport?.(name as NdiOutputName) ?? null;
+      if (!port) return;
+      senderFrame.postMessage(
+        NDI_FRAME_TRANSPORT_PORT_CHANNEL,
+        {
+          type: NDI_FRAME_TRANSPORT_WINDOW_MESSAGE,
+          version: NDI_FRAME_TRANSPORT_VERSION,
+          name,
+        },
+        [port],
+      );
+      port = null;
+    } catch (error) {
+      port?.close();
+      console.error(`[IPC ${IPC.requestNdiFrameTransport}]`, error);
+    }
+  });
 
   // Frame transport (issue #150 acceptance criterion): sendNdiFrame's inline
   // validation below is untouched — no codec, no refactor, exactly as it was.
@@ -831,7 +1135,6 @@ export const registerIpcHandlers = (
       telemetry?: NdiFrameTelemetry;
     }) => {
     const mainReceivedAtMs = Date.now();
-    const ackName = payload?.name;
     try {
       assertTrustedIpcSender(event);
       if (!payload || typeof payload !== 'object') {
@@ -844,17 +1147,13 @@ export const registerIpcHandlers = (
       if (!(buffer instanceof ArrayBuffer)) {
         throw new Error('NDI frame payload must include an ArrayBuffer');
       }
-      const stampedTelemetry: NdiFrameTelemetry | undefined = telemetry
-        ? { ...telemetry, mainReceivedAtMs }
+      const sanitizedTelemetry = sanitizeNdiFrameTelemetry(telemetry);
+      const stampedTelemetry: NdiFrameTelemetry | undefined = sanitizedTelemetry
+        ? { ...sanitizedTelemetry, mainReceivedAtMs }
         : undefined;
       ndiService.receiveFrame(name, new Uint8Array(buffer), width, height, stampedTelemetry);
     } catch (error) {
       console.error(`[IPC ${IPC.sendNdiFrame}]`, error);
-    } finally {
-      // Always ack so renderer back-pressure releases even after a rejected frame.
-      if (ackName && !event.sender.isDestroyed()) {
-        event.sender.send(NDI_EVENTS.frameAck, ackName);
-      }
     }
     },
   );
