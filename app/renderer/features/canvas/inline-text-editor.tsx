@@ -20,7 +20,7 @@ import { Bold, Italic, List, ListOrdered, Strikethrough, Underline } from 'lucid
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { ColorPicker } from '@renderer/components/form/color-picker';
 import { FieldInput } from '@renderer/components/form/field';
-import { resolveInlineTextAlign, useFontAvailabilityEpoch } from '@lumacast/canvas';
+import { resolveInlineTextAlign, useFontAvailabilityEpoch, measureInlineTextHeight } from '@lumacast/canvas';
 import { normalizeFontFamily, computeAutoFitRichTextFontSize } from '@lumacast/composition';
 
 interface InlineTextEditorProps {
@@ -347,6 +347,10 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
   const [range, setRange] = useState<RichRange | null>(null);
   const [version, setVersion] = useState(0);
   const fontEpoch = useFontAvailabilityEpoch();
+  const plainText = useMemo(
+    () => bodyRef.current.map((b) => b.runs.map((r) => r.text).join('')).join('\n'),
+    [version]
+  );
   // Whether the contentEditable host itself currently has DOM focus — the
   // signal that drives the synthetic highlight below. Deliberately independent
   // of the blur-guard/commit logic in handleBlur (which decides whether the
@@ -640,9 +644,32 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
   // transformer shows), so the box never grows-then-snaps between edit and view.
   // The canvas renders the (possibly overflowing) text; the overlay only captures input.
   const left = sceneOffsetX + element.x * sceneScale;
-  const top = sceneOffsetY + element.y * sceneScale;
+  const verticalAlign = payload.verticalAlign ?? 'middle';
+  const autoFitEnabled = payload.autoFit ?? false;
+  const textContentHeight = measureInlineTextHeight({
+    text: plainText,
+    width: element.width * sceneScale,
+    fontSize,
+    lineHeight,
+    fontWeight: String(box.weight),
+    fontStyle: box.italic ? 'italic' : 'normal',
+    fontFamily: box.fontFamily,
+  });
+  const textLineBleedPadding = Math.max(0, (fontSize - fontSize * lineHeight) / 2);
+  const frameContentHeight = autoFitEnabled
+    ? element.height * sceneScale
+    : Math.max(element.height * sceneScale, textContentHeight);
+  const textOverflowOffset = verticalAlign === 'bottom'
+    ? Math.min(0, element.height * sceneScale - frameContentHeight)
+    : verticalAlign === 'middle'
+      ? Math.min(0, (element.height * sceneScale - frameContentHeight) / 2)
+      : 0;
+  const textFrameY = textOverflowOffset - textLineBleedPadding;
+  const textFrameHeight = frameContentHeight + textLineBleedPadding * 2;
+  const verticalOffset = -textFrameY;
+  const top = sceneOffsetY + element.y * sceneScale + verticalOffset;
   const width = element.width * sceneScale;
-  const height = element.height * sceneScale;
+  const height = textFrameHeight;
   const textAlign = resolveInlineTextAlign(payload.alignment);
 
   const activeFormatting: string[] = [];
@@ -773,7 +800,7 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
           left,
           top,
           width,
-          height,
+          height: `${height}px`,
           boxSizing: 'border-box',
           fontSize,
           lineHeight,
