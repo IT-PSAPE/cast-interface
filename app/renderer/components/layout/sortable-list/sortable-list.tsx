@@ -325,8 +325,13 @@ export function useSortableItem(id: Id, disabled = false): SortableItemState {
     // context a transformed sibling can paint over it mid-drag.
     zIndex: isDragging ? 40 : undefined,
     position: isDragging ? 'relative' : undefined,
-    opacity: isSourceDragging ? 0.6 : undefined,
-  }), [isDragging, isSourceDragging, transform, transition]);
+    // With a drag overlay, the floating copy is the row you are dragging, so
+    // hide the source: its slot reads as the gap the drop will fill instead of
+    // a second copy of the same row sliding through the list. The row keeps its
+    // box either way — collision detection measures it. Lists with no overlay
+    // drag the row itself, so it stays fully opaque.
+    opacity: isDragging && useDragOverlay ? 0 : undefined,
+  }), [isDragging, transform, transition, useDragOverlay]);
   const handleProps = useMemo<Record<string, unknown>>(
     () => (disabled ? {} : { ...attributes, ...listeners }),
     [attributes, disabled, listeners],

@@ -1,8 +1,8 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
-import { useSortableItem } from './sortable-list';
+import { SortableList, useSortableItem } from './sortable-list';
 
 const mocks = vi.hoisted(() => {
   const setNodeRef = vi.fn();
@@ -36,9 +36,51 @@ const useRenderStore = create<{ unrelated: number; bump: () => void }>((set) => 
 
 afterEach(() => {
   useRenderStore.setState({ unrelated: 0 });
+  mocks.sortableState.isDragging = false;
 });
 
+function listWrapper(dragOverlay: ReactNode) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <SortableList.Root
+        ids={['row-1']}
+        activeId="row-1"
+        onDragStart={() => undefined}
+        onDragEnd={() => undefined}
+        onDragCancel={() => undefined}
+        dragOverlay={dragOverlay}
+      >
+        {children}
+      </SortableList.Root>
+    );
+  };
+}
+
 describe('useSortableItem', () => {
+  it('hides the source row while a drag overlay carries the floating copy', () => {
+    mocks.sortableState.isDragging = true;
+
+    const { result } = renderHook(() => useSortableItem('row-1'), {
+      wrapper: listWrapper(<div>Overlay row</div>),
+    });
+
+    // One visible copy only: the overlay floats, the slot left behind is a gap.
+    expect(result.current.containerStyle.opacity).toBe(0);
+    expect(result.current.isDragging).toBe(false);
+  });
+
+  it('keeps the row fully opaque when it is the thing being dragged', () => {
+    mocks.sortableState.isDragging = true;
+
+    const { result } = renderHook(() => useSortableItem('row-1'), {
+      wrapper: listWrapper(null),
+    });
+
+    // No overlay: this row is what follows the pointer, so it must not be dimmed.
+    expect(result.current.containerStyle.opacity).toBeUndefined();
+    expect(result.current.isDragging).toBe(true);
+  });
+
   it('returns stable object references across renders when dnd-kit inputs are unchanged', () => {
     const { result, rerender } = renderHook(() => useSortableItem('row-1'));
     const firstStyle = result.current.containerStyle;

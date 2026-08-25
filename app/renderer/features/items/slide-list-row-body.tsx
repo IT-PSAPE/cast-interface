@@ -119,7 +119,7 @@ export function SlideOutlineRowBody({
         onDoubleClick={overlay || row.textEditable ? undefined : handleOpen}
         variant="slide"
         selected={isFocused}
-        className={cn('bg-transparent', dragging ? 'cursor-grabbing opacity-70 shadow-lg' : 'cursor-grab')}
+        className={cn('bg-transparent', dragging ? 'cursor-grabbing shadow-lg' : 'cursor-grab')}
       >
         <Thumbnail.Preview className="border-secondary">
           <SceneFrame width={scene.width} height={scene.height} className="bg-tertiary" stageClassName="absolute inset-0">

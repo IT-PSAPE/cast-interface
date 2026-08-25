@@ -70,7 +70,7 @@ export function SlideTileBody({
           else if (containerRef) containerRef.current = node;
         }}
         style={containerStyle}
-        className={dragging ? 'cursor-grabbing opacity-70 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
+        className={dragging ? 'cursor-grabbing shadow-lg' : 'cursor-grab active:cursor-grabbing'}
         onClick={overlay ? undefined : onSelect}
         onDoubleClick={overlay ? undefined : onSelect}
         selected={isActive}

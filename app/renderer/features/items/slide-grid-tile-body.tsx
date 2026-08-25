@@ -96,7 +96,7 @@ export function SlideGridTileBody({
         onDoubleClick={overlay ? undefined : handleDoubleClick}
         selected={selected}
         variant="slide"
-        className={dragging ? 'cursor-grabbing opacity-70 shadow-lg' : 'cursor-grab'}
+        className={dragging ? 'cursor-grabbing shadow-lg' : 'cursor-grab'}
       >
         <Thumbnail.Body>
           <SceneFrame
