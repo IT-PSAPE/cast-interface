@@ -1,4 +1,4 @@
-import type { TextElementPayload } from '@lumacast/composition';
+import type { TextElementPayload, TextVerticalAlign } from '@lumacast/composition';
 
 interface MeasureInlineTextHeightInput {
   text: string;
@@ -42,4 +42,40 @@ export function measureInlineTextHeight({ text, width, fontSize, lineHeight, fon
   const height = measureNode.getBoundingClientRect().height;
   document.body.removeChild(measureNode);
   return Math.max(height, fontSize * lineHeight);
+}
+
+function textLineBleedPadding(fontSize: number, lineHeight: number): number {
+  return Math.max(0, (fontSize - fontSize * lineHeight) / 2);
+}
+
+function textOverflowOffset(verticalAlign: TextVerticalAlign, containerHeight: number, textHeight: number): number {
+  if (verticalAlign === 'bottom') return Math.min(0, containerHeight - textHeight);
+  if (verticalAlign === 'middle') return Math.min(0, (containerHeight - textHeight) / 2);
+  return 0;
+}
+
+interface InlineTextVerticalOffsetInput {
+  verticalAlign: TextVerticalAlign;
+  elementHeight: number;
+  fontSize: number;
+  lineHeight: number;
+  autoFitEnabled: boolean;
+  textContentHeight: number;
+}
+
+export function calculateInlineTextVerticalOffset({
+  verticalAlign,
+  elementHeight,
+  fontSize,
+  lineHeight,
+  autoFitEnabled,
+  textContentHeight,
+}: InlineTextVerticalOffsetInput): number {
+  const bleedPadding = textLineBleedPadding(fontSize, lineHeight);
+  const frameContentHeight = autoFitEnabled
+    ? elementHeight
+    : Math.max(elementHeight, textContentHeight);
+  const overflowOffset = textOverflowOffset(verticalAlign, elementHeight, frameContentHeight);
+  const textFrameY = overflowOffset - bleedPadding;
+  return -textFrameY;
 }
