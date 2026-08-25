@@ -268,8 +268,8 @@ function safeHandle<Args extends unknown[], R>(
 // guarantee that `registerRpcHandlers(rpcHandlers)` is actually called, or
 // called exactly once, or that nothing else in this file calls
 // `ipcMain.handle` directly outside this path. Those are runtime properties,
-// covered by `app/main/ipc-registration.test.ts`, which asserts the exact set
-// of channels the mocked `ipcMain.handle` receives against `IPC`.
+// covered by `tests/app/main/ipc-registration.test.ts`, which asserts the
+// exact set of channels the mocked `ipcMain.handle` receives against `IPC`.
 type RpcChannelName = keyof RpcOperations;
 
 type RpcHandlerFn<K extends RpcChannelName> = (

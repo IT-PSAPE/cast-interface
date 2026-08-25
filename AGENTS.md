@@ -101,9 +101,11 @@ application stays the root package and is not itself a workspace member.
 and never introduce another package manager or lockfile. Each package follows
 the same convention: `packages/<name>/src/index.ts` is its only public entry
 point (deep imports from outside the package fail `package-public-entry`),
-source and co-located tests live under `src/`, and internal files import each
-other with relative paths, never via the package's own `@lumacast/<name>`
-specifier.
+source lives under `src/`, and internal files import each other with relative
+paths, never via the package's own `@lumacast/<name>` specifier. Tests are not
+co-located: every test lives under the root `tests/` tree at the path that
+mirrors the file it covers, so a package's tests sit in
+`tests/packages/<name>/src/`.
 
 - **`@lumacast/kernel`** — dependency-free primitives (`Id`, `createId`,
   `nowIso`) that every other package may depend on.

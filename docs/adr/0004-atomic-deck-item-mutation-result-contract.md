@@ -113,7 +113,7 @@ around it are not:
   to spare pre-existing tests a rewrite; the item-model refactor rewrote the
   whole persistence layer's tests anyway, so the wrapper's reason to exist
   went with it.
-- `app/renderer/contexts/asset-editor/theme-resolution.test.tsx` (owned by
+- `tests/app/renderer/contexts/asset-editor/theme-resolution.test.tsx` (owned by
   issue #101) mocked `window.castApi.createDeckItemWithTheme` to resolve with
   a raw `SnapshotPatch`. Those mocks predated this ADR's IPC result contract
   and have been updated to resolve `{ itemId, patch }`; the mocked method name
