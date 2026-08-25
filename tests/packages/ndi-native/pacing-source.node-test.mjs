@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-const source = readFileSync(join(import.meta.dirname, '..', 'src', 'ndi_native.cc'), 'utf8');
+const source = readFileSync(join(import.meta.dirname, '..', '..', '..', 'packages', 'ndi-native', 'src', 'ndi_native.cc'), 'utf8');
 
 test('#246 shared native source keeps renderer-owned 30000/1001 pacing', () => {
   assert.match(source, /kVideoFrameRateN\s*=\s*30000/);

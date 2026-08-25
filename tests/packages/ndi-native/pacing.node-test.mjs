@@ -24,11 +24,11 @@ test('#246 native pacing: video frame rate is 30000/1001 and clock_video is fals
   assert.ok(existsSync(MOCK_RUNTIME), `mock NDI runtime missing: ${MOCK_RUNTIME}`);
   process.env.CAST_NDI_RUNTIME_PATH = MOCK_RUNTIME;
   process.env.NDI_MOCK_REPORT_PATH = REPORT;
-  const checkedAddon = join(here, '..', 'bin', 'darwin-arm64-133', 'ndi-native.node');
+  const checkedAddon = join(here, '..', '..', '..', 'packages', 'ndi-native', 'bin', 'darwin-arm64-133', 'ndi-native.node');
   assert.ok(existsSync(checkedAddon), `checked Electron addon missing: ${checkedAddon}`);
   // Require the shipped artifact explicitly so an ignored local build cannot
   // make this regression test pass while the checked binary is stale.
-  const ndi = require('../bin/darwin-arm64-133/ndi-native.node');
+  const ndi = require('../../../packages/ndi-native/bin/darwin-arm64-133/ndi-native.node');
 
   // BGRA sender (alpha disabled) exercises the BGRX send path.
   ndi.initializeSender({ senderName: 'bgra', width: 64, height: 48, withAlpha: false });
