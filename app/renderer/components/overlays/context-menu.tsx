@@ -648,7 +648,16 @@ export function useContextMenuTrigger({
   longPressDelay = DEFAULT_LONG_PRESS_DELAY,
   onDelete,
 }: UseContextMenuTriggerOptions = {}) {
-  const { actions, meta, state } = useContextMenu();
+  // Rows that double as their own drag overlay render the same body outside a
+  // ContextMenu.Root: there is nothing to open a menu against a floating copy,
+  // and those bodies already drop the Portal in overlay mode. Treat a missing
+  // Root as an inert trigger rather than throwing, so one body component can
+  // serve both the live row and its overlay — every sortable list does this.
+  const context = useContext(ContextMenuContext);
+  const inert = disabled || context === null;
+  const openAt = context?.actions.openAt;
+  const triggerRef = context?.meta.triggerRef;
+  const isOpen = context?.state.open ?? false;
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchOriginRef = useRef<ContextMenuPoint | null>(null);
 
@@ -663,27 +672,27 @@ export function useContextMenuTrigger({
 
   const ref = useCallback(
     (node: HTMLElement | null) => {
-      meta.triggerRef.current = node as HTMLDivElement | null;
+      if (triggerRef) triggerRef.current = node as HTMLDivElement | null;
     },
-    [meta.triggerRef],
+    [triggerRef],
   );
 
   return useMemo(
     () => ({
       ref,
-      'data-state': state.open ? 'open' : 'closed',
+      'data-state': isOpen ? 'open' : 'closed',
       tabIndex: onDelete ? 0 : undefined,
       onContextMenu(event: ReactMouseEvent<HTMLElement>) {
-        if (disabled) return;
+        if (inert) return;
         event.preventDefault();
-        actions.openAt({ x: event.clientX, y: event.clientY });
+        openAt?.({ x: event.clientX, y: event.clientY });
       },
       onKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
-        if (disabled) return;
+        if (inert) return;
         if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
           event.preventDefault();
           const rect = event.currentTarget.getBoundingClientRect();
-          actions.openAt({
+          openAt?.({
             x: Math.round(rect.left + rect.width / 2),
             y: Math.round(rect.top + Math.min(rect.height, 24) / 2),
           });
@@ -698,13 +707,13 @@ export function useContextMenuTrigger({
         }
       },
       onTouchStart(event: ReactTouchEvent<HTMLElement>) {
-        if (disabled || event.touches.length !== 1) return;
+        if (inert || event.touches.length !== 1) return;
         const touch = event.touches[0];
         touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
         clearLongPress();
         longPressTimerRef.current = setTimeout(() => {
           if (!touchOriginRef.current) return;
-          actions.openAt(touchOriginRef.current);
+          openAt?.(touchOriginRef.current);
           touchOriginRef.current = null;
           longPressTimerRef.current = null;
         }, longPressDelay);
@@ -728,7 +737,7 @@ export function useContextMenuTrigger({
         clearLongPress();
       },
     }),
-    [actions, clearLongPress, disabled, longPressDelay, onDelete, ref, state.open],
+    [clearLongPress, inert, isOpen, longPressDelay, onDelete, openAt, ref],
   );
 }
 
