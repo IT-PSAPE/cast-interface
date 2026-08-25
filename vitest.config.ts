@@ -6,13 +6,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
-    include: [
-      'app/**/*.test.ts',
-      'app/**/*.test.tsx',
-      'benchmarks/**/*.test.ts',
-      'packages/**/*.test.ts',
-      'packages/**/*.test.tsx',
-    ],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
   },
   resolve: {
     dedupe: ['react', 'react-dom', 'konva', 'react-konva'],

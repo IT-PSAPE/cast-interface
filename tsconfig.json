@@ -32,6 +32,8 @@
     "benchmarks/**/*.ts",
     "packages/**/*.ts",
     "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
     "tool/browser-preview/**/*.ts"
   ]
 }
