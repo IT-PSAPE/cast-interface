@@ -188,6 +188,23 @@ describe('virtualized sortable integration', () => {
     mocks.useSensors.mockClear();
   });
 
+  it('lets a shifting row paint outside its virtual slot', async () => {
+    render(<Harness commit={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('row-0')).not.toBeNull();
+    });
+
+    const slot = screen.getByText('row-0').closest('[data-index]');
+    if (!(slot instanceof HTMLElement)) throw new Error('slot missing');
+
+    // A sortable row translates a full row height past its slot to open the gap
+    // that shows where the drop lands. Paint containment clipped that away, so
+    // the neighbours read as deleted mid-drag instead of shifted.
+    expect(slot.style.contain).not.toContain('paint');
+    expect(slot.style.contain).toContain('layout');
+  });
+
   it('keeps the dragged source mounted during scroll and commits when an offscreen drop id is supplied', async () => {
     const commit = vi.fn();
 

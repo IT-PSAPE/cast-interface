@@ -144,7 +144,13 @@ export function VirtualizedList({
               left: 0,
               width: '100%',
               transform: `translateY(${virtualItem.start}px)`,
-              contain: 'layout paint',
+              // Layout containment only — never `paint`. A sortable row inside
+              // this slot translates a full row height beyond it to open the gap
+              // that shows where the drop lands, and paint containment would
+              // clip that away: the neighbours look deleted mid-drag rather than
+              // shifted. Layout containment still keeps one row's measurement
+              // from dirtying the rest of the list.
+              contain: 'layout',
               willChange: 'transform',
               paddingBottom: !isLast && itemGap > 0 ? itemGap : undefined,
             }}
