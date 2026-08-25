@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAppIdentity } from './app-identity';
+import { resolveAppIdentity } from '../../../app/main/app-identity';
 
 describe('resolveAppIdentity', () => {
   it('uses configured development identity values', () => {
