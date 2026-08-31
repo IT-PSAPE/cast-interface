@@ -2,6 +2,9 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, typ
 import { MEDIA_DERIVATIVE_EVENTS, MEDIA_LIBRARY_EVENTS, PERSISTENCE_CHANNELS, PERSISTENCE_EVENTS, validateProjectBackupAsync } from '@lumacast/protocol';
 import {
   IPC,
+  NDI_AUDIO_TRANSPORT_PORT_CHANNEL,
+  NDI_AUDIO_TRANSPORT_VERSION,
+  NDI_AUDIO_TRANSPORT_WINDOW_MESSAGE,
   NDI_EVENTS,
   NDI_FRAME_CHANNEL_NAMES,
   NDI_FRAME_TRANSPORT_PORT_CHANNEL,
@@ -111,7 +114,7 @@ import type { PersistenceServiceLike } from './persistence/persistence-service-p
 
 const SNAPSHOT_HEARTBEAT_INTERVAL_MS = 5_000;
 
-// The three ipcMain.on frame channels near the bottom of this file are the
+// The four ipcMain.on frame channels near the bottom of this file are the
 // only consumers of this set; their inline
 // validation is deliberately left untouched by issue #150 (frame transport
 // is out of scope), so this stays exactly as it was rather than being
@@ -284,7 +287,7 @@ const NDI_FRAME_CHANNEL_NAME_SET = new Set<string>(NDI_FRAME_CHANNEL_NAMES);
 /**
  * Registers every operation in `handlers` through `safeHandle`, driven by the
  * `IPC` map rather than a hand-maintained sequence of `safeHandle(IPC.x, ...)`
- * calls. Iterating `IPC` (skipping the three frame/control channels) rather than
+ * calls. Iterating `IPC` (skipping the four frame/control channels) rather than
  * `Object.keys(handlers)` means a rogue registration under a channel string
  * absent from `IPC` is structurally impossible from inside this function.
  * Frame channels are excluded by construction — `NDI_FRAME_CHANNEL_NAME_SET`
@@ -346,6 +349,7 @@ export const registerIpcHandlers = (
     onPersistenceProgress?: (progress: PersistenceProgress) => void;
     getLatestPersistenceProgress?: () => PersistenceProgress | null;
     createNdiFrameTransport?: (name: NdiOutputName) => MessagePortMain | null;
+    createNdiAudioTransport?: (name: NdiOutputName) => MessagePortMain | null;
   } = {},
 ): void => {
   const mediaDerivatives = new MediaDerivativeService(repo, app.getPath('userData'));
@@ -1118,6 +1122,43 @@ export const registerIpcHandlers = (
     } catch (error) {
       port?.close();
       console.error(`[IPC ${IPC.requestNdiFrameTransport}]`, error);
+    }
+  });
+
+  // Direct audio transport: one-shot MessagePort handshake carrying planar
+  // float32 audio, mirroring the frame transport request above. Registered
+  // directly via `ipcMain.on`, never through `registerRpcHandlers` — the
+  // request is classified as a frame channel, not an RPC op.
+  ipcMain.on(IPC.requestNdiAudioTransport, (event, payload: unknown) => {
+    let port: MessagePortMain | null = null;
+    try {
+      assertTrustedIpcSender(event);
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('NDI audio transport request must be an object');
+      }
+      const name = (payload as { name?: unknown }).name;
+      if (typeof name !== 'string' || !NDI_OUTPUT_NAMES.has(name as NdiOutputName)) {
+        throw new Error(`Invalid NDI output name: ${String(name)}`);
+      }
+      const senderFrame = event.senderFrame;
+      if (!senderFrame) {
+        throw new Error('NDI audio transport request has no sender frame');
+      }
+      port = options.createNdiAudioTransport?.(name as NdiOutputName) ?? null;
+      if (!port) return;
+      senderFrame.postMessage(
+        NDI_AUDIO_TRANSPORT_PORT_CHANNEL,
+        {
+          type: NDI_AUDIO_TRANSPORT_WINDOW_MESSAGE,
+          version: NDI_AUDIO_TRANSPORT_VERSION,
+          name,
+        },
+        [port],
+      );
+      port = null;
+    } catch (error) {
+      port?.close();
+      console.error(`[IPC ${IPC.requestNdiAudioTransport}]`, error);
     }
   });
 

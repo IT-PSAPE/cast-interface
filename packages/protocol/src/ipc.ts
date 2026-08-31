@@ -302,12 +302,16 @@ type PersistenceEventSurface = {
 // for latency, and their direction is the opposite of the event maps.
 export interface NdiFrameChannels {
   requestNdiFrameTransport: { name: NdiOutputName };
+  // Direct audio transport uses the same one-shot MessagePort handoff as the
+  // frame transport, carrying planar float32 audio instead of pixels.
+  requestNdiAudioTransport: { name: NdiOutputName };
   sendNdiFrame: { name: NdiOutputName; buffer: ArrayBuffer; width: number; height: number; telemetry?: NdiFrameTelemetry };
   sendNdiAudio: { name: NdiOutputName; buffer: ArrayBuffer; sampleRate: number; channels: number; samplesPerChannel: number };
 }
 
 type NdiFrameSurface = {
   requestNdiFrameTransport: (name: NdiOutputName) => void;
+  requestNdiAudioTransport: (name: NdiOutputName) => void;
   sendNdiFrame: (
     name: NdiOutputName,
     buffer: ArrayBuffer,
@@ -538,6 +542,7 @@ export const IPC = {
   updateNdiOutputConfig: 'ndi:updateOutputConfig',
   getNdiDiagnostics: 'ndi:getDiagnostics',
   requestNdiFrameTransport: 'ndi:requestFrameTransport',
+  requestNdiAudioTransport: 'ndi:requestAudioTransport',
   sendNdiFrame: 'ndi:sendFrame',
   sendNdiAudio: 'ndi:sendAudio',
   restoreProjectBackup: 'cast:restoreProjectBackup',
@@ -555,6 +560,7 @@ export const NDI_EVENTS = {
 } as const;
 
 export const NDI_FRAME_TRANSPORT_PORT_CHANNEL = 'ndi:frameTransportPort';
+export const NDI_AUDIO_TRANSPORT_PORT_CHANNEL = 'ndi:audioTransportPort';
 
 export const APP_MENU_EVENTS = {
   command: 'app-menu:command',
@@ -580,7 +586,7 @@ export const PERSISTENCE_CHANNELS = {
 // Channel classification completeness (issue #151 acceptance criterion:
 // "every current channel is classified exactly once").
 //
-// `IPC` above holds every request/response AND frame channel string. The two
+// `IPC` above holds every request/response AND frame channel string. The four
 // frame channels are the only entries that are not request/response
 // operations; every other `IPC` key must have exactly one matching
 // `RpcOperations` entry, checked at compile time below. `app/core/ipc-
@@ -589,7 +595,7 @@ export const PERSISTENCE_CHANNELS = {
 // this module exports, not just the RPC/frame split.
 // ---------------------------------------------------------------------------
 
-export const NDI_FRAME_CHANNEL_NAMES = ['requestNdiFrameTransport', 'sendNdiFrame', 'sendNdiAudio'] as const satisfies readonly (keyof typeof IPC)[];
+export const NDI_FRAME_CHANNEL_NAMES = ['requestNdiFrameTransport', 'requestNdiAudioTransport', 'sendNdiFrame', 'sendNdiAudio'] as const satisfies readonly (keyof typeof IPC)[];
 
 type FrameChannelName = (typeof NDI_FRAME_CHANNEL_NAMES)[number];
 type RpcChannelName = Exclude<keyof typeof IPC, FrameChannelName>;

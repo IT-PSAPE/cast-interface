@@ -372,6 +372,11 @@ app.whenReady().then(() => {
             ? ndiService.createFrameTransport(name)
             : null
         ),
+        createNdiAudioTransport: (name) => (
+          ndiService instanceof NdiServiceProxy
+            ? ndiService.createAudioTransport(name)
+            : null
+        ),
       },
     ),
     createWindow: createMainWindow,

@@ -24,6 +24,7 @@ import {
   MEDIA_DERIVATIVE_EVENTS,
   MEDIA_LIBRARY_EVENTS,
   NDI_EVENTS,
+  NDI_AUDIO_TRANSPORT_PORT_CHANNEL,
   NDI_FRAME_CHANNEL_NAMES,
   NDI_FRAME_TRANSPORT_PORT_CHANNEL,
   PERSISTENCE_CHANNELS,
@@ -98,6 +99,7 @@ describe('ipc contract: RPC/event/frame classification', () => {
       ...Object.values(IPC),
       ...Object.values(NDI_EVENTS),
       NDI_FRAME_TRANSPORT_PORT_CHANNEL,
+      NDI_AUDIO_TRANSPORT_PORT_CHANNEL,
       ...Object.values(APP_MENU_EVENTS),
       ...Object.values(PERSISTENCE_EVENTS),
       ...Object.values(PERSISTENCE_CHANNELS),
@@ -107,8 +109,13 @@ describe('ipc contract: RPC/event/frame classification', () => {
     expect(new Set(allChannelStrings).size).toBe(allChannelStrings.length);
   });
 
-  it('keeps exactly three NDI frame/control channels, all real IPC channels', () => {
-    expect(NDI_FRAME_CHANNEL_NAMES).toEqual(['requestNdiFrameTransport', 'sendNdiFrame', 'sendNdiAudio']);
+  it('keeps exactly four NDI frame/control channels, all real IPC channels', () => {
+    expect(NDI_FRAME_CHANNEL_NAMES).toEqual([
+      'requestNdiFrameTransport',
+      'requestNdiAudioTransport',
+      'sendNdiFrame',
+      'sendNdiAudio',
+    ]);
     for (const name of NDI_FRAME_CHANNEL_NAMES) {
       expect(Object.keys(IPC)).toContain(name);
     }

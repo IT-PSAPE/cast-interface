@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import { APP_MENU_EVENTS, IPC, MEDIA_DERIVATIVE_EVENTS, MEDIA_LIBRARY_EVENTS, NDI_EVENTS, NDI_FRAME_TRANSPORT_PORT_CHANNEL, PERSISTENCE_CHANNELS, PERSISTENCE_EVENTS, isNdiFrameTransportPortAnnouncement, type ItemCreateInput, type ItemCreateResult, type ItemDuplicateInput, type ItemDuplicateResult, type MainApi, type ProjectRestoreResult } from '@lumacast/protocol';
+import { APP_MENU_EVENTS, IPC, MEDIA_DERIVATIVE_EVENTS, MEDIA_LIBRARY_EVENTS, NDI_AUDIO_TRANSPORT_PORT_CHANNEL, NDI_EVENTS, NDI_FRAME_TRANSPORT_PORT_CHANNEL, PERSISTENCE_CHANNELS, PERSISTENCE_EVENTS, isNdiAudioTransportPortAnnouncement, isNdiFrameTransportPortAnnouncement, type ItemCreateInput, type ItemCreateResult, type ItemDuplicateInput, type ItemDuplicateResult, type MainApi, type ProjectRestoreResult } from '@lumacast/protocol';
 import type { SnapshotPatch } from '@lumacast/protocol';
 import type { Id } from '@lumacast/kernel';
 import type { ItemRef, ItemType, ThemeOwnerType } from '@lumacast/composition';
@@ -52,6 +52,15 @@ ipcRenderer.on(NDI_FRAME_TRANSPORT_PORT_CHANNEL, (event, announcement: unknown) 
   // contextBridge: contextBridge would clone calls crossing isolated worlds.
   // The renderer validates source, origin and the typed announcement before
   // transferring this port into its readback worker.
+  window.postMessage(announcement, '*', [port]);
+});
+
+ipcRenderer.on(NDI_AUDIO_TRANSPORT_PORT_CHANNEL, (event, announcement: unknown) => {
+  const [port] = event.ports;
+  if (!port || event.ports.length !== 1 || !isNdiAudioTransportPortAnnouncement(announcement)) {
+    for (const candidate of event.ports) candidate.close();
+    return;
+  }
   window.postMessage(announcement, '*', [port]);
 });
 
@@ -173,6 +182,9 @@ const api = {
   getNdiDiagnostics: () => ipcRenderer.invoke(IPC.getNdiDiagnostics) as Promise<NdiDiagnostics>,
   requestNdiFrameTransport: (name: NdiOutputName) => {
     ipcRenderer.send(IPC.requestNdiFrameTransport, { name });
+  },
+  requestNdiAudioTransport: (name: NdiOutputName) => {
+    ipcRenderer.send(IPC.requestNdiAudioTransport, { name });
   },
   sendNdiFrame: (name: NdiOutputName, buffer: ArrayBuffer, width: number, height: number, telemetry?: NdiFrameTelemetry) => {
     // Use ordinary IPC cloning for frame delivery. Electron's renderer

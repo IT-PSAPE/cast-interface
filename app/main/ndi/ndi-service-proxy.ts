@@ -96,6 +96,20 @@ export class NdiServiceProxy implements NdiServiceLike {
     }
   }
 
+  createAudioTransport(name: NdiOutputName): MessagePortMain | null {
+    if (this.destroyed || this.teardownStarted) return null;
+    const { port1, port2 } = new MessageChannelMain();
+    try {
+      this.host.postMessage({ type: 'attachAudioPort', name } satisfies NdiHostCommand, [port2]);
+      return port1;
+    } catch (error) {
+      port1.close();
+      port2.close();
+      console.error(`[NdiServiceProxy] Failed to attach ${name} audio transport:`, error);
+      return null;
+    }
+  }
+
   setOutputEnabled(name: NdiOutputName, enabled: boolean): NdiOutputState {
     this.cachedOutputState = { ...this.cachedOutputState, [name]: enabled };
     this.send({ type: 'setOutputEnabled', name, enabled });

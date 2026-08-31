@@ -215,6 +215,19 @@ Each rule is also proven by a committed fixture scenario under
 - The native sender declares every video frame as 30000/1001 progressive and
   creates NDI senders with `clock_video=false`. The renderer's one-frame loop
   owns cadence; the native SDK must not add a second blocking video clock.
+- Web Audio remains the audio sample clock and both audio/video frames retain
+  NDI synthesized timecodes. Each enabled output normally receives planar PCM
+  over its own versioned port directly from the AudioWorklet to the NDI utility
+  process, bypassing renderer and main-process event loops that can be busy
+  during a slide change. The utility validates the handshake, output, numeric
+  bounds, and exact planar byte length before submission. Until a port is ready,
+  or after it fails, only that output uses the existing renderer -> main ->
+  utility IPC route; ready outputs are never duplicated on the fallback route.
+  Each native NDI sender then owns a dedicated audio submission thread whose
+  bounded FIFO applies backpressure instead of dropping or reordering samples,
+  and sender teardown drains that FIFO before destroying the shared NDI handle.
+  Native `clock_audio` remains disabled, so transport and execution isolation do
+  not introduce a second timing source.
 - Slide/take latency correlation is scoped by the target output item/playlist
   entry, not by slide id alone. `SlideProvider` records the intended
   `activate`/`take` plus the truthful reason available at that boundary today

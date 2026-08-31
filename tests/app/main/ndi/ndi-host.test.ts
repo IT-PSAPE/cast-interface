@@ -267,4 +267,147 @@ describe('ndi-host teardown acknowledgments', () => {
     });
     expect(second.close).toHaveBeenCalledOnce();
   });
+
+  it('handshakes a direct audio port and forwards a validated planar frame', async () => {
+    await import('../../../../app/main/ndi/ndi-host');
+    onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+    const port = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'stage' }, ports: [port] });
+    port.listeners.get('message')?.({ data: { type: 'handshake', version: 1, name: 'stage' } });
+
+    expect(port.start).toHaveBeenCalledOnce();
+    expect(port.postMessage).toHaveBeenCalledWith({ type: 'ready', version: 1, name: 'stage' });
+
+    mocks.service.receiveAudioFrame.mockClear();
+    const buffer = new Float32Array([0.5, -0.5, 0.25, -0.25]).buffer as ArrayBuffer;
+    port.listeners.get('message')?.({
+      data: {
+        type: 'audio',
+        name: 'stage',
+        buffer,
+        sampleRate: 48000,
+        channels: 2,
+        samplesPerChannel: 2,
+      },
+    });
+
+    expect(mocks.service.receiveAudioFrame).toHaveBeenCalledWith('stage', expect.any(Float32Array), 48000, 2, 2);
+  });
+
+  it('rejects a malformed direct audio frame with an invalidPayload fallback', async () => {
+    await import('../../../../app/main/ndi/ndi-host');
+    onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+    const port = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [port] });
+    port.listeners.get('message')?.({ data: { type: 'handshake', version: 1, name: 'audience' } });
+    mocks.service.receiveAudioFrame.mockClear();
+
+    port.listeners.get('message')?.({
+      data: {
+        type: 'audio',
+        name: 'audience',
+        buffer: new ArrayBuffer(4),
+        sampleRate: 48000,
+        channels: 2,
+        samplesPerChannel: 48,
+      },
+    });
+
+    expect(port.postMessage).toHaveBeenCalledWith({
+      type: 'fallback',
+      name: 'audience',
+      reason: 'invalidPayload',
+    });
+    expect(port.close).toHaveBeenCalledOnce();
+    expect(mocks.service.receiveAudioFrame).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unmatched audio handshake and a port with no service', async () => {
+    await import('../../../../app/main/ndi/ndi-host');
+    onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+    const mismatched = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [mismatched] });
+    mismatched.listeners.get('message')?.({ data: { type: 'handshake', version: 99, name: 'audience' } });
+    expect(mismatched.postMessage).toHaveBeenCalledWith({
+      type: 'fallback',
+      name: 'audience',
+      reason: 'invalidHandshake',
+    });
+    expect(mismatched.close).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to hostUnavailable when an audio port handshakes without a service', async () => {
+    await import('../../../../app/main/ndi/ndi-host');
+    const port = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [port] });
+    port.listeners.get('message')?.({ data: { type: 'handshake', version: 1, name: 'audience' } });
+
+    expect(port.postMessage).toHaveBeenCalledWith({
+      type: 'fallback',
+      name: 'audience',
+      reason: 'hostUnavailable',
+    });
+    expect(port.close).toHaveBeenCalledOnce();
+  });
+
+  it('closes a replaced audio port, accepts an explicit close, and teardown closes it', async () => {
+    await import('../../../../app/main/ndi/ndi-host');
+    onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+    const first = createFramePort();
+    const second = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [first] });
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [second] });
+    expect(first.close).toHaveBeenCalledOnce();
+
+    second.listeners.get('message')?.({ data: { type: 'handshake', version: 1, name: 'audience' } });
+    second.close.mockClear();
+    second.listeners.get('message')?.({ data: { type: 'close', name: 'audience' } });
+    expect(second.close).toHaveBeenCalledOnce();
+
+    const remaining = createFramePort();
+    onMessage?.({ data: { type: 'attachAudioPort', name: 'stage' }, ports: [remaining] });
+    remaining.close.mockClear();
+    onMessage?.({ data: { type: 'destroy' } });
+    expect(remaining.close).toHaveBeenCalledOnce();
+  });
+
+  it('closes an attached audio port that never completes its handshake', async () => {
+    vi.useFakeTimers();
+    try {
+      await import('../../../../app/main/ndi/ndi-host');
+      onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+      const port = createFramePort();
+      onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [port] });
+
+      vi.advanceTimersByTime(500);
+
+      expect(port.postMessage).toHaveBeenCalledWith({
+        type: 'fallback',
+        name: 'audience',
+        reason: 'invalidHandshake',
+      });
+      expect(port.close).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a successfully handshaken audio port beyond the handshake deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      await import('../../../../app/main/ndi/ndi-host');
+      onMessage?.({ data: { type: 'init', outputConfigs: createDefaultNdiOutputConfigs() } });
+      const port = createFramePort();
+      onMessage?.({ data: { type: 'attachAudioPort', name: 'audience' }, ports: [port] });
+      port.listeners.get('message')?.({ data: { type: 'handshake', version: 1, name: 'audience' } });
+      port.postMessage.mockClear();
+
+      vi.advanceTimersByTime(500);
+
+      expect(port.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'fallback' }));
+      expect(port.close).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

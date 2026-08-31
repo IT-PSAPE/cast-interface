@@ -158,4 +158,39 @@ describe('NdiServiceProxy teardown lifecycle', () => {
     expect(proxy.createFrameTransport('stage')).toBeNull();
     expect(mocks.host.postMessage).not.toHaveBeenCalled();
   });
+
+  it('creates a renderer-to-utility audio channel and transfers the utility port', () => {
+    const proxy = new NdiServiceProxy({
+      outputConfigs: createDefaultNdiOutputConfigs(),
+      onOutputConfigsChanged: vi.fn(),
+      hostModulePath: '/app/out/main/ndi-host.js',
+    });
+    mocks.host.postMessage.mockClear();
+
+    expect(proxy.createAudioTransport('stage')).toBe(mocks.rendererPort);
+    expect(mocks.host.postMessage).toHaveBeenCalledWith(
+      { type: 'attachAudioPort', name: 'stage' },
+      [mocks.hostPort],
+    );
+  });
+
+  it('falls back when audio-channel transfer fails or teardown has started', () => {
+    const proxy = new NdiServiceProxy({
+      outputConfigs: createDefaultNdiOutputConfigs(),
+      onOutputConfigsChanged: vi.fn(),
+      hostModulePath: '/app/out/main/ndi-host.js',
+    });
+    mocks.host.postMessage.mockImplementationOnce(() => {
+      throw new Error('port transfer failed');
+    });
+
+    expect(proxy.createAudioTransport('audience')).toBeNull();
+    expect(mocks.rendererPort.close).toHaveBeenCalled();
+    expect(mocks.hostPort.close).toHaveBeenCalled();
+
+    proxy.destroy();
+    mocks.host.postMessage.mockClear();
+    expect(proxy.createAudioTransport('audience')).toBeNull();
+    expect(mocks.host.postMessage).not.toHaveBeenCalled();
+  });
 });

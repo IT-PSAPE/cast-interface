@@ -22,6 +22,7 @@ export interface BlackoutFlushOptions {
 export type NdiHostCommand =
   | { type: 'init'; outputConfigs: NdiOutputConfigMap }
   | { type: 'attachFramePort'; name: NdiOutputName }
+  | { type: 'attachAudioPort'; name: NdiOutputName }
   | { type: 'setOutputEnabled'; name: NdiOutputName; enabled: boolean }
   | { type: 'updateOutputConfig'; name: NdiOutputName; config: Partial<NdiOutputConfig> }
   | {
