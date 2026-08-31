@@ -20,8 +20,8 @@ import { Bold, Italic, List, ListOrdered, Strikethrough, Underline } from 'lucid
 import { SegmentedControl } from '@renderer/components/controls/segmented-control';
 import { ColorPicker } from '@renderer/components/form/color-picker';
 import { FieldInput } from '@renderer/components/form/field';
-import { resolveInlineTextAlign, useFontAvailabilityEpoch, measureInlineTextHeight } from '@lumacast/canvas';
-import { normalizeFontFamily, computeAutoFitRichTextFontSize } from '@lumacast/composition';
+import { resolveInlineTextAlign, useFontAvailabilityEpoch, textLineBleedPadding, textOverflowOffset } from '@lumacast/canvas';
+import { normalizeFontFamily, computeAutoFitRichTextFontSize, prepareRichLayout, alignRichLayout, buildBoxWithAutoFit } from '@lumacast/composition';
 
 interface InlineTextEditorProps {
   editingTextId: string;
@@ -347,10 +347,6 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
   const [range, setRange] = useState<RichRange | null>(null);
   const [version, setVersion] = useState(0);
   const fontEpoch = useFontAvailabilityEpoch();
-  const plainText = useMemo(
-    () => bodyRef.current.map((b) => b.runs.map((r) => r.text).join('')).join('\n'),
-    [version]
-  );
   // Whether the contentEditable host itself currently has DOM focus — the
   // signal that drives the synthetic highlight below. Deliberately independent
   // of the blur-guard/commit logic in handleBlur (which decides whether the
@@ -617,15 +613,18 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
     ? ''
     : String(Math.round(resolvedSize));
 
-  // lineHeight/fontSize must be computed before the early return below (every
-  // hook must run on every render), so both are null-safe: `element`/`payload`
-  // can be absent on the render where the editing target has just disappeared,
-  // and the resulting value is never read in that case since the component
-  // returns null right after.
+  // lineHeight/baseFontSize must be computed before the early return below
+  // (every hook must run on every render), so both are null-safe: `element`/
+  // `payload` can be absent on the render where the editing target has just
+  // disappeared, and the resulting value is never read in that case since the
+  // component returns null right after. baseFontSize is UNSCALED (element
+  // units, matching scene-node-text.tsx's own `fontSize`) — the DOM font-size
+  // below and the rich-layout math further down both derive from it, scaled
+  // only where a screen px is actually needed.
   const lineHeight = payload?.lineHeight ?? 1.25;
-  const fontSize = useMemo(() => {
+  const baseFontSize = useMemo(() => {
     if (!element || !payload) return 0;
-    const baseFontSize = payload.autoFit
+    return payload.autoFit
       ? computeAutoFitRichTextFontSize({
           body: bodyRef.current,
           box,
@@ -635,8 +634,44 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
           maxFontSize: payload.autoFitMaxFontSize ?? payload.fontSize,
         })
       : payload.fontSize;
-    return baseFontSize * sceneScale;
-  }, [payload?.autoFit, payload?.autoFitMaxFontSize, payload?.fontSize, payload?.lineHeight, bodyRef, box, element?.width, element?.height, sceneScale, fontEpoch]);
+  }, [payload?.autoFit, payload?.autoFitMaxFontSize, payload?.fontSize, payload?.lineHeight, bodyRef, box, element?.width, element?.height, fontEpoch]);
+
+  // Also null-safe for the same reason as baseFontSize above, and computed
+  // once here (rather than after the early return) so both this const block
+  // and the textFrameLayout memo just below can see them.
+  const verticalAlign = payload?.verticalAlign ?? 'middle';
+  const autoFitEnabled = payload?.autoFit ?? false;
+  const textAlign = payload ? resolveInlineTextAlign(payload.alignment) : 'left';
+
+  // Runs the literal same rich-layout math scene-node-text.tsx uses
+  // (packages/canvas/src/scene-node-text.tsx:435-471), in UNSCALED element
+  // units against the same body/box/width/lineHeight/align the editor already
+  // tracks — not an approximation of it via a plain-text DOM measurement.
+  // wrapRuns' binary search plus canvas measureText makes this expensive, so
+  // it's memoized exactly like scene-node-text.tsx memoizes preparedRichContent/
+  // richTextLayout — otherwise it reran as plain consts on every render
+  // (toolbar keystrokes, syncRange on every mouseup/keyup, focus/blur).
+  // bodyRef is a mutable ref React can't see into, so this depends on
+  // `version` instead (bumped whenever the body model changes) — the same
+  // trick rangeStyle uses above.
+  const textFrameLayout = useMemo(() => {
+    if (!element || !payload) return { textFrameY: 0, textFrameHeight: 0, alignY: 0 };
+    const layoutBox = autoFitEnabled ? buildBoxWithAutoFit(box, baseFontSize, box.fontSize) : box;
+    const preparedRichContent = prepareRichLayout({ body: bodyRef.current, box: layoutBox, width: element.width, lineHeight, align: textAlign });
+    const textBleedPadding = textLineBleedPadding(preparedRichContent.maxFontSize, lineHeight);
+    // autoFit locks the frame to the element bounds regardless of the fitted
+    // layout's own height (mirrors scene-node-text.tsx:449-451), so measurement
+    // overshoot at wrap boundaries doesn't briefly expand the box and snap back
+    // while typing.
+    const textFrameContentHeight = autoFitEnabled
+      ? element.height
+      : Math.max(element.height, preparedRichContent.contentHeight, preparedRichContent.layoutHeight);
+    const textFrameY = textOverflowOffset(verticalAlign, element.height, textFrameContentHeight) - textBleedPadding;
+    const textFrameHeight = textFrameContentHeight + textBleedPadding * 2;
+    const { alignY } = alignRichLayout(preparedRichContent, textFrameHeight, verticalAlign);
+    return { textFrameY, textFrameHeight, alignY };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version, box, element?.width, element?.height, lineHeight, textAlign, verticalAlign, autoFitEnabled, baseFontSize, fontEpoch]);
 
   if (!element || !payload) return null;
 
@@ -644,33 +679,23 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
   // transformer shows), so the box never grows-then-snaps between edit and view.
   // The canvas renders the (possibly overflowing) text; the overlay only captures input.
   const left = sceneOffsetX + element.x * sceneScale;
-  const verticalAlign = payload.verticalAlign ?? 'middle';
-  const autoFitEnabled = payload.autoFit ?? false;
-  const textContentHeight = measureInlineTextHeight({
-    text: plainText,
-    width: element.width * sceneScale,
-    fontSize,
-    lineHeight,
-    fontWeight: String(box.weight),
-    fontStyle: box.italic ? 'italic' : 'normal',
-    fontFamily: box.fontFamily,
-  });
-  const textLineBleedPadding = Math.max(0, (fontSize - fontSize * lineHeight) / 2);
-  const frameContentHeight = autoFitEnabled
-    ? element.height * sceneScale
-    : Math.max(element.height * sceneScale, textContentHeight);
-  const textOverflowOffset = verticalAlign === 'bottom'
-    ? Math.min(0, element.height * sceneScale - frameContentHeight)
-    : verticalAlign === 'middle'
-      ? Math.min(0, (element.height * sceneScale - frameContentHeight) / 2)
-      : 0;
-  const textFrameY = textOverflowOffset - textLineBleedPadding;
-  const textFrameHeight = frameContentHeight + textLineBleedPadding * 2;
-  const verticalOffset = -textFrameY;
+  const fontSize = baseFontSize * sceneScale;
+  // Screen px only appear once, in the final left/top/width/height/
+  // contentAlignOffset below — everything above stays in unscaled element units.
+  const { textFrameY, textFrameHeight, alignY } = textFrameLayout;
+
+  const verticalOffset = textFrameY * sceneScale;
   const top = sceneOffsetY + element.y * sceneScale + verticalOffset;
   const width = element.width * sceneScale;
-  const height = textFrameHeight;
-  const textAlign = resolveInlineTextAlign(payload.alignment);
+  const height = textFrameHeight * sceneScale;
+  // The frame position above only ever shifts the box for OVERFLOW (content
+  // taller than the box). When content is shorter than the box, the canvas
+  // still centers/bottom-aligns the glyphs *within* the frame (alignRichLayout)
+  // — the DOM has no such intra-frame stage, so the caret falls back to
+  // top-of-box. Reproduce it as padding on the content itself, leaving
+  // top/height (and therefore the toolbar and rotation pivot, which both key
+  // off `top`) untouched.
+  const contentAlignOffset = alignY * sceneScale;
 
   const activeFormatting: string[] = [];
   if (rangeStyle?.bold.value && !rangeStyle.bold.mixed) activeFormatting.push('bold');
@@ -795,13 +820,23 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
         onCompositionEnd={() => { composingRef.current = false; handleInput(); }}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        className="rt-editor absolute z-10 overflow-visible border-2 border-[#4DA3FF] bg-transparent outline-none"
+        className="rt-editor absolute z-10 overflow-visible bg-transparent"
         style={{
           left,
           top,
           width,
           height: `${height}px`,
           boxSizing: 'border-box',
+          // A `border` would sit inside the border-box and push the content
+          // origin (top/left of the actual text) a couple px down and right of
+          // `top`/`left` above — exactly what those are computed to align with
+          // the canvas's border-less text Shape. `outline` never participates in
+          // the box model, so the selection-box indicator can't perturb it;
+          // outline-offset:-2px keeps it flush inside the frame edge rather than
+          // straddling it, and this replaces the old `outline-none` reset too
+          // (an explicit outline is always drawn here, not just on :focus).
+          outline: '2px solid #4DA3FF',
+          outlineOffset: '-2px',
           fontSize,
           lineHeight,
           fontFamily: box.fontFamily,
@@ -820,6 +855,7 @@ export function InlineTextEditor({ editingTextId, effectiveElements, sceneOffset
           counterReset: 'rt-counter',
           margin: 0,
           padding: 0,
+          paddingTop: contentAlignOffset,
           transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
           transformOrigin: 'top left',
         }}

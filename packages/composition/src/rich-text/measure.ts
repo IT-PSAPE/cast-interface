@@ -281,7 +281,11 @@ export function measureTextLineLayoutHeight(lineCount: number, fontSize: number,
   return Math.max(1, lineCount) * fontSize * lineHeight;
 }
 
-function buildBoxWithAutoFit(box: RichBoxStyle, fontSize: number, authoredFontSize: number): RichBoxStyle {
+// Exported so a consumer computing its own auto-fit size (the inline editor,
+// matching scene-node-text.tsx) can rebuild the box the same way before calling
+// prepareRichLayout, so a per-run fontSize override resolves against the same
+// fontScale the canvas uses.
+export function buildBoxWithAutoFit(box: RichBoxStyle, fontSize: number, authoredFontSize: number): RichBoxStyle {
   const scale = authoredFontSize ? fontSize / authoredFontSize : 1;
   return { ...box, fontSize, fontScale: scale };
 }
@@ -413,9 +417,14 @@ export function prepareRichLayout(params: { body: RichBody; box: RichBoxStyle; w
   const layoutHeight = lastLine
     ? lines.reduce((total, line) => total + line.lineHeightPx, 0)
     : measureTextLineLayoutHeight(1, box.fontSize, lineHeight);
+  // contentHeight trades the last line's full line-box for its own glyph
+  // height (fontSize, not fontSize*lineHeight) — the zero-line fallback below
+  // must do the same trade for an imaginary single line, not repeat
+  // layoutHeight's formula (that was a real drift from scene-node-text.tsx's
+  // own copy of this function: same edge case, two different answers).
   const contentHeight = lastLine
     ? layoutHeight - lastLine.lineHeightPx + lastLine.maxFontSize
-    : measureTextLineLayoutHeight(1, box.fontSize, lineHeight);
+    : box.fontSize;
 
   return {
     width,
@@ -425,6 +434,19 @@ export function prepareRichLayout(params: { body: RichBody; box: RichBoxStyle; w
     maxFontSize,
     lines,
   };
+}
+
+// Intra-frame vertical placement of the prepared layout within a frame of
+// `frameHeight` — the canvas's own alignRichLayout (scene-node-text.tsx),
+// exported here so a consumer can reproduce the canvas's first-line position
+// exactly instead of re-deriving the centering arithmetic. Deliberately
+// unclamped (frameHeight can be a hair under layoutHeight at an autoFit
+// boundary; the canvas nudges the first line up rather than floor it at 0).
+export function alignRichLayout(layout: PreparedRichLayout, frameHeight: number, verticalAlign: 'top' | 'middle' | 'bottom'): PreparedRichLayout & { alignY: number } {
+  let alignY = 0;
+  if (verticalAlign === 'middle') alignY = (frameHeight - layout.layoutHeight) / 2;
+  else if (verticalAlign === 'bottom') alignY = frameHeight - layout.layoutHeight;
+  return { ...layout, alignY };
 }
 
 // Shared measurer for layout preparation (uses the same canvas measurer)
