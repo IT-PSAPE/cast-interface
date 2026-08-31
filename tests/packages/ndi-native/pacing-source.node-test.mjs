@@ -14,3 +14,13 @@ test('#246 shared native source keeps renderer-owned 30000/1001 pacing', () => {
   assert.equal((source.match(/frame\.frame_rate_N\s*=\s*kVideoFrameRateN/g) ?? []).length, 3);
   assert.equal((source.match(/frame\.frame_rate_D\s*=\s*kVideoFrameRateD/g) ?? []).length, 3);
 });
+
+test('native audio submission is isolated without changing the A/V clock contract', () => {
+  assert.match(source, /kSenderClockAudio\s*=\s*false/);
+  assert.match(source, /class AudioSendWorker/);
+  assert.match(source, /bool Enqueue\(QueuedAudioFrame frame\)/);
+  assert.match(source, /queue_\.size\(\) < kMaxQueuedAudioFrames/);
+  assert.match(source, /spaceAvailable_\.wait/);
+  assert.match(source, /audioWorker->Stop\(\)/);
+  assert.match(source, /audioWorker->Enqueue\(std::move\(queued\)\)/);
+});

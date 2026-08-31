@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <condition_variable>
 #include <cstdlib>
+#include <deque>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
@@ -35,6 +38,14 @@ constexpr size_t kMaxVideoFrameBytes = static_cast<size_t>(1920) * static_cast<s
 constexpr int32_t kVideoFrameRateN = 30000;
 constexpr int32_t kVideoFrameRateD = 1001;
 constexpr bool kSenderClockVideo = false;
+// Preserve the existing audio timing contract: Web Audio supplies samples at
+// the device clock and NDI synthesizes matching timecodes. The worker isolates
+// submission from video; it must not add a second audio clock.
+constexpr bool kSenderClockAudio = false;
+// Bound native buffering without dropping samples. If a pathological NDI stall
+// fills the queue, the utility host applies backpressure until the audio worker
+// catches up. At 1024 samples/48 kHz this holds about 170 ms.
+constexpr size_t kMaxQueuedAudioFrames = 8U;
 
 constexpr uint32_t MakeFourCC(char a, char b, char c, char d) {
   return static_cast<uint32_t>(static_cast<uint8_t>(a)) |
@@ -110,6 +121,97 @@ struct NdiSymbols {
   FnNdiSendAudioV2 sendAudioV2 = nullptr;
   FnNdiSendGetNoConnections sendGetNoConnections = nullptr;
   FnNdiSendGetTally sendGetTally = nullptr;
+};
+
+struct QueuedAudioFrame {
+  std::vector<float> samples;
+  int32_t sampleRate = 0;
+  int32_t channels = 0;
+  int32_t samplesPerChannel = 0;
+};
+
+// NDI documents audio/video submission on separate threads as supported. A
+// per-sender worker prevents video conversion/submission on the utility-process
+// JavaScript thread from delaying audio submission. FIFO backpressure preserves
+// every captured sample and its ordering so the threading boundary cannot
+// introduce an audio discontinuity or silently move audio relative to video.
+class AudioSendWorker {
+ public:
+  AudioSendWorker(FnNdiSendAudioV2 sendAudio,
+                  NDIlib_send_instance_t sender)
+      : sendAudio_(sendAudio), sender_(sender), thread_([this]() { Run(); }) {}
+
+  ~AudioSendWorker() { Stop(); }
+
+  AudioSendWorker(const AudioSendWorker&) = delete;
+  AudioSendWorker& operator=(const AudioSendWorker&) = delete;
+
+  bool Enqueue(QueuedAudioFrame frame) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    spaceAvailable_.wait(lock, [this]() {
+      return stopping_ || queue_.size() < kMaxQueuedAudioFrames;
+    });
+    if (stopping_) return false;
+    queue_.push_back(std::move(frame));
+    ready_.notify_one();
+    return true;
+  }
+
+  void Stop() {
+    {
+      std::lock_guard<std::mutex> guard(mutex_);
+      if (stopping_) {
+        return;
+      }
+      stopping_ = true;
+    }
+    ready_.notify_one();
+    spaceAvailable_.notify_all();
+    if (thread_.joinable()) {
+      thread_.join();
+    }
+  }
+
+ private:
+  void Run() {
+    for (;;) {
+      QueuedAudioFrame queued;
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        ready_.wait(lock, [this]() { return stopping_ || !queue_.empty(); });
+        if (queue_.empty()) {
+          if (stopping_) {
+            return;
+          }
+          continue;
+        }
+        queued = std::move(queue_.front());
+        queue_.pop_front();
+        spaceAvailable_.notify_one();
+      }
+
+      NDIlib_audio_frame_v2_t frame{};
+      frame.sample_rate = queued.sampleRate;
+      frame.no_channels = queued.channels;
+      frame.no_samples = queued.samplesPerChannel;
+      frame.timecode = kTimecodeSynthesize;
+      frame.p_data = queued.samples.data();
+      frame.channel_stride_in_bytes =
+          queued.samplesPerChannel * static_cast<int32_t>(sizeof(float));
+      frame.p_metadata = nullptr;
+      frame.timestamp = 0;
+      sendAudio_(sender_, &frame);
+    }
+  }
+
+  FnNdiSendAudioV2 sendAudio_ = nullptr;
+  NDIlib_send_instance_t sender_ = nullptr;
+  std::mutex mutex_;
+  std::condition_variable ready_;
+  std::condition_variable spaceAvailable_;
+  std::deque<QueuedAudioFrame> queue_;
+  bool stopping_ = false;
+  std::thread thread_;
 };
 
 class DynamicLibrary {
@@ -204,6 +306,7 @@ struct SenderInstance {
   bool withAlpha = true;
   std::vector<uint8_t> bgraScratch[kDoubleBufferCount];
   int currentBuffer = 0;
+  std::unique_ptr<AudioSendWorker> audioWorker;
 };
 
 struct SenderState {
@@ -407,6 +510,12 @@ void DestroySenderInstanceUnlocked(SenderState& state, SenderInstance* sender) {
     return;
   }
 
+  // Drain and join audio before the shared NDI sender handle is destroyed.
+  if (sender->audioWorker) {
+    sender->audioWorker->Stop();
+    sender->audioWorker.reset();
+  }
+
   if (sender->sender != nullptr) {
     // Send an opaque black frame before tearing down so remote receivers
     // see black instead of a frozen last frame.
@@ -507,7 +616,7 @@ void EnsureSender(SenderState& state,
   createDesc.p_ndi_name = senderName.c_str();
   createDesc.p_groups = nullptr;
   createDesc.clock_video = kSenderClockVideo;
-  createDesc.clock_audio = false;
+  createDesc.clock_audio = kSenderClockAudio;
 
   NDIlib_send_instance_t sender = state.symbols.sendCreate(&createDesc);
   if (sender == nullptr) {
@@ -529,6 +638,10 @@ void EnsureSender(SenderState& state,
 
   for (int i = 0; i < kDoubleBufferCount; ++i) {
     instance.bgraScratch[i].resize(size);
+  }
+  if (state.symbols.sendAudioV2 != nullptr) {
+    instance.audioWorker =
+        std::make_unique<AudioSendWorker>(state.symbols.sendAudioV2, sender);
   }
   state.senders[senderName] = std::move(instance);
 }
@@ -814,9 +927,9 @@ Napi::Value SendRgbaFrame(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-// Sends planar 32-bit float audio. The Float32Array holds channels back-to-
-// back: [ch0 samples..., ch1 samples..., ...]. Length must equal
-// channels * samplesPerChannel.
+// Queues planar 32-bit float audio for the sender's dedicated native thread.
+// The Float32Array holds channels back-to-back: [ch0 samples..., ch1
+// samples..., ...]. Length must equal channels * samplesPerChannel.
 Napi::Value SendAudioFrame(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
@@ -862,9 +975,14 @@ Napi::Value SendAudioFrame(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
+  QueuedAudioFrame queued;
+  queued.sampleRate = sampleRate;
+  queued.channels = channels;
+  queued.samplesPerChannel = samplesPerChannel;
+  queued.samples.assign(samples.Data(), samples.Data() + expectedLength);
+
   auto& state = State();
   std::lock_guard<std::mutex> guard(state.mutex);
-
   if (state.symbols.sendAudioV2 == nullptr) {
     Napi::Error::New(env, "NDIlib_send_send_audio_v2 unavailable in loaded runtime").ThrowAsJavaScriptException();
     return env.Undefined();
@@ -875,18 +993,14 @@ Napi::Value SendAudioFrame(const Napi::CallbackInfo& info) {
     Napi::Error::New(env, "NDI sender not initialized").ThrowAsJavaScriptException();
     return env.Undefined();
   }
+  if (!senderIt->second.audioWorker) {
+    Napi::Error::New(env, "NDI audio worker unavailable").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 
-  NDIlib_audio_frame_v2_t frame{};
-  frame.sample_rate = sampleRate;
-  frame.no_channels = channels;
-  frame.no_samples = samplesPerChannel;
-  frame.timecode = kTimecodeSynthesize;
-  frame.p_data = samples.Data();
-  frame.channel_stride_in_bytes = samplesPerChannel * static_cast<int32_t>(sizeof(float));
-  frame.p_metadata = nullptr;
-  frame.timestamp = 0;
-
-  state.symbols.sendAudioV2(senderIt->second.sender, &frame);
+  if (!senderIt->second.audioWorker->Enqueue(std::move(queued))) {
+    Napi::Error::New(env, "NDI audio worker is stopping").ThrowAsJavaScriptException();
+  }
   return env.Undefined();
 }
 

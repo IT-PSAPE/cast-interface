@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; audio consequence superseded by ADR-0020
 
 ## Date
 
@@ -75,4 +75,5 @@ take-correlation decisions remain in force.
   attributing work to process boundaries the frame did not cross.
 - Native sends return under renderer-owned pacing rather than stacking the NDI
   SDK clock on top of the renderer's one-frame lifecycle.
-- Audio transport is unchanged.
+- Audio transport was unchanged by this decision. ADR-0020 later supersedes
+  that consequence with lossless threaded native audio submission.

@@ -13,9 +13,12 @@
 // library across sender lifecycles, which would reset static state.
 
 #include <cstdint>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <thread>
 
 extern "C" {
 
@@ -161,6 +164,36 @@ static void AppendFrameReport(const NDIlib_video_frame_v2_t* frame) {
   std::fclose(out);
 }
 
+static std::mutex g_audio_report_mutex;
+
+static void AppendAudioReport(const NDIlib_audio_frame_v2_t* frame) {
+  const char* path = std::getenv("NDI_MOCK_AUDIO_REPORT_PATH");
+  if (path == nullptr || path[0] == '\0' || frame == nullptr ||
+      frame->p_data == nullptr || frame->no_samples <= 0) {
+    return;
+  }
+
+  const char* delayText = std::getenv("NDI_MOCK_AUDIO_DELAY_MS");
+  if (delayText != nullptr) {
+    const int delayMs = std::atoi(delayText);
+    if (delayMs > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+    }
+  }
+
+  std::lock_guard<std::mutex> guard(g_audio_report_mutex);
+  FILE* out = std::fopen(path, "a");
+  if (out == nullptr) {
+    return;
+  }
+  std::fprintf(
+      out,
+      "{\"marker\":%.0f,\"sampleRate\":%d,\"channels\":%d,\"samplesPerChannel\":%d}\n",
+      frame->p_data[0], frame->sample_rate, frame->no_channels,
+      frame->no_samples);
+  std::fclose(out);
+}
+
 bool NDIlib_initialize(void) { return true; }
 
 void NDIlib_destroy(void) {}
@@ -194,7 +227,9 @@ void NDIlib_send_send_video_async_v2(void* /*instance*/,
 }
 
 void NDIlib_send_send_audio_v2(void* /*instance*/,
-                               const NDIlib_audio_frame_v2_t* /*frame*/) {}
+                               const NDIlib_audio_frame_v2_t* frame) {
+  AppendAudioReport(frame);
+}
 
 int32_t NDIlib_send_get_no_connections(void* /*instance*/,
                                        uint32_t /*timeout_ms*/) {

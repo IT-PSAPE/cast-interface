@@ -10,6 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const MOCK_RUNTIME = join(here, 'fixtures', 'libndi_mock.dylib');
 const REPORT = join(here, 'fixtures', 'mock_report.json');
+const AUDIO_REPORT = join(here, 'fixtures', 'mock_audio_report.jsonl');
 
 function readReport() {
   return JSON.parse(readFileSync(REPORT, 'utf8'));
@@ -21,9 +22,12 @@ test('#246 native pacing: video frame rate is 30000/1001 and clock_video is fals
     : false,
 }, () => {
   rmSync(REPORT, { force: true });
+  rmSync(AUDIO_REPORT, { force: true });
   assert.ok(existsSync(MOCK_RUNTIME), `mock NDI runtime missing: ${MOCK_RUNTIME}`);
   process.env.CAST_NDI_RUNTIME_PATH = MOCK_RUNTIME;
   process.env.NDI_MOCK_REPORT_PATH = REPORT;
+  process.env.NDI_MOCK_AUDIO_REPORT_PATH = AUDIO_REPORT;
+  process.env.NDI_MOCK_AUDIO_DELAY_MS = '10';
   const checkedAddon = join(here, '..', '..', '..', 'packages', 'ndi-native', 'bin', 'darwin-arm64-133', 'ndi-native.node');
   assert.ok(existsSync(checkedAddon), `checked Electron addon missing: ${checkedAddon}`);
   // Require the shipped artifact explicitly so an ignored local build cannot
@@ -39,6 +43,15 @@ test('#246 native pacing: video frame rate is 30000/1001 and clock_video is fals
   ndi.initializeSender({ senderName: 'rgba', width: 64, height: 48, withAlpha: true });
   ndi.sendRgbaFrame('rgba', opaque, 64, 48);
 
+  // The mock delays native audio submission so this burst exercises the
+  // worker queue and destroy-time drain. Every marker must survive in FIFO
+  // order; the threading boundary may not drop or reorder samples.
+  const audio = new Float32Array(2 * 64);
+  for (let marker = 0; marker < 12; marker += 1) {
+    audio[0] = marker;
+    ndi.sendAudioFrame('rgba', audio, 48_000, 2, 64);
+  }
+
   // Teardown sends an opaque black frame, which must also use the pacing.
   ndi.destroySender('bgra');
   ndi.destroySender('rgba');
@@ -50,6 +63,11 @@ test('#246 native pacing: video frame rate is 30000/1001 and clock_video is fals
     report.createClockVideo,
     0,
     `expected clock_video=false on send create, got ${report.createClockVideo}`,
+  );
+  assert.equal(
+    report.createClockAudio,
+    0,
+    `expected Web Audio to remain the only audio clock, got clock_audio=${report.createClockAudio}`,
   );
   assert.equal(report.senderCreates, 2, `expected two sender creates, got ${report.senderCreates}`);
   assert.equal(
@@ -76,4 +94,20 @@ test('#246 native pacing: video frame rate is 30000/1001 and clock_video is fals
     1001,
     `expected video frame_rate_D=1001, got ${report.videoFrameRateD}`,
   );
+
+  const audioFrames = readFileSync(AUDIO_REPORT, 'utf8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    audioFrames.map((frame) => frame.marker),
+    Array.from({ length: 12 }, (_, marker) => marker),
+    'expected the native audio worker to preserve every frame in FIFO order',
+  );
+  for (const frame of audioFrames) {
+    assert.equal(frame.sampleRate, 48_000);
+    assert.equal(frame.channels, 2);
+    assert.equal(frame.samplesPerChannel, 64);
+  }
 });
